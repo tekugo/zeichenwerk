@@ -33,7 +33,7 @@ The `pkg/tui` package provides a powerful framework for creating terminal user i
 ### Basic Import
 
 ```go
-import "github.com/tekugo/zeichenwerk"
+import tui "github.com/tekugo/zeichenwerk"
 ```
 
 ### Minimal Application
