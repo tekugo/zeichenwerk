@@ -101,10 +101,10 @@ advertising and buzzwords. Also the demo.go is a good starting place.
 
 There is a small AI generated and probably not really correct tutorial in [[TUTORIAL.md]]
 
-> [!HINT]
+> [!TIP]
 > Do not use `zeichenwerk` as the package name, when importing it. Take something
-> shorter or even`.`, although it is not recommended. But when separating the UI
-> from the rest, your Go code will be better readable with the`.`
+> shorter like `tui` or even`.`, although it is not recommended. But when separating
+> the UI from the rest, your Go code will be better readable with the`.`
 
 ## Development Principles
 
