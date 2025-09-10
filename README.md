@@ -13,9 +13,9 @@ in Go.
 ## Goals
 
 My main goal was to have an easy to use library for small, interactive tools.
-I am a child of the 80s, so my first real programming encounters were with
+I am a child of the 70s, so my first real programming encounters were with
 MS-DOS and a screen with 80x25 characters, writing to screen buffers and
-having a poster with the ASCII codes in the wall in front of me. Sometimes
+having a poster with the ASCII codes on the wall in front of me. Sometimes
 I still miss the productivity I had these days with programming languages
 likes Clipper.
 
