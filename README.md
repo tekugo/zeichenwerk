@@ -165,6 +165,6 @@ In no particular order!
 This is a free-time project and you may use it under the MIT license, copy it,
 fork it, etc.
 
-> [!HINT]
+> [!TIP]
 > Please insert coin if you want me to spend more of my spare time on this
 > or have specific feature requests.
