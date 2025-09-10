@@ -99,7 +99,7 @@ advertising and buzzwords. Also the demo.go is a good starting place.
 
 ## Tutorial
 
-There is a small AI generated and probably not really correct tutorial in [[TUTORIAL.md]]
+There is a small AI generated and probably not really correct tutorial in [TUTORIAL.md](TUTORIAL.md)
 
 > [!TIP]
 > Do not use `zeichenwerk` as the package name, when importing it. Take something
