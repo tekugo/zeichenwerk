@@ -36,8 +36,8 @@ are the first application I have written with it so far.
 
 ## How does it look
 
-![Screenshot 1](screenshot-1.png)
-![Screenshot 2](screenshot-2.png)
+![Screenshot 1](Screenshot-1.png)
+![Screenshot 2](Screenshot-2.png)
 
 ## Features
 
