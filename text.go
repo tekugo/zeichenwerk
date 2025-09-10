@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // Text represents a multi-line text display widget with scrolling and automatic content management.
 // It provides a scrollable text area that can display multiple lines of text with support for

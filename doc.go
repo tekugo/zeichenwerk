@@ -110,4 +110,4 @@
 //
 // This provides robust terminal abstraction with wide compatibility and
 // comprehensive input/output capabilities.
-package tui
+package zeichenwerk

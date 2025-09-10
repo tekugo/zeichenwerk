@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 type Separator struct {
 	BaseWidget

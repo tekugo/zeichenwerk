@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // renderScrollbarV renders a vertical scrollbar indicating scroll position and content size.
 // This method creates a visual scrollbar with a thumb that represents the current

@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // BorderStyle defines the Unicode characters used to draw borders and grid lines for widgets.
 // It provides a comprehensive set of border elements including outer borders, corners,
@@ -21,7 +21,7 @@ package tui
 type BorderStyle struct {
 	// Outer border elements - form the perimeter of widgets
 	Top    rune // Horizontal line for the top border
-	Right  rune // Vertical line for the right border  
+	Right  rune // Vertical line for the right border
 	Bottom rune // Horizontal line for the bottom border
 	Left   rune // Vertical line for the left border
 

@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // renderText renders a Text widget's content with scrolling support.
 // This method displays the visible portion of multi-line text content,

@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 func DefaultTheme() Theme {
 	theme := MapTheme{styles: make(map[string]Style)}

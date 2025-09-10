@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // Stack is a generic LIFO (Last In, First Out) data structure implemented as a slice.
 // It provides standard stack operations including push, pop, and peek functionality.

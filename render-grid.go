@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // renderGrid renders a Grid widget with its cells and optional grid lines.
 // This method handles the complete rendering of grid layouts, including

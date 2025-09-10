@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // Builder provides a fluent interface for constructing TUI components.
 // It maintains a stack of containers and applies styling through themes.
@@ -267,6 +267,16 @@ func (b *Builder) Spacer() *Builder {
 	b.theme.SetStyles(spacer, "spacer")
 	spacer.SetHint(-1, -1)
 	b.add(spacer)
+	return b
+}
+
+func (b *Builder) Tabs(id string, tabs ...string) *Builder {
+	t := NewTabs(id)
+	b.theme.SetStyles(t, "tabs", "highlight", "highlight-line")
+	for _, tab := range tabs {
+		t.Add(tab)
+	}
+	b.add(t)
 	return b
 }
 

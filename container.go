@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // Container represents a widget that can contain and manage child widgets.
 // It extends the Widget interface with additional methods for managing

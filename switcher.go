@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 type Switcher struct {
 	BaseWidget

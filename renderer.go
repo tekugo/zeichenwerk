@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -320,6 +320,8 @@ func (r *Renderer) render(widget Widget) {
 				}
 			}
 		}
+	case *Tabs:
+		r.renderTabs(widget, x, y, w)
 	case *Text:
 		r.renderBorder(x, y, w, h, style)
 		r.renderText(widget, x, y, w, h)

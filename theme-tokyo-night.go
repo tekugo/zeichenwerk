@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 func TokyoNightTheme() Theme {
 	theme := MapTheme{styles: make(map[string]Style), colors: make(map[string]string)}

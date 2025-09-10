@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // Box represents a container widget that wraps a single child widget with an optional title.
 // It provides a bordered container that can display a title and contains exactly one child widget.
@@ -87,7 +87,13 @@ func (b *Box) Children() []Widget {
 //  2. Recursively search within the child widget (if it exists)
 //  3. If child is a container, search its descendants
 func (b *Box) Find(id string) Widget {
-	return Find(b, id)
+	if b.id == id {
+		return b
+	} else if b.child.ID() == id {
+		return b.child
+	} else {
+		return nil
+	}
 }
 
 // FindAt searches for the widget located at the specified screen coordinates.

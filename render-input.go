@@ -1,4 +1,4 @@
-package tui
+package zeichenwerk
 
 // renderInput renders an Input widget's text content with placeholder support.
 // This method handles the display of user input text or placeholder text
