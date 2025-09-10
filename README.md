@@ -89,7 +89,7 @@ Comprehensive visual customization through themes and styles:
 
 ## Documentation
 
-> !WARNING
+> [!WARNING]
 > AI helped me to write large parts of the documentation, so the documentation
 > might contain errors, misunderstandings or outdated information. I changed
 > a lot of things even without updating everything.
