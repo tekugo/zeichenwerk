@@ -1,9 +1,9 @@
-// Package tui provides a comprehensive terminal user interface framework for building
+// Package zeichenwerk provides a comprehensive terminal user interface framework for building
 // interactive console applications with rich widget support, event handling, and theming.
 //
 // # Overview
 //
-// The TUI package offers a complete toolkit for creating professional terminal applications
+// The zeichenwerk package offers a complete toolkit for creating professional terminal applications
 // with modern UI patterns. It provides a widget-based architecture with container layouts,
 // event-driven programming, and extensive customization options through themes and styling.
 //
@@ -86,7 +86,7 @@
 //
 // # Performance Considerations
 //
-// The TUI framework is designed for efficiency in terminal environments:
+// The zeichenwerk framework is designed for efficiency in terminal environments:
 //
 //   - Minimal screen updates through dirty region tracking
 //   - Efficient event handling with consumption model
@@ -104,7 +104,7 @@
 //
 // # Dependencies
 //
-// The TUI package builds on the tcell library for low-level terminal operations:
+// The zeichenwerk package builds on the tcell library for low-level terminal operations:
 //
 //   - github.com/gdamore/tcell/v2: Terminal cell manipulation and event handling
 //

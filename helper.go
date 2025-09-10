@@ -350,7 +350,7 @@ func WidgetDetails(widget Widget) string {
 	if widget.Focusable() {
 		flags = append(flags, "focusable")
 	}
-	if widget.Focussed() {
+	if widget.Focused() {
 		flags = append(flags, "focussed")
 	}
 	if widget.Hovered() {

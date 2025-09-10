@@ -23,13 +23,13 @@ type Widget interface {
 	// Focusable returns the focusability of the widget.
 	Focusable() bool
 
-	// Focussed returns the focus state of the widget.
+	// Focused returns the focus state of the widget.
 	// A focused widget typically receives keyboard input and may have
 	// visual indicators such as highlighted borders or cursor display.
 	//
 	// Returns:
 	//   - bool: true if the widget is currently focused, false otherwise
-	Focussed() bool
+	Focused() bool
 
 	// Handle processes the given tcell.Event and returns true if the event was consumed.
 	// Events include keyboard input, mouse events, and resize events.
@@ -100,13 +100,13 @@ type Widget interface {
 	// This defines the widget's outer boundaries and may trigger a layout update.
 	SetBounds(int, int, int, int)
 
-	// SetFocussed sets the widget's focus state.
+	// SetFocused sets the widget's focus state.
 	// When a widget gains focus, it typically becomes the target for keyboard input
 	// and may update its visual appearance to indicate the focused state.
 	//
 	// Parameters:
 	//   - bool: true to focus the widget, false to unfocus it
-	SetFocussed(bool)
+	SetFocused(bool)
 
 	// SetHint sets the sizing hint of the widget.
 	// The sizing hint is part of the style but is not context-sensitive, when

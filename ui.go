@@ -464,10 +464,10 @@ func (ui *UI) ShowDebug() {
 // the case where the same widget is already focused without unnecessary updates.
 func (ui *UI) Focus(widget Widget) {
 	if ui.focus != nil && ui.focus != widget {
-		ui.focus.SetFocussed(false)
+		ui.focus.SetFocused(false)
 	}
 	if widget != nil {
-		widget.SetFocussed(true)
+		widget.SetFocused(true)
 	}
 	ui.focus = widget
 	ui.Refresh()

@@ -137,13 +137,13 @@ func (w *BaseWidget) Focusable() bool {
 	return w.focusable
 }
 
-// Focussed returns the current focus state of the widget.
+// Focused returns the current focus state of the widget.
 // A focused widget typically receives keyboard input and may display
 // visual indicators such as highlighted borders or cursor.
 //
 // Returns:
 //   - bool: true if the widget is currently focused, false otherwise
-func (w *BaseWidget) Focussed() bool {
+func (w *BaseWidget) Focused() bool {
 	return w.focussed
 }
 
@@ -324,19 +324,19 @@ func (w *BaseWidget) SetFocusable(focusable bool) {
 	w.focusable = focusable
 }
 
-// SetFocussed sets the focus state of the widget.
+// SetFocused sets the focus state of the widget.
 // When a widget gains focus, it typically becomes the target for keyboard input
 // and may update its visual appearance to indicate the focused state.
 //
 // Parameters:
-//   - focussed: true to focus the widget, false to unfocus it
-func (w *BaseWidget) SetFocussed(focussed bool) {
-	if focussed {
+//   - focused: true to focus the widget, false to unfocus it
+func (w *BaseWidget) SetFocused(focused bool) {
+	if focused {
 		w.Emit("focus")
 	} else {
 		w.Emit("blur")
 	}
-	w.focussed = focussed
+	w.focussed = focused
 }
 
 // SetHint sets the sizing hint of the widget.
