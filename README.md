@@ -129,9 +129,9 @@ In no particular order!
 - [ ] Extend the demo to all current widgets with dedicated pages for the
       individual widgets
 - [ ] Implement Scroller widget
-- [ ] Implement Switcher widget
+- [x] Implement Switcher widget
 - [ ] Add auto height and width (0) to grid
-- [ ] Add Tabs widget
+- [x] Add Tabs widget
 - [ ] Add Table Widget
 - [ ] Add proper form handling for large forms with many fields (Form widget or
   builder with helpers)

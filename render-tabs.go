@@ -1,9 +1,29 @@
 package zeichenwerk
 
 func (r *Renderer) renderTabs(tabs *Tabs, x, y, w int) {
-	normal := tabs.Style("")
-	highlight := tabs.Style("highlight")
-	line := tabs.Style("highlight-line")
+	// Determine which styles to use based on focus state
+	var normal, highlight, line *Style
+	
+	if tabs.Focused() {
+		// Use focus-specific styles when tabs widget has focus
+		normal = tabs.Style("focus-line")
+		if normal == nil {
+			normal = tabs.Style("")
+		}
+		highlight = tabs.Style("focus-highlight")
+		if highlight == nil {
+			highlight = tabs.Style("highlight")
+		}
+		line = tabs.Style("focus-highlight-line")
+		if line == nil {
+			line = tabs.Style("highlight-line")
+		}
+	} else {
+		// Use normal styles when tabs widget doesn't have focus
+		normal = tabs.Style("")
+		highlight = tabs.Style("highlight")
+		line = tabs.Style("highlight-line")
+	}
 
 	cx := x
 	r.SetStyle(normal)

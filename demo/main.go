@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"maps"
 	"slices"
 
@@ -50,6 +51,12 @@ func content(builder *Builder) {
 		Cell(1, 0, 1, 1).
 		Switcher("demo").
 		Text("debug-log", []string{}, true, 1000).
+		Add(overview).
+		Add(box).
+		Add(button).
+		Add(flex).
+		Add(label).
+		Add(progress).
 		Add(list).
 		Add(tabs).
 		End(). // Switcher
@@ -63,6 +70,18 @@ func content(builder *Builder) {
 		HandleListEvent(grid, "demos", "activate", func(list *List, event string, index int) bool {
 			ui := FindUI(list)
 			switch demos[index] {
+			case "Overview":
+				Update(ui, "demo", "overview-demo")
+			case "Box":
+				Update(ui, "demo", "box-demo")
+			case "Button":
+				Update(ui, "demo", "button-demo")
+			case "Flex":
+				Update(ui, "demo", "flex-demo")
+			case "Label":
+				Update(ui, "demo", "label-demo")
+			case "Progress Bar":
+				Update(ui, "demo", "progress-demo")
 			case "Debug-Log":
 				Update(ui, "demo", "debug-log")
 			case "Inspector":
@@ -91,6 +110,135 @@ func list(builder *Builder) {
 func tabs(builder *Builder) {
 	builder.Flex("tabs-demo", "vertical", "stretch", 1).Padding(1, 2).
 		Tabs("tabs", "First", "Second", "Third", "Fourth").
+		End()
+}
+
+func overview(builder *Builder) {
+	builder.Flex("overview-demo", "vertical", "stretch", 1).Padding(1, 2).
+		Label("welcome", "Welcome to zeichenwerk!", 0).Padding(0, 0, 1, 0).
+		Label("description", "A comprehensive terminal user interface framework for Go", 0).Padding(0, 0, 1, 0).
+		Separator("sep1", "thin", 0, 1).Padding(0, 0, 1, 0).
+		Label("features-title", "Key Features:", 0).Padding(0, 0, 1, 0).
+		Label("feature1", "• Rich widget set (buttons, inputs, lists, tabs, etc.)", 0).
+		Label("feature2", "• Flexible layout system (flex, grid, box containers)", 0).
+		Label("feature3", "• Event-driven architecture with keyboard and mouse support", 0).
+		Label("feature4", "• Comprehensive theming and styling system", 0).
+		Label("feature5", "• Built-in themes (Tokyo Night, Default)", 0).
+		Label("feature6", "• Focus management and accessibility features", 0).
+		Separator("sep2", "thin", 0, 1).Padding(1, 0, 1, 0).
+		Label("instructions", "Use the list on the left to explore different widget demos.", 0).
+		Label("navigation", "Navigation: Arrow keys, Tab, Enter, Esc", 0).
+		End()
+}
+
+func box(builder *Builder) {
+	builder.Flex("box-demo", "vertical", "stretch", 1).Padding(1).
+		Label("box-title", "Box Widget Demo", 0).Padding(0, 0, 1, 0).
+		Flex("box-examples", "horizontal", "stretch", 2).
+		Box("simple-box", "Simple Box").Padding(1).
+		Label("box-content1", "This is content inside a simple box widget.", 0).
+		End().
+		Box("styled-box", "Styled Box").Padding(1).Border("", "double").
+		Label("box-content2", "This box has a double border style.", 0).
+		End().
+		Box("padded-box", "Padded Box").Padding(2).Border("", "round").
+		Label("box-content3", "This box has extra padding and rounded borders.", 0).
+		End().
+		End().
+		Label("box-info", "Boxes are containers that can hold a single child widget with optional borders and titles.", 0).Padding(1, 0, 0, 0).
+		End()
+}
+
+func button(builder *Builder) {
+	builder.Flex("button-demo", "vertical", "stretch", 1).Padding(1, 2).
+		Label("button-title", "Button Widget Demo", 0).Padding(0, 0, 1, 0).
+		Label("button-info", "Buttons respond to Enter key, Space bar, and mouse clicks.", 0).Padding(0, 0, 1, 0).
+		Separator("button-sep", "thin", 0, 1).Padding(0, 0, 1, 0).
+		Flex("button-row1", "horizontal", "start", 2).
+		Button("btn1", "Primary").
+		Button("btn2", "Secondary").
+		Button("btn3", "Action").
+		End().
+		Flex("button-row2", "horizontal", "start", 2).Padding(1, 0, 0, 0).
+		Button("btn4", "Save").
+		Button("btn5", "Cancel").
+		Button("btn6", "Delete").
+		End().
+		Flex("button-row3", "horizontal", "start", 2).Padding(1, 0, 0, 0).
+		Button("btn7", "Very Long Button Text").
+		Button("btn8", "OK").
+		End().
+		Label("button-status", "Click any button to see it in action!", 0).Padding(1, 0, 0, 0).
+		End()
+
+	// Add button click handlers for interactivity
+	container := builder.Container()
+	for i := 1; i <= 8; i++ {
+		btnId := fmt.Sprintf("btn%d", i)
+		if btn := container.Find(btnId, false); btn != nil {
+			btn.On("click", func(widget Widget, event string, data ...any) bool {
+				if statusLabel := container.Find("button-status", false); statusLabel != nil {
+					if label, ok := statusLabel.(*Label); ok {
+						label.Text = fmt.Sprintf("Button '%s' was clicked!", widget.ID())
+						label.Refresh()
+					}
+				}
+				return true
+			})
+		}
+	}
+}
+
+func flex(builder *Builder) {
+	builder.Flex("flex-demo", "vertical", "stretch", 1).Padding(1).
+		Label("flex-title", "Flex Layout Demo", 0).Padding(0, 0, 1, 0).
+		Label("flex-info", "Flex containers arrange widgets horizontally or vertically with flexible sizing.", 0).Padding(0, 0, 1, 0).
+		Separator("flex-sep1", "thin", 0, 1).Padding(0, 0, 1, 0).
+		Label("horizontal-title", "Horizontal Flex (stretch alignment):", 0).
+		Flex("horizontal-demo", "horizontal", "stretch", 1).Hint(0, 3).Border("", "thin").
+		Label("h1", "Left", 0).Background("", "$blue").Foreground("", "$bg").Padding(1).
+		Label("h2", "Center", 0).Background("", "$green").Foreground("", "$bg").Padding(1).
+		Label("h3", "Right", 0).Background("", "$orange").Foreground("", "$bg").Padding(1).
+		End().
+		Label("vertical-title", "Vertical Flex (start alignment):", 0).Padding(1, 0, 0, 0).
+		Flex("vertical-demo", "vertical", "start", 1).Hint(0, 6).Border("", "thin").
+		Label("v1", "Top", 0).Background("", "$red").Foreground("", "$bg").Padding(0, 1).
+		Label("v2", "Middle", 0).Background("", "$cyan").Foreground("", "$bg").Padding(0, 1).
+		Label("v3", "Bottom", 0).Background("", "$magenta").Foreground("", "$bg").Padding(0, 1).
+		End().
+		End()
+}
+
+func label(builder *Builder) {
+	builder.Flex("label-demo", "vertical", "stretch", 1).Padding(1, 2).
+		Label("label-title", "Label Widget Demo", 0).Padding(0, 0, 1, 0).
+		Label("label-info", "Labels display static text with various styling options.", 0).Padding(0, 0, 1, 0).
+		Separator("label-sep", "thin", 0, 1).Padding(0, 0, 1, 0).
+		Label("default-label", "Default Label", 0).
+		Label("colored-label", "Colored Label", 0).Background("", "$blue").Foreground("", "$bg").Padding(0, 1).
+		Label("padded-label", "Padded Label", 0).Padding(1, 2).Border("", "round").
+		Label("long-label", "This is a very long label that demonstrates how text wrapping and display works in the zeichenwerk framework.", 0).Padding(1, 0, 0, 0).
+		Label("unicode-label", "Unicode Support: ★ ♠ ♣ ♥ ♦ → ← ↑ ↓ ✓ ✗", 0).Padding(1, 0, 0, 0).
+		Label("box-drawing", "Box Drawing: ┌─┬─┐ │ │ │ ├─┼─┤ │ │ │ └─┴─┘", 0).
+		End()
+}
+
+func progress(builder *Builder) {
+	builder.Flex("progress-demo", "vertical", "stretch", 1).Padding(1, 2).
+		Label("progress-title", "Progress Bar Demo", 0).Padding(0, 0, 1, 0).
+		Label("progress-info", "Progress bars show completion status with customizable ranges.", 0).Padding(0, 0, 1, 0).
+		Separator("progress-sep", "thin", 0, 1).Padding(0, 0, 1, 0).
+		Label("progress1-label", "25% Complete:", 0).
+		ProgressBar("progress1", 25, 0, 100).Hint(30, 1).
+		Label("progress2-label", "50% Complete:", 0).Padding(1, 0, 0, 0).
+		ProgressBar("progress2", 50, 0, 100).Hint(30, 1).
+		Label("progress3-label", "75% Complete:", 0).Padding(1, 0, 0, 0).
+		ProgressBar("progress3", 75, 0, 100).Hint(30, 1).
+		Label("progress4-label", "100% Complete:", 0).Padding(1, 0, 0, 0).
+		ProgressBar("progress4", 100, 0, 100).Hint(30, 1).
+		Label("progress5-label", "Custom Range (30/50):", 0).Padding(1, 0, 0, 0).
+		ProgressBar("progress5", 30, 0, 50).Hint(30, 1).
+		Label("progress-note", "Progress bars can have custom min/max values and styling.", 0).Padding(1, 0, 0, 0).
 		End()
 }
 

@@ -284,7 +284,7 @@ func (b *Builder) Switcher(id string) *Builder {
 
 func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 	t := NewTabs(id)
-	b.theme.SetStyles(t, "tabs", "highlight", "highlight-line")
+	b.theme.SetStyles(t, "tabs", "highlight", "highlight-line", "focus-line", "focus-highlight", "focus-highlight-line")
 	for _, tab := range tabs {
 		t.Add(tab)
 	}

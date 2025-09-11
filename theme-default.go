@@ -15,6 +15,11 @@ func DefaultTheme() Theme {
 	theme.Set("button:hover", NewStyle("white", "dark-red").SetBorder("lines").SetPadding(0, 2, 0, 2))
 	theme.Set("flex#header", NewStyle("white", "#774433"))
 	theme.Set("flex#footer", NewStyle("white", "#334477"))
+	theme.Set("tabs:highlight", NewStyle("black", "yellow"))
+	theme.Set("tabs:highlight-line", NewStyle("yellow", ""))
+	theme.Set("tabs:focus-line", NewStyle("blue", ""))
+	theme.Set("tabs:focus-highlight", NewStyle("white", "blue"))
+	theme.Set("tabs:focus-highlight-line", NewStyle("blue", ""))
 
 	return &theme
 }
