@@ -128,6 +128,7 @@ func overview(builder *Builder) {
 		Separator("sep2", "thin", 0, 1).Padding(1, 0, 1, 0).
 		Label("instructions", "Use the list on the left to explore different widget demos.", 0).
 		Label("navigation", "Navigation: Arrow keys, Tab, Enter, Esc", 0).
+		Spacer().
 		End()
 }
 

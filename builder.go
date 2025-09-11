@@ -249,7 +249,7 @@ func (b *Builder) Scroller(id, title string) *Builder {
 //   - id: unique identifier for the separator widget
 //   - border: border style
 //   - width: separator width, should be 1 for vertical separators
-//   - height: separator height, should be 1 for horizontal separAators
+//   - height: separator height, should be 1 for horizontal separators
 //
 // The separator is just a visual element with no interaction possibility.
 // Returns the builder for method chaining.
