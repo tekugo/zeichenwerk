@@ -1,5 +1,9 @@
 package zeichenwerk
 
+import (
+	"github.com/gdamore/tcell/v2"
+)
+
 // Text represents a multi-line text display widget with scrolling and automatic content management.
 // It provides a scrollable text area that can display multiple lines of text with support for
 // automatic scrolling, content limiting, and both manual and automatic scroll positioning.
@@ -30,6 +34,7 @@ package zeichenwerk
 type Text struct {
 	BaseWidget
 	content []string // The lines of text content to display
+	longest int      // Length of the longest line for vertical scrolling
 	follow  bool     // Auto-follow mode: automatically scroll to show newest content
 	max     int      // Maximum number of lines to retain (0 = unlimited)
 	offsetX int      // Horizontal scroll offset for wide content
@@ -160,11 +165,23 @@ func (t *Text) Clear() {
 //   - After manual scroll position changes
 //   - When content is modified externally
 func (t *Text) Refresh() {
-	if t.follow {
+	// Determine longest line in regard to runes, not bytes
+	t.longest = 0
+	for _, line := range t.content {
+		length := len([]rune(line))
+		if length > t.longest {
+			t.longest = length
+		}
+	}
+
+	// Check, if we follow and need to update the offsets
+	if t.follow && !t.focused {
 		t.offsetX = 0
 		_, h := t.Size()
 		t.offsetY = max(len(t.content)-h, 0)
 	}
+
+	// Trigger parent refresh
 	if t.parent != nil {
 		t.parent.Refresh()
 	}
@@ -207,4 +224,126 @@ func (t *Text) Refresh() {
 func (t *Text) Set(content []string) {
 	t.content = content
 	t.Refresh()
+}
+
+// Handle processes keyboard and mouse events for the text widget.
+// This method provides keyboard navigation support for scrolling through
+// text content using arrow keys, page navigation, and home/end keys.
+//
+// Supported keyboard navigation:
+//   - Arrow Up/Down: Scroll vertically by one line
+//   - Arrow Left/Right: Scroll horizontally by one character
+//   - Page Up/Down: Scroll vertically by one page (widget height)
+//   - Home: Jump to the beginning of content (top-left)
+//   - End: Jump to the end of content (bottom, reset horizontal scroll)
+//
+// The scrolling behavior respects content boundaries and will not scroll
+// beyond the available content or into negative positions.
+//
+// Parameters:
+//   - event: The tcell.Event to process (keyboard or mouse)
+//
+// Returns:
+//   - bool: true if the event was handled, false otherwise
+func (t *Text) Handle(event tcell.Event) bool {
+	switch event := event.(type) {
+	case *tcell.EventKey:
+		return t.handleKeyEvent(event)
+	}
+
+	return false
+}
+
+// handleKeyEvent processes keyboard input for text navigation.
+// This method implements scrolling and navigation controls for the text widget,
+// allowing users to move through content using standard keyboard shortcuts.
+//
+// Navigation controls:
+//   - Vertical scrolling: Up/Down arrows and Page Up/Down
+//   - Horizontal scrolling: Left/Right arrows
+//   - Quick navigation: Home (top-left) and End (bottom)
+//
+// Scroll boundaries:
+//   - Vertical: Limited by content length and widget height
+//   - Horizontal: Limited to non-negative values (no left overflow)
+//   - Content shorter than widget: No scrolling allowed
+//
+// Parameters:
+//   - event: The keyboard event to process
+//
+// Returns:
+//   - bool: true if the key was handled, false otherwise
+func (t *Text) handleKeyEvent(event *tcell.EventKey) bool {
+	w, h := t.Size()
+	maxOffsetY := max(len(t.content)-h, 0)
+
+	switch event.Key() {
+	case tcell.KeyUp:
+		// Scroll up by one line
+		if t.offsetY > 0 {
+			t.offsetY--
+			t.Refresh()
+			return true
+		}
+
+	case tcell.KeyDown:
+		// Scroll down by one line
+		if t.offsetY < maxOffsetY {
+			t.offsetY++
+			t.Refresh()
+			return true
+		}
+
+	case tcell.KeyLeft:
+		// Scroll left by one character
+		if t.offsetX > 0 {
+			t.offsetX--
+			t.Refresh()
+			return true
+		}
+
+	case tcell.KeyRight:
+		// Scroll right by one character
+		if w+t.offsetX < t.longest {
+			t.offsetX++
+			t.Refresh()
+			return true
+		}
+
+	case tcell.KeyPgUp:
+		// Scroll up by one page (widget height)
+		if t.offsetY > 0 {
+			t.offsetY = max(t.offsetY-h, 0)
+			t.Refresh()
+			return true
+		}
+
+	case tcell.KeyPgDn:
+		// Scroll down by one page (widget height)
+		if t.offsetY < maxOffsetY {
+			t.offsetY = min(t.offsetY+h, maxOffsetY)
+			t.Refresh()
+			return true
+		}
+
+	case tcell.KeyHome:
+		// Jump to top-left (beginning of content)
+		if t.offsetX > 0 || t.offsetY > 0 {
+			t.offsetX = 0
+			t.offsetY = 0
+			t.Refresh()
+			return true
+		}
+
+	case tcell.KeyEnd:
+		// Jump to bottom of content, reset horizontal scroll
+		if t.offsetY < maxOffsetY || t.offsetX > 0 {
+			t.offsetX = 0
+			t.offsetY = maxOffsetY
+			t.Refresh()
+			return true
+		}
+	}
+
+	return false
 }

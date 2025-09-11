@@ -46,7 +46,7 @@ func (s *Scroller) Add(widget Widget) {
 //
 // Note: The returned slice should not be modified directly. Use the Add method
 // to set or change the child widget.
-func (s *Scroller) Children() []Widget {
+func (s *Scroller) Children(_ bool) []Widget {
 	if s.child == nil {
 		return []Widget{}
 	}
@@ -60,6 +60,7 @@ func (s *Scroller) Children() []Widget {
 //
 // Parameters:
 //   - id: The unique identifier of the widget to find
+//   - visible: Only look for visible children
 //
 // Returns:
 //   - Widget: The widget with the matching ID, or nil if not found
@@ -68,8 +69,8 @@ func (s *Scroller) Children() []Widget {
 //  1. Check if this box's ID matches
 //  2. Recursively search within the child widget (if it exists)
 //  3. If child is a container, search its descendants
-func (s *Scroller) Find(id string) Widget {
-	return Find(s, id)
+func (s *Scroller) Find(id string, visible bool) Widget {
+	return Find(s, id, visible)
 }
 
 // FindAt searches for the widget located at the specified screen coordinates.

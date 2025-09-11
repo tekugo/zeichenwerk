@@ -111,7 +111,7 @@ func NewGrid(id string, rows, columns int, lines bool) *Grid {
 //
 // Returns:
 //   - []Widget: A slice containing all child widgets in the grid
-func (g *Grid) Children() []Widget {
+func (g *Grid) Children(_ bool) []Widget {
 	result := make([]Widget, len(g.cells))
 	for i, cell := range g.cells {
 		result[i] = cell.content
@@ -162,11 +162,12 @@ func (g *Grid) Cursor() (int, int) {
 //
 // Parameters:
 //   - id: The unique identifier of the widget to find
+//   - visible: Only look for visible children
 //
 // Returns:
 //   - Widget: The widget with the matching ID, or nil if not found
-func (g *Grid) Find(id string) Widget {
-	return Find(g, id)
+func (g *Grid) Find(id string, visible bool) Widget {
+	return Find(g, id, visible)
 }
 
 // FindAt searches for the widget located at the specified coordinates within
@@ -207,6 +208,14 @@ func (g *Grid) Info() string {
 	x, y, w, h := g.Bounds()
 	return fmt.Sprintf("@%d.%d %d:%d grid %dx%d (%d cells)",
 		x, y, w, h, len(g.rows), len(g.columns), len(g.cells))
+}
+
+func (g *Grid) Columns(columns ...int) {
+	if len(columns) == len(g.columns) {
+		g.columns = columns
+	} else {
+		g.Log("Cannot change grid size at runtime")
+	}
 }
 
 func (g *Grid) Rows(rows ...int) {

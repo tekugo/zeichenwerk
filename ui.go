@@ -192,9 +192,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 			close(ui.quit)
 		case tcell.KeyCtrlD:
 			ui.Log("Opening inspector")
-			inspector := NewInspector(ui)
-			pw, ph := inspector.ui.Hint()
-			ui.Popup(-1, -1, pw, ph, inspector.ui)
+			ui.Popup(-1, -1, 0, 0, NewInspector(ui).UI())
 			ui.Refresh()
 		case tcell.KeyRune:
 			switch event.Rune() {
@@ -279,7 +277,7 @@ func (ui *UI) Refresh() {
 // Children returns the child widgets of the App.
 // Since UI acts as the root container, it returns a slice containing
 // only the root container widget.
-func (ui *UI) Children() []Widget {
+func (ui *UI) Children(_ bool) []Widget {
 	result := make([]Widget, 0, len(ui.layers))
 	for _, layer := range ui.layers {
 		result = append(result, layer)
@@ -294,16 +292,17 @@ func (ui *UI) Children() []Widget {
 //
 // Parameters:
 //   - id: The unique identifier of the widget to find
+//   - visible: Only look for visible children
 //
 // Returns:
 //   - Widget: The widget with the matching ID, or nil if not found
-func (ui *UI) Find(id string) Widget {
+func (ui *UI) Find(id string, visible bool) Widget {
 	var widget Widget
 	for _, layer := range ui.layers {
 		if layer.ID() == id {
 			return layer
 		} else {
-			widget = layer.Find(id)
+			widget = layer.Find(id, visible)
 			if widget != nil {
 				return widget
 			}
@@ -502,7 +501,7 @@ func (ui *UI) Focus(widget Widget) {
 func (ui *UI) SetFocus(which string) {
 	var first, previous, next, last Widget
 	found := false
-	Traverse(ui.layers[len(ui.layers)-1], func(widget Widget) {
+	Traverse(ui.layers[len(ui.layers)-1], true, func(widget Widget) {
 		if !widget.Focusable() {
 			return
 		}
@@ -642,6 +641,17 @@ func (ui *UI) Log(message string, params ...any) {
 //	// Bottom-right positioned popup
 //	ui.Popup(-2, -3, 30, 8, contextMenu)
 func (ui *UI) Popup(x, y, w, h int, popup Container) {
+	// Auto sizing
+	if w == 0 || h == 0 {
+		pw, ph := popup.Hint()
+		if w == 0 {
+			w = pw
+		}
+		if h == 0 {
+			h = ph
+		}
+	}
+
 	// if x is -1, center the popup horizontally
 	if x == -1 {
 		x = (ui.width - w) / 2
@@ -727,7 +737,7 @@ func (ui *UI) Close() {
 //		return true
 //	})
 func (ui *UI) FindOn(id, event string, handler func(Widget, string, ...any) bool) {
-	widget := ui.Find(id)
+	widget := ui.Find(id, false)
 	if widget != nil {
 		widget.On(event, handler)
 	}
@@ -755,6 +765,9 @@ func (ui *UI) FindOn(id, event string, handler func(Widget, string, ...any) bool
 //  3. Explicit redraw requests
 //  4. User input events (default case with polling)
 func (ui *UI) Run() {
+	// Set initial focus
+	ui.SetFocus("first")
+
 	// Initial draw
 	ui.Draw()
 
@@ -789,7 +802,7 @@ func (ui *UI) Run() {
 // outputs detailed information about each widget including its type, ID, and state.
 // The level parameter controls indentation for nested containers.
 func print(level int, container Container) {
-	for i, widget := range container.Children() {
+	for i, widget := range container.Children(false) {
 		container.Log("%s %3d %T %s %s\n", strings.Repeat(" ", level), i, widget, widget.ID(), widget.Info())
 		c, ok := widget.(Container)
 		if ok {

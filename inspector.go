@@ -51,9 +51,9 @@ func (i *Inspector) BuildUI() {
 		Class("").
 		Container()
 
-	i.ui.Find("children").On("select", i.SelectWidget)
-	i.ui.Find("children").On("activate", i.Activate)
-	i.ui.Find("styles").On("select", i.SelectStyle)
+	HandleListEvent(i.ui, "children", "select", i.SelectWidget)
+	HandleListEvent(i.ui, "children", "activate", i.Activate)
+	HandleListEvent(i.ui, "styles", "select", i.SelectStyle)
 	HandleKeyEvent(i.ui, "children", func(widget Widget, event *tcell.EventKey) bool {
 		switch event.Key() {
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
@@ -74,15 +74,9 @@ func (i *Inspector) BuildUI() {
 	i.Refresh()
 }
 
-func (i *Inspector) SelectWidget(widget Widget, event string, data ...any) bool {
-	i.ui.Log("Select %s %T", event, widget)
-	list, ok := widget.(*List)
-	if !ok {
-		return false
-	}
-
+func (i *Inspector) SelectWidget(list *List, event string, index int) bool {
 	id := list.Items[list.Index]
-	i.current = i.container.Find(id)
+	i.current = i.container.Find(id, false)
 	if i.current != nil {
 		styles := i.current.Styles()
 		for i, str := range styles {
@@ -100,8 +94,7 @@ func (i *Inspector) SelectWidget(widget Widget, event string, data ...any) bool 
 	return true
 }
 
-func (i *Inspector) Activate(widget Widget, event string, data ...any) bool {
-	widget.Log("Activate %s, %s", i.container.ID(), i.current.ID())
+func (i *Inspector) Activate(_ *List, _ string, _ int) bool {
 	if i.current != nil {
 		container, ok := i.current.(Container)
 		if ok {
@@ -113,21 +106,14 @@ func (i *Inspector) Activate(widget Widget, event string, data ...any) bool {
 	return true
 }
 
-func (i *Inspector) SelectStyle(widget Widget, event string, data ...any) bool {
-	widget.Log("Selected style")
-	list, ok := widget.(*List)
-	if !ok {
-		widget.Log("Error converting widget to List, is %T", widget)
-		return false
-	}
-
+func (i *Inspector) SelectStyle(list *List, _ string, _ int) bool {
 	name := list.Items[list.Index]
 	style := i.current.Style(name)
-	widget.Log("Style name if %s is %s", i.current.ID(), name)
+	list.Log("Style name if %s is %s", i.current.ID(), name)
 	if style != nil {
 		Update(i.ui, "style-info", strings.Split(style.Info(), "\n"))
 	} else {
-		widget.Log("Style %s not found in widget %s", name, widget.ID())
+		list.Log("Style %s not found in widget %s", name, list.ID())
 	}
 
 	i.ui.Refresh()
@@ -140,7 +126,7 @@ func (i *Inspector) Refresh() {
 		return
 	}
 	i.ui.Log("Refresh inspector %s", i.container.ID())
-	children := i.container.Children()
+	children := i.container.Children(false)
 	items := make([]string, len(children))
 	for j, child := range children {
 		if i.current == nil {
@@ -159,4 +145,12 @@ func (i *Inspector) Refresh() {
 	Update(i.ui, "breadcrumbs", path)
 	i.ui.Log("Breadcrumbs %s", path)
 	i.ui.Refresh()
+}
+
+func (i *Inspector) Hint() (int, int) {
+	return i.ui.Hint()
+}
+
+func (i *Inspector) UI() Container {
+	return i.ui
 }

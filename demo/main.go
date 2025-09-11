@@ -8,80 +8,27 @@ import (
 )
 
 func main() {
-	// Create a simple list
-	countries := slices.Collect(maps.Values(Countries))
-
 	ui := NewBuilder().
 		Flex("main", "vertical", "stretch", 0).
 		Add(header).
-		Grid("grid", 3, 3, false).Hint(0, -1).
-		Cell(0, 0, 1, 3).Text("debug-log", []string{}, true, 1000).
-		Cell(1, 0, 2, 1).
-		Flex("form", "vertical", "start", 1).Border("", "thin").Margin(1).Padding(1).
-		Flex("name-flex", "horizontal", "center", 1).
-		Label("name-label", "Name", 20).
-		Input("name-input", "", 20).Hint(20, 1).
-		End().
-		Flex("date-flex", "horizontal", "center", 1).
-		Label("date-label", "Date of Birth", 20).
-		Input("input2", "", 20).Hint(20, 1).
-		End().
-		ProgressBar("bar1", 0, 0, 100).Hint(30, 1).
-		ProgressBar("bar2", 50, 0, 100).Hint(30, 1).
-		ProgressBar("bar3", 100, 0, 100).Hint(30, 1).
-		End().
-		Cell(1, 1, 1, 2).List("countries", countries).
-		Cell(2, 1, 1, 1).List("names", names).
-		Cell(2, 2, 1, 1).Box("button-box", "Buttons").Border("", "thin").
-		Flex("buttons", "vertical", "center", 1).
-		Padding(1, 2).
-		Button("b1", " Button 1 ").Hint(20, 1).
-		Button("b2", " Button 2 ").Hint(20, 1).
-		End().
-		End().
-		End().
+		Add(content).
 		Add(footer).
 		Class("").
 		Build()
-
-	// Work around to adjust grid sizing from fractional to auto or fixed for
-	// frist row, have to find a better solution
-	grid := ui.Find("grid")
-	if grid, ok := grid.(*Grid); ok {
-		form := ui.Find("form")
-		_, ph := form.Hint()
-		ph += form.Style("").Vertical()
-		grid.Log("Preferred height of form is %d", ph)
-		grid.Rows(ph, -1, -1)
-		grid.Layout()
-	}
-
-	popup := popup()
-	popup.SetParent(ui)
-
-	pw, ph := popup.Hint()
-	ui.Popup(-1, -1, pw, ph, popup)
-
-	HandleListEvent(ui, "countries", "select", func(list *List, event string, index int) bool {
-		list.Log("List event %s", event)
-		return false
-	})
-
 	ui.Run()
 }
 
-func header(builder *Builder) *Builder {
+func header(builder *Builder) {
 	builder.Class("header").
-		Flex("header", "horizontal", "start", 0).Hint(0, 1).
-		Label("title", "My Application", 20).Hint(20, 1).
-		Label("", "Hello", 0).Hint(-1, 1).
+		Flex("header", "horizontal", "start", 0).Padding(0, 1).Hint(0, 1).
+		Label("title", "zeichenwerk", 20).Hint(20, 1).
+		Label("", "Demo Application", 0).Hint(-1, 1).
 		Label("time", "12:00", 0).Hint(6, 1).
 		Class("").
 		End()
-	return builder
 }
 
-func footer(builder *Builder) *Builder {
+func footer(builder *Builder) {
 	builder.Class("footer").
 		Flex("footer", "horizontal", "start", 0).Padding(0, 1).Hint(0, 1).
 		Class("shortcut").Label("1", "Esc", 0).
@@ -93,8 +40,58 @@ func footer(builder *Builder) *Builder {
 		Class("").
 		Spacer().
 		End()
+}
 
-	return builder
+func content(builder *Builder) {
+	demos := []string{"Overview", "Box", "Button", "Flex", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Tabs", "Debug-Log"}
+	builder.Grid("grid", 1, 2, true).Hint(0, -1).
+		Cell(0, 0, 1, 1).
+		List("demos", demos).
+		Cell(1, 0, 1, 1).
+		Switcher("demo").
+		Text("debug-log", []string{}, true, 1000).
+		Add(list).
+		Add(tabs).
+		End(). // Switcher
+		End()  // Grid
+
+	// TODO: Add functionality to set grid sizes
+	grid := builder.Container().Find("grid", false)
+	if grid, ok := grid.(*Grid); ok {
+		grid.Columns(30, -1)
+
+		HandleListEvent(grid, "demos", "activate", func(list *List, event string, index int) bool {
+			ui := FindUI(list)
+			switch demos[index] {
+			case "Debug-Log":
+				Update(ui, "demo", "debug-log")
+			case "Inspector":
+				ui.Popup(-1, -1, 0, 0, NewInspector(ui).UI())
+			case "List":
+				Update(ui, "demo", "list-demo")
+			case "Pop-up":
+				ui.Popup(-1, -1, 0, 0, popup())
+			case "Tabs":
+				Update(ui, "demo", "tabs-demo")
+			}
+			return true
+		})
+	}
+}
+
+func list(builder *Builder) {
+	countries := slices.Collect(maps.Keys(Countries))
+
+	builder.Flex("list-demo", "horizontal", "stretch", 1).Padding(1).
+		List("countries", countries).Border("", "round").Border("focus", "double").Hint(-1, 0).
+		List("names", names).Border("", "round").Border("focus", "double").Hint(-1, 0).
+		End()
+}
+
+func tabs(builder *Builder) {
+	builder.Flex("tabs-demo", "vertical", "stretch", 1).Padding(1, 2).
+		Tabs("tabs", "First", "Second", "Third", "Fourth").
+		End()
 }
 
 func popup() Container {

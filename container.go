@@ -21,9 +21,12 @@ type Container interface {
 	// and should not be modified directly. The order of widgets in the slice may be
 	// significant for layout and rendering purposes depending on the container implementation.
 	//
+	// Parameeters:
+	//   - bool: Flag if only visible children should be returned
+	//
 	// Returns:
 	//   - []Widget: A slice containing all direct child widgets
-	Children() []Widget
+	Children(bool) []Widget
 
 	// Find searches for a widget with the specified ID within this container and
 	// all of its descendant widgets. The search is typically performed recursively,
@@ -37,10 +40,11 @@ type Container interface {
 	//
 	// Parameters:
 	//   - string: The unique identifier of the widget to find
+	//   - bool: Only look for visible children
 	//
 	// Returns:
 	//   - Widget: The widget with the matching ID, or nil if not found
-	Find(string) Widget
+	Find(string, bool) Widget
 
 	// FindAt searches for the widget located at the specified coordinates within
 	// this container and its child widgets. This method is used for mouse interaction
@@ -90,20 +94,21 @@ type Container interface {
 // Parameters:
 //   - container: The container to search within
 //   - id: The unique identifier of the widget to find
+//   - visible: Find only visible children
 //
 // Returns:
 //   - Widget: The widget with the matching ID, or nil if not found
-func Find(container Container, id string) Widget {
+func Find(container Container, id string, visible bool) Widget {
 	if container.ID() == id {
 		return container
 	}
-	for _, child := range container.Children() {
+	for _, child := range container.Children(visible) {
 		if child.ID() == id {
 			return child
 		}
 		inner, ok := child.(Container)
 		if ok {
-			widget := inner.Find(id)
+			widget := inner.Find(id, visible)
 			if widget != nil {
 				return widget
 			}
@@ -142,7 +147,7 @@ func FindAt(container Container, x, y int) Widget {
 		return nil
 	}
 
-	for _, child := range container.Children() {
+	for _, child := range container.Children(true) {
 		cx, cy, cw, ch = child.Bounds()
 		if x >= cx && y >= cy && x < cx+cw && y < cy+ch {
 			inner, ok := child.(Container)
@@ -176,7 +181,7 @@ func FindAt(container Container, x, y int) Widget {
 // Parameters:
 //   - container: The container whose child containers should be laid out
 func Layout(container Container) {
-	for _, child := range container.Children() {
+	for _, child := range container.Children(false) {
 		if inner, ok := child.(Container); ok {
 			inner.Layout()
 		}
@@ -202,6 +207,7 @@ func Layout(container Container) {
 //
 // Parameters:
 //   - container: The container to traverse
+//   - visible: Traverse only the visible children
 //   - fn: The function to apply to each widget in the hierarchy
 //
 // Example usage:
@@ -218,11 +224,11 @@ func Layout(container Container) {
 //	        button.SetEnabled(false)
 //	    }
 //	})
-func Traverse(container Container, fn func(Widget)) {
-	for _, child := range container.Children() {
+func Traverse(container Container, visible bool, fn func(Widget)) {
+	for _, child := range container.Children(visible) {
 		fn(child)
 		if inner, ok := child.(Container); ok {
-			Traverse(inner, fn)
+			Traverse(inner, visible, fn)
 		}
 	}
 }

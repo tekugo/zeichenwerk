@@ -61,7 +61,7 @@ func (r *Renderer) renderList(list *List, x, y, w, h int) {
 		if slices.Contains(list.Disabled, i) {
 			r.SetStyle(list.Style("disabled"))
 		} else if current == list.Index {
-			if list.focussed {
+			if list.focused {
 				r.SetStyle(list.Style("highlight"))
 			} else {
 				r.SetStyle(list.Style("highlight-blurred"))

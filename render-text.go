@@ -30,13 +30,35 @@ package zeichenwerk
 // This enables Text widgets to display large documents, logs, or any
 // multi-line content with smooth scrolling in both directions.
 func (r *Renderer) renderText(text *Text, x, y, w, h int) {
+	// Check, if we need to render a vertical scroll bar
+	iw := w
+	if len(text.content) > h {
+		iw--
+	}
+
+	// Check, if we need to render a horizontal scroll bar
+	ih := h
+	if text.longest > iw {
+		ih--
+	}
+
+	if iw < w {
+		r.renderScrollbarV(x+w-1, y, ih, text.offsetY, len(text.content))
+	}
+
+	if ih < h {
+		r.renderScrollbarH(x, y+h-1, iw, text.offsetX, text.longest)
+	}
+
+	// Render visible text content
 	for i := range len(text.content) - text.offsetY {
-		if i >= h {
+		if i >= ih {
 			break
 		}
+		// TODO - use runes, not bytes
 		line := text.content[text.offsetY+i]
 		if text.offsetX < len(line) {
-			r.text(x, y+i, line[text.offsetX:], w)
+			r.text(x, y+i, line[text.offsetX:], iw)
 		}
 	}
 }

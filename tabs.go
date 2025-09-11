@@ -10,6 +10,7 @@ func NewTabs(id string) *Tabs {
 	return &Tabs{
 		BaseWidget: BaseWidget{id: id, focusable: true},
 		Tabs:       make([]string, 0),
+		Index:      0,
 	}
 }
 

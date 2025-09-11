@@ -64,7 +64,7 @@ func (b *Box) Add(widget Widget) {
 //
 // Note: The returned slice should not be modified directly. Use the Add method
 // to set or change the child widget.
-func (b *Box) Children() []Widget {
+func (b *Box) Children(_ bool) []Widget {
 	if b.child == nil {
 		return []Widget{}
 	}
@@ -78,6 +78,7 @@ func (b *Box) Children() []Widget {
 //
 // Parameters:
 //   - id: The unique identifier of the widget to find
+//   - visible: Only look for visible children
 //
 // Returns:
 //   - Widget: The widget with the matching ID, or nil if not found
@@ -86,14 +87,8 @@ func (b *Box) Children() []Widget {
 //  1. Check if this box's ID matches
 //  2. Recursively search within the child widget (if it exists)
 //  3. If child is a container, search its descendants
-func (b *Box) Find(id string) Widget {
-	if b.id == id {
-		return b
-	} else if b.child.ID() == id {
-		return b.child
-	} else {
-		return nil
-	}
+func (b *Box) Find(id string, visible bool) Widget {
+	return Find(b, id, visible)
 }
 
 // FindAt searches for the widget located at the specified screen coordinates.

@@ -38,6 +38,9 @@ func (b *Builder) add(w Widget) {
 		case *Grid:
 			top.Add(b.x, b.y, b.w, b.h, w)
 			w.SetParent(top)
+		case *Switcher:
+			top.Set(w.ID(), w)
+			w.SetParent(top)
 		}
 	}
 	b.current = w
@@ -67,8 +70,9 @@ func (b *Builder) selector(t, id string) string {
 // Using Add you can move building of parts of the UI into your own methods
 // and still keep use the fluent API.
 // Returns the builder for method chaining.
-func (b *Builder) Add(fn func(*Builder) *Builder) *Builder {
-	return fn(b)
+func (b *Builder) Add(fn func(*Builder)) *Builder {
+	fn(b)
+	return b
 }
 
 // Build finalizes the UI construction and returns a complete UI instance.
@@ -77,7 +81,7 @@ func (b *Builder) Add(fn func(*Builder) *Builder) *Builder {
 // Returns the constructed UI ready for rendering and interaction.
 func (b *Builder) Build() *UI {
 	ui, _ := NewUI(b.theme, b.stack.Peek(), true)
-	logger := ui.Find("debug-log")
+	logger := ui.Find("debug-log", false)
 	if logger != nil {
 		if text, ok := logger.(*Text); ok {
 			ui.Logger = text
@@ -267,6 +271,14 @@ func (b *Builder) Spacer() *Builder {
 	b.theme.SetStyles(spacer, "spacer")
 	spacer.SetHint(-1, -1)
 	b.add(spacer)
+	return b
+}
+
+func (b *Builder) Switcher(id string) *Builder {
+	switcher := NewSwitcher(id)
+	b.theme.SetStyles(switcher, b.selector("switcher", id))
+	b.add(switcher)
+	b.stack.Push(switcher)
 	return b
 }
 

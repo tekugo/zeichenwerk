@@ -223,7 +223,7 @@ func (b *Button) IsEnabled() bool {
 // Returns:
 //   - string: The current button state identifier for styling
 func (b *Button) State() string {
-	if b.focussed {
+	if b.focused {
 		return "focus"
 	} else if b.hovered {
 		return "hover"

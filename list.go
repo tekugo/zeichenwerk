@@ -190,7 +190,7 @@ func (l *List) Handle(event tcell.Event) bool {
 			l.PageDown()
 			return true
 		case tcell.KeyEnter:
-			l.Emit("activate")
+			l.Emit("activate", l.Index)
 			return true
 		case tcell.KeyRune:
 			// Quick search by first letter

@@ -18,7 +18,7 @@ type BaseWidget struct {
 	parent              Container         // reference to the parent container
 	x, y, width, height int               // screen area of the widget (outer bounds)
 	focusable           bool              // whether the widget can receive keyboard focus
-	focussed            bool              // focus state for keyboard input
+	focused             bool              // focus state for keyboard input
 	hovered             bool              // hover state for mouse interaction
 	styles              map[string]*Style // visual styling information
 	handlers            map[string]func(Widget, string, ...any) bool
@@ -144,7 +144,7 @@ func (w *BaseWidget) Focusable() bool {
 // Returns:
 //   - bool: true if the widget is currently focused, false otherwise
 func (w *BaseWidget) Focused() bool {
-	return w.focussed
+	return w.focused
 }
 
 // Handle processes the given tcell.Event and returns whether it was consumed.
@@ -230,7 +230,7 @@ func (w *BaseWidget) Info() string {
 	if w.focusable {
 		flags = append(flags, "focusable")
 	}
-	if w.focussed {
+	if w.focused {
 		flags = append(flags, "focussed")
 	}
 	if w.hovered {
@@ -336,7 +336,7 @@ func (w *BaseWidget) SetFocused(focused bool) {
 	} else {
 		w.Emit("blur")
 	}
-	w.focussed = focused
+	w.focused = focused
 }
 
 // SetHint sets the sizing hint of the widget.
@@ -476,7 +476,7 @@ func (w *BaseWidget) Size() (int, int) {
 // Returns:
 //   - string: The current widget state identifier for styling
 func (w *BaseWidget) State() string {
-	if w.focussed {
+	if w.focused {
 		return "focus"
 	} else {
 		return ""

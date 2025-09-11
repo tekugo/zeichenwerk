@@ -7,6 +7,17 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+func FindUI(widget Widget) *UI {
+	current := widget
+	for current != nil {
+		if ui, ok := current.(*UI); ok {
+			return ui
+		}
+		current = current.Parent()
+	}
+	return nil
+}
+
 // HandleInputEvent registers an event handler for Input widget events within a container.
 // This function simplifies the process of handling input-specific events by automatically
 // finding the widget, performing type assertions, and validating event data.
@@ -44,7 +55,7 @@ import (
 //		return true
 //	})
 func HandleInputEvent(container Container, id string, event string, fn func(*Input, string, string) bool) {
-	widget := container.Find(id)
+	widget := container.Find(id, false)
 	if widget == nil {
 		container.Log("Widget %s not found", id)
 		return
@@ -106,7 +117,7 @@ func HandleInputEvent(container Container, id string, event string, fn func(*Inp
 //		return false // Let other handlers process the key
 //	})
 func HandleKeyEvent(container Container, id string, fn func(Widget, *tcell.EventKey) bool) {
-	widget := container.Find(id)
+	widget := container.Find(id, false)
 	if widget == nil {
 		container.Log("Widget %s not found", id)
 		return
@@ -166,7 +177,7 @@ func HandleKeyEvent(container Container, id string, fn func(Widget, *tcell.Event
 //		return true
 //	})
 func HandleListEvent(container Container, id, event string, fn func(*List, string, int) bool) {
-	widget := container.Find(id)
+	widget := container.Find(id, false)
 	if widget == nil {
 		container.Log("Widget %s not found", id)
 		return
@@ -232,7 +243,7 @@ func HandleListEvent(container Container, id, event string, fn func(*List, strin
 // Note: If the widget is not found or the value type doesn't match the widget's
 // expected type, the update operation will be silently ignored.
 func Update(container Container, id string, value any) {
-	widget := container.Find(id)
+	widget := container.Find(id, false)
 	switch widget := widget.(type) {
 	case *Label:
 		widget.Text = fmt.Sprintf("%v", value)
@@ -249,6 +260,11 @@ func Update(container Container, id string, value any) {
 		v, ok := value.(int)
 		if ok {
 			widget.Value = v
+		}
+	case *Switcher:
+		pane, ok := value.(string)
+		if ok {
+			widget.Select(pane)
 		}
 	case *Text:
 		t, ok := value.([]string)

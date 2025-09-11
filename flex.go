@@ -75,7 +75,7 @@ func (f *Flex) Add(widget Widget) {
 //
 // Returns:
 //   - []Widget: A slice containing all child widgets
-func (f *Flex) Children() []Widget {
+func (f *Flex) Children(_ bool) []Widget {
 	return f.children
 }
 
@@ -84,11 +84,12 @@ func (f *Flex) Children() []Widget {
 //
 // Parameters:
 //   - id: The unique identifier of the widget to find
+//   - visible: Only look for visible children
 //
 // Returns:
 //   - Widget: The widget with the matching ID, or nil if not found
-func (f *Flex) Find(id string) Widget {
-	return Find(f, id)
+func (f *Flex) Find(id string, visible bool) Widget {
+	return Find(f, id, visible)
 }
 
 // FindAt searches for the widget located at the specified coordinates within
@@ -160,7 +161,6 @@ func (f *Flex) Hint() (int, int) {
 			if cw > width {
 				width = cw
 			}
-			f.Log("  Hint %s, width=%d, height=%d, total width=%d, height=%d", child.ID(), cw, ch, width, height)
 		}
 	}
 	return width, height
@@ -175,8 +175,8 @@ func (f *Flex) Hint() (int, int) {
 func (f *Flex) Info() string {
 	x, y, w, h := f.Bounds()
 	cx, cy, cw, ch := f.Content()
-	return fmt.Sprintf("@%d.%d %d:%d (%d.%d %d:%d) flex[%s,%s,%d]",
-		x, y, w, h, cx, cy, cw, ch, f.Orientation, f.Alignment, f.Spacing)
+	return fmt.Sprintf("@%d.%d %d:%d (%d.%d %d:%d) flex[children=%d,%s,%s,%d]",
+		x, y, w, h, cx, cy, cw, ch, len(f.children), f.Orientation, f.Alignment, f.Spacing)
 }
 
 // Layout arranges all child widgets within the flex container according to
@@ -195,6 +195,7 @@ func (f *Flex) Info() string {
 //   - Auto: Zero values use the widget's preferred size hint
 //   - Flexible: Negative values are fractional units of remaining space
 func (f *Flex) Layout() {
+	f.Log("Layout %s %s", f.id, f.Info())
 	if f.Orientation == "horizontal" {
 		f.layoutH()
 	} else if f.Orientation == "vertical" {
@@ -231,7 +232,6 @@ func (f *Flex) layoutH() {
 	rest := cw
 	for i, child := range f.children {
 		style = child.Style("")
-		f.Log("  %T %s %d:%d", child, child.ID(), style.Width, style.Height)
 		if style.Width < 0 {
 			fractions -= style.Width // Accumulate fraction units (negative values)
 			last = i
@@ -251,8 +251,6 @@ func (f *Flex) layoutH() {
 		fraction = rest / fractions
 	}
 
-	f.Log("Flex H %s children= %d, fractions=%d, fraction=%d, rest=%d", f.id, len(f.children), fractions, fraction, rest)
-
 	// Position children from left to right
 	x := cx
 	for i, child := range f.children {
@@ -267,7 +265,7 @@ func (f *Flex) layoutH() {
 				// Last flexible child gets remaining space to handle rounding
 				child.SetBounds(x, wy, rest, wh)
 			}
-			rest = rest - fraction*style.Width
+			rest = rest - fraction*(-style.Width)
 		} else if style.Width == 0 {
 			pw, _ := child.Hint()
 			child.SetBounds(x, wy, pw+style.Horizontal(), wh)
@@ -275,6 +273,7 @@ func (f *Flex) layoutH() {
 			child.SetBounds(x, wy, style.Width+style.Horizontal(), wh)
 		}
 		_, _, width, _ := child.Bounds()
+		f.Log("  Flex H %s, %d.%d", child.ID(), x, wy)
 		x += width + f.Spacing
 	}
 }
@@ -326,6 +325,7 @@ func (f *Flex) layoutV() {
 		fraction = rest / fractions
 	}
 
+	f.Log("  fractions=%d rest=%d fraction=%d", fractions, rest, fraction)
 	// Position children from top to bottom
 	y := cy
 	for i, child := range f.children {
@@ -336,11 +336,11 @@ func (f *Flex) layoutV() {
 		if style.Height < 0 {
 			if i != last {
 				child.SetBounds(wx, y, ww, -fraction*style.Height)
+				rest = rest - fraction*(-style.Height)
 			} else {
 				// Last flexible child gets remaining space to handle rounding
 				child.SetBounds(wx, y, ww, rest)
 			}
-			rest = rest - fraction*style.Height
 		} else if style.Height == 0 {
 			_, ph := child.Hint()
 			child.SetBounds(wx, y, ww, ph+style.Vertical())
@@ -348,6 +348,7 @@ func (f *Flex) layoutV() {
 			child.SetBounds(wx, y, ww, style.Height+style.Vertical())
 		}
 		_, _, _, height := child.Bounds()
+		f.Log("  Flex V %s, %d.%d %d", child.ID(), wx, y, height)
 		y += height + f.Spacing
 	}
 }

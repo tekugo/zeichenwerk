@@ -275,8 +275,6 @@ func (r *Renderer) render(widget Widget) {
 
 	r.SetStyle(style)
 
-	widget.Log("Render %s %s fg=%s bg=%s", WidgetType(widget), widget.ID(), style.Foreground, style.Background)
-
 	switch widget := widget.(type) {
 	case *Box:
 		r.renderBorder(x, y, w, h, style)
@@ -291,7 +289,7 @@ func (r *Renderer) render(widget Widget) {
 		if widget.ID() == "popup" {
 			r.renderShadow(x, y, w, h, widget.Style("shadow"))
 		}
-		for _, child := range widget.Children() {
+		for _, child := range widget.Children(true) {
 			r.render(child)
 		}
 	case *Grid:
@@ -320,6 +318,9 @@ func (r *Renderer) render(widget Widget) {
 				}
 			}
 		}
+	case *Switcher:
+		widget.Log("Render switcher %s %s %s", widget.ID(), widget.Selected, widget.Panes[widget.Selected].ID())
+		r.render(widget.Panes[widget.Selected])
 	case *Tabs:
 		r.renderTabs(widget, x, y, w)
 	case *Text:
