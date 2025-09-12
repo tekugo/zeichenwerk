@@ -3,18 +3,18 @@ package zeichenwerk
 func (r *Renderer) renderTabs(tabs *Tabs, x, y, w int) {
 	// Determine which styles to use based on focus state
 	var normal, highlight, line *Style
-	
+
 	if tabs.Focused() {
 		// Use focus-specific styles when tabs widget has focus
-		normal = tabs.Style("focus-line")
+		normal = tabs.Style("line:focus")
 		if normal == nil {
 			normal = tabs.Style("")
 		}
-		highlight = tabs.Style("focus-highlight")
+		highlight = tabs.Style("highlight:focus")
 		if highlight == nil {
 			highlight = tabs.Style("highlight")
 		}
-		line = tabs.Style("focus-highlight-line")
+		line = tabs.Style("highlight-line:focus")
 		if line == nil {
 			line = tabs.Style("highlight-line")
 		}
@@ -30,7 +30,6 @@ func (r *Renderer) renderTabs(tabs *Tabs, x, y, w int) {
 	r.repeat(x, y+1, 1, 0, 1, '\u2501')
 
 	for i, tab := range tabs.Tabs {
-		tabs.Log("Rendering %d %s %d %d", i, tab, tabs.Index, cx)
 		tl := len([]rune(tab))
 		if tabs.Index == i {
 			r.SetStyle(highlight)

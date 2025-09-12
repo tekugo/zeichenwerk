@@ -1,6 +1,8 @@
 package zeichenwerk
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Style defines the visual appearance and layout properties of TUI widgets.
 // It provides a comprehensive styling system similar to CSS, allowing fine-grained
@@ -19,10 +21,10 @@ import "fmt"
 // with content area, padding, border, and margin layers.
 //
 // Box model (from inside out):
-//   1. Content area (actual widget content)
-//   2. Padding (inner spacing with background color)
-//   3. Border (decorative border around padding)
-//   4. Margin (outer transparent spacing)
+//  1. Content area (actual widget content)
+//  2. Padding (inner spacing with background color)
+//  3. Border (decorative border around padding)
+//  4. Margin (outer transparent spacing)
 type Style struct {
 	Background string  // Background color name or hex code (empty = transparent)
 	Foreground string  // Text/foreground color name or hex code

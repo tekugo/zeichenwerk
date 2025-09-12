@@ -13,38 +13,11 @@ type Builder struct {
 
 // NewBuilder creates a new Builder instance with the default TokyoNight theme.
 // Returns a pointer to the newly created Builder.
-func NewBuilder() *Builder {
-	return &Builder{theme: TokyoNightTheme()}
+func NewBuilder(theme Theme) *Builder {
+	return &Builder{theme: theme}
 }
 
 // ---- Internal Helper Methods -----------------------------------------------
-
-// add adds a widget to the current container and sets it as the current widget.
-// If there's a container on the stack, the widget is added to it:
-// - For Box containers: widget is set as the single child
-// - For Flex containers: widget is appended to the flex layout
-// - For Grid containers: widget is placed at the specified grid coordinates
-// The widget's parent is set to the container for proper hierarchy.
-func (b *Builder) add(w Widget) {
-	if len(b.stack) > 0 {
-		top := b.stack.Peek()
-		switch top := top.(type) {
-		case *Box:
-			top.Add(w)
-			w.SetParent(top)
-		case *Flex:
-			top.Add(w)
-			w.SetParent(top)
-		case *Grid:
-			top.Add(b.x, b.y, b.w, b.h, w)
-			w.SetParent(top)
-		case *Switcher:
-			top.Set(w.ID(), w)
-			w.SetParent(top)
-		}
-	}
-	b.current = w
-}
 
 // selector constructs a CSS-like selector string for styling widgets.
 // It combines the widget type (t) with optional class and id modifiers.
@@ -62,19 +35,6 @@ func (b *Builder) selector(t, id string) string {
 
 // ---- Builder Methods ------------------------------------------------------
 
-// Add just calls another builder function, which gets this builder as a
-// parameter and returns it.
-// Parameters:
-//   - fn: Builder function to call
-//
-// Using Add you can move building of parts of the UI into your own methods
-// and still keep use the fluent API.
-// Returns the builder for method chaining.
-func (b *Builder) Add(fn func(*Builder)) *Builder {
-	fn(b)
-	return b
-}
-
 // Build finalizes the UI construction and returns a complete UI instance.
 // It creates a new UI with the current theme and root container from the stack.
 // If a widget with id "debug-log" exists, it's automatically configured as the UI logger.
@@ -85,8 +45,8 @@ func (b *Builder) Build() *UI {
 	if logger != nil {
 		if text, ok := logger.(*Text); ok {
 			ui.Logger = text
-			ui.Log("==== Debug log started! ====")
-			ui.Log("Screen size: %d:%d", ui.width, ui.height)
+			ui.Log(ui, "debug", "==== Debug log started! ====")
+			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
 		}
 	}
 	return ui
@@ -99,7 +59,51 @@ func (b *Builder) Container() Container {
 	return b.stack.Peek()
 }
 
+// With applies a builder function to this builder instance, enabling
+// composition and reusable UI building patterns.
+// Parameters:
+//   - fn: Builder function to apply
+//
+// Using With you can move building of parts of the UI into your own methods
+// and still keep use the fluent API.
+// Returns the builder for method chaining.
+func (b *Builder) With(fn func(*Builder)) *Builder {
+	fn(b)
+	return b
+}
+
 // ---- Widget Construction --------------------------------------------------
+
+// Add adds a widget to the current container and sets it as the current widget.
+// If there's a container on the stack, the widget is added to it:
+// - For Box containers: widget is set as the single child
+// - For Flex containers: widget is appended to the flex layout
+// - For Grid containers: widget is placed at the specified grid coordinates
+// The widget's parent is set to the container for proper hierarchy.
+func (b *Builder) Add(w Widget) *Builder {
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		switch top := top.(type) {
+		case *Box:
+			top.Add(w)
+			w.SetParent(top)
+		case *Flex:
+			top.Add(w)
+			w.SetParent(top)
+		case *Grid:
+			top.Add(b.x, b.y, b.w, b.h, w)
+			w.SetParent(top)
+		case *Scroller:
+			top.Add(w)
+			w.SetParent(top)
+		case *Switcher:
+			top.Set(w.ID(), w)
+			w.SetParent(top)
+		}
+	}
+	b.current = w
+	return b
+}
 
 // Box creates a new box widget with the specified id and display title.
 // The box is automatically styles with theme styles for the border and
@@ -107,7 +111,7 @@ func (b *Builder) Container() Container {
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, title)
 	b.theme.SetStyles(box, b.selector("box", id), "title")
-	b.add(box)
+	b.Add(box)
 	b.stack.Push(box)
 	return b
 }
@@ -120,7 +124,7 @@ func (b *Builder) Button(id string, text string) *Builder {
 	button := NewButton(id, text)
 	b.theme.SetStyles(button, b.selector("button", id), "disabled", "focus", "hover", "pressed")
 	button.SetHint(len(text), 1)
-	b.add(button)
+	b.Add(button)
 	return b
 }
 
@@ -135,8 +139,9 @@ func (b *Builder) Button(id string, text string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *Builder {
 	flex := NewFlex(id, orientation, alignment, spacing)
-	b.theme.SetStyles(flex, b.selector("flex", id), "shadow")
-	b.add(flex)
+	b.theme.SetStyles(flex, b.selector("flex", id))
+	b.theme.SetStyles(flex, b.selector("flex/shadow", id))
+	b.Add(flex)
 	b.stack.Push(flex)
 	return b
 }
@@ -154,7 +159,7 @@ func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *B
 func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	grid := NewGrid(id, rows, columns, lines)
 	b.theme.SetStyles(grid, b.selector("grid", id))
-	b.add(grid)
+	b.Add(grid)
 	b.stack.Push(grid)
 	return b
 }
@@ -171,7 +176,7 @@ func (b *Builder) Input(id string, label string, width int) *Builder {
 	input := NewInput(id)
 	b.theme.SetStyles(input, b.selector("input", id), "focus")
 	input.SetHint(width, 1)
-	b.add(input)
+	b.Add(input)
 	return b
 }
 
@@ -191,7 +196,7 @@ func (b *Builder) Label(id string, text string, width int) *Builder {
 	} else {
 		label.SetHint(width, 1)
 	}
-	b.add(label)
+	b.Add(label)
 	return b
 }
 
@@ -205,8 +210,9 @@ func (b *Builder) Label(id string, text string, width int) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) List(id string, values []string) *Builder {
 	list := NewList(id, values)
-	b.theme.SetStyles(list, b.selector("list", id), "disabled", "focus", "highlight", "highlight-blurred")
-	b.add(list)
+	b.theme.SetStyles(list, b.selector("list", id), "disabled", "focus")
+	b.theme.SetStyles(list, b.selector("list/highlight", id), "focus")
+	b.Add(list)
 	return b
 }
 
@@ -224,8 +230,9 @@ func (b *Builder) ProgressBar(id string, value, min, max int) *Builder {
 	bar.SetRange(min, max)
 	bar.SetValue(value)
 	bar.SetHint(20, 1)
-	b.theme.SetStyles(bar, b.selector("progress-bar", id), "bar")
-	b.add(bar)
+	b.theme.SetStyles(bar, b.selector("progress-bar", id))
+	b.theme.SetStyles(bar, b.selector("progress-bar/bar", id))
+	b.Add(bar)
 	return b
 }
 
@@ -239,7 +246,7 @@ func (b *Builder) ProgressBar(id string, value, min, max int) *Builder {
 func (b *Builder) Scroller(id, title string) *Builder {
 	scroller := NewScroller(id, title)
 	b.theme.SetStyles(scroller, b.selector("scroller", id), "focus")
-	b.add(scroller)
+	b.Add(scroller)
 	b.stack.Push(scroller)
 	return b
 }
@@ -257,7 +264,7 @@ func (b *Builder) Separator(id, border string, width, height int) *Builder {
 	separator := NewSeparator(id, border)
 	b.theme.SetStyles(separator, b.selector("separator", id))
 	separator.SetHint(width, height)
-	b.add(separator)
+	b.Add(separator)
 	return b
 }
 
@@ -270,25 +277,28 @@ func (b *Builder) Spacer() *Builder {
 	spacer := NewHidden("")
 	b.theme.SetStyles(spacer, "spacer")
 	spacer.SetHint(-1, -1)
-	b.add(spacer)
+	b.Add(spacer)
 	return b
 }
 
 func (b *Builder) Switcher(id string) *Builder {
 	switcher := NewSwitcher(id)
 	b.theme.SetStyles(switcher, b.selector("switcher", id))
-	b.add(switcher)
+	b.Add(switcher)
 	b.stack.Push(switcher)
 	return b
 }
 
 func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 	t := NewTabs(id)
-	b.theme.SetStyles(t, "tabs", "highlight", "highlight-line", "focus-line", "focus-highlight", "focus-highlight-line")
+	b.theme.SetStyles(t, b.selector("tabs", id), "focus")
+	b.theme.SetStyles(t, b.selector("tabs/line", id), "focus")
+	b.theme.SetStyles(t, b.selector("tabs/highlight", id), "focus")
+	b.theme.SetStyles(t, b.selector("tabs/highlight-line", id), "focus")
 	for _, tab := range tabs {
 		t.Add(tab)
 	}
-	b.add(t)
+	b.Add(t)
 	return b
 }
 
@@ -304,7 +314,7 @@ func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
 	text := NewText(id, content, follow, max)
 	b.theme.SetStyles(text, b.selector("text", id))
-	b.add(text)
+	b.Add(text)
 	return b
 }
 

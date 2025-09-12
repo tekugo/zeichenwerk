@@ -2,19 +2,21 @@ package zeichenwerk
 
 import (
 	"regexp"
-
-	"github.com/gdamore/tcell/v2"
 )
 
-// CSS-like selector pattern: <type>.class#id:part
+// CSS-like selector pattern: type/part.class#id/part:state
 // This regular expression parses selectors in the format:
 // - type: widget type (e.g., "button", "input")
+// - part: optional widget part (e.g., "placeholder", "bar")
 // - class: optional class name preceded by '.'
 // - id: optional ID preceded by '#'
-// - part: optional part/state preceded by ':' (e.g., "focus", "hover")
+// - state: optional state preceded by ':' (e.g., "focus", "hover")
+//
+// It is on purpose, that the part is included 2 times, so that
+// it can be either after the type or the id.
 var (
-	re, _        = regexp.Compile(`([0-9A-Za-z_\-]*)\.?([0-9A-Za-z_\-]*)#?([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
-	defaultStyle = NewStyle("green", "black").SetMargin(0).SetPadding(0)
+	styleRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*)/?([0-9A-Za-z_\-]*)\.?([0-9A-Za-z_\-]*)#?([0-9A-Za-z_\-]*)/?([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
+	defaultStyle   = NewStyle("green", "black").SetMargin(0).SetPadding(0)
 )
 
 // Theme provides a styling system for widgets using CSS-like selectors.
@@ -30,9 +32,17 @@ var (
 //   - "button:focus" - styles buttons in focus state
 //   - "input.large:focus" - styles large input widgets when focused
 type Theme interface {
-	Color(string) tcell.Color
+	Border(string) BorderStyle
+
+	Color(string) string
+
+	Colors() map[string]string
+
+	Flag(string) bool
 
 	Get(string) Style
+
+	Rune(string) rune
 
 	// Set assigns a style to the specified selector in the theme.
 	// This allows for dynamic theme customization and style registration.

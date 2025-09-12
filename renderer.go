@@ -76,23 +76,10 @@ type Renderer struct {
 //
 // Parameters:
 //   - style: The Style object containing background, foreground, and other visual properties
-//
-// Style resolution process:
-//  1. Resolves background color through the theme color system
-//  2. Resolves foreground color through the theme color system
-//  3. Creates a tcell.Style with the resolved colors
-//  4. Sets the renderer's active style for subsequent drawing operations
-//
-// Color resolution supports:
-//   - Named theme colors (e.g., "$blue", "$bg", "$fg")
-//   - Direct color specifications
-//   - Fallback to default colors for invalid specifications
-//
-// All subsequent drawing operations (text, borders, backgrounds) will use
-// this style until SetStyle is called again with a different style.
 func (r *Renderer) SetStyle(style *Style) {
-	bg := r.theme.Color(style.Background)
-	fg := r.theme.Color(style.Foreground)
+	bg, _ := ParseColor(r.theme.Color(style.Background))
+	fg, _ := ParseColor(r.theme.Color(style.Foreground))
+
 	r.style = tcell.StyleDefault.Background(bg).Foreground(fg)
 }
 
@@ -284,6 +271,9 @@ func (r *Renderer) render(widget Widget) {
 	case *Button:
 		r.renderBorder(x, y, w, h, style)
 		r.text(cx, cy, widget.Text, cw)
+	case *Custom:
+		r.renderBorder(0, 0, w, h, style)
+		widget.renderer(widget, r.screen)
 	case *Flex:
 		r.renderBorder(x, y, w, h, style)
 		if widget.ID() == "popup" {
@@ -307,19 +297,21 @@ func (r *Renderer) render(widget Widget) {
 	case *ProgressBar:
 		r.renderBorder(x, y, w, h, style)
 		r.renderProgressBar(widget, x, y, w, h)
+	case *Scroller:
+		r.renderBorder(x, y, w, h, style)
+		r.renderScroller(widget)
 	case *Separator:
 		if widget.Border != "" {
 			box, found := BorderStyles[widget.Border]
 			if found {
-				if widget.height == 1 {
-					r.line(x, y, 1, 0, widget.width-2, box.Top, box.Top, box.Top)
+				if style.Height == 1 {
+					r.line(cx, cy, 1, 0, cw, box.Top, box.Top, box.Top)
 				} else {
-					r.line(x, y, 0, 1, widget.height-2, box.Left, box.Left, box.Left)
+					r.line(cx, cy, 0, 1, ch, box.Left, box.Left, box.Left)
 				}
 			}
 		}
 	case *Switcher:
-		widget.Log("Render switcher %s %s %s", widget.ID(), widget.Selected, widget.Panes[widget.Selected].ID())
 		r.render(widget.Panes[widget.Selected])
 	case *Tabs:
 		r.renderTabs(widget, x, y, w)

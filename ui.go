@@ -178,7 +178,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		}
 
 		// Handle global app events, if the keyboard event was propagated
-		ui.Log("Handling key event %v", event)
+		ui.Log(ui, "debug", "Handling key event %v", event)
 		switch event.Key() {
 		case tcell.KeyTab:
 			ui.SetFocus("next")
@@ -191,7 +191,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
 			close(ui.quit)
 		case tcell.KeyCtrlD:
-			ui.Log("Opening inspector")
+			ui.Log(ui, "debug", "Opening inspector")
 			ui.Popup(-1, -1, 0, 0, NewInspector(ui).UI())
 			ui.Refresh()
 		case tcell.KeyRune:
@@ -598,8 +598,10 @@ func (ui *UI) ShowCursor() {
 // and can be useful for troubleshooting widget behavior and events.
 //
 // Parameters:
+//   - source: Source widget
+//   - level: Log level
 //   - message: The debug message to add to the log
-func (ui *UI) Log(message string, params ...any) {
+func (ui *UI) Log(source Widget, level, message string, params ...any) {
 	if ui.Logger != nil {
 		ui.Logger.Add(fmt.Sprintf(message, params...))
 	}
@@ -803,7 +805,7 @@ func (ui *UI) Run() {
 // The level parameter controls indentation for nested containers.
 func print(level int, container Container) {
 	for i, widget := range container.Children(false) {
-		container.Log("%s %3d %T %s %s\n", strings.Repeat(" ", level), i, widget, widget.ID(), widget.Info())
+		container.Log(widget, "debug", "%s %3d %T %s %s\n", strings.Repeat(" ", level), i, widget, widget.ID(), widget.Info())
 		c, ok := widget.(Container)
 		if ok {
 			print(level+1, c)

@@ -5,15 +5,16 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/gdamore/tcell/v2"
 	. "github.com/tekugo/zeichenwerk"
 )
 
 func main() {
-	ui := NewBuilder().
+	ui := NewBuilder(TokyoNightTheme()).
 		Flex("main", "vertical", "stretch", 0).
-		Add(header).
-		Add(content).
-		Add(footer).
+		With(header).
+		With(content).
+		With(footer).
 		Class("").
 		Build()
 	ui.Run()
@@ -44,21 +45,22 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Flex", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Tabs", "Debug-Log"}
+	demos := []string{"Overview", "Box", "Button", "Flex", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Debug-Log"}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
 		Cell(1, 0, 1, 1).
 		Switcher("demo").
 		Text("debug-log", []string{}, true, 1000).
-		Add(overview).
-		Add(box).
-		Add(button).
-		Add(flex).
-		Add(label).
-		Add(progress).
-		Add(list).
-		Add(tabs).
+		With(overview).
+		With(box).
+		With(button).
+		With(flex).
+		With(label).
+		With(progress).
+		With(list).
+		With(tabs).
+		With(scroller).
 		End(). // Switcher
 		End()  // Grid
 
@@ -90,6 +92,8 @@ func content(builder *Builder) {
 				Update(ui, "demo", "list-demo")
 			case "Pop-up":
 				ui.Popup(-1, -1, 0, 0, popup())
+			case "Scroller":
+				Update(ui, "demo", "scroller-demo")
 			case "Tabs":
 				Update(ui, "demo", "tabs-demo")
 			}
@@ -114,7 +118,7 @@ func tabs(builder *Builder) {
 }
 
 func overview(builder *Builder) {
-	builder.Flex("overview-demo", "vertical", "stretch", 1).Padding(1, 2).
+	builder.Flex("overview-demo", "vertical", "stretch", 0).Padding(1, 2).
 		Label("welcome", "Welcome to zeichenwerk!", 0).Padding(0, 0, 1, 0).
 		Label("description", "A comprehensive terminal user interface framework for Go", 0).Padding(0, 0, 1, 0).
 		Separator("sep1", "thin", 0, 1).Padding(0, 0, 1, 0).
@@ -244,7 +248,7 @@ func progress(builder *Builder) {
 }
 
 func popup() Container {
-	return NewBuilder().
+	return NewBuilder(TokyoNightTheme()).
 		Class("popup").
 		Flex("popup", "vertical", "stretch", 0).
 		Label("title", "Dialog", 0).Padding(1, 2).Background("", "$aqua").Foreground("", "$bg").
@@ -260,6 +264,32 @@ func popup() Container {
 		Button("cancel", "Cancel").
 		End().
 		Container()
+}
+
+func scroller(builder *Builder) {
+	builder.Flex("scroller-demo", "vertical", "stretch", 1).Padding(1, 2).
+		Label("scroller-title", "Scroller Demo", 0).Padding(0, 0, 1, 0).
+		Label("scroller-info", "A scroller shows a viewport of the inside widget.", 0).Padding(0, 0, 1, 0).
+		Separator("progress-sep", "thin", 0, 1).Padding(0, 0, 1, 0).
+		Scroller("scroller", "Scroller").Border("", "thin").Hint(-1, -1).
+		Add(custom()).
+		End().
+		End()
+}
+
+func custom() Widget {
+	result := NewCustom("custom", false, func(widget Widget, screen Screen) {
+		width, height := widget.Size()
+		widget.Log(widget, "debug", "Custom render %d %d", width, height)
+		for x := 10; x < width; x += 10 {
+			for y := 10; y < height; y += 10 {
+				screen.SetContent(x, y, '*', nil, tcell.StyleDefault)
+			}
+		}
+	})
+	result.SetStyle("", NewStyle("green", "black").SetMargin(0).SetPadding(0))
+	result.SetHint(200, 100)
+	return result
 }
 
 var Countries = map[string]string{

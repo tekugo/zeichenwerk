@@ -3,16 +3,24 @@ package zeichenwerk
 import (
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
 
 	"github.com/gdamore/tcell/v2"
 )
+
+// RE to parse /part:state style expressions
+var stylePartRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 
 // BaseWidget provides a default implementation of the Widget interface.
 // It serves as a foundation for creating custom widgets by providing
 // common functionality such as bounds management, parent-child relationships,
 // event handling and style handling. Most concrete widget implementations
 // should embed BaseWidget to inherit this basic functionality.
+//
+// The Widget is not responsible for rendering, so all rendering is done in
+// the renderer. For new widget, you also have to extend the renderer to be
+// able to render the widget.
 type BaseWidget struct {
 	id                  string            // widget identification datum
 	parent              Container         // reference to the parent container
@@ -25,8 +33,9 @@ type BaseWidget struct {
 }
 
 // Bounds returns the widget's outer boundaries as (x, y, width, height).
-// This includes the full area occupied by the widget including margins, borders, and padding.
-// The coordinates are always absolute screen coordinates.
+// This includes the full area occupied by the widget including margins,
+// borders, and padding. The coordinates are always absolute screen
+// coordinates.
 func (w *BaseWidget) Bounds() (int, int, int, int) {
 	return w.x, w.y, w.width, w.height
 }
@@ -34,18 +43,16 @@ func (w *BaseWidget) Bounds() (int, int, int, int) {
 // Content returns the widget's inner content area as (x, y, width, height).
 // This calculates the available space for actual content by subtracting
 // margins, padding, and border space from the outer bounds. The returned
-// coordinates represent the area where text or child widgets should be placed.
+// coordinates represent the area where the actual content should be rendered.
 func (w *BaseWidget) Content() (int, int, int, int) {
 	style := w.Style("")
 	ix := w.x + style.Margin.Left + style.Padding.Left
 	iy := w.y + style.Margin.Top + style.Padding.Top
-	iw := w.width - style.Margin.Left - style.Margin.Right - style.Padding.Left - style.Padding.Right
-	ih := w.height - style.Margin.Top - style.Margin.Bottom - style.Padding.Top - style.Padding.Bottom
+	iw := w.width - style.Horizontal()
+	ih := w.height - style.Vertical()
 	if style.Border != "" {
 		ix++
 		iy++
-		iw -= 2
-		ih -= 2
 	}
 	return ix, iy, iw, ih
 }
@@ -53,25 +60,31 @@ func (w *BaseWidget) Content() (int, int, int, int) {
 // Cursor returns the current cursor position as (x, y) coordinates.
 // The base implementation returns (-1, -1) indicating that no cursor
 // is displayed by default. Widgets that support text input or cursor
-// navigation should override this method to return the actual cursor position.
+// navigation should override this method to return the actual cursor
+// position.
+//
+// The returned position is relative to the content area of the widget,
+// so 0,0 is the top-left corner of the content.
 func (w *BaseWidget) Cursor() (int, int) {
 	return -1, -1
 }
 
-// Emit triggers a custom event on the widget, calling any registered event handlers.
-// This function is the core of the widget's event system, allowing widgets to notify
-// listeners about state changes, user interactions, or other significant events.
+// Emit triggers a custom event on the widget, calling any registered event
+// handlers. This function is the core of the widget's event system, allowing
+// widgets to notify listeners about state changes, user interactions, or
+// other significant events.
 //
 // The function performs the following operations:
 //   - Checks if any event handlers are registered for this widget
 //   - Looks up the specific handler for the given event name
-//   - Calls the handler function with the widget, event name, and any additional data
+//   - Calls the handler function with the widget, event name, and any
+//     optional data
 //   - Silently ignores the event if no handler is registered
 //
 // Event System Overview:
-// The Emit function works in conjunction with the On() method to provide a flexible
-// event-driven architecture. Widgets can emit events at any time, and external code
-// can register handlers using On() to respond to these events.
+// The Emit function works in conjunction with the On() method to provide a
+// flexible event-driven architecture. Widgets can emit events at any time,
+// and external code can register handlers using On() to respond to these events.
 //
 // Common widget events include:
 //   - "change": Content or state has been modified
@@ -83,34 +96,8 @@ func (w *BaseWidget) Cursor() (int, int) {
 //
 // Parameters:
 //   - event: The name of the event to emit (e.g., "change", "focus", "select")
-//   - data: Optional additional data to pass to the event handler. The type and
-//     meaning of this data depends on the specific event and widget type.
-//
-// Example usage:
-//
-//	// In a custom widget implementation
-//	func (w *MyWidget) SetValue(value string) {
-//		w.value = value
-//		w.Emit("change", value) // Notify listeners of the change
-//	}
-//
-//	// Emitting events with multiple data parameters
-//	w.Emit("select", selectedIndex, selectedItem)
-//
-//	// Emitting simple notification events
-//	w.Emit("activate")
-//
-// Event Handler Registration:
-// Event handlers are registered using the On() method:
-//
-//	widget.On("change", func(w Widget, event string, data ...any) bool {
-//		// Handle the change event
-//		return true // Event was handled
-//	})
-//
-// Note: If no handlers are registered or no handler exists for the specific event,
-// the Emit call is silently ignored. This allows widgets to emit events freely
-// without needing to check if anyone is listening.
+//   - data: Optional additional data to pass to the event handler. The type
+//     and meaning of this data depends on the specific event and widget type.
 //
 // Attention: When using the BaseWidget Emit() method, only the BaseWidget is
 // passed to the event handler function and it cannot be cast to the original
@@ -153,7 +140,7 @@ func (w *BaseWidget) Focused() bool {
 // this method to handle specific events like keyboard input or mouse clicks.
 //
 // Event handling follows a consumption model: if a widget handles an event,
-// it should return true to prevent the event from being passed to other widgets.
+// it should return true to prevent the event from being passed to the parent.
 // If the widget doesn't handle the event, it should return false to allow
 // event propagation to continue.
 //
@@ -251,9 +238,9 @@ func (w *BaseWidget) Info() string {
 // Parameters:
 //   - msg: The debug message to log (can be a format string)
 //   - params: Optional parameters for message formatting
-func (w *BaseWidget) Log(msg string, params ...any) {
+func (w *BaseWidget) Log(source Widget, level string, msg string, params ...any) {
 	if w.parent != nil {
-		w.parent.Log(msg, params...)
+		w.parent.Log(source, level, msg, params...)
 	}
 }
 
@@ -277,7 +264,7 @@ func (w *BaseWidget) Parent() Widget {
 
 // Position returns the widget's current position as (x, y) coordinates.
 // These coordinates represent the top-left corner of the widget's outer bounds
-// relative to its parent container or the screen.
+// as absolute screen coordinates.
 //
 // Returns:
 //   - int: The x-coordinate of the widget's position
@@ -404,12 +391,8 @@ func (w *BaseWidget) SetPosition(x, y int) {
 func (w *BaseWidget) SetSize(width, height int) {
 	style := w.Style("")
 	if style != nil {
-		w.width = width + style.Margin.Left + style.Margin.Right + style.Padding.Left + style.Padding.Right
-		w.height = height + style.Margin.Top + style.Margin.Bottom + style.Padding.Top + style.Padding.Bottom
-		if style.Border != "" {
-			w.width += 2
-			w.height += 2
-		}
+		w.width = width + style.Horizontal()
+		w.height = height + style.Vertical()
 	} else {
 		w.width = width
 		w.height = height
@@ -450,13 +433,7 @@ func (w *BaseWidget) SetStyle(selector string, style *Style) {
 func (w *BaseWidget) Size() (int, int) {
 	style := w.Style("")
 	if style != nil {
-		width := w.width - style.Margin.Left - style.Margin.Right - style.Padding.Left - style.Padding.Right
-		height := w.height - style.Margin.Top - style.Margin.Bottom - style.Padding.Top - style.Padding.Bottom
-		if style.Border != "" {
-			width -= 2
-			height -= 2
-		}
-		return width, height
+		return w.width - style.Horizontal(), w.height - style.Vertical()
 	} else {
 		return w.width, w.height
 	}
@@ -506,7 +483,14 @@ func (w *BaseWidget) Style(selector string) *Style {
 	if ok {
 		return style
 	} else {
-		return w.styles[""]
+		parts := stylePartRegExp.FindStringSubmatch(selector)
+		if style, ok = w.styles[":"+parts[2]]; ok {
+			return style
+		} else if style, ok = w.styles["/"+parts[1]]; ok {
+			return style
+		} else {
+			return w.styles[""]
+		}
 	}
 }
 

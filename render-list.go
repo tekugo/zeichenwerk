@@ -59,12 +59,12 @@ func (r *Renderer) renderList(list *List, x, y, w, h int) {
 
 		// Determine style for this item
 		if slices.Contains(list.Disabled, i) {
-			r.SetStyle(list.Style("disabled"))
+			r.SetStyle(list.Style(":disabled"))
 		} else if current == list.Index {
 			if list.focused {
-				r.SetStyle(list.Style("highlight"))
+				r.SetStyle(list.Style("highlight:focus"))
 			} else {
-				r.SetStyle(list.Style("highlight-blurred"))
+				r.SetStyle(list.Style("highlight"))
 			}
 		}
 

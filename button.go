@@ -67,6 +67,16 @@ func (b *Button) Cursor() (int, int) {
 	return -1, -1
 }
 
+func (b *Button) Emit(event string, data ...any) {
+	if b.handlers == nil {
+		return
+	}
+	handler, found := b.handlers[event]
+	if found {
+		handler(b, event, data...)
+	}
+}
+
 // Handle processes keyboard and mouse events for the button widget.
 // The button responds to various input methods and provides appropriate
 // visual feedback and action triggering.

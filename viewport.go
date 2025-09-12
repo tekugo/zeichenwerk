@@ -61,7 +61,7 @@ func NewViewport(screen Screen, x, y, w, h int) *Viewport {
 //   - tcell.Style: The style information for the character
 //   - int: The character width (for multi-cell characters)
 func (v *Viewport) GetContent(x, y int) (rune, []rune, tcell.Style, int) {
-	return v.screen.GetContent(x, y)
+	return v.screen.GetContent(x+v.tx, y+v.ty)
 }
 
 // SetContent sets the content at the specified coordinates with strict bounds checking.
@@ -82,10 +82,8 @@ func (v *Viewport) GetContent(x, y int) (rune, []rune, tcell.Style, int) {
 // Panics:
 //   - If the coordinates are outside the viewport's clipping area
 func (v *Viewport) SetContent(x, y int, primary rune, combining []rune, style tcell.Style) {
-	if x >= v.x && x < v.x+v.width && y >= v.y && y <= v.y+v.height {
-		v.screen.SetContent(x, y, primary, combining, style)
-	} else {
-		panic("outside clipping area")
+	if x+v.tx >= v.x && x+v.tx < v.x+v.width && y+v.ty >= v.y && y+v.ty < v.y+v.height {
+		v.screen.SetContent(x+v.tx, y+v.ty, primary, combining, style)
 	}
 }
 
@@ -112,7 +110,7 @@ func (v *Viewport) Bounds() (int, int, int, int) {
 // Returns:
 //   - bool: true if the coordinates are within bounds, false otherwise
 func (v *Viewport) Contains(x, y int) bool {
-	return x >= v.x && x < v.x+v.width && y >= v.y && y <= v.y+v.height
+	return x+v.tx >= v.x && x+v.tx < v.x+v.width && y+v.ty >= v.y && y+v.ty <= v.y+v.height
 }
 
 // Translate sets the coordinate translation offset for the viewport.

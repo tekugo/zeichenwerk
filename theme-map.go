@@ -2,8 +2,6 @@ package zeichenwerk
 
 import (
 	"strings"
-
-	"github.com/gdamore/tcell/v2"
 )
 
 // MapTheme is a concrete implementation of the Theme interface that stores
@@ -11,8 +9,11 @@ import (
 // lookup and supports the full CSS-like selector hierarchy with fallback
 // resolution for maintaining consistent styling across the application.
 type MapTheme struct {
-	colors map[string]string // Color variables
-	styles map[string]Style  // Map of selectors to their corresponding styles
+	borders map[string]BorderStyle // Border styles
+	colors  map[string]string      // Color variables
+	flags   map[string]bool        // Flags
+	runes   map[string]rune        // Speziell rendering runes
+	styles  map[string]Style       // Map of selectors to their corresponding styles
 }
 
 // NewMapTheme creates a new MapTheme instance with an initialized style map.
@@ -26,17 +27,36 @@ func NewMapTheme() *MapTheme {
 	}
 }
 
+func (m *MapTheme) Border(border string) BorderStyle {
+	return BorderStyles[border]
+}
+
+func (m *MapTheme) Cascade(style *Style, selector string) {
+	other := m.styles[selector]
+	style.Cascade(&other)
+}
+
+func (m *MapTheme) Color(color string) string {
+	if strings.HasPrefix(color, "$") {
+		if name, ok := m.colors[color]; ok {
+			return name
+		}
+	}
+	return color
+}
+
+func (m *MapTheme) Colors() map[string]string {
+	return m.colors
+}
+
+func (m *MapTheme) Flag(flag string) bool {
+	return m.flags[flag]
+}
+
 // Get retrieves the style for the given selector using hierarchical resolution.
 // This method implements the Theme interface's style resolution algorithm,
 // searching for the most specific match and falling back to more general
 // selectors if needed.
-//
-// The resolution follows CSS-like specificity rules:
-//  1. Exact selector match (highest priority)
-//  2. type.class:part combination
-//  3. type:part combination
-//  4. type only
-//  5. Default style (fallback)
 //
 // Parameters:
 //   - selector: The CSS-like selector string to resolve
@@ -53,47 +73,48 @@ func (m *MapTheme) Get(selector string) Style {
 	if parts[1] != "" {
 		m.Cascade(&result, parts[1])
 	}
-	if parts[2] != "" {
-		m.Cascade(&result, "."+parts[2])
-	}
-	if parts[4] != "" {
-		m.Cascade(&result, ":"+parts[4])
+	if parts[3] != "" {
+		m.Cascade(&result, "."+parts[3])
 	}
 	if parts[1] != "" && parts[2] != "" {
-		m.Cascade(&result, parts[1]+"."+parts[2])
+		m.Cascade(&result, parts[1]+"/"+parts[2])
 	}
-	if parts[1] != "" && parts[4] != "" {
-		m.Cascade(&result, parts[1]+":"+parts[4])
+	if parts[1] != "" && parts[2] != "" && parts[3] != "" {
+		m.Cascade(&result, parts[1]+"/"+parts[2]+"."+parts[3])
 	}
-	if parts[1] != "" && parts[2] != "" && parts[4] != "" {
-		m.Cascade(&result, parts[1]+"."+parts[2]+":"+parts[4])
+	if parts[6] != "" {
+		m.Cascade(&result, ":"+parts[6])
 	}
-	if parts[3] != "" {
-		m.Cascade(&result, "#"+parts[3])
+	if parts[1] != "" && parts[6] != "" {
+		m.Cascade(&result, parts[1]+":"+parts[6])
 	}
-	if parts[3] != "" && parts[4] != "" {
-		m.Cascade(&result, "#"+parts[3]+":"+parts[4])
+	if parts[1] != "" && parts[3] != "" && parts[6] != "" {
+		m.Cascade(&result, parts[1]+"."+parts[3]+":"+parts[6])
 	}
+	if parts[1] != "" && parts[2] != "" && parts[6] != "" {
+		m.Cascade(&result, parts[1]+"/"+parts[2]+":"+parts[6])
+	}
+	if parts[1] != "" && parts[2] != "" && parts[3] != "" && parts[6] != "" {
+		m.Cascade(&result, parts[1]+"/"+parts[2]+"."+parts[3]+":"+parts[6])
+	}
+	if parts[4] != "" {
+		m.Cascade(&result, "#"+parts[4])
+	}
+	if parts[4] != "" && parts[6] != "" {
+		m.Cascade(&result, "#"+parts[4]+":"+parts[6])
+	}
+	if parts[4] != "" && parts[5] != "" {
+		m.Cascade(&result, "#"+parts[4]+"/"+parts[5])
+	}
+	if parts[4] != "" && parts[5] != "" && parts[6] != "" {
+		m.Cascade(&result, "#"+parts[4]+"/"+parts[5]+":"+parts[6])
+	}
+
 	return result
 }
 
-func (m *MapTheme) Cascade(style *Style, selector string) {
-	other := m.styles[selector]
-	style.Cascade(&other)
-}
-
-func (m *MapTheme) Color(color string) tcell.Color {
-	if strings.HasPrefix(color, "$") {
-		if name, ok := m.colors[color]; ok {
-			color = name
-		}
-	}
-	result, err := ParseColor(color)
-	if err == nil {
-		return result
-	} else {
-		return tcell.ColorDefault
-	}
+func (m *MapTheme) Rune(name string) rune {
+	return m.runes[name]
 }
 
 // Set assigns a style to the specified selector in the theme.
@@ -129,14 +150,30 @@ func (m *MapTheme) Set(selector string, style *Style) {
 // Parameters:
 //   - widget: The widget to apply styles to
 //   - selector: The base selector for the widget
-//   - styles: Additional parts/states to apply (e.g., "focus", "hover", "disabled")
-func (m MapTheme) SetStyles(widget Widget, selector string, styles ...string) {
-	style := m.Get(selector)
-	widget.SetStyle("", &style)
+//   - states: Additional states to apply (e.g., "focus", "hover", "disabled")
+func (m MapTheme) SetStyles(widget Widget, selector string, states ...string) {
+	parts := split(selector)
+	part := ""
+	if parts[2] != "" {
+		part = parts[2]
+	} else if parts[5] != "" {
+		part = parts[5]
+	}
 
-	for _, part := range styles {
-		style := m.Get(selector + ":" + part)
+	if part != "" {
+		style := m.Get(selector)
 		widget.SetStyle(part, &style)
+		for _, state := range states {
+			style := m.Get(selector + ":" + state)
+			widget.SetStyle(part+":"+state, &style)
+		}
+	} else {
+		style := m.Get(selector)
+		widget.SetStyle("", &style)
+		for _, state := range states {
+			style := m.Get(selector + ":" + state)
+			widget.SetStyle(":"+state, &style)
+		}
 	}
 }
 
@@ -158,6 +195,6 @@ func (m MapTheme) SetStyles(widget Widget, selector string, styles ...string) {
 // Returns:
 //   - []string: Parsed components of the selector, or nil if invalid
 func split(selector string) []string {
-	result := re.FindStringSubmatch(selector)
+	result := styleRegExp.FindStringSubmatch(selector)
 	return result
 }

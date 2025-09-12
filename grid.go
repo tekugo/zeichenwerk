@@ -214,7 +214,7 @@ func (g *Grid) Columns(columns ...int) {
 	if len(columns) == len(g.columns) {
 		g.columns = columns
 	} else {
-		g.Log("Cannot change grid size at runtime")
+		g.Log(g, "error", "Cannot change grid size at runtime")
 	}
 }
 
@@ -222,7 +222,7 @@ func (g *Grid) Rows(rows ...int) {
 	if len(rows) == len(g.rows) {
 		g.rows = rows
 	} else {
-		g.Log("Cannot change grid size at runtime")
+		g.Log(g, "error", "Cannot change grid size at runtime")
 	}
 }
 
@@ -324,7 +324,7 @@ func (g *Grid) Layout() {
 	// Second pass: calculate fractional row heights and positions
 	rh := ih      // Remaining height after fixed rows
 	fr := fh / rf // Height per fractional unit
-	g.Log(" Row sizing: height=%d, fractions=%d, fraction=%d, rows=%v", ih, rf, fr, g.heights)
+	g.Log(g, "debug", " Row sizing: height=%d, fractions=%d, fraction=%d, rows=%v", ih, rf, fr, g.heights)
 	for i := range g.rows {
 		if g.rows[i] < 0 {
 			if i == lr {

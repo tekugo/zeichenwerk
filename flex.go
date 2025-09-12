@@ -195,7 +195,7 @@ func (f *Flex) Info() string {
 //   - Auto: Zero values use the widget's preferred size hint
 //   - Flexible: Negative values are fractional units of remaining space
 func (f *Flex) Layout() {
-	f.Log("Layout %s %s", f.id, f.Info())
+	f.Log(f, "debug", "Layout %s %s", f.id, f.Info())
 	if f.Orientation == "horizontal" {
 		f.layoutH()
 	} else if f.Orientation == "vertical" {
@@ -273,7 +273,7 @@ func (f *Flex) layoutH() {
 			child.SetBounds(x, wy, style.Width+style.Horizontal(), wh)
 		}
 		_, _, width, _ := child.Bounds()
-		f.Log("  Flex H %s, %d.%d", child.ID(), x, wy)
+		f.Log(f, "debug", "  Flex H %s, %d.%d", child.ID(), x, wy)
 		x += width + f.Spacing
 	}
 }
@@ -325,7 +325,7 @@ func (f *Flex) layoutV() {
 		fraction = rest / fractions
 	}
 
-	f.Log("  fractions=%d rest=%d fraction=%d", fractions, rest, fraction)
+	f.Log(f, "debug", "  fractions=%d rest=%d fraction=%d", fractions, rest, fraction)
 	// Position children from top to bottom
 	y := cy
 	for i, child := range f.children {
@@ -348,7 +348,7 @@ func (f *Flex) layoutV() {
 			child.SetBounds(wx, y, ww, style.Height+style.Vertical())
 		}
 		_, _, _, height := child.Bounds()
-		f.Log("  Flex V %s, %d.%d %d", child.ID(), wx, y, height)
+		f.Log(f, "debug", "  Flex V %s, %d.%d %d hint %d:%d %d", child.ID(), wx, y, height, style.Width, style.Height, style.Vertical())
 		y += height + f.Spacing
 	}
 }

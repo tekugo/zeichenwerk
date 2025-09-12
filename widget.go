@@ -9,15 +9,18 @@ import (
 // in the rendering pipeline and event handling system.
 type Widget interface {
 	// Bounds returns the widget's position and size as (x, y, width, height).
-	// These coordinates define the widget's outer boundaries including any borders or padding.
+	// These coordinates define the widget's outer boundaries including any
+	// bordersor padding. The position are absolute screen coordinates.
 	Bounds() (int, int, int, int)
 
 	// Content returns the widget's content area as (x, y, width, height).
-	// This represents the inner area available for actual content, excluding borders and padding.
+	// This represents the inner area available for actual content, excluding
+	// borders and padding. The position are absolute screen coordinates.
 	Content() (int, int, int, int)
 
 	// Cursor returns the current cursor position as (x, y) coordinates.
-	// Returns (-1, -1) if the widget doesn't support or currently show a cursor.
+	// Returns (-1, -1) if the widget doesn't support or currently show a
+	// cursor. The position is relative to the top-left content area.
 	Cursor() (int, int)
 
 	// Focusable returns the focusability of the widget.
@@ -42,8 +45,8 @@ type Widget interface {
 	// Layout containers should use this as guidance when allocating space.
 	//
 	// Returns:
-	//   - int: Preferred width in characters/cells
-	//   - int: Preferred height in characters/cells
+	//   - int: Preferred width in characters
+	//   - int: Preferred height in rows
 	Hint() (int, int)
 
 	// Hovered returns the hover state of the widget.
@@ -69,9 +72,11 @@ type Widget interface {
 	// supports formatted messages with optional parameters.
 	//
 	// Parameters:
+	//   - source: Source widget for the log message
+	//   - level: Log level
 	//   - string: The debug message to log (can be a format string)
 	//   - ...any: Optional parameters for message formatting
-	Log(string, ...any)
+	Log(Widget, string, string, ...any)
 
 	// On registers an action handler, which is called, whenever a
 	// widget-specific action occurs. The handler is called for every
@@ -83,8 +88,8 @@ type Widget interface {
 	Parent() Widget
 
 	// Position returns the widget's current position as (x, y) coordinates.
-	// These coordinates represent the top-left corner of the widget's outer bounds
-	// relative to its parent container or the screen.
+	// These coordinates represent the top-left corner of the widget's outer
+	// bounds as absolute screen coordinates.
 	//
 	// Returns:
 	//   - int: The x-coordinate of the widget's position
@@ -132,7 +137,10 @@ type Widget interface {
 	// layout management, and widget tree traversal.
 	//
 	// Parameters:
-	//   - Container: The parent container widget, or nil to remove from current parent
+	//   - Container: The parent container widget
+	//
+	// Attention! The parent container normally also tracks its children, so
+	// setting the parent to nil does not remove it from the parent normally.
 	SetParent(Container)
 
 	// SetPosition sets the widget's position to the specified coordinates.
@@ -158,7 +166,8 @@ type Widget interface {
 	// visual appearance such as colors, borders, and text formatting.
 	//
 	// Parameters:
-	//   - string: The style selector (e.g., "", "focus", "hover") for state-specific styling
+	//   - string: Style consisting of the part prefixed by a slash and
+	//     the state prefixed by a colon.
 	//   - *Style: The style configuration to apply, or nil to remove the style
 	SetStyle(string, *Style)
 
@@ -179,24 +188,33 @@ type Widget interface {
 
 	// State returns the current state of the widget for rendering purposes.
 	// Common states include "" (default), "focus", "hover", "disabled", etc.
-	// The state is used to determine which style configuration to apply.
+	// The state is used to determine which style configuration to apply. For
+	// style resolution, the state is prefixed by a colon.
 	//
 	// Returns:
 	//   - string: The current widget state identifier
 	State() string
 
-	// Style returns the current style configuration applied to the widget for the given selector.
-	// This method is used during rendering to determine the visual appearance of the widget.
+	// Style returns the current style configuration applied to the widget for
+	// the given selector. This method is used during rendering to determine the
+	// visual appearance of the widget.
+	//
+	// The style may consist of a part prefixed by a slash and the state prefixed
+	// by a colon. The renderer decides, what style to use, but the widget should
+	// return defaults for styles not set. So if there is not part/state
+	// combination, first use the state, then the part.
 	//
 	// Parameters:
-	//   - string: The style selector to retrieve (e.g., "", "focus", "hover")
+	//   - string: The style selector to retrieve (e.g., "/bar", ":focus", "/bar:hover")
 	//
 	// Returns:
-	//   - *Style: The style configuration for the selector, or nil if no style is set
+	//   - *Style: The style configuration for the selector, or an alternative
 	Style(string) *Style
 
 	// Styles returns a list of all defined part/state styles selector names.
 	// This is mainly for debugging or introspection purposes.
+	//
+	// Only set styles should be returned.
 	//
 	// Returns:
 	//   - []string: All selector names

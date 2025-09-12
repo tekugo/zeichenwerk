@@ -57,22 +57,22 @@ func FindUI(widget Widget) *UI {
 func HandleInputEvent(container Container, id string, event string, fn func(*Input, string, string) bool) {
 	widget := container.Find(id, false)
 	if widget == nil {
-		container.Log("Widget %s not found", id)
+		container.Log(container, "error", "Widget %s not found", id)
 		return
 	}
 	widget.On(event, func(widget Widget, event string, data ...any) bool {
 		input, ok := widget.(*Input)
 		if !ok {
-			widget.Log("Error converting %s (%T) to Input", widget.ID(), widget)
+			widget.Log(widget, "error", "Error converting %s (%T) to Input", widget.ID(), widget)
 			return false
 		}
 		if len(data) != 1 {
-			widget.Log("Error handling input event, wrong parameter count %d", len(data))
+			widget.Log(widget, "error", "Error handling input event, wrong parameter count %d", len(data))
 			return false
 		}
 		text, ok := data[0].(string)
 		if !ok {
-			widget.Log("Error converting parameter to string, is %T", data[0])
+			widget.Log(widget, "error", "Error converting parameter to string, is %T", data[0])
 			return false
 		}
 		return fn(input, event, text)
@@ -119,21 +119,21 @@ func HandleInputEvent(container Container, id string, event string, fn func(*Inp
 func HandleKeyEvent(container Container, id string, fn func(Widget, *tcell.EventKey) bool) {
 	widget := container.Find(id, false)
 	if widget == nil {
-		container.Log("Widget %s not found", id)
+		container.Log(container, "error", "Widget %s not found", id)
 		return
 	}
 	widget.On("key", func(widget Widget, event string, data ...any) bool {
 		if event != "key" {
-			widget.Log("Event is no key event")
+			widget.Log(widget, "error", "Event is no key event")
 			return false
 		}
 		if len(data) != 1 {
-			widget.Log("Error handling key event, wrong parameter count %d", len(data))
+			widget.Log(widget, "error", "Error handling key event, wrong parameter count %d", len(data))
 			return false
 		}
 		key, ok := data[0].(*tcell.EventKey)
 		if !ok {
-			widget.Log("Error converting parameter to key event, is %T", data[0])
+			widget.Log(widget, "error", "Error converting parameter to key event, is %T", data[0])
 			return false
 		}
 		return fn(widget, key)
@@ -179,22 +179,22 @@ func HandleKeyEvent(container Container, id string, fn func(Widget, *tcell.Event
 func HandleListEvent(container Container, id, event string, fn func(*List, string, int) bool) {
 	widget := container.Find(id, false)
 	if widget == nil {
-		container.Log("Widget %s not found", id)
+		container.Log(container, "error", "Widget %s not found", id)
 		return
 	}
 	widget.On(event, func(widget Widget, event string, data ...any) bool {
 		list, ok := widget.(*List)
 		if !ok {
-			widget.Log("Error converting %s (%T) to List", widget.ID(), widget)
+			widget.Log(widget, "error", "Error converting %s (%T) to List", widget.ID(), widget)
 			return false
 		}
 		if len(data) != 1 {
-			widget.Log("Error handling list event, wrong parameter count %d", len(data))
+			widget.Log(widget, "error", "Error handling list event, wrong parameter count %d", len(data))
 			return false
 		}
 		index, ok := data[0].(int)
 		if !ok {
-			widget.Log("Error converting parameter to int, is %T", data[0])
+			widget.Log(widget, "error", "Error converting parameter to int, is %T", data[0])
 			return false
 		}
 		return fn(list, event, index)

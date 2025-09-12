@@ -23,7 +23,7 @@ func NewInspector(root Container) *Inspector {
 }
 
 func (i *Inspector) BuildUI() {
-	i.ui = NewBuilder().
+	i.ui = NewBuilder(TokyoNightTheme()).
 		Class("inspector").
 		Box("inspector-box", "Inspector").Border("", "double").
 		Flex("inspector", "vertical", "stretch", 0).Background("", "$comments").
@@ -60,10 +60,10 @@ func (i *Inspector) BuildUI() {
 			if i.container.Parent() != nil {
 				container, ok := i.container.Parent().(Container)
 				if !ok {
-					widget.Log("Parent is no container! %T", i.container.Parent())
+					widget.Log(container, "error", "Parent is no container! %T", i.container.Parent())
 				}
 				i.container = container
-				widget.Log("Going back to %s", i.container.ID())
+				widget.Log(i.ui, "debug", "Going back to %s", i.container.ID())
 				i.Refresh()
 			}
 			return true
@@ -109,11 +109,11 @@ func (i *Inspector) Activate(_ *List, _ string, _ int) bool {
 func (i *Inspector) SelectStyle(list *List, _ string, _ int) bool {
 	name := list.Items[list.Index]
 	style := i.current.Style(name)
-	list.Log("Style name if %s is %s", i.current.ID(), name)
+	list.Log(list, "debug", "Style name if %s is %s", i.current.ID(), name)
 	if style != nil {
 		Update(i.ui, "style-info", strings.Split(style.Info(), "\n"))
 	} else {
-		list.Log("Style %s not found in widget %s", name, list.ID())
+		list.Log(list, "error", "Style %s not found in widget %s", name, list.ID())
 	}
 
 	i.ui.Refresh()
@@ -122,10 +122,10 @@ func (i *Inspector) SelectStyle(list *List, _ string, _ int) bool {
 
 func (i *Inspector) Refresh() {
 	if i.container == nil {
-		i.ui.Log("No current container!")
+		i.ui.Log(i.ui, "error", "No current container!")
 		return
 	}
-	i.ui.Log("Refresh inspector %s", i.container.ID())
+	i.ui.Log(i.ui, "debug", "Refresh inspector %s", i.container.ID())
 	children := i.container.Children(false)
 	items := make([]string, len(children))
 	for j, child := range children {
@@ -143,7 +143,6 @@ func (i *Inspector) Refresh() {
 		current = current.Parent()
 	}
 	Update(i.ui, "breadcrumbs", path)
-	i.ui.Log("Breadcrumbs %s", path)
 	i.ui.Refresh()
 }
 

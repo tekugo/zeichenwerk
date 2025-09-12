@@ -37,24 +37,11 @@ func (r *Renderer) renderScrollbarV(x, y, height, offset, total int) {
 	}
 
 	// Calculate scrollbar thumb position and size
-	thumb := height * height / total
-	if thumb < 1 {
-		thumb = 1
-	}
-	if thumb > height {
-		thumb = height
-	}
-
-	pos := offset * (height - thumb) / (total - height)
-	if pos < 0 {
-		pos = 0
-	}
-	if pos > height-thumb {
-		pos = height - thumb
-	}
+	thumb := min(max(height*height/total, 1), height)
+	pos := min(max(offset*(height-thumb)/(total-height), 0), height-thumb)
 
 	// Render scrollbar track
-	for i := 0; i < height; i++ {
+	for i := range height {
 		var ch rune
 		if i >= pos && i < pos+thumb {
 			ch = '█' // Solid block for thumb
@@ -103,30 +90,18 @@ func (r *Renderer) renderScrollbarH(x, y, width, offset, total int) {
 	}
 
 	// Calculate scrollbar thumb position and size
-	thumb := width * width / total
-	if thumb < 1 {
-		thumb = 1
-	}
-	if thumb > width {
-		thumb = width
-	}
+	thumb := min(max(width*width/total, 1), width)
 
 	// Calculate thumb position, handling edge case where total <= width
 	var pos int
 	if total > width {
-		pos = offset * (width - thumb) / (total - width)
-		if pos < 0 {
-			pos = 0
-		}
-		if pos > width-thumb {
-			pos = width - thumb
-		}
+		pos = min(max(offset*(width-thumb)/(total-width), 0), width-thumb)
 	} else {
 		pos = 0 // Content fits within view, thumb starts at beginning
 	}
 
 	// Render horizontal scrollbar track
-	for i := 0; i < width; i++ {
+	for i := range width {
 		var ch rune
 		if i >= pos && i < pos+thumb {
 			ch = '█' // Solid block for thumb
