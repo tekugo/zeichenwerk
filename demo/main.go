@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	ui := NewBuilder(MidnightNeonTheme()).
+	ui := NewBuilder(TokyoNightTheme()).
 		Flex("main", "vertical", "stretch", 0).
 		With(header).
 		With(content).
@@ -251,13 +251,13 @@ func popup() Container {
 	return NewBuilder(TokyoNightTheme()).
 		Class("popup").
 		Flex("popup", "vertical", "stretch", 0).
-		Label("title", "Dialog", 0).Padding(1, 2).Background("", "$aqua").Foreground("", "$bg").
+		Label("title", "Dialog", 0).Padding(1, 2).Background("", "$aqua").Foreground("", "$bg0").
 		Flex("content", "vertical", "stretch", 0).Hint(0, -1).Padding(1, 2).
 		Label("test", "Hello World", 0).Padding(0, 0, 1, 0).
 		Label("label", "Input", 0).
 		Input("prompt", "", 20).
 		End().
-		Separator("button-separator", "thick", 0, 1).Background("", "$comments").Foreground("", "$bg").
+		Separator("button-separator", "thick", 0, 1).Foreground("", "$bg0").
 		Flex("popup-buttons", "horizontal", "start", 1).Padding(0, 2, 1).
 		Label("", "", 0).Hint(-1, 1).
 		Button("ok", "OK").

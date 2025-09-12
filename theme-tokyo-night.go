@@ -31,6 +31,7 @@ func TokyoNightTheme() Theme {
 		"grid":                      NewStyle("$fg1", "$bg0").SetBorder("thin"),
 		"input":                     NewStyle("$fg0", "$bg2").SetCursor("*bar").SetBorder("round"),
 		"input:focus":               NewStyle("$bg0", "$blue"),
+		"label":                     NewStyle("fg0", ""),
 		"list/highlight:focus":      NewStyle("$bg0", "$red"),
 		"list/highlight":            NewStyle("$bg0", "$fg1"),
 		"progress-bar":              NewStyle("$fg1", "").SetRender("unicode"),
@@ -51,14 +52,14 @@ func TokyoNightTheme() Theme {
 
 		".footer": NewStyle("$fg0", "$fg1"),
 
-		".popup":       NewStyle("", "$fg1"),
-		"button.popup": NewStyle("", "$cyan"),
-		".popup#title": NewStyle("$bg0", "$fg0"),
+		".popup":            NewStyle("", "$bg2"),
+		"flex/shadow.popup": NewStyle("$bg1", "black"),
+		"button.popup":      NewStyle("", "$cyan"),
+		".popup#title":      NewStyle("$bg0", "$fg1"),
 
 		".shortcut": NewStyle("$cyan", "$fg1").SetPadding(0, 1),
 
-		"#popup/shadow": NewStyle("$b1", "black"),
-		"#debug-log":    NewStyle("$green", "$bg1"),
+		"#debug-log": NewStyle("$green", "$bg1"),
 	})
 
 	return t

@@ -195,11 +195,14 @@ func (m *MapTheme) Get(selector string) Style {
 	if parts[1] != "" {
 		m.Cascade(&result, parts[1])
 	}
+	if parts[1] != "" && parts[2] != "" {
+		m.Cascade(&result, parts[1]+"/"+parts[2])
+	}
 	if parts[3] != "" {
 		m.Cascade(&result, "."+parts[3])
 	}
-	if parts[1] != "" && parts[2] != "" {
-		m.Cascade(&result, parts[1]+"/"+parts[2])
+	if parts[1] != "" && parts[3] != "" {
+		m.Cascade(&result, parts[1]+"."+parts[3])
 	}
 	if parts[1] != "" && parts[2] != "" && parts[3] != "" {
 		m.Cascade(&result, parts[1]+"/"+parts[2]+"."+parts[3])

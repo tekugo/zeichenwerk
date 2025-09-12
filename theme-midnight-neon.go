@@ -46,7 +46,7 @@ func MidnightNeonTheme() Theme {
 		".header": NewStyle("$fg0", "$fg1"),
 
 		// Inspector style
-		".inspector":          NewStyle("", "$bg2"),
+		"flex.inspector":      NewStyle("", "$bg2"),
 		"box.inspector:title": NewStyle("$cyan", ""),
 
 		".footer": NewStyle("$fg0", "$fg1"),
@@ -57,7 +57,7 @@ func MidnightNeonTheme() Theme {
 
 		".shortcut": NewStyle("$cyan", "$fg1").SetPadding(0, 1),
 
-		"#popup/shadow": NewStyle("$b1", "black"),
+		"#popup/shadow": NewStyle("$bg1", "black"),
 		"#debug-log":    NewStyle("$green", "$bg1"),
 	})
 

@@ -304,9 +304,9 @@ func (r *Renderer) render(widget Widget) {
 		if widget.Border != "" {
 			box := r.theme.Border(widget.Border)
 			if style.Height == 1 {
-				r.line(cx, cy, 1, 0, cw, box.Top, box.Top, box.Top)
+				r.line(cx, cy, 1, 0, cw-2, box.Top, box.Top, box.Top)
 			} else {
-				r.line(cx, cy, 0, 1, ch, box.Left, box.Left, box.Left)
+				r.line(cx, cy, 0, 1, ch-2, box.Left, box.Left, box.Left)
 			}
 		}
 	case *Switcher:
