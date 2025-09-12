@@ -126,7 +126,7 @@ In no particular order!
 
 - [ ] Change theme at build time and runtime (tokyo midnight is hard coded)
 - [ ] Review existing mostly AI generated documentation
-- [ ] Extend the demo to all current widgets with dedicated pages for the
+- [x] Extend the demo to all current widgets with dedicated pages for the
       individual widgets
 - [ ] Implement Scroller widget
 - [x] Implement Switcher widget
