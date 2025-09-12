@@ -258,7 +258,7 @@ func (r *Renderer) render(widget Widget) {
 	x, y, w, h := widget.Bounds()
 	cx, cy, cw, ch := widget.Content()
 	state := widget.State()
-	style := widget.Style(state)
+	style := widget.Style(":" + state)
 
 	r.SetStyle(style)
 
@@ -284,7 +284,7 @@ func (r *Renderer) render(widget Widget) {
 		}
 	case *Grid:
 		r.renderBorder(x, y, w, h, style)
-		r.renderGrid(widget, BorderStyles[widget.Style("").Border])
+		r.renderGrid(widget, r.theme.Border(widget.Style("").Border))
 	case *Input:
 		r.renderBorder(x, y, w, h, style)
 		r.renderInput(widget, cx, cy, cw, ch)
@@ -302,13 +302,11 @@ func (r *Renderer) render(widget Widget) {
 		r.renderScroller(widget)
 	case *Separator:
 		if widget.Border != "" {
-			box, found := BorderStyles[widget.Border]
-			if found {
-				if style.Height == 1 {
-					r.line(cx, cy, 1, 0, cw, box.Top, box.Top, box.Top)
-				} else {
-					r.line(cx, cy, 0, 1, ch, box.Left, box.Left, box.Left)
-				}
+			box := r.theme.Border(widget.Border)
+			if style.Height == 1 {
+				r.line(cx, cy, 1, 0, cw, box.Top, box.Top, box.Top)
+			} else {
+				r.line(cx, cy, 0, 1, ch, box.Left, box.Left, box.Left)
 			}
 		}
 	case *Switcher:
@@ -326,10 +324,8 @@ func (r *Renderer) renderBorder(x, y, w, h int, style *Style) {
 		r.clear(x+style.Margin.Left, y+style.Margin.Top, w-style.Margin.Left-style.Margin.Right, h-style.Margin.Top-style.Margin.Bottom)
 	}
 	if style.Border != "" {
-		box, found := BorderStyles[style.Border]
-		if found {
-			r.border(x+style.Margin.Left, y+style.Margin.Top, w-style.Margin.Left-style.Margin.Right-2, h-style.Margin.Top-style.Margin.Bottom-2, box)
-		}
+		box := r.theme.Border(style.Border)
+		r.border(x+style.Margin.Left, y+style.Margin.Top, w-style.Margin.Left-style.Margin.Right-2, h-style.Margin.Top-style.Margin.Bottom-2, box)
 	}
 }
 

@@ -1,37 +1,37 @@
 package zeichenwerk
 
-func TokyoNightTheme() Theme {
+func MidnightNeonTheme() Theme {
 	t := NewMapTheme()
 
 	AddUnicodeBorders(t)
 
 	t.SetColors(map[string]string{
-		"$bg0":     "#1a1b26",
-		"$bg1":     "#1e1e2e",
-		"$bg2":     "#1b263b",
-		"$fg0":     "#c0caf5",
-		"$fg1":     "#565f89",
-		"$gray":    "#414868",
-		"$blue":    "#7aa2f7",
-		"$cyan":    "#2ac3de",
-		"$aqua":    "#89ddff",
-		"$magenta": "#bb9af7",
-		"$red":     "#f7768e",
-		"$orange":  "#ff9e64",
-		"$yellow":  "#e0af68",
-		"$green":   "#9ece6a",
+		"$bg0":     "#0f1117",
+		"$bg1":     "#1a1c23",
+		"$bg2":     "#242730",
+		"$bg3":     "#2f323d",
+		"$fg0":     "#5ee9f0",
+		"$fg1":     "#c7ccd9",
+		"$fg2":     "#a0a4b3",
+		"$fg3":     "#6c7384",
+		"$blue":    "#5aaaff",
+		"$cyan":    "#40e000",
+		"$green":   "#4cd964",
+		"$yellow":  "#ffd866",
+		"$orange":  "#ff9f43",
+		"$magenta": "#c792ea",
 	})
 
 	t.SetStyles(map[string]*Style{
 		// Default widget styles
 		"":                          NewStyle("$fg0", "$bg0").SetMargin(0).SetPadding(0),
-		"button":                    NewStyle("$bg0", "$blue").SetBorder("lines").SetPadding(0, 2),
-		"button:focus":              NewStyle("$fg0", "$blue"),
-		"button:hover":              NewStyle("$red", "$blue"),
-		"grid":                      NewStyle("$fg1", "$bg0").SetBorder("thin"),
+		"button":                    NewStyle("$fg1", "$bg3").SetBorder("lines").SetPadding(0, 2),
+		"button:focus":              NewStyle("$cyan", "$bg3"),
+		"button:hover":              NewStyle("$fg0", "$bg3"),
+		"grid":                      NewStyle("$fg2", "$bg0").SetBorder("thin"),
 		"input":                     NewStyle("$fg0", "$bg2").SetCursor("*bar").SetBorder("round"),
 		"input:focus":               NewStyle("$bg0", "$blue"),
-		"list/highlight:focus":      NewStyle("$bg0", "$red"),
+		"list/highlight:focus":      NewStyle("$bg0", "$cyan"),
 		"list/highlight":            NewStyle("$bg0", "$fg1"),
 		"progress-bar":              NewStyle("$fg1", "").SetRender("unicode"),
 		"scroller":                  NewStyle("$fg1", "$bg2"),

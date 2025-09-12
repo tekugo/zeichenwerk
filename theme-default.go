@@ -1,7 +1,7 @@
 package zeichenwerk
 
 func DefaultTheme() Theme {
-	theme := MapTheme{styles: make(map[string]Style)}
+	theme := NewMapTheme()
 
 	theme.Set("flex", NewStyle("white", ""))
 	theme.Set("grid", NewStyle("white", "blue").SetBorder("thick-slashed"))
@@ -21,5 +21,5 @@ func DefaultTheme() Theme {
 	theme.Set("tabs:focus-highlight", NewStyle("white", "blue"))
 	theme.Set("tabs:focus-highlight-line", NewStyle("blue", ""))
 
-	return &theme
+	return theme
 }

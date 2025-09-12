@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	ui := NewBuilder(TokyoNightTheme()).
+	ui := NewBuilder(MidnightNeonTheme()).
 		Flex("main", "vertical", "stretch", 0).
 		With(header).
 		With(content).

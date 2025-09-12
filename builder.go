@@ -110,7 +110,7 @@ func (b *Builder) Add(w Widget) *Builder {
 // the title.
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, title)
-	b.theme.SetStyles(box, b.selector("box", id), "title")
+	b.theme.Apply(box, b.selector("box", id), "title")
 	b.Add(box)
 	b.stack.Push(box)
 	return b
@@ -122,7 +122,7 @@ func (b *Builder) Box(id, title string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Button(id string, text string) *Builder {
 	button := NewButton(id, text)
-	b.theme.SetStyles(button, b.selector("button", id), "disabled", "focus", "hover", "pressed")
+	b.theme.Apply(button, b.selector("button", id), "disabled", "focus", "hover", "pressed")
 	button.SetHint(len(text), 1)
 	b.Add(button)
 	return b
@@ -139,8 +139,8 @@ func (b *Builder) Button(id string, text string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *Builder {
 	flex := NewFlex(id, orientation, alignment, spacing)
-	b.theme.SetStyles(flex, b.selector("flex", id))
-	b.theme.SetStyles(flex, b.selector("flex/shadow", id))
+	b.theme.Apply(flex, b.selector("flex", id))
+	b.theme.Apply(flex, b.selector("flex/shadow", id))
 	b.Add(flex)
 	b.stack.Push(flex)
 	return b
@@ -158,7 +158,7 @@ func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *B
 // Returns the builder for method chaining.
 func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	grid := NewGrid(id, rows, columns, lines)
-	b.theme.SetStyles(grid, b.selector("grid", id))
+	b.theme.Apply(grid, b.selector("grid", id))
 	b.Add(grid)
 	b.stack.Push(grid)
 	return b
@@ -174,7 +174,7 @@ func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Input(id string, label string, width int) *Builder {
 	input := NewInput(id)
-	b.theme.SetStyles(input, b.selector("input", id), "focus")
+	b.theme.Apply(input, b.selector("input", id), "focus")
 	input.SetHint(width, 1)
 	b.Add(input)
 	return b
@@ -190,7 +190,7 @@ func (b *Builder) Input(id string, label string, width int) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Label(id string, text string, width int) *Builder {
 	label := NewLabel(id, text)
-	b.theme.SetStyles(label, b.selector("label", id))
+	b.theme.Apply(label, b.selector("label", id))
 	if width == 0 {
 		label.SetHint(len([]rune(text)), 1)
 	} else {
@@ -210,8 +210,8 @@ func (b *Builder) Label(id string, text string, width int) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) List(id string, values []string) *Builder {
 	list := NewList(id, values)
-	b.theme.SetStyles(list, b.selector("list", id), "disabled", "focus")
-	b.theme.SetStyles(list, b.selector("list/highlight", id), "focus")
+	b.theme.Apply(list, b.selector("list", id), "disabled", "focus")
+	b.theme.Apply(list, b.selector("list/highlight", id), "focus")
 	b.Add(list)
 	return b
 }
@@ -230,8 +230,8 @@ func (b *Builder) ProgressBar(id string, value, min, max int) *Builder {
 	bar.SetRange(min, max)
 	bar.SetValue(value)
 	bar.SetHint(20, 1)
-	b.theme.SetStyles(bar, b.selector("progress-bar", id))
-	b.theme.SetStyles(bar, b.selector("progress-bar/bar", id))
+	b.theme.Apply(bar, b.selector("progress-bar", id))
+	b.theme.Apply(bar, b.selector("progress-bar/bar", id))
 	b.Add(bar)
 	return b
 }
@@ -245,7 +245,7 @@ func (b *Builder) ProgressBar(id string, value, min, max int) *Builder {
 // area and if it is larger, scroll bars are shown.
 func (b *Builder) Scroller(id, title string) *Builder {
 	scroller := NewScroller(id, title)
-	b.theme.SetStyles(scroller, b.selector("scroller", id), "focus")
+	b.theme.Apply(scroller, b.selector("scroller", id), "focus")
 	b.Add(scroller)
 	b.stack.Push(scroller)
 	return b
@@ -262,7 +262,7 @@ func (b *Builder) Scroller(id, title string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Separator(id, border string, width, height int) *Builder {
 	separator := NewSeparator(id, border)
-	b.theme.SetStyles(separator, b.selector("separator", id))
+	b.theme.Apply(separator, b.selector("separator", id))
 	separator.SetHint(width, height)
 	b.Add(separator)
 	return b
@@ -275,7 +275,7 @@ func (b *Builder) Separator(id, border string, width, height int) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Spacer() *Builder {
 	spacer := NewHidden("")
-	b.theme.SetStyles(spacer, "spacer")
+	b.theme.Apply(spacer, "spacer")
 	spacer.SetHint(-1, -1)
 	b.Add(spacer)
 	return b
@@ -283,7 +283,7 @@ func (b *Builder) Spacer() *Builder {
 
 func (b *Builder) Switcher(id string) *Builder {
 	switcher := NewSwitcher(id)
-	b.theme.SetStyles(switcher, b.selector("switcher", id))
+	b.theme.Apply(switcher, b.selector("switcher", id))
 	b.Add(switcher)
 	b.stack.Push(switcher)
 	return b
@@ -291,10 +291,10 @@ func (b *Builder) Switcher(id string) *Builder {
 
 func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 	t := NewTabs(id)
-	b.theme.SetStyles(t, b.selector("tabs", id), "focus")
-	b.theme.SetStyles(t, b.selector("tabs/line", id), "focus")
-	b.theme.SetStyles(t, b.selector("tabs/highlight", id), "focus")
-	b.theme.SetStyles(t, b.selector("tabs/highlight-line", id), "focus")
+	b.theme.Apply(t, b.selector("tabs", id), "focus")
+	b.theme.Apply(t, b.selector("tabs/line", id), "focus")
+	b.theme.Apply(t, b.selector("tabs/highlight", id), "focus")
+	b.theme.Apply(t, b.selector("tabs/highlight-line", id), "focus")
 	for _, tab := range tabs {
 		t.Add(tab)
 	}
@@ -313,7 +313,7 @@ func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
 	text := NewText(id, content, follow, max)
-	b.theme.SetStyles(text, b.selector("text", id))
+	b.theme.Apply(text, b.selector("text", id))
 	b.Add(text)
 	return b
 }
