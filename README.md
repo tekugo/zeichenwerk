@@ -128,21 +128,21 @@ In no particular order!
 - [ ] Review existing mostly AI generated documentation
 - [x] Extend the demo to all current widgets with dedicated pages for the
       individual widgets
-- [ ] Implement Scroller widget
+- [x] Implement Scroller widget
 - [x] Implement Switcher widget
 - [ ] Add auto height and width (0) to grid
 - [x] Add Tabs widget
 - [ ] Add Table Widget
 - [ ] Add proper form handling for large forms with many fields (Form widget or
   builder with helpers)
-- [ ] Improve internal logging with proper error handling, source widget
+- [x] Improve internal logging with proper error handling, source widget
       (will break existing w.Log)
 - [ ] Extend inspector to show widget-specific information
 - [ ] Add style manipulation to the inspector
-- [ ] Improve theming
+- [x] Improve theming
 - [ ] Add a nord inspired theme
 - [ ] Add a gruvbox inspired theme
-- [ ] Add a midnight neon theme
+- [x] Add a midnight neon theme
 - [ ] Improve theme variables and make them visible in the inspector
 
 ## Ideas
