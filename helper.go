@@ -303,7 +303,7 @@ func Update(container Container, id string, value any) {
 //	input := NewInput("username")
 //	fmt.Println(WidgetType(input))  // Output: "Input"
 func WidgetType(widget Widget) string {
-	return strings.TrimPrefix(fmt.Sprintf("%T", widget), "*tui.")
+	return strings.TrimPrefix(fmt.Sprintf("%T", widget), "*zeichenwerk.")
 }
 
 // WidgetDetails returns a comprehensive, formatted string containing detailed
@@ -373,6 +373,12 @@ func WidgetDetails(widget Widget) string {
 		flags = append(flags, "hovered")
 	}
 	result += fmt.Sprintf("\nFlags     : %s", strings.Join(flags, ", "))
+
+	switch widget := widget.(type) {
+	case *Grid:
+	  result += fmt.Sprintf("\nRows      : %v", widget.rows)
+	  result += fmt.Sprintf("\nColumns   : %v", widget.columns)
+	}
 
 	return result
 }

@@ -45,13 +45,12 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Flex", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Debug-Log"}
+	demos := []string{"Overview", "Box", "Button", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Debug-Log"}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
 		Cell(1, 0, 1, 1).
 		Switcher("demo").
-		Text("debug-log", []string{}, true, 1000).
 		With(overview).
 		With(box).
 		With(button).
@@ -61,6 +60,9 @@ func content(builder *Builder) {
 		With(list).
 		With(tabs).
 		With(scroller).
+		With(grid).
+		With(input).
+		Text("debug-log", []string{}, true, 1000).
 		End(). // Switcher
 		End()  // Grid
 
@@ -80,6 +82,10 @@ func content(builder *Builder) {
 				Update(ui, "demo", "button-demo")
 			case "Flex":
 				Update(ui, "demo", "flex-demo")
+			case "Grid":
+				Update(ui, "demo", "grid-demo")
+			case "Input":
+			  Update(ui, "demo", "input-demo")
 			case "Label":
 				Update(ui, "demo", "label-demo")
 			case "Progress Bar":
@@ -134,6 +140,32 @@ func overview(builder *Builder) {
 		Label("navigation", "Navigation: Arrow keys, Tab, Enter, Esc", 0).
 		Spacer().
 		End()
+}
+
+func grid(builder *Builder) {
+	builder.Grid("grid-demo", 4, 4, true).Margin(1).Border("", "round").
+		Cell(0, 0, 4, 1).Label("", "First row, spans 4 columns", 0).
+		Cell(0, 1, 1, 3).Label("", "Spans 3 rows", 0).
+		Cell(2, 2, 2, 2).Label("", "2 x 2", 0).
+	End()
+
+  if grid, ok := builder.Container().(*Grid); ok {
+		grid.Columns(0, -1, -1, -1)
+	}
+}
+
+func input(builder *Builder) {
+	builder.Grid("input-demo", 10, 2, false).Margin(1).
+		Cell(0, 0, 1, 1).Label("", "First Name", 0).
+		Cell(0, 1, 1, 1).Label("", "Last Name", 0).
+		Cell(1, 0, 1, 1).Input("input-first-name", "", 40).
+		Cell(1, 1, 1, 1).Input("input-last-name", "", 40).
+	  End()
+
+	if grid, ok := builder.Container().Find("input-demo", false).(*Grid); ok {
+		grid.Rows(1, 1, 1, 1, 1, 1, 1, 1, 1, -1)
+		grid.Columns(20, -1)
+	}
 }
 
 func box(builder *Builder) {
