@@ -36,8 +36,11 @@ are the first application I have written with it so far.
 
 ## How does it look
 
-![Screenshot 1](Screenshot-1.png)
-![Screenshot 2](Screenshot-2.png)
+![Screencast current version](zeichenwerk.gif)
+
+![Screenshot 1 / early version](Screenshot-1.png)
+
+![Screenshot 2 / early version](Screenshot-2.png)
 
 ## Features
 

@@ -85,7 +85,7 @@ func content(builder *Builder) {
 			case "Grid":
 				Update(ui, "demo", "grid-demo")
 			case "Input":
-			  Update(ui, "demo", "input-demo")
+				Update(ui, "demo", "input-demo")
 			case "Label":
 				Update(ui, "demo", "label-demo")
 			case "Progress Bar":
@@ -112,8 +112,8 @@ func list(builder *Builder) {
 	countries := slices.Collect(maps.Keys(Countries))
 
 	builder.Flex("list-demo", "horizontal", "stretch", 1).Padding(1).
-		List("countries", countries).Border("", "round").Border("focus", "double").Hint(-1, 0).
-		List("names", names).Border("", "round").Border("focus", "double").Hint(-1, 0).
+		List("countries", countries).Border("", "round").Border(":focus", "double").Hint(-1, 0).
+		List("names", names).Border("", "round").Border(":focus", "double").Hint(-1, 0).
 		End()
 }
 
@@ -147,9 +147,9 @@ func grid(builder *Builder) {
 		Cell(0, 0, 4, 1).Label("", "First row, spans 4 columns", 0).
 		Cell(0, 1, 1, 3).Label("", "Spans 3 rows", 0).
 		Cell(2, 2, 2, 2).Label("", "2 x 2", 0).
-	End()
+		End()
 
-  if grid, ok := builder.Container().(*Grid); ok {
+	if grid, ok := builder.Container().(*Grid); ok {
 		grid.Columns(0, -1, -1, -1)
 	}
 }
@@ -160,7 +160,7 @@ func input(builder *Builder) {
 		Cell(0, 1, 1, 1).Label("", "Last Name", 0).
 		Cell(1, 0, 1, 1).Input("input-first-name", "", 40).
 		Cell(1, 1, 1, 1).Input("input-last-name", "", 40).
-	  End()
+		End()
 
 	if grid, ok := builder.Container().Find("input-demo", false).(*Grid); ok {
 		grid.Rows(1, 1, 1, 1, 1, 1, 1, 1, 1, -1)
