@@ -1,6 +1,9 @@
 // Package zeichenwerk provides a comprehensive terminal user interface framework for building
 // interactive console applications with rich widget support, event handling, and theming.
 //
+// Zeichenwerk (German for "character works") aims to be an easy-to-use, yet modern UI library
+// for console applications in Go, inspired by classic terminal interfaces and modern TUI applications.
+//
 // # Overview
 //
 // The zeichenwerk package offers a complete toolkit for creating professional terminal applications
@@ -11,19 +14,23 @@
 //
 // The package includes a rich set of built-in widgets for common UI patterns:
 //
-//   - Input: Single-line text input with editing capabilities, password masking, and validation
-//   - Label: Static text display with alignment options
-//   - Button: Interactive buttons with click handlers and styling
-//   - List: Scrollable item lists with multi-selection and keyboard navigation
-//   - Text: Multi-line text display with scrolling and content management
-//   - ProgressBar: Visual progress indicators with customizable styling
+//   - Input: Single-line text input with editing capabilities and validation
+//   - Label: Static text display with alignment and styling options
+//   - Button: Interactive buttons with click handlers and focus management
+//   - List: Scrollable item lists with selection and keyboard navigation
+//   - Text: Multi-line text display with scrolling capabilities
+//   - ProgressBar: Visual progress indicators with customizable ranges and styling
 //   - Viewport: Scrollable content containers for large data sets
+//   - Tabs: Tabbed interface for organizing content into multiple views
+//   - Switcher: Container that displays one of multiple child widgets
+//   - Scroller: Widget that provides scrollable viewport for content larger than display area
+//   - Separator: Visual dividers with customizable styles (thin, thick, etc.)
 //
 // # Containers
 //
 // Layout containers organize widgets into structured interfaces:
 //
-//   - Box: Simple single-widget container with borders and padding
+//   - Box: Simple single-widget container with optional borders, titles, and padding
 //   - Flex: Flexible layouts with horizontal/vertical orientation and dynamic sizing
 //   - Grid: Precise grid-based layouts with cell positioning and spanning
 //   - Stack: Layered widget management for overlays and modal dialogs
@@ -32,7 +39,7 @@
 //
 // A robust event-driven architecture enables responsive user interactions:
 //
-//   - Widget-specific events (change, focus, select, activate)
+//   - Widget-specific events (click, change, focus, select, activate)
 //   - Raw keyboard and mouse event handling
 //   - Event propagation and consumption model
 //   - Custom event registration and emission
@@ -41,9 +48,9 @@
 //
 // Comprehensive visual customization through themes and styles:
 //
-//   - Built-in themes (Default, Tokyo Night) with consistent color schemes
+//   - Built-in themes (Default, Tokyo Night, Midnight Neon) with consistent color schemes
 //   - CSS-like styling system with classes and inheritance
-//   - Border styles and decorative elements
+//   - Unicode border styles and decorative elements
 //   - Color management with terminal compatibility
 //   - Dynamic theme switching and custom theme creation
 //

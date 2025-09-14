@@ -271,6 +271,9 @@ func (r *Renderer) render(widget Widget) {
 	case *Button:
 		r.renderBorder(x, y, w, h, style)
 		r.text(cx, cy, widget.Text, cw)
+	case *Checkbox:
+		r.renderBorder(x, y, w, h, style)
+		r.renderCheckbox(widget, cx, cy, cw, ch)
 	case *Custom:
 		r.renderBorder(0, 0, w, h, style)
 		widget.renderer(widget, r.screen)

@@ -7,6 +7,26 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+// FindUI traverses up the widget hierarchy to find the root UI instance.
+// This utility function is useful for widgets that need access to UI-level
+// functionality such as logging, popup management, or theme access.
+//
+// Parameters:
+//   - widget: The starting widget to traverse up from
+//
+// Returns:
+//   - *UI: The root UI instance, or nil if not found
+//
+// The function walks up the parent chain until it finds a widget that
+// is an instance of *UI, which should be the root of the widget hierarchy.
+// If no UI is found (widget is not part of a UI tree), it returns nil.
+//
+// Example usage:
+//
+//	ui := FindUI(someWidget)
+//	if ui != nil {
+//		ui.Log(someWidget, "info", "Widget action performed")
+//	}
 func FindUI(widget Widget) *UI {
 	current := widget
 	for current != nil {

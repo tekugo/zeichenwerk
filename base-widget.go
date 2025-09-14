@@ -10,6 +10,17 @@ import (
 )
 
 // RE to parse /part:state style expressions
+// stylePartRegExp is a compiled regular expression used to parse style part selectors.
+// It matches patterns like "part:state" where both the part and state components
+// are optional and consist of alphanumeric characters, underscores, and hyphens.
+//
+// Pattern breakdown:
+//   - ([0-9A-Za-z_\-]*): Captures the part name (optional)
+//   - :?: Matches an optional colon separator
+//   - ([0-9A-Za-z_\-]*): Captures the state name (optional)
+//
+// This regex is used internally by the BaseWidget to parse style selectors
+// and extract part and state information for theme application.
 var stylePartRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 
 // BaseWidget provides a default implementation of the Widget interface.

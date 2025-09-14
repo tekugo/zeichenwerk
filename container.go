@@ -1,100 +1,73 @@
 package zeichenwerk
 
 // Container represents a widget that can contain and manage child widgets.
-// It extends the Widget interface with additional methods for managing
-// a collection of child widgets, enabling the creation of complex UI layouts
-// and hierarchical widget structures.
+// It extends the Widget interface with methods for managing child widget
+// collections, enabling complex UI layouts and hierarchical structures.
 //
-// Containers are responsible for:
-//   - Managing child widget collections
-//   - Providing widget lookup functionality by ID
-//   - Coordinating layout and rendering of child widgets
-//   - Propagating events and state changes to children
+// Core responsibilities:
+//   - Child management: Add, remove, and organize child widgets
+//   - Widget lookup: Find widgets by ID or screen coordinates
+//   - Layout coordination: Position and size child widgets appropriately
+//   - Event propagation: Route events to appropriate child widgets
+//   - Hierarchy management: Maintain parent-child relationships
 //
-// Common container implementations include layouts like Stack, Grid, Flex,
-// and other composite widgets that organize multiple child components.
+// Common implementations: Box, Flex, Grid, Stack, Switcher, Scroller, Tabs
 type Container interface {
 	Widget
 
-	// Children returns a slice of all direct child widgets contained within this container.
-	// The returned slice represents the current state of the container's child collection
-	// and should not be modified directly. The order of widgets in the slice may be
-	// significant for layout and rendering purposes depending on the container implementation.
+	// Children returns a slice of all direct child widgets.
+	// The visible parameter controls whether to include only visible children
+	// or all children regardless of visibility state.
 	//
-	// Parameeters:
-	//   - bool: Flag if only visible children should be returned
+	// Parameters:
+	//   - visible: If true, return only visible children; if false, return all
 	//
 	// Returns:
-	//   - []Widget: A slice containing all direct child widgets
+	//   - []Widget: Slice containing the child widgets
 	Children(bool) []Widget
 
-	// Find searches for a widget with the specified ID within this container and
-	// all of its descendant widgets. The search is typically performed recursively,
-	// traversing the entire widget hierarchy rooted at this container.
-	//
-	// The search process:
-	//   - First checks direct children for a matching ID
-	//   - Recursively searches within child containers
-	//   - Returns the first widget found with the matching ID
-	//   - Returns nil if no widget with the specified ID is found
+	// Find searches for a widget with the specified ID within this container
+	// and all descendant widgets. Performs recursive traversal of the widget tree.
 	//
 	// Parameters:
 	//   - string: The unique identifier of the widget to find
-	//   - bool: Only look for visible children
+	//   - bool: If true, search only visible children; if false, search all
 	//
 	// Returns:
 	//   - Widget: The widget with the matching ID, or nil if not found
 	Find(string, bool) Widget
 
-	// FindAt searches for the widget located at the specified coordinates within
-	// this container and its child widgets. This method is used for mouse interaction
-	// to determine which widget is positioned at a given point on the screen.
-	//
-	// The search process:
-	//   - Checks if the coordinates fall within this container's bounds
-	//   - Recursively searches child widgets and containers at the coordinates
-	//   - Returns the topmost/most specific widget at the given position
-	//   - Considers widget layering and z-order where applicable
+	// FindAt locates the widget at the specified screen coordinates.
+	// Used for mouse interaction to determine which widget is at a given point.
 	//
 	// Parameters:
 	//   - int: The x-coordinate to search at
 	//   - int: The y-coordinate to search at
 	//
 	// Returns:
-	//   - Widget: The widget at the specified coordinates, or nil if no widget is found
+	//   - Widget: The widget at the coordinates, or nil if none found
 	FindAt(int, int) Widget
 
 	// Layout arranges and positions all child widgets within this container
-	// according to the container's layout algorithm and any layout hints or
-	// constraints associated with the child widgets.
+	// according to the container's layout algorithm and child size hints.
 	//
-	// The layout process typically involves:
-	//   - Calculating positions and sizes for all child widgets
-	//   - Applying layout constraints and hints
-	//   - Recursively laying out child containers
-	//   - Updating widget bounds based on the layout algorithm
-	//
-	// This method should be called whenever the container's size changes
-	// or when child widgets are added, removed, or modified in ways that
-	// affect the layout.
+	// Called when container size changes or when children are added/removed.
 	Layout()
 }
 
-// Find is a utility function that provides a default implementation for searching
-// widgets by ID within a container hierarchy. This function can be used by
-// concrete container implementations to implement their Find method.
+// Find searches for a widget by ID within a container hierarchy.
+// Provides a default implementation that container types can use.
 //
-// The search algorithm:
-//   - Iterates through all direct children of the container
-//   - Checks each child's ID for an exact match
-//   - If a child is also a container, recursively searches within it
-//   - Returns the first widget found with the matching ID
-//   - Returns nil if no widget with the specified ID exists in the hierarchy
+// Algorithm:
+//   - Checks container's own ID first
+//   - Searches direct children for matching ID
+//   - Recursively searches child containers
+//   - Returns first match found
 //
 // Parameters:
 //   - container: The container to search within
 //   - id: The unique identifier of the widget to find
-//   - visible: Find only visible children
+//   - visible: If true, search only visible children; if false, search all
 //
 // Returns:
 //   - Widget: The widget with the matching ID, or nil if not found
@@ -117,20 +90,15 @@ func Find(container Container, id string, visible bool) Widget {
 	return nil
 }
 
-// FindAt is a utility function that provides a default implementation for finding
-// widgets at specific coordinates within a container hierarchy. This function can
-// be used by concrete container implementations to implement their FindAt method.
+// FindAt locates a widget at specific coordinates within a container hierarchy.
+// Provides a default implementation that container types can use.
 //
-// The search algorithm:
-//   - First checks if the coordinates fall within the container's bounds
-//   - Returns nil immediately if coordinates are outside the container
-//   - Iterates through all direct children to find those containing the coordinates
-//   - For child containers, recursively searches within them first
-//   - Returns the most specific (deepest) widget found at the coordinates
-//   - Falls back to returning the container itself if no children match
-//
-// This implementation respects widget layering by checking children in order,
-// allowing later children to override earlier ones at the same coordinates.
+// Algorithm:
+//   - Checks if coordinates are within container bounds
+//   - Searches children for widgets containing the coordinates
+//   - Recursively searches child containers first (respects layering)
+//   - Returns the most specific (deepest) widget found
+//   - Falls back to container itself if no children match
 //
 // Parameters:
 //   - container: The container to search within
@@ -138,7 +106,7 @@ func Find(container Container, id string, visible bool) Widget {
 //   - y: The y-coordinate to search at
 //
 // Returns:
-//   - Widget: The most specific widget at the coordinates, or nil if outside bounds
+//   - Widget: The most specific widget at coordinates, or nil if outside bounds
 func FindAt(container Container, x, y int) Widget {
 	cx, cy, cw, ch := container.Bounds()
 
@@ -164,19 +132,13 @@ func FindAt(container Container, x, y int) Widget {
 	return container
 }
 
-// Layout is a utility function that recursively triggers layout on all child
-// containers within the given container. This function provides a convenient
-// way to ensure that the entire widget hierarchy is properly laid out.
+// Layout recursively triggers layout on all child containers within the given container.
+// Ensures the entire widget hierarchy is properly laid out after changes.
 //
-// The function:
-//   - Iterates through all direct children of the container
-//   - Identifies which children are themselves containers
+// Process:
+//   - Iterates through all direct children
 //   - Calls Layout() on each child container
-//   - Does not affect non-container widgets (leaf widgets)
-//
-// This is typically used after making changes to the widget hierarchy
-// or when the container's size has changed and all descendant containers
-// need to recalculate their layouts.
+//   - Skips non-container widgets (leaf widgets)
 //
 // Parameters:
 //   - container: The container whose child containers should be laid out
@@ -189,40 +151,28 @@ func Layout(container Container) {
 }
 
 // Traverse recursively visits all widgets in the container hierarchy and applies
-// the given function to each widget. This utility function provides a convenient
-// way to perform operations on all widgets within a container tree.
-//
-// The traversal algorithm:
-//   - Visits all direct children of the container first
-//   - Applies the function to each child widget
-//   - For child containers, recursively traverses their children
-//   - Uses depth-first traversal order
-//   - Visits each widget exactly once
+// the given function to each widget. Uses depth-first traversal order.
 //
 // Common use cases:
-//   - Collecting statistics about widgets in the hierarchy
-//   - Applying styling or configuration changes to all widgets
+//   - Collecting statistics about widgets
+//   - Applying changes to all widgets
 //   - Searching for widgets with specific properties
-//   - Debugging and inspection of widget trees
+//   - Debugging widget trees
 //
 // Parameters:
 //   - container: The container to traverse
-//   - visible: Traverse only the visible children
-//   - fn: The function to apply to each widget in the hierarchy
+//   - visible: If true, traverse only visible children; if false, traverse all
+//   - fn: The function to apply to each widget
 //
 // Example usage:
 //
-//	// Count all widgets in the hierarchy
+//	// Count all widgets
 //	count := 0
-//	Traverse(rootContainer, func(w Widget) {
-//	    count++
-//	})
+//	Traverse(container, true, func(w Widget) { count++ })
 //
-//	// Find all buttons and disable them
-//	Traverse(rootContainer, func(w Widget) {
-//	    if button, ok := w.(*Button); ok {
-//	        button.SetEnabled(false)
-//	    }
+//	// Disable all buttons
+//	Traverse(container, true, func(w Widget) {
+//		if btn, ok := w.(*Button); ok { btn.SetEnabled(false) }
 //	})
 func Traverse(container Container, visible bool, fn func(Widget)) {
 	for _, child := range container.Children(visible) {

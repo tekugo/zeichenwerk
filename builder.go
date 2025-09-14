@@ -128,6 +128,19 @@ func (b *Builder) Button(id string, text string) *Builder {
 	return b
 }
 
+// Checkbox creates a new checkbox widget with the specified id, label text, and initial state.
+// The checkbox is automatically styled with theme styles for various states
+// (disabled, focus, hover). The checkbox's size hint is set based on the label length.
+// Returns the builder for method chaining.
+func (b *Builder) Checkbox(id string, text string, checked bool) *Builder {
+	checkbox := NewCheckbox(id, text, checked)
+	b.theme.Apply(checkbox, b.selector("checkbox", id), "disabled", "focus", "hover")
+	// Size hint: 4 characters for "[x] " plus text length
+	checkbox.SetHint(4+len([]rune(text)), 1)
+	b.Add(checkbox)
+	return b
+}
+
 // Flex creates a new flex container widget for arranging child widgets.
 // Parameters:
 //   - id: unique identifier for the flex container

@@ -45,7 +45,7 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Debug-Log"}
+	demos := []string{"Overview", "Box", "Button", "Checkbox", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Debug-Log"}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
@@ -54,6 +54,7 @@ func content(builder *Builder) {
 		With(overview).
 		With(box).
 		With(button).
+		With(checkbox).
 		With(flex).
 		With(label).
 		With(progress).
@@ -80,6 +81,8 @@ func content(builder *Builder) {
 				Update(ui, "demo", "box-demo")
 			case "Button":
 				Update(ui, "demo", "button-demo")
+			case "Checkbox":
+				Update(ui, "demo", "checkbox-demo")
 			case "Flex":
 				Update(ui, "demo", "flex-demo")
 			case "Grid":
@@ -184,6 +187,51 @@ func box(builder *Builder) {
 		End().
 		Label("box-info", "Boxes are containers that can hold a single child widget with optional borders and titles.", 0).Padding(1, 0, 0, 0).
 		End()
+}
+
+func checkbox(builder *Builder) {
+	builder.Flex("checkbox-demo", "vertical", "stretch", 1).Padding(1, 2).
+		Label("checkbox-title", "Checkbox Widget Demo", 0).Padding(0, 0, 1, 0).
+		Label("checkbox-info", "Checkboxes toggle between checked and unchecked states.", 0).Padding(0, 0, 1, 0).
+		Separator("checkbox-sep", "thin", 0, 1).Padding(0, 0, 1, 0).
+		Checkbox("cb1", "Enable notifications", false).
+		Checkbox("cb2", "Remember login", true).
+		Checkbox("cb3", "Auto-save documents", false).
+		Checkbox("cb4", "Show hidden files", true).
+		Checkbox("cb5", "I agree to the terms and conditions", false).
+		Label("checkbox-status", "Toggle checkboxes with Space or Enter key!", 0).Padding(1, 0, 0, 0).
+		End()
+
+	// Add checkbox event handlers for interactivity
+	container := builder.Container()
+	for i := 1; i <= 5; i++ {
+		cbId := fmt.Sprintf("cb%d", i)
+		if cb := container.Find(cbId, false); cb != nil {
+			cb.On("change", func(widget Widget, event string, data ...any) bool {
+				checked := data[0].(bool)
+				if statusLabel := container.Find("checkbox-status", false); statusLabel != nil {
+					if label, ok := statusLabel.(*Label); ok {
+						var checkboxName string
+						switch widget.ID() {
+						case "cb1":
+							checkboxName = "Notifications"
+						case "cb2":
+							checkboxName = "Remember login"
+						case "cb3":
+							checkboxName = "Auto-save"
+						case "cb4":
+							checkboxName = "Show hidden"
+						case "cb5":
+							checkboxName = "Terms agreed"
+						}
+						label.Text = fmt.Sprintf("%s: %v", checkboxName, checked)
+						label.Refresh()
+					}
+				}
+				return true
+			})
+		}
+	}
 }
 
 func button(builder *Builder) {

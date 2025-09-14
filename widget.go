@@ -6,16 +6,35 @@ import (
 
 // Widget represents a UI component that can be rendered and interact with user input.
 // All UI elements in the TUI framework must implement this interface to participate
-// in the rendering pipeline and event handling system.
+// in the rendering pipeline, event handling system, and layout management.
+//
+// Core responsibilities:
+//   - Rendering: Provide size hints and handle visual display
+//   - Layout: Manage position, bounds, and content area calculations
+//   - Events: Process keyboard, mouse, and custom events
+//   - Hierarchy: Maintain parent-child relationships
+//   - Styling: Apply themes and state-based visual styles
+//   - Focus: Participate in focus management and keyboard navigation
+//
+// Widget lifecycle:
+//   1. Creation with unique ID and initial properties
+//   2. Parent assignment and hierarchy establishment
+//   3. Layout calculation and bounds setting
+//   4. Style application based on theme and state
+//   5. Event handling and user interaction
+//   6. Rendering and visual updates
+//
+// All widgets share common functionality through BaseWidget, which provides
+// default implementations for most interface methods.
 type Widget interface {
 	// Bounds returns the widget's position and size as (x, y, width, height).
 	// These coordinates define the widget's outer boundaries including any
-	// bordersor padding. The position are absolute screen coordinates.
+	// borders or padding. Positions are absolute screen coordinates.
 	Bounds() (int, int, int, int)
 
 	// Content returns the widget's content area as (x, y, width, height).
 	// This represents the inner area available for actual content, excluding
-	// borders and padding. The position are absolute screen coordinates.
+	// borders and padding. Positions are absolute screen coordinates.
 	Content() (int, int, int, int)
 
 	// Cursor returns the current cursor position as (x, y) coordinates.
@@ -36,13 +55,12 @@ type Widget interface {
 
 	// Handle processes the given tcell.Event and returns true if the event was consumed.
 	// Events include keyboard input, mouse events, and resize events.
-	// If the widget handles the event, it should return true to prevent further propagation.
+	// Return true to consume the event and prevent further propagation.
 	Handle(tcell.Event) bool
 
 	// Hint returns the widget's preferred size for optimal display.
-	// This represents the ideal dimensions the widget would like to have,
-	// taking into account its content, styling, and layout requirements.
-	// Layout containers should use this as guidance when allocating space.
+	// Layout containers use this as guidance when allocating space.
+	// Values can be: positive (fixed size), negative (fraction), zero (auto).
 	//
 	// Returns:
 	//   - int: Preferred width in characters
@@ -67,20 +85,21 @@ type Widget interface {
 	Info() string
 
 	// Log logs a debug message to the application's debug log.
-	// Messages are typically displayed in debug mode and can be useful
-	// for troubleshooting widget behavior and state changes. The method
-	// supports formatted messages with optional parameters.
+	// Supports formatted messages with optional parameters.
 	//
 	// Parameters:
 	//   - source: Source widget for the log message
-	//   - level: Log level
+	//   - level: Log level (e.g., "debug", "info", "error")
 	//   - string: The debug message to log (can be a format string)
 	//   - ...any: Optional parameters for message formatting
 	Log(Widget, string, string, ...any)
 
-	// On registers an action handler, which is called, whenever a
-	// widget-specific action occurs. The handler is called for every
-	// action.
+	// On registers an event handler for widget-specific actions.
+	// The handler is called whenever the specified event occurs.
+	//
+	// Parameters:
+	//   - string: Event name (e.g., "click", "change", "select")
+	//   - func: Handler function receiving widget, event name, and data
 	On(string, func(Widget, string, ...any) bool)
 
 	// Parent returns the parent container in the widget hierarchy.
@@ -161,14 +180,12 @@ type Widget interface {
 	//   - int: The desired content height
 	SetSize(int, int)
 
-	// SetStyle applies the given style to the widget. The style can depend
-	// on the state or be for different parts of the widget. The style controls
-	// visual appearance such as colors, borders, and text formatting.
+	// SetStyle applies the given style to the widget for a specific selector.
+	// Controls visual appearance such as colors, borders, and text formatting.
 	//
 	// Parameters:
-	//   - string: Style consisting of the part prefixed by a slash and
-	//     the state prefixed by a colon.
-	//   - *Style: The style configuration to apply, or nil to remove the style
+	//   - string: Style selector (e.g., "", ":focus", "/bar", "/bar:hover")
+	//   - *Style: The style configuration to apply, or nil to remove
 	SetStyle(string, *Style)
 
 	// Size returns the widget's content size as (width, height).

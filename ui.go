@@ -797,6 +797,122 @@ func (ui *UI) Run() {
 	}
 }
 
+// ---- Theme Management -----------------------------------------------------
+
+// SetTheme changes the active theme and re-applies styling to all widgets.
+// This method enables runtime theme switching by updating the renderer's theme
+// and triggering a complete re-styling of the entire widget hierarchy.
+//
+// Parameters:
+//   - theme: The new theme to apply to the application
+//
+// Process:
+//  1. Updates the renderer's theme reference
+//  2. Recursively re-applies theme styles to all widgets in all layers
+//  3. Triggers a complete screen refresh to show the new styling
+//
+// The method traverses the entire widget hierarchy and re-applies the appropriate
+// theme styles based on each widget's type, class, and ID. This ensures that
+// all visual elements immediately reflect the new theme.
+//
+// Example usage:
+//
+//	// Switch to Nord theme
+//	ui.SetTheme(NordTheme())
+//
+//	// Switch to Tokyo Night theme
+//	ui.SetTheme(TokyoNightTheme())
+func (ui *UI) SetTheme(theme Theme) {
+	ui.renderer.theme = theme
+	
+	// Re-apply theme to all layers
+	for _, layer := range ui.layers {
+		ui.applyThemeToWidget(layer)
+	}
+	
+	ui.Refresh()
+}
+
+// GetTheme returns the currently active theme.
+// This method provides access to the current theme for inspection or
+// for storing the current theme before switching to a different one.
+//
+// Returns:
+//   - Theme: The currently active theme
+func (ui *UI) GetTheme() Theme {
+	return ui.renderer.theme
+}
+
+// applyThemeToWidget recursively applies the current theme to a widget and its children.
+// This internal method handles the theme application logic for different widget types
+// and ensures that all styling is properly updated.
+//
+// Parameters:
+//   - widget: The widget to apply the theme to
+func (ui *UI) applyThemeToWidget(widget Widget) {
+	// Clear existing styles to start fresh
+	widget.SetStyle("", nil)
+	
+	// Determine widget type and apply appropriate theme styles
+	switch w := widget.(type) {
+	case *Button:
+		ui.renderer.theme.Apply(w, ui.getSelector("button", w.ID()), "disabled", "focus", "hover", "pressed")
+	case *Checkbox:
+		ui.renderer.theme.Apply(w, ui.getSelector("checkbox", w.ID()), "disabled", "focus", "hover")
+	case *Input:
+		ui.renderer.theme.Apply(w, ui.getSelector("input", w.ID()), "focus")
+	case *Label:
+		ui.renderer.theme.Apply(w, ui.getSelector("label", w.ID()))
+	case *List:
+		ui.renderer.theme.Apply(w, ui.getSelector("list", w.ID()), "disabled", "focus")
+		ui.renderer.theme.Apply(w, ui.getSelector("list/highlight", w.ID()), "focus")
+	case *ProgressBar:
+		ui.renderer.theme.Apply(w, ui.getSelector("progress-bar", w.ID()))
+		ui.renderer.theme.Apply(w, ui.getSelector("progress-bar/bar", w.ID()))
+	case *Tabs:
+		ui.renderer.theme.Apply(w, ui.getSelector("tabs", w.ID()), "focus")
+		ui.renderer.theme.Apply(w, ui.getSelector("tabs/line", w.ID()), "focus")
+		ui.renderer.theme.Apply(w, ui.getSelector("tabs/highlight", w.ID()), "focus")
+		ui.renderer.theme.Apply(w, ui.getSelector("tabs/highlight-line", w.ID()), "focus")
+	case *Box:
+		ui.renderer.theme.Apply(w, ui.getSelector("box", w.ID()), "title")
+	case *Flex:
+		ui.renderer.theme.Apply(w, ui.getSelector("flex", w.ID()))
+		ui.renderer.theme.Apply(w, ui.getSelector("flex/shadow", w.ID()))
+	case *Grid:
+		ui.renderer.theme.Apply(w, ui.getSelector("grid", w.ID()))
+	case *Scroller:
+		ui.renderer.theme.Apply(w, ui.getSelector("scroller", w.ID()), "focus")
+	case *Text:
+		ui.renderer.theme.Apply(w, ui.getSelector("text", w.ID()))
+	case *Separator:
+		ui.renderer.theme.Apply(w, ui.getSelector("separator", w.ID()))
+	}
+	
+	// Apply theme to children if this is a container
+	if container, ok := widget.(Container); ok {
+		for _, child := range container.Children(true) {
+			ui.applyThemeToWidget(child)
+		}
+	}
+}
+
+// getSelector creates a theme selector string for the given widget type and ID.
+// This helper method constructs the appropriate CSS-like selector for theme lookup.
+//
+// Parameters:
+//   - widgetType: The type of widget (e.g., "button", "input")
+//   - id: The widget's unique identifier
+//
+// Returns:
+//   - string: The constructed selector (e.g., "button#save", "input#username")
+func (ui *UI) getSelector(widgetType, id string) string {
+	if id != "" {
+		return widgetType + "#" + id
+	}
+	return widgetType
+}
+
 // ---- Helper functions -----------------------------------------------------
 
 // print recursively logs information about a container and its child widgets.
