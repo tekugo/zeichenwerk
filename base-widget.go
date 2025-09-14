@@ -229,7 +229,7 @@ func (w *BaseWidget) Info() string {
 		flags = append(flags, "focusable")
 	}
 	if w.focused {
-		flags = append(flags, "focussed")
+		flags = append(flags, "focused")
 	}
 	if w.hovered {
 		flags = append(flags, "hovered")
@@ -247,6 +247,8 @@ func (w *BaseWidget) Info() string {
 // formatted messages with optional parameters.
 //
 // Parameters:
+//   - source: Source widget
+//   - level: Log level
 //   - msg: The debug message to log (can be a format string)
 //   - params: Optional parameters for message formatting
 func (w *BaseWidget) Log(source Widget, level string, msg string, params ...any) {
@@ -268,7 +270,8 @@ func (w *BaseWidget) On(event string, handler func(Widget, string, ...any) bool)
 }
 
 // Parent returns the parent widget in the widget hierarchy.
-// Returns nil if this widget has no parent (i.e., it's a root widget).
+// Returns nil if this widget has no parent (i.e., it's a root widget,
+// or is not in the widget hierarchy yet).
 func (w *BaseWidget) Parent() Widget {
 	return w.parent
 }
