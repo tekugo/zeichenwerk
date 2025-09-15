@@ -1,5 +1,7 @@
 package zeichenwerk
 
+import "fmt"
+
 // Builder provides a fluent interface for constructing TUI components.
 // It maintains a stack of containers and applies styling through themes.
 // The builder pattern allows for method chaining to create complex UI layouts.
@@ -40,15 +42,8 @@ func (b *Builder) selector(t, id string) string {
 // If a widget with id "debug-log" exists, it's automatically configured as the UI logger.
 // Returns the constructed UI ready for rendering and interaction.
 func (b *Builder) Build() *UI {
+	fmt.Printf("*** BUILD %s %T %d", b.stack.Peek().ID(), b.stack.Peek(), len(b.stack))
 	ui, _ := NewUI(b.theme, b.stack.Peek(), true)
-	logger := ui.Find("debug-log", false)
-	if logger != nil {
-		if text, ok := logger.(*Text); ok {
-			ui.Logger = text
-			ui.Log(ui, "debug", "==== Debug log started! ====")
-			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
-		}
-	}
 	return ui
 }
 
@@ -80,29 +75,84 @@ func (b *Builder) With(fn func(*Builder)) *Builder {
 // - For Flex containers: widget is appended to the flex layout
 // - For Grid containers: widget is placed at the specified grid coordinates
 // The widget's parent is set to the container for proper hierarchy.
-func (b *Builder) Add(w Widget) *Builder {
+func (b *Builder) Add(widget Widget) *Builder {
 	if len(b.stack) > 0 {
 		top := b.stack.Peek()
 		switch top := top.(type) {
 		case *Box:
-			top.Add(w)
-			w.SetParent(top)
+			top.Add(widget)
+			widget.SetParent(top)
 		case *Flex:
-			top.Add(w)
-			w.SetParent(top)
+			top.Add(widget)
+			widget.SetParent(top)
 		case *Grid:
-			top.Add(b.x, b.y, b.w, b.h, w)
-			w.SetParent(top)
+			top.Add(b.x, b.y, b.w, b.h, widget)
+			widget.SetParent(top)
 		case *Scroller:
-			top.Add(w)
-			w.SetParent(top)
+			top.Add(widget)
+			widget.SetParent(top)
 		case *Switcher:
-			top.Set(w.ID(), w)
-			w.SetParent(top)
+			top.Set(widget.ID(), widget)
+			widget.SetParent(top)
+		case *ThemeSwitch:
+			top.Add(widget)
+			widget.SetParent(top)
 		}
 	}
-	b.current = w
+	b.Apply(widget)
+	b.current = widget
+	if container, ok := widget.(Container); ok {
+		b.stack.Push(container)
+	}
 	return b
+}
+
+// Apply applies a theme to a widget based on its type.
+func (b *Builder) Apply(widget Widget) {
+	switch widget := widget.(type) {
+	case *Box:
+		b.theme.Apply(widget, b.selector("box", widget.ID()), "title")
+	case *Button:
+		b.theme.Apply(widget, b.selector("button", widget.ID()), "disabled", "focus", "hover", "pressed")
+	case *Checkbox:
+		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focus", "hover")
+	case *Custom:
+		b.theme.Apply(widget, b.selector("custom", widget.ID()))
+	case *Flex:
+		b.theme.Apply(widget, b.selector("flex", widget.ID()))
+		b.theme.Apply(widget, b.selector("flex/shadow", widget.ID()))
+	case *Grid:
+		b.theme.Apply(widget, b.selector("grid", widget.ID()))
+	case *Hidden:
+		b.theme.Apply(widget, b.selector("hidden", widget.ID()))
+	case *Input:
+		b.theme.Apply(widget, b.selector("input", widget.ID()), "focus")
+	case *Label:
+		b.theme.Apply(widget, b.selector("label", widget.ID()))
+	case *List:
+		b.theme.Apply(widget, b.selector("list", widget.ID()), "disabled", "focus")
+		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focus")
+	case *ProgressBar:
+		b.theme.Apply(widget, b.selector("progress-bar", widget.ID()))
+		b.theme.Apply(widget, b.selector("progress-bar/bar", widget.ID()))
+	case *Scroller:
+		b.theme.Apply(widget, b.selector("scroller", widget.ID()), "focus")
+	case *Separator:
+		b.theme.Apply(widget, b.selector("separator", widget.ID()))
+	case *Switcher:
+		b.theme.Apply(widget, b.selector("switcher", widget.ID()))
+	case *Tabs:
+		b.theme.Apply(widget, b.selector("tabs", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("tabs/line", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("tabs/highlight", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("tabs/highlight-line", widget.ID()), "focus")
+	case *Text:
+		b.theme.Apply(widget, b.selector("text", widget.ID()))
+	case *ThemeSwitch:
+		b.theme.Apply(widget, b.selector("theme-switch", widget.ID()))
+	default:
+		panic(fmt.Errorf("no style for widget type %T", widget))
+	}
 }
 
 // Box creates a new box widget with the specified id and display title.
@@ -110,9 +160,7 @@ func (b *Builder) Add(w Widget) *Builder {
 // the title.
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, title)
-	b.theme.Apply(box, b.selector("box", id), "title")
 	b.Add(box)
-	b.stack.Push(box)
 	return b
 }
 
@@ -122,9 +170,8 @@ func (b *Builder) Box(id, title string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Button(id string, text string) *Builder {
 	button := NewButton(id, text)
-	b.theme.Apply(button, b.selector("button", id), "disabled", "focus", "hover", "pressed")
-	button.SetHint(len(text), 1)
 	b.Add(button)
+	button.SetHint(len(text), 1)
 	return b
 }
 
@@ -134,10 +181,9 @@ func (b *Builder) Button(id string, text string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Checkbox(id string, text string, checked bool) *Builder {
 	checkbox := NewCheckbox(id, text, checked)
-	b.theme.Apply(checkbox, b.selector("checkbox", id), "disabled", "focus", "hover")
+	b.Add(checkbox)
 	// Size hint: 4 characters for "[x] " plus text length
 	checkbox.SetHint(4+len([]rune(text)), 1)
-	b.Add(checkbox)
 	return b
 }
 
@@ -152,10 +198,7 @@ func (b *Builder) Checkbox(id string, text string, checked bool) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *Builder {
 	flex := NewFlex(id, orientation, alignment, spacing)
-	b.theme.Apply(flex, b.selector("flex", id))
-	b.theme.Apply(flex, b.selector("flex/shadow", id))
 	b.Add(flex)
-	b.stack.Push(flex)
 	return b
 }
 
@@ -171,9 +214,7 @@ func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *B
 // Returns the builder for method chaining.
 func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	grid := NewGrid(id, rows, columns, lines)
-	b.theme.Apply(grid, b.selector("grid", id))
 	b.Add(grid)
-	b.stack.Push(grid)
 	return b
 }
 
@@ -187,9 +228,8 @@ func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Input(id string, label string, width int) *Builder {
 	input := NewInput(id)
-	b.theme.Apply(input, b.selector("input", id), "focus")
-	input.SetHint(width, 1)
 	b.Add(input)
+	input.SetHint(width, 1)
 	return b
 }
 
@@ -203,13 +243,12 @@ func (b *Builder) Input(id string, label string, width int) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Label(id string, text string, width int) *Builder {
 	label := NewLabel(id, text)
-	b.theme.Apply(label, b.selector("label", id))
+	b.Add(label)
 	if width == 0 {
 		label.SetHint(len([]rune(text)), 1)
 	} else {
 		label.SetHint(width, 1)
 	}
-	b.Add(label)
 	return b
 }
 
@@ -223,8 +262,6 @@ func (b *Builder) Label(id string, text string, width int) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) List(id string, values []string) *Builder {
 	list := NewList(id, values)
-	b.theme.Apply(list, b.selector("list", id), "disabled", "focus")
-	b.theme.Apply(list, b.selector("list/highlight", id), "focus")
 	b.Add(list)
 	return b
 }
@@ -240,12 +277,10 @@ func (b *Builder) List(id string, values []string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) ProgressBar(id string, value, min, max int) *Builder {
 	bar := NewProgressBar(id)
+	b.Add(bar)
 	bar.SetRange(min, max)
 	bar.SetValue(value)
 	bar.SetHint(20, 1)
-	b.theme.Apply(bar, b.selector("progress-bar", id))
-	b.theme.Apply(bar, b.selector("progress-bar/bar", id))
-	b.Add(bar)
 	return b
 }
 
@@ -258,9 +293,7 @@ func (b *Builder) ProgressBar(id string, value, min, max int) *Builder {
 // area and if it is larger, scroll bars are shown.
 func (b *Builder) Scroller(id, title string) *Builder {
 	scroller := NewScroller(id, title)
-	b.theme.Apply(scroller, b.selector("scroller", id), "focus")
 	b.Add(scroller)
-	b.stack.Push(scroller)
 	return b
 }
 
@@ -275,9 +308,8 @@ func (b *Builder) Scroller(id, title string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Separator(id, border string, width, height int) *Builder {
 	separator := NewSeparator(id, border)
-	b.theme.Apply(separator, b.selector("separator", id))
-	separator.SetHint(width, height)
 	b.Add(separator)
+	separator.SetHint(width, height)
 	return b
 }
 
@@ -288,26 +320,19 @@ func (b *Builder) Separator(id, border string, width, height int) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Spacer() *Builder {
 	spacer := NewHidden("")
-	b.theme.Apply(spacer, "spacer")
-	spacer.SetHint(-1, -1)
 	b.Add(spacer)
+	spacer.SetHint(-1, -1)
 	return b
 }
 
 func (b *Builder) Switcher(id string) *Builder {
 	switcher := NewSwitcher(id)
-	b.theme.Apply(switcher, b.selector("switcher", id))
 	b.Add(switcher)
-	b.stack.Push(switcher)
 	return b
 }
 
 func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 	t := NewTabs(id)
-	b.theme.Apply(t, b.selector("tabs", id), "focus")
-	b.theme.Apply(t, b.selector("tabs/line", id), "focus")
-	b.theme.Apply(t, b.selector("tabs/highlight", id), "focus")
-	b.theme.Apply(t, b.selector("tabs/highlight-line", id), "focus")
 	for _, tab := range tabs {
 		t.Add(tab)
 	}
@@ -326,8 +351,18 @@ func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 // Returns the builder for method chaining.
 func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
 	text := NewText(id, content, follow, max)
-	b.theme.Apply(text, b.selector("text", id))
 	b.Add(text)
+	return b
+}
+
+// ThemeSwitch creates a new theme switcher widget, for temporarily changing
+// the theme.
+// Parameters:
+//   - id: unique identifier for the theme switch
+//   - theme: new theme
+func (b *Builder) ThemeSwitch(id string, theme Theme) *Builder {
+	ts := NewThemeSwitch(id, theme)
+	b.Add(ts)
 	return b
 }
 

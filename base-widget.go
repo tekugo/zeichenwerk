@@ -9,7 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// RE to parse /part:state style expressions
+// RE to parse part:state style expressions
 // stylePartRegExp is a compiled regular expression used to parse style part selectors.
 // It matches patterns like "part:state" where both the part and state components
 // are optional and consist of alphanumeric characters, underscores, and hyphens.
@@ -30,7 +30,7 @@ var stylePartRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 // should embed BaseWidget to inherit this basic functionality.
 //
 // The Widget is not responsible for rendering, so all rendering is done in
-// the renderer. For new widget, you also have to extend the renderer to be
+// the renderer. For new widgets, you also have to extend the renderer to be
 // able to render the widget.
 type BaseWidget struct {
 	id                  string            // widget identification datum
@@ -57,15 +57,22 @@ func (w *BaseWidget) Bounds() (int, int, int, int) {
 // coordinates represent the area where the actual content should be rendered.
 func (w *BaseWidget) Content() (int, int, int, int) {
 	style := w.Style("")
-	ix := w.x + style.Margin.Left + style.Padding.Left
-	iy := w.y + style.Margin.Top + style.Padding.Top
-	iw := w.width - style.Horizontal()
-	ih := w.height - style.Vertical()
-	if style.Border != "" {
-		ix++
-		iy++
+	if style == nil {
+		panic(fmt.Errorf("no style for widget %s %T", w.ID(), w))
 	}
-	return ix, iy, iw, ih
+	if style.Margin != nil && style.Padding != nil {
+		ix := w.x + style.Margin.Left + style.Padding.Left
+		iy := w.y + style.Margin.Top + style.Padding.Top
+		iw := w.width - style.Horizontal()
+		ih := w.height - style.Vertical()
+		if style.Border != "" {
+			ix++
+			iy++
+		}
+		return ix, iy, iw, ih
+	} else {
+		return w.x, w.y, w.width, w.height
+	}
 }
 
 // Cursor returns the current cursor position as (x, y) coordinates.
@@ -490,9 +497,12 @@ func (w *BaseWidget) State() string {
 // Returns:
 //   - *Style: The style configuration for the selector, or nil if not found
 func (w *BaseWidget) Style(selector string) *Style {
+	// If no style is set, we create an empty default one
 	if w.styles == nil {
-		return nil
+		w.styles = make(map[string]*Style)
+		w.styles[""] = NewStyle("", "")
 	}
+
 	style, ok := w.styles[selector]
 	if ok {
 		return style

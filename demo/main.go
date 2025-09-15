@@ -10,14 +10,18 @@ import (
 )
 
 func main() {
-	ui := NewBuilder(TokyoNightTheme()).
+	ui := createUI()
+	ui.Run()
+}
+
+func createUI() *UI {
+	return NewBuilder(TokyoNightTheme()).
 		Flex("main", "vertical", "stretch", 0).
 		With(header).
 		With(content).
 		With(footer).
 		Class("").
 		Build()
-	ui.Run()
 }
 
 func header(builder *Builder) {
@@ -45,7 +49,7 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Checkbox", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Debug-Log"}
+	demos := []string{"Overview", "Box", "Button", "Checkbox", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
@@ -63,6 +67,7 @@ func content(builder *Builder) {
 		With(scroller).
 		With(grid).
 		With(input).
+		With(theme).
 		Text("debug-log", []string{}, true, 1000).
 		End(). // Switcher
 		End()  // Grid
@@ -105,6 +110,16 @@ func content(builder *Builder) {
 				Update(ui, "demo", "scroller-demo")
 			case "Tabs":
 				Update(ui, "demo", "tabs-demo")
+			case "Theme Switch":
+				Update(ui, "demo", "theme-switch")
+			case "Gruvbox Dark Theme":
+				ui.SetTheme(GruvboxDarkTheme())
+			case "Gruvbox Light Theme":
+				ui.SetTheme(GruvboxLightTheme())
+			case "Midnight Neon Theme":
+				ui.SetTheme(MidnightNeonTheme())
+			case "Tokyo Night Theme":
+				ui.SetTheme(TokyoNightTheme())
 			}
 			return true
 		})
@@ -167,7 +182,7 @@ func input(builder *Builder) {
 
 	if grid, ok := builder.Container().Find("input-demo", false).(*Grid); ok {
 		grid.Rows(1, 1, 1, 1, 1, 1, 1, 1, 1, -1)
-		grid.Columns(20, -1)
+		grid.Columns(0, -1)
 	}
 }
 
@@ -370,6 +385,19 @@ func custom() Widget {
 	result.SetStyle("", NewStyle("green", "black").SetMargin(0).SetPadding(0))
 	result.SetHint(200, 100)
 	return result
+}
+
+func theme(builder *Builder) {
+	builder.ThemeSwitch("theme-switch", GruvboxLightTheme()).
+		Box("theme-box", "Gruvbox Light").Border("", "thin").
+		Flex("theme-flex", "vertical", "stretch", 1).Padding(1).
+		Button("theme-button", "Just a button").
+		Checkbox("theme-cb", "Checkbox", true).
+		Input("theme-input", "Label", 20).
+		Spacer().
+		End().
+		End().
+		End()
 }
 
 var Countries = map[string]string{

@@ -255,11 +255,25 @@ func (g *Grid) Layout() {
 	lc, lr := 0, 0                    // Last fractional column/row indices
 	gx := make([]int, len(g.columns)) // Calculated x positions for each column
 	gy := make([]int, len(g.rows))    // Calculated y positions for each row
+	aw := make([]int, len(g.columns)) // Preferred width for auto columns
+	ah := make([]int, len(g.rows))    // Preferred height for auto rows
 
 	// Reset all separators to show both horizontal and vertical lines
 	for i := range g.separators {
 		for j := range g.separators[i] {
 			g.separators[i][j] = GridB
+		}
+	}
+
+	// Determine preferred width and height for all rows and columns
+	// At this moment, we do not take row spans and column spans into account.
+	for _, cell := range g.cells {
+		pw, ph := cell.content.Hint()
+		if cell.w == 1 && pw > aw[cell.x] {
+			aw[cell.x] = pw
+		}
+		if cell.h == 1 && ph > ah[cell.y] {
+			ah[cell.y] = ph
 		}
 	}
 
@@ -275,6 +289,8 @@ func (g *Grid) Layout() {
 		if g.columns[i] < 0 {
 			cf -= g.columns[i] // Accumulate fractional units (negative values)
 			lc = i             // Track last fractional column for remainder handling
+		} else if g.columns[i] == 0 {
+			g.widths[i] = aw[i]
 		} else {
 			g.widths[i] = g.columns[i] // Set fixed width
 		}
@@ -287,6 +303,7 @@ func (g *Grid) Layout() {
 		if g.columns[i] < 0 {
 			if i == lc {
 				g.widths[i] = rw // Last fractional column gets remaining space
+				// TODO: Distribute remaining space evenly
 			} else {
 				g.widths[i] = -g.columns[i] * fc // Calculate fractional width
 			}
@@ -315,6 +332,8 @@ func (g *Grid) Layout() {
 		if g.rows[i] < 0 {
 			rf -= g.rows[i] // Accumulate fractional units (negative values)
 			lr = i          // Track last fractional row for remainder handling
+		} else if g.rows[i] == 0 {
+			g.heights[i] = ah[i]
 		} else {
 			fh -= g.heights[i]
 			g.heights[i] = g.rows[i] // Set fixed height
@@ -329,6 +348,7 @@ func (g *Grid) Layout() {
 		if g.rows[i] < 0 {
 			if i == lr {
 				g.heights[i] = rh // Last fractional row gets remaining space
+				// TODO: Distribute remaining space evenly
 			} else {
 				g.heights[i] = -g.rows[i] * fr // Calculate fractional height
 			}

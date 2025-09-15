@@ -29,7 +29,7 @@ import (
 // but only the selected pane is visible and interactive.
 type Switcher struct {
 	BaseWidget
-	Selected string           // Name of the currently selected/visible pane
+	Selected string            // Name of the currently selected/visible pane
 	Panes    map[string]Widget // Map of pane names to their corresponding widgets
 }
 
@@ -115,6 +115,21 @@ func (s *Switcher) Find(id string, visible bool) Widget {
 // helping determine which widget should receive mouse events.
 func (s *Switcher) FindAt(x, y int) Widget {
 	return FindAt(s, x, y)
+}
+
+// Hint determines the preferred size of the switcher.
+// The preferred size is the maximum width and height of all children.
+func (s *Switcher) Hint() (int, int) {
+	width := 0
+	height := 0
+
+	for child := range maps.Values(s.Panes) {
+		cw, ch := child.Hint()
+		width = max(cw, width)
+		height = max(ch, height)
+	}
+
+	return width, height
 }
 
 // Select changes the currently visible pane to the one with the specified name.

@@ -100,27 +100,10 @@ type UI struct {
 //	}
 //	ui.Run()
 func NewUI(theme Theme, root Container, debug bool) (*UI, error) {
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := screen.Init(); err != nil {
-		return nil, err
-	}
-
-	// Enable mouse events
-	screen.EnableMouse()
-
-	style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
-	screen.SetStyle(style)
-	screen.Clear()
-	w, h := screen.Size()
-
-	app := &UI{
-		BaseWidget: BaseWidget{id: "root", x: 0, y: 0, width: w, height: h},
-		screen:     screen,
-		renderer:   Renderer{theme: theme, screen: screen, style: style},
+	ui := &UI{
+		BaseWidget: BaseWidget{id: "root", x: 0, y: 0, width: 0, height: 0},
+		screen:     nil,
+		renderer:   Renderer{theme: theme},
 		layers:     []Container{root},
 		debug:      debug,
 		dirty:      true, // Initial draw needed
@@ -128,10 +111,19 @@ func NewUI(theme Theme, root Container, debug bool) (*UI, error) {
 		redraw:     make(chan struct{}, 1),
 	}
 
-	root.SetParent(app)
-	app.Refresh()
+	root.SetParent(ui)
 
-	return app, nil
+	// Connect debug log
+	logger := ui.Find("debug-log", false)
+	if logger != nil {
+		if text, ok := logger.(*Text); ok {
+			ui.Logger = text
+			ui.Log(ui, "debug", "==== Debug log started! ====")
+			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
+		}
+	}
+
+	return ui, nil
 }
 
 // ---- Widget methods -------------------------------------------------------
@@ -382,17 +374,18 @@ func (ui *UI) Layout() {
 // The method only performs actual rendering if the dirty flag is set,
 // providing efficient updates by avoiding unnecessary redraws.
 func (ui *UI) Draw() {
+	if !ui.dirty {
+		return
+	}
+
+	ui.counter++
+	for _, layer := range ui.layers {
+		ui.renderer.render(layer)
+	}
 	ui.ShowCursor()
 	ui.ShowDebug()
-
-	if ui.dirty {
-		ui.counter++
-		for _, layer := range ui.layers {
-			ui.renderer.render(layer)
-		}
-		ui.screen.Show()
-		ui.dirty = false
-	}
+	ui.screen.Show()
+	ui.dirty = false
 }
 
 // ShowDebug renders the debug information bar at the bottom of the screen.
@@ -766,11 +759,36 @@ func (ui *UI) FindOn(id, event string, handler func(Widget, string, ...any) bool
 //  2. Periodic refresh timer
 //  3. Explicit redraw requests
 //  4. User input events (default case with polling)
-func (ui *UI) Run() {
+func (ui *UI) Run() error {
+	var err error
+
+	// Initialize screen
+	ui.screen, err = tcell.NewScreen()
+	if err != nil {
+		return err
+	}
+
+	if err := ui.screen.Init(); err != nil {
+		return err
+	}
+
+	// Enable mouse events
+	ui.screen.EnableMouse()
+
+	style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
+	ui.screen.SetStyle(style)
+	ui.screen.Clear()
+	ui.renderer.screen = ui.screen
+	ui.renderer.style = style
+
+	// Take screen size for the root
+	ui.width, ui.height = ui.screen.Size()
+
 	// Set initial focus
 	ui.SetFocus("first")
 
 	// Initial draw
+	ui.Layout()
 	ui.Draw()
 
 	// Start a goroutine for periodic updates (if needed for time-based updates)
@@ -781,7 +799,7 @@ func (ui *UI) Run() {
 		select {
 		case <-ui.quit:
 			ui.screen.Fini()
-			return
+			return nil
 		case <-ticker.C:
 			// Only redraw if there are time-based updates needed
 			ui.Refresh()
@@ -824,12 +842,13 @@ func (ui *UI) Run() {
 //	ui.SetTheme(TokyoNightTheme())
 func (ui *UI) SetTheme(theme Theme) {
 	ui.renderer.theme = theme
-	
-	// Re-apply theme to all layers
-	for _, layer := range ui.layers {
-		ui.applyThemeToWidget(layer)
-	}
-	
+
+	// Re-apply theme styles to all widgets
+	builder := NewBuilder(theme)
+	Traverse(ui, false, func(widget Widget) {
+		builder.Apply(widget)
+	})
+
 	ui.Refresh()
 }
 
@@ -841,76 +860,6 @@ func (ui *UI) SetTheme(theme Theme) {
 //   - Theme: The currently active theme
 func (ui *UI) GetTheme() Theme {
 	return ui.renderer.theme
-}
-
-// applyThemeToWidget recursively applies the current theme to a widget and its children.
-// This internal method handles the theme application logic for different widget types
-// and ensures that all styling is properly updated.
-//
-// Parameters:
-//   - widget: The widget to apply the theme to
-func (ui *UI) applyThemeToWidget(widget Widget) {
-	// Clear existing styles to start fresh
-	widget.SetStyle("", nil)
-	
-	// Determine widget type and apply appropriate theme styles
-	switch w := widget.(type) {
-	case *Button:
-		ui.renderer.theme.Apply(w, ui.getSelector("button", w.ID()), "disabled", "focus", "hover", "pressed")
-	case *Checkbox:
-		ui.renderer.theme.Apply(w, ui.getSelector("checkbox", w.ID()), "disabled", "focus", "hover")
-	case *Input:
-		ui.renderer.theme.Apply(w, ui.getSelector("input", w.ID()), "focus")
-	case *Label:
-		ui.renderer.theme.Apply(w, ui.getSelector("label", w.ID()))
-	case *List:
-		ui.renderer.theme.Apply(w, ui.getSelector("list", w.ID()), "disabled", "focus")
-		ui.renderer.theme.Apply(w, ui.getSelector("list/highlight", w.ID()), "focus")
-	case *ProgressBar:
-		ui.renderer.theme.Apply(w, ui.getSelector("progress-bar", w.ID()))
-		ui.renderer.theme.Apply(w, ui.getSelector("progress-bar/bar", w.ID()))
-	case *Tabs:
-		ui.renderer.theme.Apply(w, ui.getSelector("tabs", w.ID()), "focus")
-		ui.renderer.theme.Apply(w, ui.getSelector("tabs/line", w.ID()), "focus")
-		ui.renderer.theme.Apply(w, ui.getSelector("tabs/highlight", w.ID()), "focus")
-		ui.renderer.theme.Apply(w, ui.getSelector("tabs/highlight-line", w.ID()), "focus")
-	case *Box:
-		ui.renderer.theme.Apply(w, ui.getSelector("box", w.ID()), "title")
-	case *Flex:
-		ui.renderer.theme.Apply(w, ui.getSelector("flex", w.ID()))
-		ui.renderer.theme.Apply(w, ui.getSelector("flex/shadow", w.ID()))
-	case *Grid:
-		ui.renderer.theme.Apply(w, ui.getSelector("grid", w.ID()))
-	case *Scroller:
-		ui.renderer.theme.Apply(w, ui.getSelector("scroller", w.ID()), "focus")
-	case *Text:
-		ui.renderer.theme.Apply(w, ui.getSelector("text", w.ID()))
-	case *Separator:
-		ui.renderer.theme.Apply(w, ui.getSelector("separator", w.ID()))
-	}
-	
-	// Apply theme to children if this is a container
-	if container, ok := widget.(Container); ok {
-		for _, child := range container.Children(true) {
-			ui.applyThemeToWidget(child)
-		}
-	}
-}
-
-// getSelector creates a theme selector string for the given widget type and ID.
-// This helper method constructs the appropriate CSS-like selector for theme lookup.
-//
-// Parameters:
-//   - widgetType: The type of widget (e.g., "button", "input")
-//   - id: The widget's unique identifier
-//
-// Returns:
-//   - string: The constructed selector (e.g., "button#save", "input#username")
-func (ui *UI) getSelector(widgetType, id string) string {
-	if id != "" {
-		return widgetType + "#" + id
-	}
-	return widgetType
 }
 
 // ---- Helper functions -----------------------------------------------------

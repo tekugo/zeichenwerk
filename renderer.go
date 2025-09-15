@@ -4,6 +4,12 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+// ===========================================================================
+// Attention! To keep the renderer.go file from getting to big, individual
+// parts are put into separate render-*.go files especially for more
+// complex widgets.
+// ===========================================================================
+
 // Screen represents an abstraction over terminal screen operations for rendering.
 // This interface provides the essential methods needed for drawing content to
 // the terminal, allowing for both direct screen access and viewport-based rendering.
@@ -15,7 +21,8 @@ import (
 //   - Testing and mocking of screen operations
 //
 // Implementations include the actual tcell.Screen for terminal output and
-// Viewport for clipped rendering within specific rectangular areas.
+// Viewport for clipped rendering within specific rectangular areas. The interface
+// was designed to mirror the tcell.Screen, so no adapter needed.
 type Screen interface {
 	// GetContent retrieves the character, combining characters, style, and width
 	// at the specified screen coordinates. This is used for reading existing
@@ -319,6 +326,11 @@ func (r *Renderer) render(widget Widget) {
 	case *Text:
 		r.renderBorder(x, y, w, h, style)
 		r.renderText(widget, x, y, w, h)
+	case *ThemeSwitch:
+		old := r.theme
+		r.theme = widget.theme
+		r.render(widget.child)
+		r.theme = old
 	}
 }
 
