@@ -284,6 +284,9 @@ func (r *Renderer) render(widget Widget) {
 	case *Custom:
 		r.renderBorder(0, 0, w, h, style)
 		widget.renderer(widget, r.screen)
+	case *Editor:
+		r.renderBorder(x, y, w, h, style)
+		r.renderEditor(widget, cx, cy, cw, ch)
 	case *Flex:
 		r.renderBorder(x, y, w, h, style)
 		if widget.ID() == "popup" {

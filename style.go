@@ -56,7 +56,10 @@ type Style struct {
 //	// Create a style with hex colors
 //	style := NewStyle("#ffffff", "#0000ff")
 func NewStyle(fg, bg string) *Style {
-	return &Style{Background: bg, Foreground: fg}
+	return &Style{
+		Background: bg,
+		Foreground: fg,
+	}
 }
 
 // Cascade applies properties from another style to this style, implementing
@@ -136,7 +139,13 @@ func (s *Style) Cascade(other *Style) {
 //   - Border: present
 //   - Result: 2 + 3 + 1 + 1 + 2 = 9
 func (s *Style) Horizontal() int {
-	result := s.Margin.Horizontal() + s.Padding.Horizontal()
+	result := 0
+	if s.Margin != nil {
+		result += s.Margin.Horizontal()
+	}
+	if s.Padding != nil {
+		result += s.Padding.Horizontal()
+	}
 	if s.Border != "" {
 		result += 2
 	}
@@ -162,7 +171,13 @@ func (s *Style) Horizontal() int {
 //   - Border: present
 //   - Result: 1 + 2 + 1 + 1 + 2 = 7
 func (s *Style) Vertical() int {
-	result := s.Margin.Vertical() + s.Padding.Vertical()
+	result := 0
+	if s.Margin != nil {
+		result += s.Margin.Vertical()
+	}
+	if s.Padding != nil {
+		result += s.Padding.Vertical()
+	}
 	if s.Border != "" {
 		result += 2
 	}
