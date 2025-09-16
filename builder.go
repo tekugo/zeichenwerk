@@ -118,6 +118,8 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focus", "hover")
 	case *Custom:
 		b.theme.Apply(widget, b.selector("custom", widget.ID()))
+	case *Editor:
+		b.theme.Apply(widget, b.selector("editor", widget.ID()))
 	case *Flex:
 		b.theme.Apply(widget, b.selector("flex", widget.ID()))
 		b.theme.Apply(widget, b.selector("flex/shadow", widget.ID()))
@@ -141,6 +143,9 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("separator", widget.ID()))
 	case *Switcher:
 		b.theme.Apply(widget, b.selector("switcher", widget.ID()))
+	case *Table:
+		b.theme.Apply(widget, b.selector("table", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("table/highlight", widget.ID()), "focus")
 	case *Tabs:
 		b.theme.Apply(widget, b.selector("tabs", widget.ID()), "focus")
 		b.theme.Apply(widget, b.selector("tabs/line", widget.ID()), "focus")
@@ -184,6 +189,12 @@ func (b *Builder) Checkbox(id string, text string, checked bool) *Builder {
 	b.Add(checkbox)
 	// Size hint: 4 characters for "[x] " plus text length
 	checkbox.SetHint(4+len([]rune(text)), 1)
+	return b
+}
+
+func (b *Builder) Editor(id string) *Builder {
+	editor := NewEditor(id)
+	b.Add(editor)
 	return b
 }
 
@@ -328,6 +339,12 @@ func (b *Builder) Spacer() *Builder {
 func (b *Builder) Switcher(id string) *Builder {
 	switcher := NewSwitcher(id)
 	b.Add(switcher)
+	return b
+}
+
+func (b *Builder) Table(id string, provider TableProvider) *Builder {
+	table := NewTable(id, provider)
+	b.Add(table)
 	return b
 }
 

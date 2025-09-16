@@ -53,14 +53,17 @@ options through themes and styling.
 
 The package includes a rich set of built-in widgets for common UI patterns:
 
+- Button: Interactive buttons with click handlers and styling
+- Custom: Custom components with user-defined rendering
+- Editor: A multi-line text editor component
 - Input: Single-line text input with editing capabilities, password masking,
   and validation
 - Label: Static text display with alignment options
-- Button: Interactive buttons with click handlers and styling
 - List: Scrollable item lists with multi-selection and keyboard navigation
-- Text: Multi-line text display with scrolling and content management
 - ProgressBar: Visual progress indicators with customizable styling
-- Viewport: Scrollable content containers for large data sets
+- Separator: Horizontal or vertical content separator
+- Tabs: A tab-bar for selection
+- Text: Multi-line text display with scrolling and content management
 
 ### Containers
 
@@ -69,7 +72,8 @@ Layout containers organize widgets into structured interfaces:
 - Box: Simple single-widget container with borders and padding
 - Flex: Flexible layouts with horizontal/vertical orientation and dynamic sizing
 - Grid: Precise grid-based layouts with cell positioning and spanning
-- Stack: Layered widget management for overlays and modal dialogs
+- Scroller: Scrollable viewport container with scroll bars
+- Switcher: A content switcher
 
 ### Event System
 
@@ -127,25 +131,25 @@ clean, short and concise.
 
 In no particular order!
 
-- [ ] Change theme at build time and runtime (tokyo midnight is hard coded)
-- [ ] Review existing mostly AI generated documentation
+- [x] Change theme at build time and runtime (tokyo midnight is hard coded)
 - [x] Extend the demo to all current widgets with dedicated pages for the
       individual widgets
 - [x] Implement Scroller widget
 - [x] Implement Switcher widget
-- [ ] Add auto height and width (0) to grid
+- [x] Add auto height and width (0) to grid
 - [x] Add Tabs widget
+- [x] Improve internal logging with proper error handling, source widget
+      (will break existing w.Log)
+- [x] Improve theming
+- [x] Add a nord inspired theme
+- [x] Add a gruvbox inspired theme
+- [x] Add a midnight neon theme
+- [ ] Review existing mostly AI generated documentation
 - [ ] Add Table Widget
 - [ ] Add proper form handling for large forms with many fields (Form widget or
   builder with helpers)
-- [x] Improve internal logging with proper error handling, source widget
-      (will break existing w.Log)
 - [ ] Extend inspector to show widget-specific information
 - [ ] Add style manipulation to the inspector
-- [x] Improve theming
-- [ ] Add a nord inspired theme
-- [ ] Add a gruvbox inspired theme
-- [x] Add a midnight neon theme
 - [ ] Improve theme variables and make them visible in the inspector
 
 ## Ideas

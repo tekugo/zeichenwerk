@@ -282,7 +282,7 @@ func (r *Renderer) render(widget Widget) {
 		r.renderBorder(x, y, w, h, style)
 		r.renderCheckbox(widget, cx, cy, cw, ch)
 	case *Custom:
-		r.renderBorder(0, 0, w, h, style)
+		r.renderBorder(x, y, w, h, style)
 		widget.renderer(widget, r.screen)
 	case *Editor:
 		r.renderBorder(x, y, w, h, style)
@@ -324,11 +324,14 @@ func (r *Renderer) render(widget Widget) {
 		}
 	case *Switcher:
 		r.render(widget.Panes[widget.Selected])
+	case *Table:
+		r.renderBorder(x, y, w, h, style)
+		r.renderTable(widget)
 	case *Tabs:
-		r.renderTabs(widget, x, y, w)
+		r.renderTabs(widget, cx, cy, cw)
 	case *Text:
 		r.renderBorder(x, y, w, h, style)
-		r.renderText(widget, x, y, w, h)
+		r.renderText(widget, cx, cy, cw, ch)
 	case *ThemeSwitch:
 		old := r.theme
 		r.theme = widget.theme

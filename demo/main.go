@@ -49,7 +49,7 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Checkbox", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
+	demos := []string{"Overview", "Box", "Button", "Checkbox", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Table", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
@@ -67,6 +67,7 @@ func content(builder *Builder) {
 		With(scroller).
 		With(grid).
 		With(input).
+		With(table).
 		With(theme).
 		Text("debug-log", []string{}, true, 1000).
 		End(). // Switcher
@@ -108,6 +109,8 @@ func content(builder *Builder) {
 				ui.Popup(-1, -1, 0, 0, popup())
 			case "Scroller":
 				Update(ui, "demo", "scroller-demo")
+			case "Table":
+				Update(ui, "demo", "table-demo")
 			case "Tabs":
 				Update(ui, "demo", "tabs-demo")
 			case "Theme Switch":
@@ -400,6 +403,10 @@ func theme(builder *Builder) {
 		End()
 }
 
+func table(builder *Builder) {
+	builder.Table("table-demo", NewArrayTableProvider([]string{"Code", "Country", "Continent", "Capital", "Inhabitants"}, CountryData))
+}
+
 var Countries = map[string]string{
 	"AC": "Ascension",
 	"AD": "Andorra",
@@ -684,4 +691,57 @@ var names = []string{
 	"Olivia",
 	"Sophia",
 	"William",
+}
+
+var CountryData = [][]string{
+	{"US", "United States", "North America", "Washington, D.C.", "331000000"},
+	{"CA", "Canada", "North America", "Ottawa", "38000000"},
+	{"MX", "Mexico", "North America", "Mexico City", "128900000"},
+	{"BR", "Brazil", "South America", "Brasília", "213000000"},
+	{"AR", "Argentina", "South America", "Buenos Aires", "45100000"},
+	{"CL", "Chile", "South America", "Santiago", "19400000"},
+	{"CO", "Colombia", "South America", "Bogotá", "50800000"},
+	{"PE", "Peru", "South America", "Lima", "32900000"},
+	{"VE", "Venezuela", "South America", "Caracas", "28400000"},
+	{"UY", "Uruguay", "South America", "Montevideo", "3470000"},
+	{"GB", "United Kingdom", "Europe", "London", "67800000"},
+	{"FR", "France", "Europe", "Paris", "65200000"},
+	{"DE", "Germany", "Europe", "Berlin", "83100000"},
+	{"IT", "Italy", "Europe", "Rome", "60400000"},
+	{"ES", "Spain", "Europe", "Madrid", "47300000"},
+	{"PT", "Portugal", "Europe", "Lisbon", "10300000"},
+	{"NL", "Netherlands", "Europe", "Amsterdam", "17400000"},
+	{"BE", "Belgium", "Europe", "Brussels", "11500000"},
+	{"CH", "Switzerland", "Europe", "Bern", "8700000"},
+	{"AT", "Austria", "Europe", "Vienna", "9000000"},
+	{"SE", "Sweden", "Europe", "Stockholm", "10400000"},
+	{"NO", "Norway", "Europe", "Oslo", "5400000"},
+	{"FI", "Finland", "Europe", "Helsinki", "5500000"},
+	{"DK", "Denmark", "Europe", "Copenhagen", "5800000"},
+	{"PL", "Poland", "Europe", "Warsaw", "38300000"},
+	{"CZ", "Czech Republic", "Europe", "Prague", "10700000"},
+	{"HU", "Hungary", "Europe", "Budapest", "9700000"},
+	{"GR", "Greece", "Europe", "Athens", "10700000"},
+	{"RU", "Russia", "Europe/Asia", "Moscow", "146000000"},
+	{"TR", "Turkey", "Asia/Europe", "Ankara", "84300000"},
+	{"CN", "China", "Asia", "Beijing", "1412000000"},
+	{"IN", "India", "Asia", "New Delhi", "1393000000"},
+	{"JP", "Japan", "Asia", "Tokyo", "126000000"},
+	{"KR", "South Korea", "Asia", "Seoul", "51700000"},
+	{"ID", "Indonesia", "Asia", "Jakarta", "273000000"},
+	{"TH", "Thailand", "Asia", "Bangkok", "70000000"},
+	{"VN", "Vietnam", "Asia", "Hanoi", "97300000"},
+	{"MY", "Malaysia", "Asia", "Kuala Lumpur", "32700000"},
+	{"PH", "Philippines", "Asia", "Manila", "109600000"},
+	{"AU", "Australia", "Oceania", "Canberra", "25700000"},
+	{"NZ", "New Zealand", "Oceania", "Wellington", "5000000"},
+	{"EG", "Egypt", "Africa", "Cairo", "102000000"},
+	{"NG", "Nigeria", "Africa", "Abuja", "206000000"},
+	{"ZA", "South Africa", "Africa", "Pretoria", "59300000"},
+	{"KE", "Kenya", "Africa", "Nairobi", "53700000"},
+	{"ET", "Ethiopia", "Africa", "Addis Ababa", "115000000"},
+	{"DZ", "Algeria", "Africa", "Algiers", "43800000"},
+	{"MA", "Morocco", "Africa", "Rabat", "36900000"},
+	{"GH", "Ghana", "Africa", "Accra", "31000000"},
+	{"SN", "Senegal", "Africa", "Dakar", "16700000"},
 }
