@@ -1,10 +1,7 @@
 package zeichenwerk
 
-var emptyBorder = BorderStyle{InnerH: ' ', InnerV: '-'}
-
-func (r *Renderer) renderTableHeader(table *Table, x, y, w, h int, grid bool, border BorderStyle) {
+func (r *Renderer) renderTableHeader(table *Table, x, y, w, h int, headerStyle, gridStyle *Style) {
 	rx := 0 // current render position
-	rw := w // remaining width
 	columns := table.provider.Columns()
 	for i, column := range columns {
 		// Check, if the column is visible
@@ -13,56 +10,78 @@ func (r *Renderer) renderTableHeader(table *Table, x, y, w, h int, grid bool, bo
 			continue
 		}
 		// Do we need to render it partially?
+		r.SetStyle(headerStyle)
+		cx := x - table.offsetX + rx
 		if rx < table.offsetX {
 			start := table.offsetX - rx
 			rcw := column.Width - start
-			r.text(x-table.offsetX+rx, y, column.Header[start:], rcw)
-			rw = rw - rcw - 1
-		} else {
-			r.text(x-table.offsetX+rx, y, column.Header, column.Width)
-			r.repeat(x-table.offsetX+rx, y+1, 1, 0, column.Width, border.InnerH)
-			if i < len(columns)-1 && grid {
-				r.screen.SetContent(x-table.offsetX+rx+column.Width, y+1, border.InnerTopT, nil, r.style)
-				r.screen.SetContent(x-table.offsetX+rx+column.Width, y+h, border.BottomT, nil, r.style)
+			runes := []rune(column.Header)
+			if start < len(runes) {
+				r.text(cx+start, y, string(runes[start:]), rcw)
 			}
-			rw = rw - column.Width - 1
+			r.SetStyle(gridStyle)
+			r.repeat(cx+start, y+1, 1, 0, rcw, table.grid.InnerH)
+		} else {
+			r.text(cx, y, column.Header, column.Width)
+			r.SetStyle(gridStyle)
+			r.repeat(cx, y+1, 1, 0, column.Width, table.grid.InnerH)
+		}
+		if i < len(columns)-1 {
+			r.screen.SetContent(cx+column.Width, y+1, table.grid.InnerTopT, nil, r.style)
+			if table.outer {
+				r.screen.SetContent(cx+column.Width, y+h, table.grid.BottomT, nil, r.style)
+			}
 		}
 		rx = rx + column.Width + 1
 	}
 
 	// Draw the remaining header line
+	r.SetStyle(gridStyle)
 	if rx-table.offsetX < w {
-		r.repeat(x-table.offsetX+rx-1, y+1, 1, 0, w+table.offsetX-rx+1, border.InnerH)
+		r.repeat(x-table.offsetX+rx-1, y+1, 1, 0, w+table.offsetX-rx+1, table.grid.InnerH)
 	}
-	if grid {
-		r.screen.SetContent(x-1, y+1, border.LeftT, nil, r.style)
-		r.screen.SetContent(x+w, y+1, border.RightT, nil, r.style)
+	if table.outer {
+		r.screen.SetContent(x-1, y+1, table.grid.LeftT, nil, r.style)
+		r.screen.SetContent(x+w, y+1, table.grid.RightT, nil, r.style)
 	}
 }
 
-func (r *Renderer) renderTableContent(table *Table, x, y, w, h int, separator rune) {
+func (r *Renderer) renderTableContent(table *Table, x, y, w, h int, gridStyle *Style) {
 	row := table.offsetY
 	columns := table.provider.Columns()
 	for row < table.provider.Length() && row-table.offsetY < h {
 		rx := 0
+		var style *Style
 		if row == table.row && table.focused {
-			r.SetStyle(table.Style("highlight:focus"))
+			style = table.Style("highlight:focus")
 		} else if row == table.row {
-			r.SetStyle(table.Style("highlight"))
+			style = table.Style("highlight")
 		} else {
-			r.SetStyle(table.Style(""))
+			style = table.Style("")
 		}
 		for i, column := range columns {
 			if rx+column.Width < table.offsetX {
 				rx = rx + column.Width + 1
 				continue
 			}
+			r.SetStyle(style)
+			cx := x - table.offsetX + rx
+			cy := y - table.offsetY + row
 			if rx < table.offsetX {
-			} else {
-				r.text(x-table.offsetX+rx, y-table.offsetY+row, table.provider.Str(row, i), column.Width)
-				if i < len(columns)-1 {
-					r.screen.SetContent(x-table.offsetX+rx+column.Width, y-table.offsetY+row, separator, nil, r.style)
+				start := table.offsetX - rx
+				rcw := column.Width - start
+				runes := []rune(table.provider.Str(row, i))
+				if start < len(runes) {
+					r.text(cx+start, cy, string(runes[start:]), rcw)
+				} else {
+					r.repeat(cx+start, cy, 1, 0, rcw, ' ')
 				}
+			} else {
+				r.text(cx, cy, table.provider.Str(row, i), column.Width)
+			}
+			if i < len(columns)-1 && table.inner {
+				r.SetStyle(gridStyle)
+				r.screen.SetContent(cx+column.Width, cy, table.grid.InnerV, nil, r.style)
 			}
 			rx = rx + column.Width + 1
 		}
@@ -72,13 +91,16 @@ func (r *Renderer) renderTableContent(table *Table, x, y, w, h int, separator ru
 
 func (r *Renderer) renderTable(table *Table) {
 	x, y, w, h := table.Content()
-	style := table.Style("")
-	if style.Border != "" {
-		border := r.theme.Border(style.Border)
-		r.renderTableHeader(table, x, y, w, h, true, border)
-		r.renderTableContent(table, x, y+2, w, h-2, border.InnerV)
+	headerStyle := table.Style("header")
+	gridStyle := table.Style("grid")
+	if gridStyle.Border != "" {
+		table.Log(table, "debug", "Grid border is %s", gridStyle.Border)
+		table.grid = r.theme.Border(gridStyle.Border)
+		r.renderTableHeader(table, x, y, w, h, headerStyle, gridStyle)
+		r.renderTableContent(table, x, y+2, w, h-2, gridStyle)
 	} else {
-		r.renderTableHeader(table, x, y, w, h, false, emptyBorder)
-		r.renderTableContent(table, x, y+2, w, h-2, ' ')
+		table.Log(table, "debug", "Grid border is not set")
+		r.renderTableHeader(table, x, y, w, h, headerStyle, gridStyle)
+		r.renderTableContent(table, x, y+2, w, h-2, gridStyle)
 	}
 }

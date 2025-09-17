@@ -145,6 +145,8 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("switcher", widget.ID()))
 	case *Table:
 		b.theme.Apply(widget, b.selector("table", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("table/grid", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("table/header", widget.ID()), "focus")
 		b.theme.Apply(widget, b.selector("table/highlight", widget.ID()), "focus")
 	case *Tabs:
 		b.theme.Apply(widget, b.selector("tabs", widget.ID()), "focus")

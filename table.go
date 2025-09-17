@@ -7,12 +7,17 @@ type Table struct {
 	provider         TableProvider
 	row, column      int // highlight position
 	offsetX, offsetY int
+	grid             BorderStyle // grid border style
+	inner, outer     bool        // flag to show inner and outer grid
 }
 
 func NewTable(id string, provider TableProvider) *Table {
 	return &Table{
 		BaseWidget: BaseWidget{id: id, focusable: true},
 		provider:   provider,
+		grid:       BorderStyle{InnerH: ' ', InnerV: '-'},
+		inner:      true,
+		outer:      true,
 	}
 }
 
@@ -45,6 +50,18 @@ func (t *Table) Handle(evt tcell.Event) bool {
 		if t.row > 0 {
 			t.row--
 			t.adjust()
+		}
+		return true
+	case tcell.KeyLeft:
+		if t.offsetX > 0 {
+			t.offsetX--
+			t.Refresh()
+		}
+		return true
+	case tcell.KeyRight:
+		if t.offsetX < t.width-1 {
+			t.offsetX++
+			t.Refresh()
 		}
 		return true
 	default:
