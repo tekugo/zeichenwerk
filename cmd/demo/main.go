@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"maps"
+	"math/rand"
 	"slices"
+	"strconv"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	. "github.com/tekugo/zeichenwerk"
@@ -242,8 +245,7 @@ func checkbox(builder *Builder) {
 						case "cb5":
 							checkboxName = "Terms agreed"
 						}
-						label.Text = fmt.Sprintf("%s: %v", checkboxName, checked)
-						label.Refresh()
+						label.SetText(fmt.Sprintf("%s: %v", checkboxName, checked))
 					}
 				}
 				return true
@@ -404,7 +406,109 @@ func theme(builder *Builder) {
 }
 
 func table(builder *Builder) {
-	builder.Table("table-demo", NewArrayTableProvider([]string{"Code", "Country", "Continent", "Capital", "Inhabitants"}, CountryData))
+	headers := []string{
+		"First name",
+		"Last name",
+		"Street address",
+		"ZIP",
+		"City",
+		"State",
+		"Country",
+		"Phone",
+		"E-Mail",
+		"Date of Birth",
+		"Age",
+		"Place of Birth",
+		"Income",
+		"SSN",
+		"Sex",
+	}
+	data := people(100)
+	builder.Table("table-demo", NewArrayTableProvider(headers, data))
+}
+
+var (
+	firstNames = []string{"John", "Jane", "Michael", "Emily", "David", "Sophia", "James", "Olivia", "Daniel", "Ava", "Liam", "Emma", "Noah", "Isabella", "Ethan", "Mia", "Lucas", "Charlotte", "Mason", "Amelia"}
+	lastNames  = []string{"Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"}
+	streets    = []string{"Maple St", "Oak Ave", "Pine Rd", "Birch Blvd", "Cedar Ln", "Spruce Ct", "Willow Way", "Elm Pl", "Aspen Dr", "Cypress St"}
+	cities     = []string{"New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"}
+	states     = []string{"NY", "CA", "IL", "TX", "AZ", "PA", "OH", "MI", "GA", "NC"}
+	countries  = []string{"USA"}
+	sexes      = []string{"M", "F"}
+)
+
+func randomFrom(list []string) string {
+	return list[rand.Intn(len(list))]
+}
+
+func randomPhone() string {
+	return fmt.Sprintf("+1-%03d-%03d-%04d", rand.Intn(999), rand.Intn(999), rand.Intn(10000))
+}
+
+func randomEmail(first, last string) string {
+	domains := []string{"example.com", "mail.com", "test.org", "demo.net"}
+	return fmt.Sprintf("%s.%s@%s", first, last, randomFrom(domains))
+}
+
+func randomDOB() (string, int) {
+	year := rand.Intn(60) + 1955 // between 1955–2015
+	month := rand.Intn(12) + 1
+	day := rand.Intn(28) + 1
+	age := time.Now().Year() - year
+	return fmt.Sprintf("%04d-%02d-%02d", year, month, day), age
+}
+
+func randomSSN() string {
+	return fmt.Sprintf("%03d-%02d-%04d", rand.Intn(900)+100, rand.Intn(90)+10, rand.Intn(10000))
+}
+
+func randomIncome() string {
+	return strconv.Itoa((rand.Intn(90) + 30) * 1000) // 30k–120k
+}
+
+func generatePerson() []string {
+	first := randomFrom(firstNames)
+	last := randomFrom(lastNames)
+	streetNumber := strconv.Itoa(rand.Intn(999) + 1)
+	street := streetNumber + " " + randomFrom(streets)
+	zip := fmt.Sprintf("%05d", rand.Intn(99999))
+	city := randomFrom(cities)
+	state := randomFrom(states)
+	country := randomFrom(countries)
+	phone := randomPhone()
+	email := randomEmail(first, last)
+	dob, age := randomDOB()
+	placeOfBirth := randomFrom(cities)
+	income := randomIncome()
+	ssn := randomSSN()
+	sex := randomFrom(sexes)
+
+	return []string{
+		first,
+		last,
+		street,
+		zip,
+		city,
+		state,
+		country,
+		phone,
+		email,
+		dob,
+		strconv.Itoa(age),
+		placeOfBirth,
+		income,
+		ssn,
+		sex,
+	}
+}
+
+func people(count int) [][]string {
+	// Generate 100 people
+	people := make([][]string, count)
+	for i := range count {
+		people[i] = generatePerson()
+	}
+	return people
 }
 
 var Countries = map[string]string{

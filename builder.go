@@ -42,7 +42,6 @@ func (b *Builder) selector(t, id string) string {
 // If a widget with id "debug-log" exists, it's automatically configured as the UI logger.
 // Returns the constructed UI ready for rendering and interaction.
 func (b *Builder) Build() *UI {
-	fmt.Printf("*** BUILD %s %T %d", b.stack.Peek().ID(), b.stack.Peek(), len(b.stack))
 	ui, _ := NewUI(b.theme, b.stack.Peek(), true)
 	return ui
 }
@@ -457,7 +456,6 @@ func (b *Builder) Class(class string) *Builder {
 // If only one container remains on the stack, it stays as the root container.
 // Returns the builder for method chaining.
 func (b *Builder) End() *Builder {
-	b.current.Refresh()
 	if len(b.stack) > 1 {
 		b.current = b.stack.Pop()
 	}

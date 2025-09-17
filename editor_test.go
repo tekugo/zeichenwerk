@@ -44,7 +44,7 @@ func TestNewEditor(t *testing.T) {
 		t.Error("NewEditor() useSpaces should be false by default")
 	}
 
-	if editor.numbers {
+	if editor.numbers > 0 {
 		t.Error("NewEditor() showLineNumbers should be false by default")
 	}
 
@@ -121,7 +121,7 @@ func TestLoadText(t *testing.T) {
 	editor := NewEditor("test-editor")
 
 	text := "Line 1\nLine 2\nLine 3\n\nLine 5"
-	editor.LoadText(text)
+	editor.Load(text)
 
 	expectedLines := []string{"Line 1", "Line 2", "Line 3", "", "Line 5"}
 
@@ -151,7 +151,7 @@ func TestGetContent(t *testing.T) {
 	}
 
 	editor.SetContent(originalLines)
-	retrievedLines := editor.GetContent()
+	retrievedLines := editor.Lines()
 
 	if len(retrievedLines) != len(originalLines) {
 		t.Errorf("GetContent() length = %d, want %d", len(retrievedLines), len(originalLines))
@@ -175,7 +175,7 @@ func TestGetText(t *testing.T) {
 	expectedText := "Line 1\nLine 2\nLine 3"
 
 	editor.SetContent(lines)
-	actualText := editor.GetText()
+	actualText := editor.Text()
 
 	if actualText != expectedText {
 		t.Errorf("GetText() = %q, want %q", actualText, expectedText)
@@ -206,7 +206,7 @@ func TestConfiguration(t *testing.T) {
 
 	// Test ShowLineNumbers
 	editor.ShowLineNumbers(true)
-	if !editor.numbers {
+	if editor.numbers < 3 {
 		t.Error("ShowLineNumbers(true) showLineNumbers should be true")
 	}
 
@@ -667,4 +667,3 @@ func TestRuneInsertion(t *testing.T) {
 		t.Errorf("After rune insertion got %q, want %q", actual, expected)
 	}
 }
-

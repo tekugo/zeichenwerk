@@ -416,8 +416,6 @@ func (g *Grid) Layout() {
 		// Recursively layout child containers or refresh leaf widgets
 		if inner, ok := cell.content.(Container); ok {
 			inner.Layout()
-		} else if cell.content != nil {
-			cell.content.Refresh()
 		}
 	}
 }

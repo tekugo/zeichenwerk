@@ -221,6 +221,14 @@ func HandleListEvent(container Container, id, event string, fn func(*List, strin
 	})
 }
 
+// Redraw queues a single widget for redraw.
+func Redraw(widget Widget) {
+	ui := FindUI(widget)
+	if ui != nil {
+		ui.Redraw(widget)
+	}
+}
+
 // Update provides a convenient way to update widget content based on the widget type.
 // This function automatically determines the widget type and applies the appropriate
 // update method, making it easier to update widgets dynamically without explicit
@@ -266,7 +274,7 @@ func Update(container Container, id string, value any) {
 	widget := container.Find(id, false)
 	switch widget := widget.(type) {
 	case *Label:
-		widget.Text = fmt.Sprintf("%v", value)
+		widget.SetText(fmt.Sprintf("%v", value))
 	case *List:
 		a, ok := value.([]string)
 		if ok {
@@ -396,8 +404,8 @@ func WidgetDetails(widget Widget) string {
 
 	switch widget := widget.(type) {
 	case *Grid:
-	  result += fmt.Sprintf("\nRows      : %v", widget.rows)
-	  result += fmt.Sprintf("\nColumns   : %v", widget.columns)
+		result += fmt.Sprintf("\nRows      : %v", widget.rows)
+		result += fmt.Sprintf("\nColumns   : %v", widget.columns)
 	}
 
 	return result

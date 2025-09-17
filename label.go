@@ -47,17 +47,6 @@ func NewLabel(id string, text string) *Label {
 	}
 }
 
-// Cursor returns the cursor position for the label widget.
-// Labels are non-interactive widgets and don't display a cursor,
-// so this always returns (-1, -1) to indicate no cursor should be shown.
-//
-// Returns:
-//   - int: x-coordinate (always -1)
-//   - int: y-coordinate (always -1)
-func (l *Label) Cursor() (int, int) {
-	return -1, -1
-}
-
 // Info returns a human-readable description of the label's current state.
 // This includes both the outer bounds and inner content area dimensions,
 // which is useful for debugging layout and styling issues.

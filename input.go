@@ -97,6 +97,11 @@ func NewInput(id string) *Input {
 	}
 }
 
+// Refresh queues a redraw for the input.
+func (i *Input) Refresh() {
+	Redraw(i)
+}
+
 // Cursor returns the current cursor position relative to the visible text area.
 // The cursor position is adjusted for horizontal scrolling, so it represents
 // the visual position within the widget's content area rather than the absolute
@@ -554,28 +559,20 @@ func (i *Input) Handle(evt tcell.Event) bool {
 	switch event.Key() {
 	case tcell.KeyLeft:
 		i.Left()
-		return true
 	case tcell.KeyRight:
 		i.Right()
-		return true
 	case tcell.KeyHome:
 		i.Start()
-		return true
 	case tcell.KeyEnd:
 		i.End()
-		return true
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		i.Delete()
-		return true
 	case tcell.KeyDelete:
 		i.DeleteForward()
-		return true
 	case tcell.KeyCtrlA:
 		i.Start()
-		return true
 	case tcell.KeyCtrlE:
 		i.End()
-		return true
 	case tcell.KeyCtrlK:
 		// Delete from cursor to end of text
 		if !i.ReadOnly {
@@ -583,7 +580,6 @@ func (i *Input) Handle(evt tcell.Event) bool {
 			i.adjust()
 			i.Emit("change", i.Text)
 		}
-		return true
 	case tcell.KeyCtrlU:
 		// Delete from beginning of text to cursor
 		if !i.ReadOnly {
@@ -592,19 +588,21 @@ func (i *Input) Handle(evt tcell.Event) bool {
 			i.adjust()
 			i.Emit("change", i.Text)
 		}
-		return true
 	case tcell.KeyEnter:
 		i.Emit("enter", i.Text)
-		return true
 	case tcell.KeyRune:
 		ch := event.Rune()
 		if unicode.IsPrint(ch) {
 			i.Insert(ch)
-			return true
+		} else {
+			return false
 		}
+	default:
+		return false
 	}
 
-	return false
+	i.Refresh()
+	return true
 }
 
 // ShouldShowPlaceholder returns whether the placeholder text should be displayed

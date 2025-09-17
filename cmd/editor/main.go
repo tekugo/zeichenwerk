@@ -15,7 +15,7 @@ func main() {
 	editor.SetTabWidth(4)
 	editor.UseSpaces(false)
 	editor.SetAutoIndent(true)
-	editor.SetStyle("", NewStyle("", "").SetCursor("*block"))
+	editor.SetStyle("", NewStyle("", "").SetCursor("*bar"))
 
 	// Load some sample content
 	sampleText := `// Welcome to the Zeichenwerk Editor!

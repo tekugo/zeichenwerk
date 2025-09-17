@@ -3,7 +3,6 @@ package zeichenwerk
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -48,17 +47,20 @@ import (
 // constructing interfaces.
 type UI struct {
 	BaseWidget
-	counter  int           // Frame counter for debugging and performance monitoring
-	debug    bool          // Debug mode flag for showing debug information overlay
-	dirty    bool          // Flag indicating if a screen redraw is needed
-	focus    Widget        // Currently focused widget that receives keyboard input
-	hover    Widget        // Currently hovered widget for mouse interaction feedback
-	layers   []Container   // Stack of widget layers (main UI + popups/modals)
-	Logger   *Text         // Debug log widget for runtime messages (auto-scrolling)
-	quit     chan struct{} // Channel for signaling application shutdown
-	redraw   chan struct{} // Buffered channel for triggering screen redraws
-	renderer Renderer      // Renderer instance for drawing widgets to the terminal
-	screen   tcell.Screen  // The terminal screen interface for low-level rendering
+	debug    bool             // Debug mode flag for showing debug information overlay
+	dirty    bool             // Flag indicating if a screen redraw is needed
+	events   chan tcell.Event // Event channel for event handling
+	focus    Widget           // Currently focused widget that receives keyboard input
+	hover    Widget           // Currently hovered widget for mouse interaction feedback
+	layers   []Container      // Stack of widget layers (main UI + popups/modals)
+	logger   *Text            // Debug log widget for runtime messages (auto-scrolling)
+	quit     chan struct{}    // Channel for signaling application shutdown
+	redraw   chan Widget      // Channel for triggering individual widget redraws
+	redraws  int              // Redraw counter for debugging and performance monitoring
+	refresh  chan struct{}    // Buffered channel for triggering screen redraws
+	refreshs int              // Refresh counter for debugging and performance monitoring
+	renderer Renderer         // Renderer instance for drawing widgets to the terminal
+	screen   tcell.Screen     // The terminal screen interface for low-level rendering
 }
 
 // ---- Constructor function -------------------------------------------------
@@ -108,7 +110,9 @@ func NewUI(theme Theme, root Container, debug bool) (*UI, error) {
 		debug:      debug,
 		dirty:      true, // Initial draw needed
 		quit:       make(chan struct{}),
-		redraw:     make(chan struct{}, 1),
+		events:     make(chan tcell.Event, 10),
+		redraw:     make(chan Widget, 10), // Initialize redraw channel with buffer
+		refresh:    make(chan struct{}, 1),
 	}
 
 	root.SetParent(ui)
@@ -117,7 +121,7 @@ func NewUI(theme Theme, root Container, debug bool) (*UI, error) {
 	logger := ui.Find("debug-log", false)
 	if logger != nil {
 		if text, ok := logger.(*Text); ok {
-			ui.Logger = text
+			ui.logger = text
 			ui.Log(ui, "debug", "==== Debug log started! ====")
 			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
 		}
@@ -165,7 +169,6 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		// If the event is handled by the focused widget, we do not process the
 		// event any further.
 		if ui.propagate(ui.focus, event) {
-			ui.focus.Refresh()
 			break
 		}
 
@@ -248,6 +251,22 @@ func (ui *UI) propagate(target Widget, event tcell.Event) bool {
 	return handled
 }
 
+// Redraw queues the passed widget for redraw.
+// This method enqueues the widget in the redraw channel without blocking.
+// If the channel is full, a complete refresh will be triggered.
+//
+// This method should be called whenever only a single widget changes and the
+// rest of the screen is not affected. Widget redraw should be the preferred
+// way for updates, because they will be faster.
+func (ui *UI) Redraw(widget Widget) {
+	select {
+	case ui.redraw <- widget:
+	default:
+		ui.Log(ui, "debug", "Redraw queue full")
+		ui.Refresh()
+	}
+}
+
 // Refresh marks the application as needing a redraw and signals the draw loop.
 // This method sets the dirty flag and attempts to send a signal through the
 // redraw channel to trigger a screen update. If the channel is full (redraw
@@ -259,7 +278,7 @@ func (ui *UI) propagate(target Widget, event tcell.Event) bool {
 func (ui *UI) Refresh() {
 	ui.dirty = true
 	select {
-	case ui.redraw <- struct{}{}:
+	case ui.refresh <- struct{}{}:
 	default: // Channel is full, redraw already pending
 	}
 }
@@ -378,7 +397,7 @@ func (ui *UI) Draw() {
 		return
 	}
 
-	ui.counter++
+	ui.refreshs++
 	for _, layer := range ui.layers {
 		ui.renderer.render(layer)
 	}
@@ -386,6 +405,19 @@ func (ui *UI) Draw() {
 	ui.ShowDebug()
 	ui.screen.Show()
 	ui.dirty = false
+}
+
+// Redraw renders just a single widget, if its state changed. No new layout is
+// performed, no other widgets are affected.
+//
+// Parameters:
+//   - widget: Widget to redraw
+func (ui *UI) DrawWidget(widget Widget) {
+	ui.redraws++
+	ui.renderer.render(widget)
+	ui.ShowCursor()
+	ui.ShowDebug()
+	ui.screen.Show()
 }
 
 // ShowDebug renders the debug information bar at the bottom of the screen.
@@ -427,7 +459,7 @@ func (ui *UI) ShowDebug() {
 		ui.renderer.text(
 			0,
 			ui.height-1,
-			fmt.Sprintf(" DEBUG \u2502 #%6d \u2502 Screen %3d:%3d \u2502 Layers %2d \u2502 Focus %-20s \u2502 Hover %-20s", ui.counter, ui.width, ui.height, len(ui.layers), focus, hover),
+			fmt.Sprintf(" DEBUG \u2502 Refresh %6d \u2502 Redraw %6d \u2502 Screen %3d:%3d \u2502 Layers %2d \u2502 Focus %-20s \u2502 Hover %-20s", ui.refreshs, ui.redraws, ui.width, ui.height, len(ui.layers), focus, hover),
 			ui.width)
 	}
 }
@@ -579,6 +611,7 @@ func (ui *UI) ShowCursor() {
 			}
 			ui.screen.SetCursorStyle(cs)
 			ui.screen.ShowCursor(x+cx, y+cy)
+			ui.screen.Show()
 		} else {
 			ui.screen.HideCursor()
 		}
@@ -595,8 +628,8 @@ func (ui *UI) ShowCursor() {
 //   - level: Log level
 //   - message: The debug message to add to the log
 func (ui *UI) Log(source Widget, level, message string, params ...any) {
-	if ui.Logger != nil {
-		ui.Logger.Add(fmt.Sprintf(message, params...))
+	if ui.logger != nil {
+		ui.logger.Add(fmt.Sprintf(message, params...))
 	}
 }
 
@@ -664,6 +697,7 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 	popup.SetParent(ui)
 	popup.SetBounds(x, y, w, h)
 	popup.Layout()
+
 	ui.layers = append(ui.layers, popup)
 	ui.SetFocus("first")
 	ui.Refresh()
@@ -791,26 +825,32 @@ func (ui *UI) Run() error {
 	ui.Layout()
 	ui.Draw()
 
-	// Start a goroutine for periodic updates (if needed for time-based updates)
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+	go ui.EventLoop()
 
+	// Event handling loop
 	for {
 		select {
 		case <-ui.quit:
 			ui.screen.Fini()
 			return nil
-		case <-ticker.C:
-			// Only redraw if there are time-based updates needed
-			ui.Refresh()
-		case <-ui.redraw:
+		case widget := <-ui.redraw:
+			ui.DrawWidget(widget)
+		case <-ui.refresh:
 			ui.Draw()
-		default:
-			// Poll for events with a small timeout to avoid busy waiting
-			ev := ui.screen.PollEvent()
-			if ev != nil {
-				ui.Handle(ev)
-			}
+		case event := <-ui.events:
+			go ui.Handle(event)
+		}
+	}
+}
+
+// EventLoop polls the tcell events and sends them to the run loop over the
+// event channel. Polling for events inside run would normally block the run
+// loop.
+func (ui *UI) EventLoop() {
+	for {
+		ev := ui.screen.PollEvent()
+		if ev != nil {
+			ui.events <- ev
 		}
 	}
 }

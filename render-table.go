@@ -2,8 +2,13 @@ package zeichenwerk
 
 func (r *Renderer) renderTableHeader(table *Table, x, y, w, h int, headerStyle, gridStyle *Style) {
 	rx := 0 // current render position
+	rw := w // remaining width
 	columns := table.provider.Columns()
 	for i, column := range columns {
+		// If there is no room remaing, we stop rendering the header
+		if rw < 0 {
+			break
+		}
 		// Check, if the column is visible
 		if rx+column.Width < table.offsetX {
 			rx = rx + column.Width + 1
@@ -21,18 +26,21 @@ func (r *Renderer) renderTableHeader(table *Table, x, y, w, h int, headerStyle, 
 			}
 			r.SetStyle(gridStyle)
 			r.repeat(cx+start, y+1, 1, 0, rcw, table.grid.InnerH)
-		} else {
-			r.text(cx, y, column.Header, column.Width)
+			rw += start
+		} else if rw > 0 {
+			cw := min(rw, column.Width)
+			r.text(cx, y, column.Header, cw)
 			r.SetStyle(gridStyle)
-			r.repeat(cx, y+1, 1, 0, column.Width, table.grid.InnerH)
+			r.repeat(cx, y+1, 1, 0, cw, table.grid.InnerH)
 		}
-		if i < len(columns)-1 {
+		if i < len(columns)-1 && rw > column.Width {
 			r.screen.SetContent(cx+column.Width, y+1, table.grid.InnerTopT, nil, r.style)
 			if table.outer {
 				r.screen.SetContent(cx+column.Width, y+h, table.grid.BottomT, nil, r.style)
 			}
 		}
 		rx = rx + column.Width + 1
+		rw = rw - column.Width - 1
 	}
 
 	// Draw the remaining header line
@@ -51,6 +59,7 @@ func (r *Renderer) renderTableContent(table *Table, x, y, w, h int, gridStyle *S
 	columns := table.provider.Columns()
 	for row < table.provider.Length() && row-table.offsetY < h {
 		rx := 0
+		rw := w
 		var style *Style
 		if row == table.row && table.focused {
 			style = table.Style("highlight:focus")
@@ -76,14 +85,19 @@ func (r *Renderer) renderTableContent(table *Table, x, y, w, h int, gridStyle *S
 				} else {
 					r.repeat(cx+start, cy, 1, 0, rcw, ' ')
 				}
+				rw += start
 			} else {
-				r.text(cx, cy, table.provider.Str(row, i), column.Width)
+				cw := min(rw, column.Width)
+				r.text(cx, cy, table.provider.Str(row, i), cw)
 			}
-			if i < len(columns)-1 && table.inner {
-				r.SetStyle(gridStyle)
+			if i < len(columns)-1 && table.inner && rw > column.Width {
+				if row != table.row {
+					r.SetStyle(gridStyle)
+				}
 				r.screen.SetContent(cx+column.Width, cy, table.grid.InnerV, nil, r.style)
 			}
 			rx = rx + column.Width + 1
+			rw = rw - column.Width - 1
 		}
 		row++
 	}

@@ -273,7 +273,11 @@ func (e *Editor) Cursor() (int, int) {
 // changes.
 func (e *Editor) RefreshCursor() {
 	ui := FindUI(e)
-	ui.ShowCursor()
+	if ui != nil {
+		ui.ShowCursor()
+	} else {
+		panic("Cannot update cursor position")
+	}
 }
 
 // MoveTo moves the cursor to the specified line and column position.
@@ -502,7 +506,6 @@ func (e *Editor) Enter() {
 
 	// Split current line at cursor position
 	currentLine := e.content[e.line]
-	currentLine.Move(e.column)
 
 	// Get text after cursor
 	rightText := ""
@@ -510,9 +513,10 @@ func (e *Editor) Enter() {
 		rightText += string(r)
 	}
 
-	// Remove text after cursor from current line
-	for i := currentLine.Length() - 1; i >= e.column; i-- {
-		currentLine.Move(i + 1)
+	// Remove text after cursor from current line by deleting from the end
+	// Move cursor to the split position and delete everything after it
+	currentLine.Move(e.column)
+	for currentLine.Length() > e.column {
 		currentLine.Delete()
 	}
 
@@ -522,8 +526,9 @@ func (e *Editor) Enter() {
 	// Auto-indent if enabled
 	if e.indent {
 		indent := e.getLineIndent(e.line)
-		for _, ch := range indent {
-			newBuffer.Move(0)
+		// Insert indentation at the beginning of the new line
+		for i, ch := range []rune(indent) {
+			newBuffer.Move(i)
 			newBuffer.Insert(ch)
 		}
 	}
@@ -534,7 +539,7 @@ func (e *Editor) Enter() {
 
 	// Position cursor at beginning of new line (after auto-indent)
 	if e.indent {
-		indent := e.getLineIndent(e.line)
+		indent := e.getLineIndent(e.line - 1) // Get indent from previous line
 		e.column = len([]rune(indent))
 	} else {
 		e.column = 0

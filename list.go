@@ -62,6 +62,12 @@ func NewList(id string, items []string) *List {
 	}
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
+func (l *List) Refresh() {
+	Redraw(l)
+}
+
 // ---- Movements ------------------------------------------------------------
 
 // Up moves the highlight bar up by one item, skipping any disabled items.
@@ -92,8 +98,19 @@ func (l *List) Up(count int) {
 		l.adjust()
 		l.Emit("select", l.Index)
 	} else {
-		l.First()
+		// Move to first without calling First() to avoid double refresh
+		l.Index = -1
+		for i := range l.Items {
+			if !slices.Contains(l.Disabled, i) {
+				l.Index = i
+				l.adjust()
+				l.Emit("select", l.Index)
+				break
+			}
+		}
 	}
+
+	l.Refresh()
 }
 
 // Down moves the highlight bar down by one item, skipping any disabled items.
@@ -122,8 +139,19 @@ func (l *List) Down(count int) {
 		l.adjust()
 		l.Emit("select", l.Index)
 	} else {
-		l.Last()
+		// Move to last without calling Last() to avoid double refresh
+		l.Index = -1
+		for i := len(l.Items) - 1; i >= 0; i-- {
+			if !slices.Contains(l.Disabled, i) {
+				l.Index = i
+				l.adjust()
+				l.Emit("select", l.Index)
+				break
+			}
+		}
 	}
+
+	l.Refresh()
 }
 
 // First moves the index to the first non-disabled item
@@ -137,6 +165,7 @@ func (l *List) First() {
 			break
 		}
 	}
+	l.Refresh()
 }
 
 // Last moves the index to the last non-disabled item
@@ -150,18 +179,21 @@ func (l *List) Last() {
 			break
 		}
 	}
+	l.Refresh()
 }
 
 // PageUp moves selection up by one page
 func (l *List) PageUp() {
 	_, _, _, ih := l.Content()
 	l.Up(ih)
+	// Refresh is already called by Up(), no need to call again
 }
 
 // PageDown moves selection down by one page
 func (l *List) PageDown() {
 	_, _, _, ih := l.Content()
 	l.Down(ih)
+	// Refresh is already called by Down(), no need to call again
 }
 
 // ---- Actions --------------------------------------------------------------

@@ -50,6 +50,11 @@ func NewCheckbox(id, text string, checked bool) *Checkbox {
 	}
 }
 
+// Refresh redraws the widget.
+func (c *Checkbox) Refresh() {
+	Redraw(c)
+}
+
 // Toggle switches the checkbox state between checked and unchecked.
 // This method triggers the "change" event with the new state as data.
 // The checkbox will be refreshed to reflect the visual state change.
@@ -217,3 +222,4 @@ func (c *Checkbox) State() string {
 		return c.state
 	}
 }
+
