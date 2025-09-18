@@ -838,7 +838,7 @@ func (ui *UI) Run() error {
 		case <-ui.refresh:
 			ui.Draw()
 		case event := <-ui.events:
-			go ui.Handle(event)
+			ui.Handle(event)
 		}
 	}
 }
