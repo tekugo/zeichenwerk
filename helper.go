@@ -273,6 +273,8 @@ func Redraw(widget Widget) {
 func Update(container Container, id string, value any) {
 	widget := container.Find(id, false)
 	switch widget := widget.(type) {
+	case *Digits:
+		widget.Text = fmt.Sprintf("%v", value)
 	case *Label:
 		widget.SetText(fmt.Sprintf("%v", value))
 	case *List:
@@ -285,18 +287,19 @@ func Update(container Container, id string, value any) {
 			}
 		}
 	case *ProgressBar:
-		v, ok := value.(int)
-		if ok {
+		if v, ok := value.(int); ok {
 			widget.Value = v
 		}
 	case *Switcher:
-		pane, ok := value.(string)
-		if ok {
+		if pane, ok := value.(string); ok {
 			widget.Select(pane)
 		}
+	case *Table:
+		if provider, ok := value.(TableProvider); ok {
+			widget.Set(provider)
+		}
 	case *Text:
-		t, ok := value.([]string)
-		if ok {
+		if t, ok := value.([]string); ok {
 			widget.Set(t)
 		}
 	}

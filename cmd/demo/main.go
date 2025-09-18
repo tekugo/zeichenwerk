@@ -52,7 +52,7 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Checkbox", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Table", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
+	demos := []string{"Overview", "Box", "Button", "Checkbox", "Digits", "Editor", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Spinner", "Table", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
@@ -72,6 +72,9 @@ func content(builder *Builder) {
 		With(input).
 		With(table).
 		With(theme).
+		With(spinner).
+		With(editor).
+		With(digits).
 		Text("debug-log", []string{}, true, 1000).
 		End(). // Switcher
 		End()  // Grid
@@ -83,6 +86,12 @@ func content(builder *Builder) {
 
 		HandleListEvent(grid, "demos", "activate", func(list *List, event string, index int) bool {
 			ui := FindUI(list)
+
+			// Stop all spinners
+			for _, spinner := range FindAll[*Spinner](ui, false) {
+				spinner.Stop()
+			}
+
 			switch demos[index] {
 			case "Overview":
 				Update(ui, "demo", "overview-demo")
@@ -92,6 +101,10 @@ func content(builder *Builder) {
 				Update(ui, "demo", "button-demo")
 			case "Checkbox":
 				Update(ui, "demo", "checkbox-demo")
+			case "Digits":
+				Update(ui, "demo", "digits-demo")
+			case "Editor":
+				Update(ui, "demo", "editor")
 			case "Flex":
 				Update(ui, "demo", "flex-demo")
 			case "Grid":
@@ -112,6 +125,11 @@ func content(builder *Builder) {
 				ui.Popup(-1, -1, 0, 0, popup())
 			case "Scroller":
 				Update(ui, "demo", "scroller-demo")
+			case "Spinner":
+				Update(ui, "demo", "spinner-demo")
+				for _, spinner := range FindAll[*Spinner](ui, false) {
+					spinner.Start(100 * time.Millisecond)
+				}
 			case "Table":
 				Update(ui, "demo", "table-demo")
 			case "Tabs":
@@ -425,6 +443,42 @@ func table(builder *Builder) {
 	}
 	data := people(100)
 	builder.Table("table-demo", NewArrayTableProvider(headers, data))
+}
+
+func spinner(builder *Builder) {
+	builder.Box("spinner-demo", "Spinner").Border("", "round").Margin(1).Padding(1, 5).
+		Flex("spinner-flex", "horizontal", "start", 2).
+		Spinner("spinner", []rune(Spinners["bar"])).
+		Spinner("spinner", []rune(Spinners["dot"])).
+		Spinner("spinner", []rune(Spinners["dots"])).
+		Spinner("spinner", []rune(Spinners["arrow"])).
+		Spinner("spinner", []rune(Spinners["circle"])).
+		Spinner("spinner", []rune(Spinners["bounce"])).
+		Spinner("spinner", []rune(Spinners["braille"])).
+		End().
+		End()
+}
+
+func editor(builder *Builder) {
+	builder.Editor("editor")
+}
+
+func digits(builder *Builder) {
+	builder.Flex("digits-demo", "vertical", "stretch", 1).
+		Box("digits-input-box", "Digits").Border("", "thin").
+		Input("digits-input", "Digits", 20).
+		End().
+		Box("digits-output-box", "Result").Border("", "thin").Padding(1).
+		Digits("digits", "0123456789ABCDEF.,#:").
+		End().
+		End()
+
+	builder.Find("digits-input").On("enter", func(widget Widget, event string, values ...any) bool {
+		ui := FindUI(widget)
+		Update(ui, "digits", fmt.Sprintf("%v", values[0]))
+		Redraw(ui.Find("digits", true))
+		return true
+	})
 }
 
 var (

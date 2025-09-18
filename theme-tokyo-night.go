@@ -28,6 +28,7 @@ func TokyoNightTheme() Theme {
 		"button":                    NewStyle("$bg0", "$blue").SetBorder("lines").SetPadding(0, 2),
 		"button:focus":              NewStyle("$fg0", "$blue"),
 		"button:hover":              NewStyle("$red", "$blue"),
+		"digits":                    NewStyle("$green", ""),
 		"editor":                    NewStyle("", "").SetCursor("*block"),
 		"grid":                      NewStyle("$fg1", "$bg0").SetBorder("thin"),
 		"input":                     NewStyle("$fg0", "$bg2").SetCursor("*bar"),

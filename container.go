@@ -90,6 +90,24 @@ func Find(container Container, id string, visible bool) Widget {
 	return nil
 }
 
+// FindAll returns all widgets of the specified type found inside the container.
+//
+// Parameters:
+//   - container: The container to search within
+//   - visible: If true, search only visible children; if false, search all
+//
+// Returns:
+//   - T: An array containing all found widgets, may be empty, but never nil
+func FindAll[T any](container Container, visible bool) []T {
+	var result []T
+	Traverse(container, visible, func(widget Widget) {
+		if val, ok := widget.(T); ok {
+			result = append(result, val)
+		}
+	})
+	return result
+}
+
 // FindAt locates a widget at specific coordinates within a container hierarchy.
 // Provides a default implementation that container types can use.
 //

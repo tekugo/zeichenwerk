@@ -661,14 +661,15 @@ func (e *Editor) calculateVisualColumn() int {
 }
 
 // Emit overrides BaseWidget.Emit to pass the correct widget type.
-func (e *Editor) Emit(event string, data ...any) {
+func (e *Editor) Emit(event string, data ...any) bool {
 	if e.handlers == nil {
-		return
+		return false
 	}
 	handler, found := e.handlers[event]
 	if found {
-		handler(e, event, data...)
+		return handler(e, event, data...)
 	}
+	return false
 }
 
 // Handle processes keyboard events for the editor widget.
@@ -727,6 +728,8 @@ func (e *Editor) Handle(evt tcell.Event) bool {
 			e.Insert(ch)
 			return true
 		}
+	default:
+		return e.Emit("key", event)
 	}
 
 	return false

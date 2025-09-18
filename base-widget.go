@@ -47,31 +47,31 @@ type BaseWidget struct {
 // This includes the full area occupied by the widget including margins,
 // borders, and padding. The coordinates are always absolute screen
 // coordinates.
-func (w *BaseWidget) Bounds() (int, int, int, int) {
-	return w.x, w.y, w.width, w.height
+func (bw *BaseWidget) Bounds() (int, int, int, int) {
+	return bw.x, bw.y, bw.width, bw.height
 }
 
 // Content returns the widget's inner content area as (x, y, width, height).
 // This calculates the available space for actual content by subtracting
 // margins, padding, and border space from the outer bounds. The returned
 // coordinates represent the area where the actual content should be rendered.
-func (w *BaseWidget) Content() (int, int, int, int) {
-	style := w.Style("")
+func (bw *BaseWidget) Content() (int, int, int, int) {
+	style := bw.Style("")
 	if style == nil {
-		panic(fmt.Errorf("no style for widget %s %T", w.ID(), w))
+		return bw.x, bw.y, bw.width, bw.height
 	}
 	if style.Margin != nil && style.Padding != nil {
-		ix := w.x + style.Margin.Left + style.Padding.Left
-		iy := w.y + style.Margin.Top + style.Padding.Top
-		iw := w.width - style.Horizontal()
-		ih := w.height - style.Vertical()
+		ix := bw.x + style.Margin.Left + style.Padding.Left
+		iy := bw.y + style.Margin.Top + style.Padding.Top
+		iw := bw.width - style.Horizontal()
+		ih := bw.height - style.Vertical()
 		if style.Border != "" {
 			ix++
 			iy++
 		}
 		return ix, iy, iw, ih
 	} else {
-		return w.x, w.y, w.width, w.height
+		return bw.x, bw.y, bw.width, bw.height
 	}
 }
 
@@ -83,7 +83,7 @@ func (w *BaseWidget) Content() (int, int, int, int) {
 //
 // The returned position is relative to the content area of the widget,
 // so 0,0 is the top-left corner of the content.
-func (w *BaseWidget) Cursor() (int, int) {
+func (bw *BaseWidget) Cursor() (int, int) {
 	return -1, -1
 }
 
@@ -121,14 +121,15 @@ func (w *BaseWidget) Cursor() (int, int) {
 // passed to the event handler function and it cannot be cast to the original
 // widget type. If you want the original widget to be passed, you have to
 // "copy" the Emit() method into it.
-func (w *BaseWidget) Emit(event string, data ...any) {
-	if w.handlers == nil {
-		return
+func (bw *BaseWidget) Emit(event string, data ...any) bool {
+	if bw.handlers == nil {
+		return false
 	}
-	handler, found := w.handlers[event]
+	handler, found := bw.handlers[event]
 	if found {
-		handler(w, event, data...)
+		return handler(bw, event, data...)
 	}
+	return false
 }
 
 // Focusable returns whether the widget can receive keyboard focus.
@@ -138,8 +139,8 @@ func (w *BaseWidget) Emit(event string, data ...any) {
 //
 // Returns:
 //   - bool: true if the widget can receive focus, false otherwise
-func (w *BaseWidget) Focusable() bool {
-	return w.focusable
+func (bw *BaseWidget) Focusable() bool {
+	return bw.focusable
 }
 
 // Focused returns the current focus state of the widget.
@@ -148,8 +149,8 @@ func (w *BaseWidget) Focusable() bool {
 //
 // Returns:
 //   - bool: true if the widget is currently focused, false otherwise
-func (w *BaseWidget) Focused() bool {
-	return w.focused
+func (bw *BaseWidget) Focused() bool {
+	return bw.focused
 }
 
 // Handle processes the given tcell.Event and returns whether it was consumed.
@@ -167,10 +168,10 @@ func (w *BaseWidget) Focused() bool {
 //
 // Returns:
 //   - bool: true if the event was handled and consumed, false otherwise
-func (w *BaseWidget) Handle(event tcell.Event) bool {
+func (bw *BaseWidget) Handle(event tcell.Event) bool {
 	switch event := event.(type) {
 	case *tcell.EventKey:
-		w.Emit("key", event)
+		return bw.Emit("key", event)
 	}
 	return false
 }
@@ -187,8 +188,8 @@ func (w *BaseWidget) Handle(event tcell.Event) bool {
 // Returns:
 //   - int: Preferred width from default style, or 0 if not specified
 //   - int: Preferred height from default style, or 0 if not specified
-func (w *BaseWidget) Hint() (int, int) {
-	style := w.Style("")
+func (bw *BaseWidget) Hint() (int, int) {
+	style := bw.Style("")
 	if style != nil {
 		w := style.Width
 		h := style.Height
@@ -210,8 +211,8 @@ func (w *BaseWidget) Hint() (int, int) {
 //
 // Returns:
 //   - bool: true if the widget is currently hovered, false otherwise
-func (w *BaseWidget) Hovered() bool {
-	return w.hovered
+func (bw *BaseWidget) Hovered() bool {
+	return bw.hovered
 }
 
 // ID returns the unique identifier string for this widget instance.
@@ -221,31 +222,31 @@ func (w *BaseWidget) Hovered() bool {
 //
 // Returns:
 //   - string: The widget's unique identifier
-func (w *BaseWidget) ID() string {
-	return w.id
+func (bw *BaseWidget) ID() string {
+	return bw.id
 }
 
 // Info returns a human-readable description of the widget's current state.
 // The base implementation returns basic information about the widget's
 // type, ID, and bounds. This is primarily used for debugging and development.
-func (w *BaseWidget) Info() string {
-	cx, cy, cw, ch := w.Content()
+func (bw *BaseWidget) Info() string {
+	cx, cy, cw, ch := bw.Content()
 	flags := make([]string, 0)
 	parent := "<nil>"
-	if w.focusable {
+	if bw.focusable {
 		flags = append(flags, "focusable")
 	}
-	if w.focused {
+	if bw.focused {
 		flags = append(flags, "focused")
 	}
-	if w.hovered {
+	if bw.hovered {
 		flags = append(flags, "hovered")
 	}
-	if w.parent != nil {
-		parent = w.parent.ID()
+	if bw.parent != nil {
+		parent = bw.parent.ID()
 	}
 	return fmt.Sprintf("id=%s, p=%s, bounds=(%d.%d %d/%d), content=(%d.%d %d/%d), styles=%d, handlers=%d, flags=%s",
-		w.id, parent, w.x, w.y, w.width, w.height, cx, cy, cw, ch, len(w.styles), len(w.handlers), flags)
+		bw.id, parent, bw.x, bw.y, bw.width, bw.height, cx, cy, cw, ch, len(bw.styles), len(bw.handlers), flags)
 }
 
 // Log logs a debug message to the application's debug log.
@@ -258,9 +259,9 @@ func (w *BaseWidget) Info() string {
 //   - level: Log level
 //   - msg: The debug message to log (can be a format string)
 //   - params: Optional parameters for message formatting
-func (w *BaseWidget) Log(source Widget, level string, msg string, params ...any) {
-	if w.parent != nil {
-		w.parent.Log(source, level, msg, params...)
+func (bw *BaseWidget) Log(source Widget, level string, msg string, params ...any) {
+	if bw.parent != nil {
+		bw.parent.Log(source, level, msg, params...)
 	}
 }
 
@@ -269,18 +270,18 @@ func (w *BaseWidget) Log(source Widget, level string, msg string, params ...any)
 //
 // Parameters:
 //   - handler: event handler function
-func (w *BaseWidget) On(event string, handler func(Widget, string, ...any) bool) {
-	if w.handlers == nil {
-		w.handlers = make(map[string]func(Widget, string, ...any) bool)
+func (bw *BaseWidget) On(event string, handler func(Widget, string, ...any) bool) {
+	if bw.handlers == nil {
+		bw.handlers = make(map[string]func(Widget, string, ...any) bool)
 	}
-	w.handlers[event] = handler
+	bw.handlers[event] = handler
 }
 
 // Parent returns the parent widget in the widget hierarchy.
 // Returns nil if this widget has no parent (i.e., it's a root widget,
 // or is not in the widget hierarchy yet).
-func (w *BaseWidget) Parent() Widget {
-	return w.parent
+func (bw *BaseWidget) Parent() Widget {
+	return bw.parent
 }
 
 // Position returns the widget's current position as (x, y) coordinates.
@@ -290,8 +291,8 @@ func (w *BaseWidget) Parent() Widget {
 // Returns:
 //   - int: The x-coordinate of the widget's position
 //   - int: The y-coordinate of the widget's position
-func (w *BaseWidget) Position() (int, int) {
-	return w.x, w.y
+func (bw *BaseWidget) Position() (int, int) {
+	return bw.x, bw.y
 }
 
 // Refresh triggers a redraw of the widget and its visual representation.
@@ -302,9 +303,9 @@ func (w *BaseWidget) Position() (int, int) {
 //
 // Concrete widget implementations may override this method to perform
 // widget-specific refresh operations before delegating to the parent.
-func (w *BaseWidget) Refresh() {
-	if w.parent != nil {
-		w.parent.Refresh()
+func (bw *BaseWidget) Refresh() {
+	if bw.parent != nil {
+		bw.parent.Refresh()
 	}
 }
 
@@ -317,8 +318,8 @@ func (w *BaseWidget) Refresh() {
 //   - y: The y-coordinate of the widget's position
 //   - width: The total width of the widget
 //   - height: The total height of the widget
-func (w *BaseWidget) SetBounds(x, y, width, height int) {
-	w.x, w.y, w.width, w.height = x, y, width, height
+func (bw *BaseWidget) SetBounds(x, y, width, height int) {
+	bw.x, bw.y, bw.width, bw.height = x, y, width, height
 }
 
 // SetFocusable sets whether the widget can receive keyboard focus.
@@ -328,8 +329,8 @@ func (w *BaseWidget) SetBounds(x, y, width, height int) {
 //
 // Parameters:
 //   - focusable: true to allow the widget to receive focus, false to prevent it
-func (w *BaseWidget) SetFocusable(focusable bool) {
-	w.focusable = focusable
+func (bw *BaseWidget) SetFocusable(focusable bool) {
+	bw.focusable = focusable
 }
 
 // SetFocused sets the focus state of the widget.
@@ -338,13 +339,13 @@ func (w *BaseWidget) SetFocusable(focusable bool) {
 //
 // Parameters:
 //   - focused: true to focus the widget, false to unfocus it
-func (w *BaseWidget) SetFocused(focused bool) {
+func (bw *BaseWidget) SetFocused(focused bool) {
 	if focused {
-		w.Emit("focus")
+		bw.Emit("focus")
 	} else {
-		w.Emit("blur")
+		bw.Emit("blur")
 	}
-	w.focused = focused
+	bw.focused = focused
 }
 
 // SetHint sets the sizing hint of the widget.
@@ -354,8 +355,8 @@ func (w *BaseWidget) SetFocused(focused bool) {
 // Parameters:
 //   - width: preferred widget content width
 //   - height: preferred widget content height
-func (w *BaseWidget) SetHint(width, height int) {
-	style := w.Style("")
+func (bw *BaseWidget) SetHint(width, height int) {
+	style := bw.Style("")
 	if style != nil {
 		style.Width = width
 		style.Height = height
@@ -369,18 +370,18 @@ func (w *BaseWidget) SetHint(width, height int) {
 //
 // Parameters:
 //   - hovered: true when the mouse is over the widget, false when it leaves
-func (w *BaseWidget) SetHovered(hovered bool) {
+func (bw *BaseWidget) SetHovered(hovered bool) {
 	if hovered {
-		w.Emit("hover")
+		bw.Emit("hover")
 	}
-	w.hovered = hovered
+	bw.hovered = hovered
 }
 
 // SetParent establishes a parent-child relationship by setting the parent widget.
 // Pass nil to remove the widget from its current parent. This is typically
 // called during widget hierarchy construction or when moving widgets between containers.
-func (w *BaseWidget) SetParent(parent Container) {
-	w.parent = parent
+func (bw *BaseWidget) SetParent(parent Container) {
+	bw.parent = parent
 }
 
 // SetPosition sets the widget's position to the specified coordinates.
@@ -390,9 +391,9 @@ func (w *BaseWidget) SetParent(parent Container) {
 // Parameters:
 //   - x: The new x-coordinate for the widget's position
 //   - y: The new y-coordinate for the widget's position
-func (w *BaseWidget) SetPosition(x, y int) {
-	w.x = x
-	w.y = y
+func (bw *BaseWidget) SetPosition(x, y int) {
+	bw.x = x
+	bw.y = y
 }
 
 // SetSize sets the content size of the widget, automatically calculating outer bounds.
@@ -409,14 +410,14 @@ func (w *BaseWidget) SetPosition(x, y int) {
 // Parameters:
 //   - width: The desired content width in characters/cells
 //   - height: The desired content height in characters/cells
-func (w *BaseWidget) SetSize(width, height int) {
-	style := w.Style("")
+func (bw *BaseWidget) SetSize(width, height int) {
+	style := bw.Style("")
 	if style != nil {
-		w.width = width + style.Horizontal()
-		w.height = height + style.Vertical()
+		bw.width = width + style.Horizontal()
+		bw.height = height + style.Vertical()
 	} else {
-		w.width = width
-		w.height = height
+		bw.width = width
+		bw.height = height
 	}
 }
 
@@ -427,14 +428,14 @@ func (w *BaseWidget) SetSize(width, height int) {
 // Parameters:
 //   - selector: The style selector (e.g., "", "focus", "hover", "disabled")
 //   - style: The style configuration to apply, or nil to remove the style for this selector
-func (w *BaseWidget) SetStyle(selector string, style *Style) {
-	if w.styles == nil {
-		w.styles = make(map[string]*Style)
+func (bw *BaseWidget) SetStyle(selector string, style *Style) {
+	if bw.styles == nil {
+		bw.styles = make(map[string]*Style)
 	}
 	if style == nil {
-		delete(w.styles, selector)
+		delete(bw.styles, selector)
 	} else {
-		w.styles[selector] = style
+		bw.styles[selector] = style
 	}
 }
 
@@ -451,12 +452,12 @@ func (w *BaseWidget) SetStyle(selector string, style *Style) {
 // Returns:
 //   - int: The content width in characters/cells
 //   - int: The content height in characters/cells
-func (w *BaseWidget) Size() (int, int) {
-	style := w.Style("")
+func (bw *BaseWidget) Size() (int, int) {
+	style := bw.Style("")
 	if style != nil {
-		return w.width - style.Horizontal(), w.height - style.Vertical()
+		return bw.width - style.Horizontal(), bw.height - style.Vertical()
 	} else {
-		return w.width, w.height
+		return bw.width, bw.height
 	}
 }
 
@@ -473,8 +474,8 @@ func (w *BaseWidget) Size() (int, int) {
 //
 // Returns:
 //   - string: The current widget state identifier for styling
-func (w *BaseWidget) State() string {
-	if w.focused {
+func (bw *BaseWidget) State() string {
+	if bw.focused {
 		return "focus"
 	} else {
 		return ""
@@ -496,24 +497,24 @@ func (w *BaseWidget) State() string {
 //
 // Returns:
 //   - *Style: The style configuration for the selector, or nil if not found
-func (w *BaseWidget) Style(selector string) *Style {
+func (bw *BaseWidget) Style(selector string) *Style {
 	// If no style is set, we create an empty default one
-	if w.styles == nil {
-		w.styles = make(map[string]*Style)
-		w.styles[""] = NewStyle("", "")
+	if bw.styles == nil {
+		bw.styles = make(map[string]*Style)
+		bw.styles[""] = NewStyle("", "")
 	}
 
-	style, ok := w.styles[selector]
+	style, ok := bw.styles[selector]
 	if ok {
 		return style
 	} else {
 		parts := stylePartRegExp.FindStringSubmatch(selector)
-		if style, ok = w.styles[":"+parts[2]]; ok {
+		if style, ok = bw.styles[":"+parts[2]]; ok {
 			return style
-		} else if style, ok = w.styles["/"+parts[1]]; ok {
+		} else if style, ok = bw.styles["/"+parts[1]]; ok {
 			return style
 		} else {
-			return w.styles[""]
+			return bw.styles[""]
 		}
 	}
 }
@@ -524,6 +525,6 @@ func (w *BaseWidget) Style(selector string) *Style {
 //
 // Returns:
 //   - []string: A slice of all style selector names defined for this widget
-func (w *BaseWidget) Styles() []string {
-	return slices.Collect(maps.Keys(w.styles))
+func (bw *BaseWidget) Styles() []string {
+	return slices.Collect(maps.Keys(bw.styles))
 }

@@ -2,7 +2,10 @@ module github.com/tekugo/zeichenwerk
 
 go 1.24.3
 
-require github.com/gdamore/tcell/v2 v2.9.0
+require (
+	github.com/gdamore/tcell/v2 v2.9.0
+	github.com/mattn/go-sqlite3 v1.14.32
+)
 
 require (
 	github.com/gdamore/encoding v1.0.1 // indirect

@@ -297,8 +297,11 @@ func (g *Grid) Layout() {
 	}
 
 	// Second pass: calculate fractional column widths and positions
-	rw := iw      // Remaining width after fixed columns
-	fc := iw / cf // Width per fractional unit
+	rw := iw // Remaining width after fixed columns
+	fc := 0  // Width per fractional unit (only when used)
+	if cf > 0 {
+		fc = iw / cf
+	}
 	for i := range g.columns {
 		if g.columns[i] < 0 {
 			if i == lc {
@@ -341,8 +344,11 @@ func (g *Grid) Layout() {
 	}
 
 	// Second pass: calculate fractional row heights and positions
-	rh := ih      // Remaining height after fixed rows
-	fr := fh / rf // Height per fractional unit
+	rh := ih // Remaining height after fixed rows
+	fr := 0  // Height per fractional unit (only if used)
+	if rf > 0 {
+		fr = fh / rf
+	}
 	g.Log(g, "debug", " Row sizing: height=%d, fractions=%d, fraction=%d, rows=%v", ih, rf, fr, g.heights)
 	for i := range g.rows {
 		if g.rows[i] < 0 {

@@ -1,6 +1,8 @@
 package zeichenwerk
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Builder provides a fluent interface for constructing TUI components.
 // It maintains a stack of containers and applies styling through themes.
@@ -51,6 +53,15 @@ func (b *Builder) Build() *UI {
 // Returns nil if no containers have been created yet.
 func (b *Builder) Container() Container {
 	return b.stack.Peek()
+}
+
+func (b *Builder) Find(id string) Widget {
+	return Find(b.stack[0], id, false)
+}
+
+// Run builds and runs the UI in one go.
+func (b *Builder) Run() {
+	b.Build().Run()
 }
 
 // With applies a builder function to this builder instance, enabling
@@ -117,6 +128,8 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focus", "hover")
 	case *Custom:
 		b.theme.Apply(widget, b.selector("custom", widget.ID()))
+	case *Digits:
+		b.theme.Apply(widget, b.selector("digits", widget.ID()))
 	case *Editor:
 		b.theme.Apply(widget, b.selector("editor", widget.ID()))
 	case *Flex:
@@ -140,6 +153,8 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("scroller", widget.ID()), "focus")
 	case *Separator:
 		b.theme.Apply(widget, b.selector("separator", widget.ID()))
+	case *Spinner:
+		b.theme.Apply(widget, b.selector("spinner", widget.ID()))
 	case *Switcher:
 		b.theme.Apply(widget, b.selector("switcher", widget.ID()))
 	case *Table:
@@ -193,6 +208,16 @@ func (b *Builder) Checkbox(id string, text string, checked bool) *Builder {
 	return b
 }
 
+// Digits creates a big digit display label.
+func (b *Builder) Digits(id, text string) *Builder {
+	digits := NewDigits(id, text)
+	b.Add(digits)
+	digits.SetHint(len(text)*4, 3)
+	return b
+}
+
+// Editor creates a multi-line text editor widget with the specified id.
+// The editor will be empty and should be configured separately.
 func (b *Builder) Editor(id string) *Builder {
 	editor := NewEditor(id)
 	b.Add(editor)
@@ -337,18 +362,28 @@ func (b *Builder) Spacer() *Builder {
 	return b
 }
 
+// Spinner creates a new spinner widget.
+func (b *Builder) Spinner(id string, runes []rune) *Builder {
+	spinner := NewSpinner(id, runes)
+	b.Add(spinner)
+	return b
+}
+
+// Switcher creates a content swithcer container.
 func (b *Builder) Switcher(id string) *Builder {
 	switcher := NewSwitcher(id)
 	b.Add(switcher)
 	return b
 }
 
+// Table creates a table widget with the passed data provider.
 func (b *Builder) Table(id string, provider TableProvider) *Builder {
 	table := NewTable(id, provider)
 	b.Add(table)
 	return b
 }
 
+// Tabs creates a tabl selection widget.
 func (b *Builder) Tabs(id string, tabs ...string) *Builder {
 	t := NewTabs(id)
 	for _, tab := range tabs {

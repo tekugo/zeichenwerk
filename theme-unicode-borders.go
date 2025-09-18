@@ -224,5 +224,30 @@ func AddUnicodeBorders(theme Theme) {
 			InnerBottomT: ' ',          //   (space - no inner grid)
 			InnerLeftT:   ' ',          //   (space - no inner grid)
 		},
+
+		// "lines2" - Minimalist horizontal lines only
+		// Provides subtle content separation without visual clutter.
+		// Ideal for clean, minimal interfaces or content that needs gentle organization.
+		"lines2": {
+			Top:          rune(0x2581),
+			Right:        ' ',
+			Bottom:       rune(0x2594),
+			Left:         ' ',
+			TopLeft:      rune(0x2581),
+			TopRight:     rune(0x2581),
+			BottomRight:  rune(0x2594),
+			BottomLeft:   rune(0x2594),
+			TopT:         rune(0x2581),
+			RightT:       ' ',
+			BottomT:      rune(0x2594),
+			LeftT:        ' ',
+			InnerH:       ' ',
+			InnerV:       ' ',
+			InnerX:       ' ',
+			InnerTopT:    ' ',
+			InnerRightT:  ' ',
+			InnerBottomT: ' ',
+			InnerLeftT:   ' ',
+		},
 	})
 }

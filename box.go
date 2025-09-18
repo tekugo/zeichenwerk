@@ -124,16 +124,18 @@ func (b *Box) FindAt(x, y int) Widget {
 //  2. Add the child widget's preferred dimensions (if child exists)
 //  3. Return the total required space for optimal display
 func (b *Box) Hint() (int, int) {
-	w := b.Style("").Horizontal()
-	h := b.Style("").Vertical()
 	if b.child != nil {
-		cw, ch := b.child.Hint()
-		w += cw
-		h += ch
+		w, h := b.child.Hint()
+		w += b.child.Style("").Horizontal()
+		h += b.child.Style("").Vertical()
+		return w, h
+	} else {
+		return 0, 0
 	}
-	return w, h
 }
 
+// Info returns an information string about the widget.
+// This is mainly used for debugging purposes.
 func (b *Box) Info() string {
 	return "box [" + b.BaseWidget.Info() + "]"
 }

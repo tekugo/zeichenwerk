@@ -5,6 +5,7 @@ import "github.com/gdamore/tcell/v2"
 type Table struct {
 	BaseWidget
 	provider         TableProvider
+	tableWidth       int // total table width over all columns
 	row, column      int // highlight position
 	offsetX, offsetY int
 	grid             BorderStyle // grid border style
@@ -12,13 +13,23 @@ type Table struct {
 }
 
 func NewTable(id string, provider TableProvider) *Table {
-	return &Table{
+	table := &Table{
 		BaseWidget: BaseWidget{id: id, focusable: true},
-		provider:   provider,
 		grid:       BorderStyle{InnerH: ' ', InnerV: '-'},
 		inner:      true,
 		outer:      true,
 	}
+	table.Set(provider)
+	return table
+}
+
+func (t *Table) Set(provider TableProvider) {
+	t.provider = provider
+	columns := provider.Columns()
+	for _, column := range columns {
+		t.tableWidth += column.Width
+	}
+	t.tableWidth += len(columns) - 1
 }
 
 func (t *Table) Hint() (int, int) {
@@ -59,7 +70,7 @@ func (t *Table) Handle(evt tcell.Event) bool {
 		}
 		return true
 	case tcell.KeyRight:
-		if t.offsetX < t.width-1 {
+		if t.offsetX+t.width < t.tableWidth {
 			t.offsetX++
 			t.Refresh()
 		}

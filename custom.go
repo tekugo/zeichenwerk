@@ -27,8 +27,8 @@ import "github.com/gdamore/tcell/v2"
 // layout management and event propagation systems.
 type Custom struct {
 	BaseWidget
-	handler  func(tcell.Event) bool    // Custom event handler function
-	renderer func(Widget, Screen)      // Custom rendering function
+	handler  func(tcell.Event) bool // Custom event handler function
+	renderer func(Widget, Screen)   // Custom rendering function
 }
 
 // NewCustom creates a new custom widget with user-defined rendering behavior.
@@ -61,5 +61,13 @@ func NewCustom(id string, focusable bool, renderer func(Widget, Screen)) *Custom
 	return &Custom{
 		BaseWidget: BaseWidget{id: id, focusable: focusable},
 		renderer:   renderer,
+	}
+}
+
+func (c *Custom) Handle(event tcell.Event) bool {
+	if c.handler != nil {
+		return c.handler(event)
+	} else {
+		return false
 	}
 }

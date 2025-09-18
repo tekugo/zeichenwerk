@@ -3,6 +3,7 @@ package zeichenwerk
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -629,7 +630,7 @@ func (ui *UI) ShowCursor() {
 //   - message: The debug message to add to the log
 func (ui *UI) Log(source Widget, level, message string, params ...any) {
 	if ui.logger != nil {
-		ui.logger.Add(fmt.Sprintf(message, params...))
+		ui.logger.Add(time.Now().Format("15:04:05.000") + fmt.Sprintf(" %-6s %-16s %-10s ", level, source.ID(), WidgetType(source)) + fmt.Sprintf(message, params...))
 	}
 }
 

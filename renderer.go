@@ -245,7 +245,7 @@ func (r *Renderer) repeat(x, y, dx, dy, length int, ch rune) {
 // for all text display in labels, buttons, inputs, and other text-based widgets.
 func (r *Renderer) text(x, y int, s string, max int) {
 	i := 0
-	for _, ch := range s {
+	for _, ch := range []rune(s) {
 		if max > 0 && i >= max {
 			break
 		}
@@ -273,7 +273,7 @@ func (r *Renderer) render(widget Widget) {
 	case *Box:
 		r.renderBorder(x, y, w, h, style)
 		r.SetStyle(widget.Style("title"))
-		r.text(x+2, y, " "+widget.Title+" ", 0)
+		r.text(x+style.Margin.Left+2, y+style.Margin.Top, " "+widget.Title+" ", 0)
 		r.render(widget.child)
 	case *Button:
 		r.renderBorder(x, y, w, h, style)
@@ -284,6 +284,9 @@ func (r *Renderer) render(widget Widget) {
 	case *Custom:
 		r.renderBorder(x, y, w, h, style)
 		widget.renderer(widget, r.screen)
+	case *Digits:
+		r.renderBorder(x, y, w, h, style)
+		r.renderDigits(widget, cx, cy, cw, ch)
 	case *Editor:
 		r.renderBorder(x, y, w, h, style)
 		r.renderEditor(widget, cx, cy, cw, ch)
@@ -322,6 +325,9 @@ func (r *Renderer) render(widget Widget) {
 				r.line(cx, cy, 0, 1, ch-2, box.Left, box.Left, box.Left)
 			}
 		}
+	case *Spinner:
+		r.renderBorder(x, y, w, h, style)
+		r.screen.SetContent(cx, cy, widget.Rune(), nil, r.style)
 	case *Switcher:
 		r.render(widget.Panes[widget.Selected])
 	case *Table:
