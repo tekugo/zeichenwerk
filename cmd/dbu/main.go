@@ -152,17 +152,20 @@ func fill(rows *sql.Rows) {
 }
 
 func loadTables() {
+	ui.Log(ui, "debug", "Loading tables...")
 	tables := []string{}
 	var name string
 
-	rows, err := db.Query("SELECT name FROM sq1lite_schema WHERE type='table'")
+	rows, err := db.Query("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name")
 	if err != nil {
+		ui.Log(ui, "error", "Error loading tables: %v", err)
 		return
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		rows.Scan(&name)
+		ui.Log(ui, "debug", "Table %s", name)
 		tables = append(tables, name)
 	}
 
