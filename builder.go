@@ -497,6 +497,14 @@ func (b *Builder) End() *Builder {
 	return b
 }
 
+// Font set the font options for the current widget.
+// The font can be bold, italic, strikethrough or underline or any combination
+// concatenated by commas.
+func (b *Builder) Font(selector string, font string) *Builder {
+	b.current.Style(selector).Font = font
+	return b
+}
+
 // Foreground sets the foreground (text) color for the current widget.
 // The color parameter should be a valid color name or hex code.
 // This applies to the default state of the widget.

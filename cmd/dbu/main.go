@@ -68,13 +68,16 @@ func content(builder *Builder) {
 		Cell(1, 0, 1, 1).
 		Editor("sql").
 		Cell(1, 1, 1, 1).
-		Box("result-box", "Result").
+		Flex("main", "vertical", "stretch", 0).
+		Tabs("tabs", "Result", "Debug").
+		Switcher("switcher").Hint(-1, -1).
 		Table("result", NewArrayTableProvider([]string{}, [][]string{})).
+		Text("debug-log", []string{}, true, 1000).
+		End().
 		End().
 		End()
 
-	grid := builder.Container().Find("grid", false)
-	if grid, ok := grid.(*Grid); ok {
+	With[*Grid](builder.Container(), "grid", func(grid *Grid) {
 		grid.Columns(30, -1)
 		grid.Rows(5, -1)
 
@@ -87,7 +90,22 @@ func content(builder *Builder) {
 				return false
 			}
 		})
-	}
+	})
+
+	current := builder.Container()
+	With[*Tabs](current, "tabs", func(tabs *Tabs) {
+		tabs.On("activate", func(widget Widget, event string, params ...any) bool {
+			if t, ok := widget.(*Tabs); ok {
+				switch t.Selected {
+				case 0:
+					Update(current, "switcher", "result")
+				case 1:
+					Update(current, "switcher", "debug-log")
+				}
+			}
+			return true
+		})
+	})
 
 	if editor, ok := builder.Container().Find("sql", false).(*Editor); ok {
 		editor.Load("SELECT * FROM sqlite_schema")
@@ -134,4 +152,19 @@ func fill(rows *sql.Rows) {
 }
 
 func loadTables() {
+	tables := []string{}
+	var name string
+
+	rows, err := db.Query("SELECT name FROM sq1lite_schema WHERE type='table'")
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		rows.Scan(&name)
+		tables = append(tables, name)
+	}
+
+	Update(ui, "tables", tables)
 }

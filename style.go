@@ -28,6 +28,7 @@ import (
 type Style struct {
 	Background string  // Background color name or hex code (empty = transparent)
 	Foreground string  // Text/foreground color name or hex code
+	Font       string  // Font style
 	Border     string  // Border style identifier (empty = no border)
 	Cursor     string  // Cursor style for interactive widgets
 	Margin     *Insets // Outer spacing around the widget (transparent)
@@ -94,6 +95,9 @@ func (s *Style) Cascade(other *Style) {
 	}
 	if other.Foreground != "" {
 		s.Foreground = other.Foreground
+	}
+	if other.Font != "" {
+		s.Font = other.Font
 	}
 	if other.Border != "" {
 		s.Border = other.Border
@@ -269,6 +273,29 @@ func (s *Style) SetBorder(border string) *Style {
 //	style.SetCursor("block").SetForeground("white")
 func (s *Style) SetCursor(cursor string) *Style {
 	s.Cursor = cursor
+	return s
+}
+
+// SetFont sets the font style ad returns the style for method chaining.
+// Font support highly depends on the terminal
+//
+// The font support is directly mapped to the tcell style. The following
+// styles are supported at the moment:
+//   - bold
+//   - italic
+//   - underline
+//   - strikethrough
+//
+// Styles can be combined separated by comma, the underline style may be
+// extended by double, curly, dotted or dashed and/or a color value.
+//
+// Parameters:
+//   - font: Font style
+//
+// Returns:
+//   - *Style: The style instance for method chaining
+func (s *Style) SetFont(font string) *Style {
+	s.Font = font
 	return s
 }
 

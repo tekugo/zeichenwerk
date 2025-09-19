@@ -1,6 +1,8 @@
 package zeichenwerk
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -84,10 +86,38 @@ type Renderer struct {
 // Parameters:
 //   - style: The Style object containing background, foreground, and other visual properties
 func (r *Renderer) SetStyle(style *Style) {
-	bg, _ := ParseColor(r.theme.Color(style.Background))
-	fg, _ := ParseColor(r.theme.Color(style.Foreground))
+	result := tcell.StyleDefault
 
-	r.style = tcell.StyleDefault.Background(bg).Foreground(fg)
+	if style.Background != "" {
+		if bg, err := ParseColor(r.theme.Color(style.Background)); err == nil {
+			result = result.Background(bg)
+		}
+	}
+	if style.Foreground != "" {
+		if fg, err := ParseColor(r.theme.Color(style.Foreground)); err == nil {
+			result = result.Foreground(fg)
+		}
+	}
+
+	for part := range strings.SplitSeq(style.Font, ",") {
+		option := strings.ToLower(strings.TrimSpace(part))
+		switch option {
+		case "blink":
+			result = result.Blink(true)
+		case "bold":
+			result = result.Bold(true)
+		case "normal":
+			result = result.Blink(false).Bold(false).Italic(false).Underline(false).StrikeThrough(false)
+		case "italic":
+			result = result.Italic(true)
+		case "strikethrough":
+			result = result.StrikeThrough(true)
+		case "underline":
+			result = result.Underline(true)
+		}
+	}
+
+	r.style = result
 }
 
 // ---- Internal Rendering Methods -------------------------------------------

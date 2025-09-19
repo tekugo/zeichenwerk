@@ -167,11 +167,11 @@ func tabs(builder *Builder) {
 
 func overview(builder *Builder) {
 	builder.Flex("overview-demo", "vertical", "stretch", 0).Padding(1, 2).
-		Label("welcome", "Welcome to zeichenwerk!", 0).Padding(0, 0, 1, 0).
+		Label("welcome", "Welcome to zeichenwerk!", 0).Padding(0, 0, 1, 0).Font("", "bold").
 		Label("description", "A comprehensive terminal user interface framework for Go", 0).Padding(0, 0, 1, 0).
 		Separator("sep1", "thin", 0, 1).Padding(0, 0, 1, 0).
-		Label("features-title", "Key Features:", 0).Padding(0, 0, 1, 0).
-		Label("feature1", "• Rich widget set (buttons, inputs, lists, tabs, etc.)", 0).
+		Label("features-title", "Key Features:", 0).Font("", "underline").
+		Label("feature1", "• Rich widget set (buttons, inputs, lists, tabs, etc.)", 0).Padding(1, 0, 0, 0).
 		Label("feature2", "• Flexible layout system (flex, grid, box containers)", 0).
 		Label("feature3", "• Event-driven architecture with keyboard and mouse support", 0).
 		Label("feature4", "• Comprehensive theming and styling system", 0).
@@ -179,7 +179,7 @@ func overview(builder *Builder) {
 		Label("feature6", "• Focus management and accessibility features", 0).
 		Separator("sep2", "thin", 0, 1).Padding(1, 0, 1, 0).
 		Label("instructions", "Use the list on the left to explore different widget demos.", 0).
-		Label("navigation", "Navigation: Arrow keys, Tab, Enter, Esc", 0).
+		Label("navigation", "Navigation: Arrow keys, Tab, Enter, Esc", 0).Font("", "italic").
 		Spacer().
 		End()
 }

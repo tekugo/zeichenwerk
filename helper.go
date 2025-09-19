@@ -413,3 +413,12 @@ func WidgetDetails(widget Widget) string {
 
 	return result
 }
+
+func With[T any](container Container, id string, fn func(widget T)) {
+	widget := container.Find(id, false)
+	if widget != nil {
+		if typed, ok := widget.(T); ok {
+			fn(typed)
+		}
+	}
+}

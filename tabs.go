@@ -6,14 +6,16 @@ import (
 
 type Tabs struct {
 	BaseWidget
-	Tabs  []string
-	Index int
+	Tabs     []string // Tab names
+	Selected int      // Currently selected
+	Index    int      // Currently highlighted tab during focus
 }
 
 func NewTabs(id string) *Tabs {
 	return &Tabs{
 		BaseWidget: BaseWidget{id: id, focusable: true},
 		Tabs:       make([]string, 0),
+		Selected:   0,
 		Index:      0,
 	}
 }
@@ -56,7 +58,7 @@ func (t *Tabs) Handle(event tcell.Event) bool {
 			return true
 		}
 	}
-	
+
 	// Call parent Handle to emit "key" event and handle other events
 	return t.BaseWidget.Handle(event)
 }
@@ -79,10 +81,11 @@ func (t *Tabs) Handle(event tcell.Event) bool {
 //   - No-op optimization: Skips processing if target tab is already active
 //
 // Letter navigation example:
-//   With tabs ["First", "Second", "Third", "Fourth", "Fifth"] and "First" active:
-//   - Pressing 'f' jumps to "Fourth", then "Fifth", then "First" (cycling)
-//   - Pressing 's' jumps to "Second"
-//   - Pressing 't' jumps to "Third"
+//
+//	With tabs ["First", "Second", "Third", "Fourth", "Fifth"] and "First" active:
+//	- Pressing 'f' jumps to "Fourth", then "Fifth", then "First" (cycling)
+//	- Pressing 's' jumps to "Second"
+//	- Pressing 't' jumps to "Third"
 //
 // Parameters:
 //   - event: The keyboard event to process
@@ -93,9 +96,9 @@ func (t *Tabs) handleKeyEvent(event *tcell.EventKey) bool {
 	if len(t.Tabs) == 0 {
 		return false // No tabs to navigate
 	}
-	
+
 	oldIndex := t.Index
-	
+
 	switch event.Key() {
 	case tcell.KeyLeft:
 		// Move to previous tab (wrap to last if at first)
@@ -104,7 +107,7 @@ func (t *Tabs) handleKeyEvent(event *tcell.EventKey) bool {
 		} else {
 			t.Index = len(t.Tabs) - 1 // Wrap to last tab
 		}
-		
+
 	case tcell.KeyRight:
 		// Move to next tab (wrap to first if at last)
 		if t.Index < len(t.Tabs)-1 {
@@ -112,15 +115,15 @@ func (t *Tabs) handleKeyEvent(event *tcell.EventKey) bool {
 		} else {
 			t.Index = 0 // Wrap to first tab
 		}
-		
+
 	case tcell.KeyHome:
 		// Jump to first tab
 		t.Index = 0
-		
+
 	case tcell.KeyEnd:
 		// Jump to last tab
 		t.Index = len(t.Tabs) - 1
-		
+
 	case tcell.KeyRune:
 		// Handle letter navigation - jump to tabs by first letter
 		if t.handleLetterNavigation(event.Rune()) {
@@ -128,18 +131,22 @@ func (t *Tabs) handleKeyEvent(event *tcell.EventKey) bool {
 		} else {
 			return false // Letter not found in any tab
 		}
-		
+
+	case tcell.KeyEnter:
+		t.Selected = t.Index
+		t.Emit("activate", t.Selected)
+
 	default:
 		return false // Key not handled
 	}
-	
+
 	// Only refresh and emit event if the tab actually changed
 	if t.Index != oldIndex {
 		t.Refresh()
 		t.Emit("change", t.Index)
 		return true
 	}
-	
+
 	return false
 }
 
@@ -173,22 +180,22 @@ func (t *Tabs) handleKeyEvent(event *tcell.EventKey) bool {
 //
 // Example with tabs ["First", "Second", "Third", "Fourth", "Fifth"]:
 //   - Current: "First", press 'f' → jumps to "Fourth"
-//   - Current: "Fourth", press 'f' → jumps to "Fifth" 
+//   - Current: "Fourth", press 'f' → jumps to "Fifth"
 //   - Current: "Fifth", press 'f' → jumps to "First" (wraps around)
 func (t *Tabs) handleLetterNavigation(letter rune) bool {
 	if len(t.Tabs) == 0 {
 		return false
 	}
-	
+
 	// Convert to lowercase for case-insensitive comparison
 	targetLetter := rune(letter)
 	if targetLetter >= 'A' && targetLetter <= 'Z' {
 		targetLetter = targetLetter - 'A' + 'a'
 	}
-	
+
 	// Start searching from the next tab after current
 	startIndex := (t.Index + 1) % len(t.Tabs)
-	
+
 	// First pass: search from current+1 to end
 	for i := startIndex; i < len(t.Tabs); i++ {
 		if len(t.Tabs[i]) > 0 {
@@ -202,7 +209,7 @@ func (t *Tabs) handleLetterNavigation(letter rune) bool {
 			}
 		}
 	}
-	
+
 	// Second pass: search from beginning to current (wraparound)
 	for i := 0; i < startIndex; i++ {
 		if len(t.Tabs[i]) > 0 {
@@ -216,7 +223,18 @@ func (t *Tabs) handleLetterNavigation(letter rune) bool {
 			}
 		}
 	}
-	
+
 	// No matching tab found
+	return false
+}
+
+func (t *Tabs) Emit(event string, data ...any) bool {
+	if t.handlers == nil {
+		return false
+	}
+	handler, found := t.handlers[event]
+	if found {
+		return handler(t, event, data...)
+	}
 	return false
 }
