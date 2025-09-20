@@ -111,6 +111,7 @@ func renderFiglet(fontData string, text string) ([]string, error) {
 				maxw = len(runes)
 			}
 		}
+		
 		glyphs[gi] = glyph{lines: lines, width: maxw}
 	}
 
@@ -502,34 +503,17 @@ func min(a, b int) int {
 
 // ---------------- Example main ----------------
 func main() {
-	// Test individual characters first
-	fmt.Println("=== Testing 'l' ===")
-	out, err := RenderFigletFromFile("standard.flf", "l")
-	if err != nil {
-		fmt.Println("error:", err)
-		return
-	}
-	for i, line := range out {
-		fmt.Printf("Row %d: '%s' (len=%d)\n", i, line, len(line))
-	}
+	tests := []string{"Hello, World!", "Somewhere", "Autobahn", "Just do it!"}
 	
-	fmt.Println("\n=== Testing 'o' ===")
-	out, err = RenderFigletFromFile("standard.flf", "o")
-	if err != nil {
-		fmt.Println("error:", err)
-		return
-	}
-	for i, line := range out {
-		fmt.Printf("Row %d: '%s' (len=%d)\n", i, line, len(line))
-	}
-	
-	fmt.Println("\n=== Testing 'lo' ===")
-	out, err = RenderFigletFromFile("standard.flf", "lo")
-	if err != nil {
-		fmt.Println("error:", err)
-		return
-	}
-	for _, line := range out {
-		fmt.Printf("'%s'\n", line)
+	for _, test := range tests {
+		out, err := RenderFigletFromFile("standard.flf", test)
+		if err != nil {
+			fmt.Println("error:", err)
+			continue
+		}
+		for _, line := range out {
+			fmt.Println(line)
+		}
+		fmt.Println()
 	}
 }

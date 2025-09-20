@@ -62,6 +62,8 @@ The package includes a rich set of built-in widgets for common UI patterns:
 - List: Scrollable item lists with multi-selection and keyboard navigation
 - ProgressBar: Visual progress indicators with customizable styling
 - Separator: Horizontal or vertical content separator
+- Spinner: Animated loading indicators with multiple predefined styles and custom sequences
+- Table: Data table widget with keyboard navigation, scrolling, and flexible data providers
 - Tabs: A tab-bar for selection
 - Text: Multi-line text display with scrolling and content management
 
@@ -144,13 +146,17 @@ In no particular order!
 - [x] Add a nord inspired theme
 - [x] Add a gruvbox inspired theme
 - [x] Add a midnight neon theme
+- [x] Add Table Widget
 - [ ] Review existing mostly AI generated documentation
-- [ ] Add Table Widget
 - [ ] Add proper form handling for large forms with many fields (Form widget or
   builder with helpers)
 - [ ] Extend inspector to show widget-specific information
 - [ ] Add style manipulation to the inspector
 - [ ] Improve theme variables and make them visible in the inspector
+- [ ] Add Animator widget
+- [ ] Add Connect helper method to connect widgets (Tabs->Switcher)
+- [ ] Add Tab method to Builder to create switched Tabs directly
+- [ ] Add support to underline colors in the styles
 
 ## Ideas
 

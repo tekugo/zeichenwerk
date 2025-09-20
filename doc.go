@@ -20,6 +20,8 @@
 //   - List: Scrollable item lists with selection and keyboard navigation
 //   - Text: Multi-line text display with scrolling capabilities
 //   - ProgressBar: Visual progress indicators with customizable ranges and styling
+//   - Spinner: Animated loading indicators with predefined and custom character sequences
+//   - Table: Data table widget with scrolling, navigation, and flexible data providers
 //   - Viewport: Scrollable content containers for large data sets
 //   - Tabs: Tabbed interface for organizing content into multiple views
 //   - Switcher: Container that displays one of multiple child widgets
