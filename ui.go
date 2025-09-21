@@ -1,3 +1,18 @@
+// Package ui.go contains the core UI type and application lifecycle management
+// for the zeichenwerk terminal user interface framework.
+//
+// This file implements the main UI struct which serves as the root container
+// and application orchestrator, managing:
+//   - Terminal screen initialization and cleanup
+//   - Event processing and propagation
+//   - Widget hierarchy and layer management
+//   - Focus and cursor management
+//   - Rendering coordination and performance optimization
+//   - Debug logging and visualization
+//
+// The UI type provides both the foundation for all TUI applications and
+// the main entry point for running interactive terminal interfaces.
+
 package zeichenwerk
 
 import (
@@ -15,7 +30,8 @@ import (
 // The UI acts as the central orchestrator for the entire terminal user interface,
 // providing a complete application framework with the following capabilities:
 //
-// Core Responsibilities:
+// # Core Responsibilities
+//
 //   - Screen initialization and management using tcell
 //   - Event processing (keyboard, mouse, resize events)
 //   - Focus navigation between widgets with Tab/Shift+Tab support
@@ -25,50 +41,75 @@ import (
 //   - Application lifecycle (startup, main loop, shutdown)
 //   - Layer management for popups and modal dialogs
 //
-// Event System:
+// # Event System
+//
 //   - Hierarchical event propagation from focused widget up the parent chain
 //   - Global keyboard shortcuts (Tab navigation, Ctrl+C/Escape to quit)
 //   - Mouse hover detection and click handling
 //   - Automatic screen resize handling with layout recalculation
 //
-// Rendering Pipeline:
+// # Rendering Pipeline
+//
 //   - Efficient dirty-flag based rendering to minimize screen updates
 //   - Cursor positioning and styling based on focused widget
 //   - Debug information overlay in debug mode
 //   - Multi-layer rendering support for popups and overlays
 //
-// Focus Management:
+// # Focus Management
+//
 //   - Automatic focus traversal through focusable widgets
 //   - Focus wrapping (first to last, last to first)
 //   - Programmatic focus control and widget finding
+//
+// # Architecture
 //
 // The UI maintains a widget hierarchy where containers can hold child widgets,
 // enabling complex layouts and nested component structures. It provides both
 // imperative APIs for direct control and declarative builder patterns for
 // constructing interfaces.
+//
+// The UI uses a layer-based architecture where each layer represents a level
+// of the interface (main UI + popups/modals). This enables proper event handling
+// and rendering order for overlay elements.
 type UI struct {
 	BaseWidget
-	debug    bool             // Debug mode flag for showing debug information overlay
-	dirty    bool             // Flag indicating if a screen redraw is needed
-	events   chan tcell.Event // Event channel for event handling
-	focus    Widget           // Currently focused widget that receives keyboard input
-	hover    Widget           // Currently hovered widget for mouse interaction feedback
-	layers   []Container      // Stack of widget layers (main UI + popups/modals)
-	logger   *Text            // Debug log widget for runtime messages (auto-scrolling)
-	quit     chan struct{}    // Channel for signaling application shutdown
-	redraw   chan Widget      // Channel for triggering individual widget redraws
-	redraws  int              // Redraw counter for debugging and performance monitoring
-	refresh  chan struct{}    // Buffered channel for triggering screen redraws
-	refreshs int              // Refresh counter for debugging and performance monitoring
-	renderer Renderer         // Renderer instance for drawing widgets to the terminal
-	screen   tcell.Screen     // The terminal screen interface for low-level rendering
+	
+	// State management
+	debug bool // Debug mode flag for showing debug information overlay and logging
+	dirty bool // Flag indicating if a screen redraw is needed due to state changes
+	
+	// Event handling channels
+	events chan tcell.Event // Buffered channel for incoming tcell events (keyboard, mouse, resize)
+	quit   chan struct{}    // Channel for signaling graceful application shutdown
+	
+	// Rendering channels
+	redraw  chan Widget      // Buffered channel for triggering individual widget redraws (performance optimization)
+	refresh chan struct{}    // Buffered channel for triggering full screen redraws
+	
+	// Widget state tracking
+	focus Widget // Currently focused widget that receives keyboard input and cursor positioning
+	hover Widget // Currently hovered widget for mouse interaction feedback and styling
+	
+	// Layer management
+	layers []Container // Stack of widget layers (base layer + popups/modals) for proper z-order rendering
+	
+	// Debug infrastructure
+	logger *Text // Debug log widget for runtime messages with auto-scrolling capability
+	
+	// Performance counters
+	redraws  int // Counter for individual widget redraws (debugging and performance monitoring)
+	refreshs int // Counter for full screen refreshes (debugging and performance monitoring)
+	
+	// Rendering system
+	renderer Renderer     // Renderer instance responsible for drawing widgets to the terminal
+	screen   tcell.Screen // The terminal screen interface for low-level cell manipulation and event polling
 }
 
 // ---- Constructor function -------------------------------------------------
 
 // NewUI creates and initializes a new TUI application with the specified theme and root container.
-// It sets up the terminal screen, initializes the rendering system, and prepares
-// the application for the main event loop.
+// It sets up the rendering system and prepares the application for the main event loop.
+// The actual terminal screen initialization is deferred until Run() is called.
 //
 // Parameters:
 //   - theme: The visual theme to use for styling widgets and colors
@@ -76,32 +117,38 @@ type UI struct {
 //   - debug: Enable debug mode to show debug information overlay and logging
 //
 // Returns:
-//   - *UI: The initialized UI application instance
-//   - error: Any error that occurred during initialization (e.g., screen setup failure)
+//   - *UI: The initialized UI application instance ready for Run()
+//   - error: Any error that occurred during initialization (currently always nil)
 //
-// Initialization process:
-//  1. Creates and initializes a new tcell screen for terminal interaction
-//  2. Enables mouse event support for hover detection and click interactions
-//  3. Sets up the default screen style (black background, white foreground)
-//  4. Creates the UI instance with proper screen bounds and communication channels
-//  5. Establishes the parent-child relationship with the root container
-//  6. Configures the renderer with the provided theme
-//  7. Sets up the layer stack with the root container as the base layer
-//  8. Triggers initial layout calculation and marks for refresh
+// # Initialization Process
 //
-// Error conditions:
-//   - Screen creation failure (terminal not available, permissions, etc.)
-//   - Screen initialization failure (terminal capabilities, size detection)
+//  1. Creates the UI instance with communication channels and default settings
+//  2. Establishes the parent-child relationship with the root container
+//  3. Configures the renderer with the provided theme
+//  4. Sets up the layer stack with the root container as the base layer
+//  5. Connects to debug log widget if present (ID: "debug-log")
 //
-// Example usage:
+// # Debug Mode
 //
-//	theme := tui.TokyoNightTheme()
-//	root := tui.NewBuilder().Label("hello", "Hello World", 0).Container()
-//	ui, err := tui.NewUI(theme, root, false)
+// When debug is true, the UI will:
+//   - Display a debug information bar at the bottom of the screen
+//   - Show performance counters, focus/hover state, and layer information
+//   - Log events and state changes to the debug log widget
+//   - Reserve the bottom line of the screen for debug display
+//
+// # Example Usage
+//
+//	theme := zeichenwerk.TokyoNightTheme()
+//	root := zeichenwerk.NewBuilder(theme).
+//		Label("hello", "Hello World", 0).
+//		Container()
+//	ui, err := zeichenwerk.NewUI(theme, root, false)
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	ui.Run()
+//	if err := ui.Run(); err != nil {
+//		log.Fatal(err)
+//	}
 func NewUI(theme Theme, root Container, debug bool) (*UI, error) {
 	ui := &UI{
 		BaseWidget: BaseWidget{id: "root", x: 0, y: 0, width: 0, height: 0},
@@ -138,31 +185,46 @@ func NewUI(theme Theme, root Container, debug bool) (*UI, error) {
 // application. This is the main event processing method that handles keyboard
 // input, mouse events, and screen resize events.
 //
-// Event handling by type:
+// # Event Processing Flow
 //
-// Keyboard Events:
-//  1. Focused widget and its parent chain get first opportunity to handle events
-//  2. Global application shortcuts if not handled by widgets
+// The UI uses a hierarchical event handling system where events are first
+// offered to the most specific widget (focused or hovered), then propagated
+// up the parent chain until handled or reaching the root UI.
 //
-// Mouse Events:
-//   - Tracks mouse position and updates hover state
-//   - Sets hover state on widgets as mouse moves over them
-//   - Clears hover state when mouse leaves widgets
+// # Event Types
 //
-// Resize Events:
-//   - Updates application and root container bounds
-//   - Triggers layout refresh and screen synchronization
+// Keyboard Events (*tcell.EventKey):
+//  1. Event is first propagated to the focused widget and its parent chain
+//  2. If not handled, global application shortcuts are processed
+//  3. Unhandled events are discarded
 //
-// Parameters:
+// Mouse Events (*tcell.EventMouse):
+//   - Determines which widget is at the mouse position
+//   - Updates hover state (clearing old, setting new)
+//   - Propagates the event to the hovered widget
+//   - Triggers screen refresh if hover state changed
+//
+// Resize Events (*tcell.EventResize):
+//   - Updates UI dimensions from the screen
+//   - Recalculates layout for all layers
+//   - Synchronizes screen buffer and triggers refresh
+//
+// # Global Keyboard Shortcuts
+//
+//   - Tab: Navigate to next focusable widget
+//   - Shift+Tab: Navigate to previous focusable widget
+//   - Escape: Close current popup layer (if multiple layers exist)
+//   - Ctrl+C, Ctrl+Q: Quit the application
+//   - Ctrl+D: Open widget inspector (debug mode)
+//   - 'q', 'Q': Quit the application
+//
+// # Parameters
+//
 //   - event: The tcell.Event to process (keyboard, mouse, resize, etc.)
 //
-// Returns:
-//   - bool: Always returns true as the App is the root event handler
+// # Returns
 //
-// Global keyboard shortcuts:
-//   - Tab: Navigate to next widget in focus order
-//   - Escape/Ctrl+C: Quit the application
-//   - 'q'/'Q': Quit the application
+//   - bool: Always returns true as the UI is the root event handler
 func (ui *UI) Handle(event tcell.Event) bool {
 	switch event := event.(type) {
 	case *tcell.EventKey:
@@ -252,13 +314,38 @@ func (ui *UI) propagate(target Widget, event tcell.Event) bool {
 	return handled
 }
 
-// Redraw queues the passed widget for redraw.
-// This method enqueues the widget in the redraw channel without blocking.
-// If the channel is full, a complete refresh will be triggered.
+// Redraw queues the specified widget for individual redraw optimization.
+// This method provides a performance optimization by redrawing only the
+// changed widget instead of the entire screen.
 //
-// This method should be called whenever only a single widget changes and the
-// rest of the screen is not affected. Widget redraw should be the preferred
-// way for updates, because they will be faster.
+// # Behavior
+//
+// The method attempts to enqueue the widget in the redraw channel without blocking.
+// If the redraw channel is full (indicating heavy redraw activity), it falls back
+// to triggering a complete screen refresh instead.
+//
+// # Usage Guidelines
+//
+// Use Redraw when:
+//   - Only a single widget's content or state has changed
+//   - The widget's position and size remain unchanged
+//   - Other widgets on screen are not affected by the change
+//   - Performance optimization is desired for frequent updates
+//
+// Use Refresh instead when:
+//   - Multiple widgets have changed
+//   - Layout has been modified
+//   - Widget positions or sizes have changed
+//   - Focus or hover states have changed
+//
+// # Performance Benefits
+//
+// Individual widget redraws are significantly faster than full screen refreshes
+// because they:
+//   - Skip layout calculations
+//   - Only render the specific widget
+//   - Avoid traversing the entire widget hierarchy
+//   - Minimize terminal output operations
 func (ui *UI) Redraw(widget Widget) {
 	select {
 	case ui.redraw <- widget:
@@ -268,14 +355,39 @@ func (ui *UI) Redraw(widget Widget) {
 	}
 }
 
-// Refresh marks the application as needing a redraw and signals the draw loop.
-// This method sets the dirty flag and attempts to send a signal through the
-// redraw channel to trigger a screen update. If the channel is full (redraw
-// already pending), the signal is skipped to avoid blocking.
+// Refresh triggers a complete screen redraw for all visible widgets.
+// This method sets the dirty flag and signals the main event loop to perform
+// a full rendering pass on the next iteration.
 //
-// This method should be called whenever the visual state of the application
-// changes and requires a screen update, such as after widget modifications,
-// focus changes, or data updates.
+// # Behavior
+//
+// The method performs two operations:
+//  1. Sets the dirty flag to true, marking the screen as needing an update
+//  2. Attempts to send a signal through the refresh channel without blocking
+//
+// If the refresh channel is full (indicating a refresh is already pending),
+// the signal is skipped to avoid blocking and prevent redundant refreshes.
+//
+// # When to Use
+//
+// Call Refresh when:
+//   - Multiple widgets have changed and need updating
+//   - Layout modifications have occurred (position, size changes)
+//   - Focus or hover states have changed
+//   - Theme changes have been applied
+//   - Layer stack modifications (popups opened/closed)
+//   - Initial rendering or major state changes
+//
+// # Performance Considerations
+//
+// Full screen refreshes are more expensive than individual widget redraws
+// because they:
+//   - Traverse the entire widget hierarchy
+//   - Recalculate cursor positioning
+//   - Render debug information (if enabled)
+//   - Update all visible layers
+//
+// For single widget updates, prefer using Redraw() for better performance.
 func (ui *UI) Refresh() {
 	ui.dirty = true
 	select {
@@ -779,21 +891,43 @@ func (ui *UI) FindOn(id, event string, handler func(Widget, string, ...any) bool
 // exits. This is the primary method that drives the TUI application, handling
 // all events, rendering, and application lifecycle management.
 //
-// The event loop handles:
-//   - Initial screen rendering
-//   - Periodic refresh triggers (every second for time-based updates)
-//   - Redraw requests from the redraw channel
-//   - User input events (keyboard, mouse, resize)
-//   - Application shutdown signals
+// # Initialization Phase
 //
-// The method blocks until the application receives a quit signal (Escape, Ctrl+C, 'q', or 'Q'),
-// at which point it properly cleans up the screen and returns.
+// Before entering the event loop, Run performs the following initialization:
+//  1. Creates and initializes a new tcell screen for terminal interaction
+//  2. Enables mouse event support for hover detection and click interactions
+//  3. Sets up the default screen style (black background, white foreground)
+//  4. Configures the renderer with the screen interface
+//  5. Determines initial screen dimensions
+//  6. Sets initial focus to the first focusable widget
+//  7. Performs initial layout calculation and screen rendering
+//  8. Starts the background event polling goroutine
 //
-// Event loop priority:
-//  1. Quit signals (highest priority)
-//  2. Periodic refresh timer
-//  3. Explicit redraw requests
-//  4. User input events (default case with polling)
+// # Event Loop
+//
+// The main event loop handles the following in order of priority:
+//  1. Quit signals - highest priority for graceful shutdown
+//  2. Individual widget redraw requests - performance optimization
+//  3. Full screen refresh requests - complete re-rendering
+//  4. Input events - keyboard, mouse, and resize events
+//
+// # Shutdown Process
+//
+// When a quit signal is received, the method:
+//  1. Calls screen.Fini() to restore terminal state
+//  2. Returns nil to indicate successful shutdown
+//
+// # Error Conditions
+//
+// The method returns an error if:
+//   - Screen creation fails (terminal not available, permissions, etc.)
+//   - Screen initialization fails (terminal capabilities, size detection)
+//
+// # Concurrency
+//
+// Run spawns a background goroutine (EventLoop) to poll for tcell events
+// and forward them to the main event loop channel. This prevents the main
+// loop from blocking on event polling.
 func (ui *UI) Run() error {
 	var err error
 
@@ -844,9 +978,25 @@ func (ui *UI) Run() error {
 	}
 }
 
-// EventLoop polls the tcell events and sends them to the run loop over the
-// event channel. Polling for events inside run would normally block the run
-// loop.
+// EventLoop continuously polls for tcell events and forwards them to the main event loop.
+// This method runs in a separate goroutine to prevent blocking the main event loop
+// during event polling operations.
+//
+// # Operation
+//
+// The method runs an infinite loop that:
+//  1. Calls screen.PollEvent() to wait for the next terminal event
+//  2. Forwards non-nil events to the main event loop via the events channel
+//  3. Continues polling until the application terminates
+//
+// # Concurrency Design
+//
+// This separation of event polling from event processing allows the main event loop
+// to handle multiple types of operations (rendering, widget updates, shutdown) without
+// being blocked by the synchronous nature of tcell's event polling.
+//
+// The goroutine automatically terminates when the screen is finalized during
+// application shutdown, as PollEvent() will return nil or panic.
 func (ui *UI) EventLoop() {
 	for {
 		ev := ui.screen.PollEvent()
