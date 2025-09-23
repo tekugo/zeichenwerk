@@ -154,9 +154,9 @@ type Renderer struct {
 // # Usage Pattern
 //
 // This method is typically called before drawing operations:
-//   1. Widget resolves its current style based on state and theme
-//   2. SetStyle() converts the high-level style to tcell format
-//   3. Subsequent drawing operations use the prepared tcell.Style
+//  1. Widget resolves its current style based on state and theme
+//  2. SetStyle() converts the high-level style to tcell format
+//  3. Subsequent drawing operations use the prepared tcell.Style
 //
 // Parameters:
 //   - style: The Style object containing colors and font attributes to apply
@@ -567,6 +567,12 @@ func (r *Renderer) render(widget Widget) {
 		for _, child := range widget.Children(true) {
 			r.render(child)
 		}
+	case *Form:
+		r.renderBorder(x, y, w, h, style)
+		r.render(widget.child)
+	case *FormGroup:
+		r.renderBorder(x, y, w, h, style)
+		r.renderFormGroup(widget)
 	case *Grid:
 		r.renderBorder(x, y, w, h, style)
 		r.renderGrid(widget, r.theme.Border(widget.Style("").Border))

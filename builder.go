@@ -2,6 +2,8 @@ package zeichenwerk
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
 )
 
 // Builder provides a fluent interface for constructing TUI components.
@@ -95,6 +97,9 @@ func (b *Builder) Add(widget Widget) *Builder {
 		case *Flex:
 			top.Add(widget)
 			widget.SetParent(top)
+		case *Form:
+			top.Add(widget)
+			widget.SetParent(top)
 		case *Grid:
 			top.Add(b.x, b.y, b.w, b.h, widget)
 			widget.SetParent(top)
@@ -135,6 +140,10 @@ func (b *Builder) Apply(widget Widget) {
 	case *Flex:
 		b.theme.Apply(widget, b.selector("flex", widget.ID()))
 		b.theme.Apply(widget, b.selector("flex/shadow", widget.ID()))
+	case *Form:
+		b.theme.Apply(widget, b.selector("form", widget.ID()))
+	case *FormGroup:
+		b.theme.Apply(widget, b.selector("form-group", widget.ID()))
 	case *Grid:
 		b.theme.Apply(widget, b.selector("grid", widget.ID()))
 	case *Hidden:
@@ -239,6 +248,12 @@ func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *B
 	return b
 }
 
+func (b *Builder) Form(id, title string, value any) *Builder {
+	form := NewForm(id, title, value)
+	b.Add(form)
+	return b
+}
+
 // Grid creates a new grid container widget for arranging widgets in a table layout.
 // Parameters:
 //   - id: unique identifier for the grid container
@@ -253,6 +268,60 @@ func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	grid := NewGrid(id, rows, columns, lines)
 	b.Add(grid)
 	return b
+}
+
+func (b *Builder) Group(id, title, placement, name string) *Builder {
+	group := NewFormGroup(id, title, placement)
+	group.Spacing = 1
+	b.Add(group)
+
+	// Find the nearest form
+	var current Widget = b.stack.Peek()
+	for current != nil {
+		if form, ok := current.(*Form); ok {
+			b.buildGroup(form, group, form.Data)
+			break
+		}
+		current = current.Parent()
+	}
+
+	return b
+}
+
+func (b *Builder) buildGroup(form *Form, group *FormGroup, data any) {
+	line := 0
+	v := reflect.ValueOf(data)
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
+		panic("expecting pointer to struct")
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	for i := range v.NumField() {
+		sf := t.Field(i)
+		fv := v.Field(i)
+		label := sf.Tag.Get("label")
+		if label == "" {
+			label = sf.Name
+		}
+		width, err := strconv.Atoi(sf.Tag.Get("width"))
+		if err != nil {
+			width = 10
+		}
+		l, err := strconv.Atoi(sf.Tag.Get("line"))
+		if err == nil {
+			line = l
+		}
+		input := NewInput(sf.Name)
+		b.Apply(input)
+		input.Text = fv.String()
+		input.SetHint(width, 1)
+		input.SetParent(b.stack.Peek())
+		input.On("change", form.Update(fv))
+		group.Add(line, label, input)
+		line++
+	}
 }
 
 // Input creates a new text input widget for user text entry.

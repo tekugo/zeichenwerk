@@ -52,7 +52,7 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Checkbox", "Digits", "Editor", "Flex", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Spinner", "Table", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
+	demos := []string{"Overview", "Box", "Button", "Checkbox", "Digits", "Editor", "Flex", "Form", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Spinner", "Table", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
@@ -75,6 +75,7 @@ func content(builder *Builder) {
 		With(spinner).
 		With(editor).
 		With(digits).
+		With(form).
 		Text("debug-log", []string{}, true, 1000).
 		End(). // Switcher
 		End()  // Grid
@@ -107,6 +108,8 @@ func content(builder *Builder) {
 				Update(ui, "demo", "editor")
 			case "Flex":
 				Update(ui, "demo", "flex-demo")
+			case "Form":
+				Update(ui, "demo", "form-demo")
 			case "Grid":
 				Update(ui, "demo", "grid-demo")
 			case "Input":
@@ -479,6 +482,25 @@ func digits(builder *Builder) {
 		Redraw(ui.Find("digits", true))
 		return true
 	})
+}
+
+func form(builder *Builder) {
+	data := struct {
+		Database string `width:"40"`
+		Username string `width:"20"`
+		Password string `width:"20" line:"1"`
+	}{
+		Database: "sqlite:mem",
+		Username: "admin",
+		Password: "secret",
+	}
+
+	builder.Flex("form-demo", "vertical", "start", 1).Margin(2).Border("", "round").Padding(2).
+		Form("form", "Connect", &data).
+		Group("form-group", "", "vertical", "").Border("", "round").
+		End().
+		End().
+		End()
 }
 
 var (
