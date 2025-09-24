@@ -14,11 +14,13 @@ type MockWidget struct {
 }
 
 func NewMockWidget(id string, w, h int) *MockWidget {
-	return &MockWidget{
+	widget := &MockWidget{
 		BaseWidget:      BaseWidget{id: id},
 		preferredWidth:  w,
 		preferredHeight: h,
 	}
+	widget.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
+	return widget
 }
 
 func (m *MockWidget) Hint() (int, int) {
@@ -285,6 +287,7 @@ func TestGridLayoutCalculations(t *testing.T) {
 func TestGridSpanning(t *testing.T) {
 	t.Run("Column spanning", func(t *testing.T) {
 		grid := NewGrid("test", 2, 3, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 120, 80)
 		grid.Columns(30, 40, -1) // Mixed: fixed, fixed, fractional (50)
 		grid.Rows(40, -1)        // Mixed: fixed, fractional (40)
@@ -305,6 +308,7 @@ func TestGridSpanning(t *testing.T) {
 
 	t.Run("Row spanning", func(t *testing.T) {
 		grid := NewGrid("test", 3, 2, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 100, 120)
 		grid.Columns(-1, -1)  // Fractional sizes (50 each)
 		grid.Rows(30, 40, -1) // Mixed: fixed, fixed, fractional (50)
@@ -325,6 +329,7 @@ func TestGridSpanning(t *testing.T) {
 
 	t.Run("Full spanning", func(t *testing.T) {
 		grid := NewGrid("test", 2, 2, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 100, 80)
 		grid.Columns(-1, -1) // Equal fractional (50 each)
 		grid.Rows(-1, -1)    // Equal fractional (40 each)
@@ -348,9 +353,10 @@ func TestGridSpanning(t *testing.T) {
 func TestGridWithLines(t *testing.T) {
 	t.Run("Grid line spacing", func(t *testing.T) {
 		grid := NewGrid("test", 2, 2, true) // With grid lines
-		grid.SetBounds(0, 0, 102, 82)       // Extra space for lines
-		grid.Columns(-1, -1)                // Equal fractional columns
-		grid.Rows(-1, -1)                   // Equal fractional rows
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
+		grid.SetBounds(0, 0, 101, 81) // Extra space for lines
+		grid.Columns(-1, -1)          // Equal fractional columns
+		grid.Rows(-1, -1)             // Equal fractional rows
 
 		widget1 := NewMockWidget("w1", 10, 10)
 		widget2 := NewMockWidget("w2", 10, 10)
@@ -376,9 +382,10 @@ func TestGridWithLines(t *testing.T) {
 
 	t.Run("Spanning with grid lines", func(t *testing.T) {
 		grid := NewGrid("test", 2, 3, true)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 122, 82) // 120 + 2 for lines, 80 + 1 for line
-		grid.Columns(30, 40, -1)     // Mixed: fixed, fixed, fractional
-		grid.Rows(-1, -1)            // Equal fractional rows
+		grid.Columns(30, 40, -1)      // Mixed: fixed, fixed, fractional
+		grid.Rows(-1, -1)             // Equal fractional rows
 
 		// Widget spanning 2 columns with grid lines
 		widget := NewMockWidget("span", 10, 10)
@@ -399,6 +406,7 @@ func TestGridWithLines(t *testing.T) {
 func TestGridAutoSizing(t *testing.T) {
 	t.Run("Auto column width", func(t *testing.T) {
 		grid := NewGrid("test", 1, 2, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 100, 50)
 		grid.Columns(0, -1) // Auto, fractional
 		grid.Rows(-1)       // Fractional
@@ -428,9 +436,10 @@ func TestGridAutoSizing(t *testing.T) {
 
 	t.Run("Auto row height", func(t *testing.T) {
 		grid := NewGrid("test", 2, 1, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 50, 100)
-		grid.Columns(-1)     // Fractional
-		grid.Rows(0, -1)     // Auto, fractional
+		grid.Columns(-1) // Fractional
+		grid.Rows(0, -1) // Auto, fractional
 
 		widget1 := NewMockWidget("w1", 20, 25) // Preferred height 25
 		widget2 := NewMockWidget("w2", 20, 10)
@@ -459,6 +468,7 @@ func TestGridAutoSizing(t *testing.T) {
 func TestGridBoundaryConditions(t *testing.T) {
 	t.Run("Empty grid layout", func(t *testing.T) {
 		grid := NewGrid("test", 2, 2, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 100, 80)
 
 		// Layout with no cells should not panic
@@ -472,6 +482,7 @@ func TestGridBoundaryConditions(t *testing.T) {
 
 	t.Run("Single cell grid", func(t *testing.T) {
 		grid := NewGrid("test", 1, 1, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 100, 80)
 		grid.Columns(-1) // Use fractional to avoid divide by zero
 		grid.Rows(-1)    // Use fractional to avoid divide by zero
@@ -489,6 +500,7 @@ func TestGridBoundaryConditions(t *testing.T) {
 
 	t.Run("Out of bounds spanning", func(t *testing.T) {
 		grid := NewGrid("test", 2, 2, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 100, 80)
 		grid.Columns(-1, -1) // Equal fractional (50 each)
 		grid.Rows(-1, -1)    // Equal fractional (40 each)
@@ -502,7 +514,7 @@ func TestGridBoundaryConditions(t *testing.T) {
 
 		// Widget should be positioned but clipped to grid boundaries
 		x, y, w, h := widget.Bounds()
-		
+
 		// Should be positioned at (1,1) with size of single cell
 		if x != 50 || y != 40 || w != 50 || h != 40 {
 			t.Errorf("Out of bounds widget bounds = (%d,%d,%d,%d), want (50,40,50,40)", x, y, w, h)
@@ -511,6 +523,7 @@ func TestGridBoundaryConditions(t *testing.T) {
 
 	t.Run("Zero size grid", func(t *testing.T) {
 		grid := NewGrid("test", 1, 1, false)
+		grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 		grid.SetBounds(0, 0, 0, 0) // Zero size
 
 		widget := NewMockWidget("zero", 10, 10)
@@ -529,6 +542,7 @@ func TestGridBoundaryConditions(t *testing.T) {
 // TestGridInfo tests the Info method
 func TestGridInfo(t *testing.T) {
 	grid := NewGrid("test-grid", 3, 4, true)
+	grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 	grid.SetBounds(10, 20, 200, 150)
 
 	widget1 := NewMockWidget("w1", 10, 10)
@@ -556,6 +570,7 @@ func TestGridInfo(t *testing.T) {
 // TestGridCursor tests cursor positioning
 func TestGridCursor(t *testing.T) {
 	grid := NewGrid("test", 2, 2, false)
+	grid.SetStyle("", NewStyle("white", "black").SetMargin(0).SetPadding(0))
 
 	x, y := grid.Cursor()
 	if x != -1 || y != -1 {
@@ -576,8 +591,8 @@ func TestGridEventHandling(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (substr == "" || indexOf(s, substr) >= 0)
+	return len(s) >= len(substr) &&
+		(substr == "" || indexOf(s, substr) >= 0)
 }
 
 // Simple indexOf implementation
@@ -589,3 +604,4 @@ func indexOf(s, substr string) int {
 	}
 	return -1
 }
+

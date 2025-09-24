@@ -27,8 +27,15 @@ import "github.com/gdamore/tcell/v2"
 // layout management and event propagation systems.
 type Custom struct {
 	BaseWidget
-	handler  func(tcell.Event) bool // Custom event handler function
-	renderer func(Widget, Screen)   // Custom rendering function
+	// handler is the user-defined function that processes events for this widget.
+	// It should return true if the event was handled, false otherwise.
+	// If nil, the widget will not handle any events.
+	handler func(tcell.Event) bool
+	
+	// renderer is the user-defined function that draws the widget's visual content.
+	// It receives the widget instance and screen interface for drawing operations.
+	// If nil, the widget will not render anything.
+	renderer func(Widget, Screen)
 }
 
 // NewCustom creates a new custom widget with user-defined rendering behavior.
@@ -50,12 +57,27 @@ type Custom struct {
 //
 // Example usage:
 //
-//	custom := NewCustom("chart", false, func(widget Widget, screen Screen) {
+//	// Create a simple horizontal line widget
+//	custom := NewCustom("line", false, func(widget Widget, screen Screen) {
 //		width, height := widget.Size()
-//		// Draw custom content using screen.SetContent()
-//		for x := 0; x < width; x++ {
-//			screen.SetContent(x, 0, '-', nil, style)
+//		x, y := widget.Position()
+//		style := tcell.StyleDefault.Foreground(tcell.ColorWhite)
+//		
+//		// Draw a horizontal line across the widget
+//		for i := 0; i < width; i++ {
+//			screen.SetContent(x+i, y, '─', nil, style)
 //		}
+//	})
+//
+//	// Add event handling
+//	custom.SetHandler(func(event tcell.Event) bool {
+//		if keyEv, ok := event.(*tcell.EventKey); ok {
+//			if keyEv.Key() == tcell.KeyEnter {
+//				// Handle enter key press
+//				return true
+//			}
+//		}
+//		return false
 //	})
 func NewCustom(id string, focusable bool, renderer func(Widget, Screen)) *Custom {
 	return &Custom{
@@ -64,10 +86,60 @@ func NewCustom(id string, focusable bool, renderer func(Widget, Screen)) *Custom
 	}
 }
 
+// Handle processes events for the custom widget using the user-defined event handler.
+// If no custom handler is set, it returns false to indicate the event was not handled.
+//
+// This method is called by the framework when events need to be processed by the widget.
+// The custom handler function should return true if it handled the event, or false to
+// allow the event to propagate to other widgets or the default handling mechanism.
+//
+// Parameters:
+//   - event: The tcell.Event to be processed
+//
+// Returns:
+//   - bool: true if the event was handled, false otherwise
 func (c *Custom) Handle(event tcell.Event) bool {
 	if c.handler != nil {
 		return c.handler(event)
-	} else {
-		return false
+	}
+	return false
+}
+
+// SetHandler sets a custom event handler function for the widget.
+// The handler function will be called whenever events need to be processed by this widget.
+// If handler is nil, the widget will not handle any events (Handle will return false).
+//
+// The handler function should:
+//   - Return true if it successfully handled the event
+//   - Return false if the event should be passed to other handlers or default processing
+//
+// Parameters:
+//   - handler: Function that processes tcell.Event and returns bool indicating if handled
+//
+// Example usage:
+//
+//	custom.SetHandler(func(event tcell.Event) bool {
+//		switch ev := event.(type) {
+//		case *tcell.EventKey:
+//			if ev.Key() == tcell.KeyEnter {
+//				// Handle enter key
+//				return true
+//			}
+//		}
+//		return false
+//	})
+func (c *Custom) SetHandler(handler func(tcell.Event) bool) {
+	c.handler = handler
+}
+
+// Render draws the custom widget using the user-defined renderer function.
+// This method is called by the framework during the rendering phase.
+// If no renderer is set, the widget will not draw anything.
+//
+// Parameters:
+//   - screen: Screen interface for drawing operations
+func (c *Custom) Render(screen Screen) {
+	if c.renderer != nil {
+		c.renderer(c, screen)
 	}
 }

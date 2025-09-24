@@ -45,7 +45,7 @@ type Separator struct {
 //	hSep := NewSeparator("h-sep", "thin")
 //	hSep.SetHint(0, 1)  // Full width, 1 line height
 //
-//	// Vertical separator  
+//	// Vertical separator
 //	vSep := NewSeparator("v-sep", "thick")
 //	vSep.SetHint(1, 0)  // 1 character width, full height
 //

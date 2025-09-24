@@ -291,6 +291,7 @@ func Update(container Container, id string, value any) {
 			widget.Value = v
 		}
 	case *Switcher:
+		container.Log(container, "debug", "Update switcher: %s", value)
 		if pane, ok := value.(string); ok {
 			widget.Select(pane)
 		}

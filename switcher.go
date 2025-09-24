@@ -1,9 +1,6 @@
 package zeichenwerk
 
-import (
-	"maps"
-	"slices"
-)
+import "slices"
 
 // Switcher represents a container widget that displays one pane at a time from a collection
 // of named panes. It acts like a tabbed interface without visible tabs, where only the
@@ -29,8 +26,9 @@ import (
 // but only the selected pane is visible and interactive.
 type Switcher struct {
 	BaseWidget
-	Selected string            // Name of the currently selected/visible pane
-	Panes    map[string]Widget // Map of pane names to their corresponding widgets
+	Selected int      // Index of the currently selected/visible pane
+	Labels   []string // Switched pane names
+	Panes    []Widget // Array the corresponding pane widgets
 }
 
 // NewSwitcher creates a new switcher container with the specified identifier.
@@ -52,8 +50,16 @@ type Switcher struct {
 func NewSwitcher(id string) *Switcher {
 	return &Switcher{
 		BaseWidget: BaseWidget{id: id, focusable: false},
-		Panes:      make(map[string]Widget),
+		Labels:     make([]string, 0, 3),
+		Panes:      make([]Widget, 0, 3),
 	}
+}
+
+func (s *Switcher) Add(label string, widget Widget) {
+	s.Labels = append(s.Labels, label)
+	s.Panes = append(s.Panes, widget)
+	x, y, w, h := s.Content()
+	widget.SetBounds(x, y, w, h)
 }
 
 // Children returns the child widgets of the switcher based on visibility preference.
@@ -79,7 +85,7 @@ func (s *Switcher) Children(visible bool) []Widget {
 			return []Widget{}
 		}
 	} else {
-		return slices.Collect(maps.Values(s.Panes))
+		return s.Panes
 	}
 }
 
@@ -123,7 +129,7 @@ func (s *Switcher) Hint() (int, int) {
 	width := 0
 	height := 0
 
-	for child := range maps.Values(s.Panes) {
+	for _, child := range s.Panes {
 		cw, ch := child.Hint()
 		width = max(cw, width)
 		height = max(ch, height)
@@ -132,54 +138,16 @@ func (s *Switcher) Hint() (int, int) {
 	return width, height
 }
 
-// Select changes the currently visible pane to the one with the specified name.
-// If the named pane exists, it becomes the visible pane and the switcher
-// triggers a refresh to update the display immediately.
-//
-// Parameters:
-//   - name: The name of the pane to make visible
-//
-// Behavior:
-//   - If the named pane exists, it becomes the selected/visible pane
-//   - If the named pane doesn't exist, the selection remains unchanged
-//   - The switcher refreshes automatically to show the newly selected pane
-//   - Focus management is handled by the parent UI system
-//
-// Example usage:
-//
-//	switcher.Select("dashboard")  // Switch to dashboard view
-//	switcher.Select("settings")   // Switch to settings view
-func (s *Switcher) Select(name string) {
-	s.Selected = name
-	s.Refresh()
-}
-
-// Set adds or updates a pane in the switcher with the specified name and widget.
-// If this is the first pane added, it automatically becomes the selected pane.
-// The widget is immediately positioned to fill the switcher's content area.
-//
-// Parameters:
-//   - name: The name identifier for the pane (used for selection)
-//   - widget: The widget to add as a pane
-//
-// Behavior:
-//   - Adds the widget to the panes collection with the given name
-//   - If no pane is currently selected, this pane becomes selected
-//   - If a pane with the same name exists, it is replaced
-//   - The widget is immediately positioned to fill the content area
-//
-// Example usage:
-//
-//	switcher.Set("login", NewLoginForm("login-form"))
-//	switcher.Set("main", NewDashboard("dashboard"))
-//	switcher.Set("settings", NewSettingsPanel("settings"))
-func (s *Switcher) Set(name string, widget Widget) {
-	s.Panes[name] = widget
-	if s.Selected == "" {
-		s.Selected = name
+func (s *Switcher) Select(index any) {
+	switch pane := index.(type) {
+	case int:
+		s.Selected = pane
+	case string:
+		index := slices.Index(s.Labels, pane)
+		if index >= 0 {
+			s.Selected = index
+		}
 	}
-	x, y, w, h := s.Content()
-	widget.SetBounds(x, y, w, h)
 }
 
 // Layout calculates and applies layout positioning for all panes in the switcher.

@@ -24,6 +24,16 @@ func (t *Tabs) Add(title string) {
 	t.Tabs = append(t.Tabs, title)
 }
 
+func (t *Tabs) Emit(event string, data ...any) {
+	if t.handlers == nil {
+		return
+	}
+	handler, found := t.handlers[event]
+	if found {
+		handler(t, event, data...)
+	}
+}
+
 func (t *Tabs) Hint() (int, int) {
 	width := 0
 	for _, tab := range t.Tabs {
@@ -211,7 +221,7 @@ func (t *Tabs) handleLetterNavigation(letter rune) bool {
 	}
 
 	// Second pass: search from beginning to current (wraparound)
-	for i := 0; i < startIndex; i++ {
+	for i := range startIndex {
 		if len(t.Tabs[i]) > 0 {
 			firstChar := rune(t.Tabs[i][0])
 			if firstChar >= 'A' && firstChar <= 'Z' {
@@ -225,16 +235,5 @@ func (t *Tabs) handleLetterNavigation(letter rune) bool {
 	}
 
 	// No matching tab found
-	return false
-}
-
-func (t *Tabs) Emit(event string, data ...any) bool {
-	if t.handlers == nil {
-		return false
-	}
-	handler, found := t.handlers[event]
-	if found {
-		return handler(t, event, data...)
-	}
 	return false
 }

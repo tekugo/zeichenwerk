@@ -148,7 +148,7 @@ In no particular order!
 - [x] Add a midnight neon theme
 - [x] Add Table Widget
 - [ ] Review existing mostly AI generated documentation
-- [ ] Add proper form handling for large forms with many fields (Form widget or
+- [x] Add proper form handling for large forms with many fields (Form widget or
   builder with helpers)
 - [ ] Extend inspector to show widget-specific information
 - [ ] Add style manipulation to the inspector

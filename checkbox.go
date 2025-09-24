@@ -75,6 +75,47 @@ func (c *Checkbox) Cursor() (int, int) {
 	return -1, -1
 }
 
+// Emit triggers a custom event on the widget, calling any registered event
+// handlers. This function is the core of the widget's event system, allowing
+// widgets to notify listeners about state changes, user interactions, or
+// other significant events.
+//
+// The function performs the following operations:
+//   - Checks if any event handlers are registered for this widget
+//   - Looks up the specific handler for the given event name
+//   - Calls the handler function with the widget, event name, and any
+//     optional data
+//   - Silently ignores the event if no handler is registered
+//
+// Event System Overview:
+// The Emit function works in conjunction with the On() method to provide a
+// flexible event-driven architecture. Widgets can emit events at any time,
+// and external code can register handlers using On() to respond to these events.
+//
+// Common widget events include:
+//   - "change": Content or state has been modified
+//   - "focus": Widget has gained keyboard focus
+//   - "blur": Widget has lost keyboard focus
+//   - "select": Item selection has changed (for lists, menus)
+//   - "activate": Item has been activated (Enter key, double-click)
+//   - "key": Raw keyboard event (automatically emitted by Handle())
+//
+// Parameters:
+//   - event: The name of the event to emit (e.g., "change", "focus", "select")
+//   - data: Optional additional data to pass to the event handler. The type
+//     and meaning of this data depends on the specific event and widget type.
+func (c *Checkbox) Emit(event string, data ...any) bool {
+	if c.handlers == nil {
+		return false
+	}
+	handler, found := c.handlers[event]
+	if found {
+		return handler(c, event, data...)
+	} else {
+		return false
+	}
+}
+
 // Handle processes keyboard and mouse events for the checkbox widget.
 // The checkbox responds to space bar, enter key, and mouse clicks for toggling.
 //
@@ -125,7 +166,11 @@ func (c *Checkbox) handleKeyEvent(event *tcell.EventKey) bool {
 		if event.Rune() == ' ' {
 			c.Toggle()
 			return true
+		} else {
+			c.Emit("key", event)
 		}
+	default:
+		return c.Emit("key", event)
 	}
 
 	return false
@@ -222,4 +267,3 @@ func (c *Checkbox) State() string {
 		return c.state
 	}
 }
-

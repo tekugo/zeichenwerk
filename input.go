@@ -128,14 +128,15 @@ func (i *Input) Cursor() (int, int) {
 	return cursorX, 0
 }
 
-func (i *Input) Emit(event string, data ...any) {
+func (i *Input) Emit(event string, data ...any) bool {
 	if i.handlers == nil {
-		return
+		return false
 	}
 	handler, found := i.handlers[event]
 	if found {
-		handler(i, event, data...)
+		return handler(i, event, data...)
 	}
+	return false
 }
 
 // Find searches for a widget with the specified ID within this input widget.
@@ -480,10 +481,7 @@ func (i *Input) Visible() string {
 	}
 
 	// Calculate the end position for the visible text
-	endX := i.Offset + iw
-	if endX > len(displayText) {
-		endX = len(displayText)
-	}
+	endX := min(i.Offset+iw, len(displayText))
 
 	// Ensure we don't go beyond text boundaries
 	if i.Offset < 0 {
@@ -598,7 +596,7 @@ func (i *Input) Handle(evt tcell.Event) bool {
 			return false
 		}
 	default:
-		return false
+		return i.Emit("key", event)
 	}
 
 	i.Refresh()

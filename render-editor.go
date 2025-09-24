@@ -139,7 +139,7 @@ func (r *Renderer) renderLineNumbers(editor *Editor, x, y, width, height int) {
 
 	// Draw separator between line numbers and content
 	r.SetStyle(editor.Style("separator"))
-	for i := 0; i < height; i++ {
+	for i := range height {
 		r.screen.SetContent(x+width, y+i, '│', nil, r.style)
 	}
 }
@@ -177,7 +177,7 @@ func (r *Renderer) renderEditorContent(editor *Editor, x, y, w, h int) {
 	r.SetStyle(editor.Style(""))
 
 	// Render visible lines
-	for i := 0; i < h; i++ {
+	for i := range h {
 		lineIndex := editor.offsetY + i
 		if lineIndex >= len(editor.content) {
 			// Clear remaining lines if document is shorter than viewport
@@ -230,10 +230,7 @@ func (r *Renderer) getVisibleLineContent(line string, offsetX, width, tabWidth i
 		return ""
 	}
 
-	end := start + width
-	if end > len(runes) {
-		end = len(runes)
-	}
+	end := min(start+width, len(runes))
 
 	return string(runes[start:end])
 }
@@ -259,7 +256,7 @@ func (r *Renderer) expandTabs(line string, tabWidth int) string {
 		if ch == '\t' {
 			// Calculate spaces needed to reach next tab stop
 			spacesToAdd := tabWidth - (column % tabWidth)
-			for i := 0; i < spacesToAdd; i++ {
+			for range spacesToAdd {
 				result.WriteRune(' ')
 				column++
 			}
@@ -296,10 +293,7 @@ func runeSubstring(s string, start, length int) string {
 		return ""
 	}
 
-	end := start + length
-	if end > len(runes) {
-		end = len(runes)
-	}
+	end := min(start+length, len(runes))
 
 	return string(runes[start:end])
 }

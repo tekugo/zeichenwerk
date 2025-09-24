@@ -275,8 +275,6 @@ func (e *Editor) RefreshCursor() {
 	ui := FindUI(e)
 	if ui != nil {
 		ui.ShowCursor()
-	} else {
-		panic("Cannot update cursor position")
 	}
 }
 
@@ -556,7 +554,7 @@ func (e *Editor) Enter() {
 // insertTabAsSpaces inserts spaces to reach the next tab stop.
 func (e *Editor) insertTabAsSpaces() {
 	spacesToInsert := e.tab - (e.column % e.tab)
-	for i := 0; i < spacesToInsert; i++ {
+	for range spacesToInsert {
 		e.content[e.line].Insert(' ')
 		e.column++
 	}
@@ -641,14 +639,11 @@ func (e *Editor) calculateVisualColumn() int {
 	lineRunes := []rune(lineContent)
 
 	// Ensure cursor column is within line bounds
-	cursorCol := e.column
-	if cursorCol > len(lineRunes) {
-		cursorCol = len(lineRunes)
-	}
+	cursorCol := min(e.column, len(lineRunes))
 
 	// Calculate visual position accounting for tabs
 	visualCol := 0
-	for i := 0; i < cursorCol; i++ {
+	for i := range cursorCol {
 		if lineRunes[i] == '\t' {
 			// Move to next tab stop
 			visualCol = ((visualCol / e.tab) + 1) * e.tab

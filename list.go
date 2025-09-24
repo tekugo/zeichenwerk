@@ -98,18 +98,18 @@ import (
 //   - Fast rendering with only visible items processed
 type List struct {
 	BaseWidget
-	
+
 	// ---- Core Data ----
 	Items []string // Text items to display in the list (primary content)
-	
+
 	// ---- Navigation State ----
 	Index  int // Current highlight position (focused item index, -1 if none)
 	Offset int // Vertical scroll offset for viewport positioning (top visible item index)
-	
+
 	// ---- Selection Management ----
 	Selection []int // Indices of currently selected items (supports multi-selection)
 	Disabled  []int // Indices of items that cannot be selected or activated
-	
+
 	// ---- Display Options ----
 	Numbers   bool // Show line numbers next to each item for reference
 	Scrollbar bool // Display scrollbar indicator on the right edge
@@ -183,6 +183,51 @@ func NewList(id string, items []string) *List {
 }
 
 // ---- Widget Methods -------------------------------------------------------
+
+// Emit triggers registered event handlers for the specified event type.
+// This method implements the event system that allows external code to
+// respond to list interactions and state changes.
+//
+// # Event System Design
+//
+// The method provides:
+//   - Type-safe event emission with arbitrary data
+//   - Handler lookup by event name
+//   - Graceful handling of missing handlers
+//   - Support for multiple data parameters
+//
+// # Event Types
+//
+// Common events emitted by the List widget:
+//   - "select": Fired when highlight position changes (navigation)
+//   - "activate": Fired when an item is activated (Enter key)
+//   - "key": Fired for unhandled keyboard events
+//
+// # Handler Requirements
+//
+// Event handlers must match the signature:
+//
+//	func(widget Widget, event string, data ...any) bool
+//
+// # Error Handling
+//
+// The method handles edge cases gracefully:
+//   - No handlers registered: Silent return (no error)
+//   - Event type not found: Silent return (no error)
+//   - Handler execution: Delegates error handling to handler
+//
+// Parameters:
+//   - event: Name of the event to emit
+//   - data: Variable number of parameters to pass to handler
+func (l *List) Emit(event string, data ...any) {
+	if l.handlers == nil {
+		return
+	}
+	handler, found := l.handlers[event]
+	if found {
+		handler(l, event, data...)
+	}
+}
 
 // Refresh triggers a visual update of the List widget by requesting a redraw.
 // This method should be called whenever the list's visual state has changed
@@ -800,48 +845,4 @@ func (l *List) ScrollInfo() (canScrollUp, canScrollDown bool, scrollPercent floa
 	}
 
 	return
-}
-
-// Emit triggers registered event handlers for the specified event type.
-// This method implements the event system that allows external code to
-// respond to list interactions and state changes.
-//
-// # Event System Design
-//
-// The method provides:
-//   - Type-safe event emission with arbitrary data
-//   - Handler lookup by event name
-//   - Graceful handling of missing handlers
-//   - Support for multiple data parameters
-//
-// # Event Types
-//
-// Common events emitted by the List widget:
-//   - "select": Fired when highlight position changes (navigation)
-//   - "activate": Fired when an item is activated (Enter key)
-//   - "key": Fired for unhandled keyboard events
-//
-// # Handler Requirements
-//
-// Event handlers must match the signature:
-//   func(widget Widget, event string, data ...any) bool
-//
-// # Error Handling
-//
-// The method handles edge cases gracefully:
-//   - No handlers registered: Silent return (no error)
-//   - Event type not found: Silent return (no error)
-//   - Handler execution: Delegates error handling to handler
-//
-// Parameters:
-//   - event: Name of the event to emit
-//   - data: Variable number of parameters to pass to handler
-func (l *List) Emit(event string, data ...any) {
-	if l.handlers == nil {
-		return
-	}
-	handler, found := l.handlers[event]
-	if found {
-		handler(l, event, data...)
-	}
 }

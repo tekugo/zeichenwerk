@@ -24,9 +24,9 @@ func TestTableNavigation(t *testing.T) {
 
 	provider := NewArrayTableProvider(headers, data)
 	table := NewTable("test-table", provider)
-	
+
 	// Set a reasonable size for testing
-	table.SetBounds(0, 0, 80, 20)
+	table.SetBounds(0, 0, 20, 20)
 
 	// Test initial state
 	if table.GetSelectedRow() != 0 {
@@ -36,7 +36,7 @@ func TestTableNavigation(t *testing.T) {
 	// Test basic navigation
 	testKeyNavigation(t, table, tcell.KeyDown, 1, "Down arrow navigation")
 	testKeyNavigation(t, table, tcell.KeyUp, 0, "Up arrow navigation")
-	
+
 	// Test Home/End keys
 	testKeyNavigation(t, table, tcell.KeyEnd, len(data)-1, "End key navigation")
 	testKeyNavigation(t, table, tcell.KeyHome, 0, "Home key navigation")
@@ -170,7 +170,7 @@ func TestTableHorizontalNavigation(t *testing.T) {
 
 	// Test horizontal scrolling
 	rightEvent := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)
-	
+
 	// Initial offset should be 0
 	offsetX, _ := table.GetScrollOffset()
 	if offsetX != 0 {
@@ -187,7 +187,7 @@ func TestTableHorizontalNavigation(t *testing.T) {
 	// Test Tab navigation
 	tabEvent := tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)
 	table.Handle(tabEvent)
-	
+
 	// Test Shift+Tab navigation
 	shiftTabEvent := tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModShift)
 	table.Handle(shiftTabEvent)
@@ -195,7 +195,7 @@ func TestTableHorizontalNavigation(t *testing.T) {
 	// Test Ctrl+Left/Right for column scrolling
 	ctrlLeftEvent := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModCtrl)
 	ctrlRightEvent := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl)
-	
+
 	table.Handle(ctrlRightEvent)
 	table.Handle(ctrlLeftEvent)
 }
@@ -204,7 +204,7 @@ func TestTableHorizontalNavigation(t *testing.T) {
 func testKeyNavigation(t *testing.T, table *Table, key tcell.Key, expectedRow int, description string) {
 	event := tcell.NewEventKey(key, 0, tcell.ModNone)
 	table.Handle(event)
-	
+
 	if table.GetSelectedRow() != expectedRow {
 		t.Errorf("%s: Expected row %d, got %d", description, expectedRow, table.GetSelectedRow())
 	}
@@ -214,8 +214,9 @@ func testKeyNavigation(t *testing.T, table *Table, key tcell.Key, expectedRow in
 func testKeyNavigationWithMod(t *testing.T, table *Table, key tcell.Key, mod tcell.ModMask, expectedRow int, description string) {
 	event := tcell.NewEventKey(key, 0, mod)
 	table.Handle(event)
-	
+
 	if table.GetSelectedRow() != expectedRow {
 		t.Errorf("%s: Expected row %d, got %d", description, expectedRow, table.GetSelectedRow())
 	}
 }
+

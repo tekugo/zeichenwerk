@@ -16,8 +16,9 @@ import "time"
 //   - "braille": Complex braille pattern creating a spinning effect
 //
 // Usage:
-//   spinner := NewSpinner("loading", []rune(Spinners["braille"]))
-//   spinner.Start(100 * time.Millisecond)
+//
+//	spinner := NewSpinner("loading", []rune(Spinners["braille"]))
+//	spinner.Start(100 * time.Millisecond)
 var Spinners = map[string]string{
 	"bar":     "|/-\\",
 	"dots":    ".oOo",
@@ -78,13 +79,14 @@ type Spinner struct {
 //   - *Spinner: Configured spinner widget ready for use
 //
 // Example:
-//   // Using predefined spinner styles
-//   spinner1 := NewSpinner("loader1", []rune(Spinners["braille"]))
-//   spinner2 := NewSpinner("loader2", []rune(Spinners["circle"]))
 //
-//   // Using custom character sequence
-//   custom := []rune("◢◣◤◥")
-//   spinner3 := NewSpinner("custom", custom)
+//	// Using predefined spinner styles
+//	spinner1 := NewSpinner("loader1", []rune(Spinners["braille"]))
+//	spinner2 := NewSpinner("loader2", []rune(Spinners["circle"]))
+//
+//	// Using custom character sequence
+//	custom := []rune("◢◣◤◥")
+//	spinner3 := NewSpinner("custom", custom)
 //
 // Note: The spinner is not focusable and starts with the first character
 // in the sequence. An empty runes slice will cause runtime panics.
@@ -130,14 +132,15 @@ func (s *Spinner) Refresh() {
 //   - Panics if called when already running (use Stop() first)
 //
 // Example:
-//   spinner := NewSpinner("loader", []rune(Spinners["braille"]))
-//   spinner.Start(100 * time.Millisecond)  // 10 FPS animation
-//   
-//   // For faster animation
-//   spinner.Start(50 * time.Millisecond)   // 20 FPS animation
-//   
-//   // For slower animation  
-//   spinner.Start(200 * time.Millisecond)  // 5 FPS animation
+//
+//	spinner := NewSpinner("loader", []rune(Spinners["braille"]))
+//	spinner.Start(100 * time.Millisecond)  // 10 FPS animation
+//
+//	// For faster animation
+//	spinner.Start(50 * time.Millisecond)   // 20 FPS animation
+//
+//	// For slower animation
+//	spinner.Start(200 * time.Millisecond)  // 5 FPS animation
 //
 // Note: The spinner must be stopped before starting again. Multiple concurrent
 // animations on the same spinner are not supported and will cause a panic.
@@ -193,15 +196,16 @@ func (s *Spinner) Rune() rune {
 //   - Preserves the current character position for potential restart
 //
 // Example:
-//   spinner := NewSpinner("loader", []rune(Spinners["circle"]))
-//   spinner.Start(100 * time.Millisecond)
-//   
-//   // Stop after some work
-//   time.Sleep(2 * time.Second)
-//   spinner.Stop()
-//   
-//   // Can restart later
-//   spinner.Start(200 * time.Millisecond)
+//
+//	spinner := NewSpinner("loader", []rune(Spinners["circle"]))
+//	spinner.Start(100 * time.Millisecond)
+//
+//	// Stop after some work
+//	time.Sleep(2 * time.Second)
+//	spinner.Stop()
+//
+//	// Can restart later
+//	spinner.Start(200 * time.Millisecond)
 //
 // Note: It's good practice to defer Stop() when creating spinners to ensure
 // cleanup even if the program exits unexpectedly.
@@ -210,6 +214,7 @@ func (s *Spinner) Stop() {
 	case s.stop <- struct{}{}:
 	default:
 	}
+	s.ticker = nil
 }
 
 // IsRunning returns whether the spinner animation is currently active.
@@ -219,9 +224,10 @@ func (s *Spinner) Stop() {
 //   - bool: true if animation is running, false if stopped
 //
 // Example:
-//   if !spinner.IsRunning() {
-//       spinner.Start(100 * time.Millisecond)
-//   }
+//
+//	if !spinner.IsRunning() {
+//	    spinner.Start(100 * time.Millisecond)
+//	}
 func (s *Spinner) IsRunning() bool {
 	return s.ticker != nil
 }
@@ -234,11 +240,12 @@ func (s *Spinner) IsRunning() bool {
 //   - runes: New sequence of Unicode characters for animation
 //
 // Example:
-//   spinner := NewSpinner("loader", []rune(Spinners["bar"]))
-//   spinner.Start(100 * time.Millisecond)
-//   
-//   // Switch to a different animation style
-//   spinner.SetRunes([]rune(Spinners["braille"]))
+//
+//	spinner := NewSpinner("loader", []rune(Spinners["bar"]))
+//	spinner.Start(100 * time.Millisecond)
+//
+//	// Switch to a different animation style
+//	spinner.SetRunes([]rune(Spinners["braille"]))
 //
 // Note: An empty runes slice will cause runtime panics when Rune() is called.
 func (s *Spinner) SetRunes(runes []rune) {
@@ -262,10 +269,11 @@ func (s *Spinner) GetCurrentIndex() int {
 // This does not affect whether the spinner is running or stopped.
 //
 // Example:
-//   spinner.Reset() // Back to first character
-//   if !spinner.IsRunning() {
-//       spinner.Start(100 * time.Millisecond)
-//   }
+//
+//	spinner.Reset() // Back to first character
+//	if !spinner.IsRunning() {
+//	    spinner.Start(100 * time.Millisecond)
+//	}
 func (s *Spinner) Reset() {
 	s.index = 0
 	if s.IsRunning() {

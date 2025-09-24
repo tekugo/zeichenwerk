@@ -107,7 +107,7 @@ func (b *Builder) Add(widget Widget) *Builder {
 			top.Add(widget)
 			widget.SetParent(top)
 		case *Switcher:
-			top.Set(widget.ID(), widget)
+			top.Add(widget.ID(), widget)
 			widget.SetParent(top)
 		case *ThemeSwitch:
 			top.Add(widget)
@@ -248,6 +248,34 @@ func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *B
 	return b
 }
 
+// Form creates a new form widget that manages data binding between Go structs and form controls.
+// The form automatically generates appropriate controls based on struct field types and tags.
+//
+// Parameters:
+//   - id: Unique identifier for the form widget
+//   - title: Display title for the form container
+//   - value: Pointer to struct containing form data - must be a pointer for updates to work
+//
+// The struct should use tags to control form generation:
+//   - `label:"Display Name"` - Custom label (default: field name)
+//   - `width:"20"` - Control width in characters
+//   - `control:"input|checkbox|password"` - Control type (auto-detected if omitted)
+//   - `group:"groupname"` - Group fields together
+//   - `line:"1"` - Line number within group
+//   - `readOnly:"true"` - Make field read-only
+//
+// Returns the builder for method chaining.
+//
+// Example:
+//
+//	type User struct {
+//	  Name  string `label:"Full Name" width:"30"`
+//	  Email string `label:"Email Address" width:"40"`
+//	  Admin bool   `label:"Administrator"`
+//	}
+//
+//	user := &User{}
+//	builder.Form("user-form", "User Registration", user)
 func (b *Builder) Form(id, title string, value any) *Builder {
 	form := NewForm(id, title, value)
 	b.Add(form)
@@ -270,7 +298,37 @@ func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	return b
 }
 
-func (b *Builder) Group(id, title, placement, name string) *Builder {
+// Group creates a form group that organizes related form fields with consistent labeling and layout.
+// This method automatically generates form controls based on struct fields that match the specified group.
+//
+// Parameters:
+//   - id: Unique identifier for the form group
+//   - title: Display title for the group (shown in border if styled)
+//   - name: Group name to match against struct field `group` tags (empty string matches untagged fields)
+//   - placement: Label placement ("horizontal" or "vertical")
+//   - spacing: Vertical spacing between field lines (typically 1)
+//
+// The method searches for the nearest parent Form widget and automatically generates
+// controls for struct fields that have a matching `group` tag value.
+//
+// Struct tag example:
+//
+//	type User struct {
+//	  Name  string `group:"basic" label:"Full Name" width:"30"`
+//	  Email string `group:"basic" label:"Email" width:"40"`
+//	  Phone string `group:"contact" label:"Phone" width:"20"`
+//	}
+//
+// Returns the builder for method chaining.
+//
+// Example:
+//
+//	builder.Form("user-form", "User", &user).
+//	  Group("basic-group", "Basic Information", "basic", "horizontal", 1).
+//	  End().
+//	  Group("contact-group", "Contact Details", "contact", "vertical", 1).
+//	  End()
+func (b *Builder) Group(id, title, name, placement string, spacing int) *Builder {
 	group := NewFormGroup(id, title, placement)
 	group.Spacing = 1
 	b.Add(group)
@@ -279,7 +337,7 @@ func (b *Builder) Group(id, title, placement, name string) *Builder {
 	var current Widget = b.stack.Peek()
 	for current != nil {
 		if form, ok := current.(*Form); ok {
-			b.buildGroup(form, group, form.Data)
+			b.buildGroup(form, group, name, form.Data)
 			break
 		}
 		current = current.Parent()
@@ -288,7 +346,23 @@ func (b *Builder) Group(id, title, placement, name string) *Builder {
 	return b
 }
 
-func (b *Builder) buildGroup(form *Form, group *FormGroup, data any) {
+// buildGroup processes struct fields and creates form controls for fields matching the specified group.
+// This is an internal helper method called by Group() to generate form controls automatically.
+//
+// Parameters:
+//   - form: The parent form widget for data binding
+//   - group: The form group to add controls to
+//   - name: Group name to filter fields (empty matches untagged fields)
+//   - data: Pointer to struct containing the data
+//
+// Supported struct tags:
+//   - `group:"name"` - Assigns field to named group
+//   - `label:"text"` - Custom label (default: field name, "-" to hide)
+//   - `control:"type"` - Control type (input, checkbox, password)
+//   - `width:"20"` - Control width in characters (default: 10)
+//   - `line:"1"` - Specific line number (default: auto-increment)
+//   - `readOnly:"true"` - Make control read-only
+func (b *Builder) buildGroup(form *Form, group *FormGroup, name string, data any) {
 	line := 0
 	v := reflect.ValueOf(data)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
@@ -301,10 +375,17 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, data any) {
 	for i := range v.NumField() {
 		sf := t.Field(i)
 		fv := v.Field(i)
+		g := sf.Tag.Get("group")
+		if name != "" && name != g {
+			continue
+		}
 		label := sf.Tag.Get("label")
-		if label == "" {
+		if label == "-" {
+			continue
+		} else if label == "" {
 			label = sf.Name
 		}
+		control := sf.Tag.Get("control")
 		width, err := strconv.Atoi(sf.Tag.Get("width"))
 		if err != nil {
 			width = 10
@@ -313,14 +394,54 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, data any) {
 		if err == nil {
 			line = l
 		}
-		input := NewInput(sf.Name)
-		b.Apply(input)
-		input.Text = fv.String()
-		input.SetHint(width, 1)
-		input.SetParent(b.stack.Peek())
-		input.On("change", form.Update(fv))
-		group.Add(line, label, input)
+
+		widget := b.buildFormControl(control, sf.Name, form, fv)
+		widget.SetHint(width, 1)
+		widget.SetParent(b.stack.Peek())
+		widget.On("change", form.Update(fv))
+		group.Add(line, label, widget)
+
 		line++
+	}
+}
+
+// buildFormControl creates an appropriate form control widget based on the field type and control tag.
+// This is an internal helper method that handles the automatic selection and configuration of controls.
+//
+// Parameters:
+//   - control: Explicit control type from struct tag ("input", "checkbox", "password")
+//   - id: Widget ID (typically the struct field name)
+//   - form: Parent form for context
+//   - v: reflect.Value of the struct field
+//
+// Returns:
+//   - Widget: Configured form control widget
+//
+// Control type selection:
+//   - If control tag is specified, uses that type
+//   - If no control tag: bool fields become checkboxes, others become inputs
+//   - Supported types: "input", "checkbox", "password"
+func (b *Builder) buildFormControl(control, id string, form *Form, v reflect.Value) Widget {
+	if control == "" {
+		switch v.Kind() {
+		case reflect.Bool:
+			control = "checkbox"
+		default:
+			control = "input"
+		}
+	}
+
+	switch control {
+	case "checkbox":
+		checkbox := NewCheckbox(id, id, v.Bool())
+		b.Apply(checkbox)
+		checkbox.Checked = v.Bool()
+		return checkbox
+	default:
+		input := NewInput(id)
+		b.Apply(input)
+		input.Text = v.String()
+		return input
 	}
 }
 

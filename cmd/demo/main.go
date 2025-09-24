@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"math/rand"
@@ -495,12 +496,42 @@ func form(builder *Builder) {
 		Password: "secret",
 	}
 
+	user := struct {
+		ID         string `readOnly:"true"`
+		Login      string `label:"Login Name:" width:"40"`
+		Name       string `width:"40"`
+		Department string `width:"40"`
+		Email      string `label:"E-Mail-Address" width:"40"`
+		Phone      string `label:"Phone Number" width:"40"`
+		Mobile     string `label:"Mobile Phone" width:"40"`
+		Password   string `control:"password" width:"40"`
+		Temporary  bool   `label:"Temporary"`
+		Pending    bool   `label:"Pending"`
+		Active     bool   `label:"Active"`
+		Fixed      bool   `label:"Fixed" readOnly:"true"`
+	}{}
+
 	builder.Flex("form-demo", "vertical", "start", 1).Margin(2).Border("", "round").Padding(2).
 		Form("form", "Connect", &data).
-		Group("form-group", "", "vertical", "").Border("", "round").
+		Group("form-group", "", "", "vertical", 1).Border("", "round").
 		End().
+		End().
+		Form("form2", "User", &user).
+		Group("form-group-2", "user", "", "horizontal", 1).Border("", "round").
+		End().
+		End().
+		Flex("form-buttons", "horizontal", "start", 1).Margin(1).
+		Button("save-button", "Save").
+		Label("info-label", "Info", 0).
 		End().
 		End()
+
+	builder.Find("save-button").On("click", func(widget Widget, _ string, _ ...any) bool {
+		Update(FindUI(widget), "info-label", "Click "+time.Now().String())
+		text, _ := json.Marshal(user)
+		widget.Log(widget, "debug", string(text))
+		return true
+	})
 }
 
 var (

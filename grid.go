@@ -140,6 +140,32 @@ func (g *Grid) Children(_ bool) []Widget {
 //	// Place a text widget spanning 2 columns and 3 rows
 //	grid.Add(1, 0, 2, 3, textWidget)
 func (g *Grid) Add(x, y, w, h int, content Widget) {
+	// If no width or height is specified, minimum is 1 cell
+	if w == 0 {
+		w = 1
+	}
+	if h == 0 {
+		h = 1
+	}
+
+	// Check width boundaries
+	if x >= len(g.columns) {
+		x = len(g.columns) - 1
+		w = 1
+	}
+	if x+w > len(g.columns) {
+		w = len(g.columns) - x
+	}
+
+	// Check height boundaries
+	if y >= len(g.rows) {
+		y = len(g.rows) - 1
+		h = 1
+	}
+	if y+h > len(g.rows) {
+		h = len(g.rows) - y
+	}
+
 	g.cells = append(g.cells, &Cell{x: x, y: y, w: w, h: h, content: content})
 	content.SetParent(g)
 }
@@ -349,7 +375,6 @@ func (g *Grid) Layout() {
 	if rf > 0 {
 		fr = fh / rf
 	}
-	g.Log(g, "debug", " Row sizing: height=%d, fractions=%d, fraction=%d, rows=%v", ih, rf, fr, g.heights)
 	for i := range g.rows {
 		if g.rows[i] < 0 {
 			if i == lr {
