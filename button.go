@@ -67,6 +67,28 @@ func (b *Button) Cursor() (int, int) {
 	return -1, -1
 }
 
+// Emit triggers an event handler for the specified event type.
+// This method is part of the button's event system and allows the button
+// to notify registered event handlers when specific events occur.
+//
+// The method looks up the event handler for the given event type and
+// executes it with the button instance, event name, and any additional data.
+// If no handler is registered for the event type, the method returns false.
+//
+// Parameters:
+//   - event: The name of the event to emit (e.g., "click", "focus", "hover")
+//   - data: Optional additional data to pass to the event handler
+//
+// Returns:
+//   - bool: true if a handler was found and executed, false otherwise
+//
+// Example usage:
+//
+//	button.On("click", func(widget Widget, event string, data ...any) bool {
+//		fmt.Println("Button was clicked!")
+//		return true
+//	})
+//	button.Emit("click") // Triggers the registered handler
 func (b *Button) Emit(event string, data ...any) bool {
 	if b.handlers == nil {
 		return false

@@ -53,7 +53,13 @@ func footer(builder *Builder) {
 }
 
 func content(builder *Builder) {
-	demos := []string{"Overview", "Box", "Button", "Checkbox", "Digits", "Editor", "Flex", "Form", "Grid", "Input", "Inspector", "Label", "List", "Pop-up", "Progress Bar", "Scroller", "Spinner", "Table", "Tabs", "Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme", "Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log"}
+	demos := []string{
+		"Overview", "Box", "Button", "Checkbox", "Confirm", "Digits", "Editor",
+		"Flex", "Form", "Grid", "Input", "Inspector", "Label", "List", "Message",
+		"Pop-up", "Progress Bar", "Scroller", "Spinner", "Table", "Tabs",
+		"Theme Switch", "Gruvbox Dark Theme", "Gruvbox Light Theme",
+		"Midnight Neon Theme", "Tokyo Night Theme", "Debug-Log",
+	}
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
@@ -103,6 +109,8 @@ func content(builder *Builder) {
 				Update(ui, "demo", "button-demo")
 			case "Checkbox":
 				Update(ui, "demo", "checkbox-demo")
+			case "Confirm":
+				ui.Confirm("Confirmation Dialog", "Please confirm the action!", "Okay", "Cancel", func() {})
 			case "Digits":
 				Update(ui, "demo", "digits-demo")
 			case "Editor":

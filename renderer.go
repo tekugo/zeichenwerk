@@ -553,6 +553,11 @@ func (r *Renderer) render(widget Widget) {
 	case *Custom:
 		r.renderBorder(x, y, w, h, style)
 		widget.renderer(widget, r.screen)
+	case *Dialog:
+		r.renderBorder(x, y, w, h, style)
+		r.SetStyle(widget.Style("title"))
+		r.text(x+style.Margin.Left+2, y+style.Margin.Top, " "+widget.Title+" ", 0)
+		r.render(widget.child)
 	case *Digits:
 		r.renderBorder(x, y, w, h, style)
 		r.renderDigits(widget, cx, cy, cw, ch)
@@ -592,7 +597,7 @@ func (r *Renderer) render(widget Widget) {
 		r.renderBorder(x, y, w, h, style)
 		r.renderScroller(widget)
 	case *Separator:
-		if widget.Border != "" {
+		if widget.Border != "" && widget.Border != "none" {
 			box := r.theme.Border(widget.Border)
 			if style.Height == 1 {
 				r.line(cx, cy, 1, 0, cw-2, box.Top, box.Top, box.Top)
@@ -664,12 +669,25 @@ func (r *Renderer) render(widget Widget) {
 //   - w, h: Total width and height of the widget area
 //   - style: Style containing background, border, and margin specifications
 func (r *Renderer) renderBorder(x, y, w, h int, style *Style) {
+	if style.Border == "" || style.Border == "none" {
+		return
+	}
 	if style.Background != "" {
 		r.clear(x+style.Margin.Left, y+style.Margin.Top, w-style.Margin.Left-style.Margin.Right, h-style.Margin.Top-style.Margin.Bottom)
 	}
-	if style.Border != "" {
+	if style.Border != "" && style.Border != "none" {
+		parts := strings.Split(style.Border, " ")
+		if len(parts) > 1 {
+			fg := parts[1]
+			bg := style.Background
+			if len(parts) > 2 {
+				bg = parts[2]
+			}
+			r.SetStyle(NewStyle(fg, bg))
+		}
 		box := r.theme.Border(style.Border)
 		r.border(x+style.Margin.Left, y+style.Margin.Top, w-style.Margin.Left-style.Margin.Right-2, h-style.Margin.Top-style.Margin.Bottom-2, box)
+		r.SetStyle(style)
 	}
 }
 

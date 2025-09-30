@@ -269,74 +269,89 @@ tryOverlap:
 	return 0
 }
 
-// computeSmushAmount implements the original figlet smushamt() algorithm
+// computeSmushAmount implements the figlet smushamt() algorithm correctly
 func computeSmushAmount(canvas [][]rune, canvasWidth int, g *glyph, rules SmushRules, hardblank rune) int {
 	if canvasWidth == 0 {
 		return 0
 	}
 	
 	height := len(canvas)
-	maxSmush := g.width
+	maxSmush := g.width // Start with maximum possible smush
 	
 	for row := 0; row < height; row++ {
-		// Find rightmost non-space char in current line (linebd)
-		linebd := canvasWidth - 1
-		for linebd >= 0 {
-			if linebd < len(canvas[row]) {
-				ch := canvas[row][linebd]
-				if ch != ' ' && ch != 0 {
-					break
-				}
-			}
-			linebd--
-		}
-		
-		// Find leftmost non-space char in new character (charbd)  
-		charbd := 0
-		for charbd < g.width {
+		// Find rightmost non-space character in existing canvas
+		linebd := -1
+		for col := canvasWidth - 1; col >= 0; col-- {
 			var ch rune = ' '
-			if charbd < len(g.lines[row]) {
-				ch = g.lines[row][charbd]
+			if col < len(canvas[row]) {
+				ch = canvas[row][col]
 			}
 			if ch != ' ' && ch != 0 {
+				linebd = col
 				break
 			}
-			charbd++
-		}
-		if charbd == g.width {
-			charbd = g.width // No characters found in this row
 		}
 		
-		// Calculate potential overlap
-		amt := charbd + canvasWidth - 1 - linebd
-		
-		// Get the characters that would overlap
-		var ch1, ch2 rune = ' ', ' '
-		if linebd >= 0 && linebd < len(canvas[row]) {
-			ch1 = canvas[row][linebd]
-		}
-		if charbd < len(g.lines[row]) {
-			ch2 = g.lines[row][charbd]
-		}
-		
-		// Apply figlet's overlap rules
-		if ch1 == ' ' || ch1 == 0 {
-			amt++ // Can overlap one more if left char is space
-		} else if ch2 != ' ' && ch2 != 0 {
-			// Both are non-space - check if they can smush
-			if canSmush(ch1, ch2, rules, hardblank) {
-				amt++ // Can overlap one more if they can smush
+		// Find leftmost non-space character in new glyph
+		charbd := g.width // Default to no character found
+		for col := 0; col < g.width; col++ {
+			var ch rune = ' '
+			if row < len(g.lines) && col < len(g.lines[row]) {
+				ch = g.lines[row][col]
+			}
+			if ch != ' ' && ch != 0 {
+				charbd = col
+				break
 			}
 		}
 		
+		// Calculate how much we can smush on this row
+		var amt int
+		if linebd < 0 {
+			// No existing characters on this line
+			amt = charbd + 1
+		} else if charbd >= g.width {
+			// No new characters on this line  
+			amt = g.width
+		} else {
+			// Both lines have characters - calculate possible overlap
+			amt = charbd + canvasWidth - 1 - linebd
+			
+			// Now check if this overlap is actually valid
+			if amt > 0 {
+				// Get the characters that would be overlapping
+				leftChar := canvas[row][linebd]
+				rightChar := g.lines[row][charbd]
+				
+				// Apply the figlet overlap rules
+				if leftChar == ' ' || leftChar == 0 {
+					// Left is space, we can definitely overlap
+					amt++
+				} else if rightChar != ' ' && rightChar != 0 {
+					// Both are non-space - check if they can smush
+					if canSmush(leftChar, rightChar, rules, hardblank) {
+						amt++
+					} else {
+						// Characters cannot smush - no overlap allowed
+						amt = 0
+					}
+				}
+				// If right is space and left is not, amt stays as calculated
+			}
+		}
+		
+		// Take the minimum across all rows
 		if amt < maxSmush {
 			maxSmush = amt
 		}
 	}
 	
-	// Don't allow negative overlap
+	// Clamp to reasonable bounds
 	if maxSmush < 0 {
 		maxSmush = 0
+	}
+	if maxSmush > g.width {
+		maxSmush = g.width
 	}
 	
 	return maxSmush
@@ -391,60 +406,73 @@ func canSmush(left, right rune, rules SmushRules, hardblank rune) bool {
 func appendWithSmush(canvas [][]rune, canvasWidth int, g *glyph, rules SmushRules, hardblank rune) ([][]rune, int) {
 	height := len(canvas)
 	
-	// Implement the original figlet smushamt() algorithm
-	overlap := computeSmushAmount(canvas, canvasWidth, g, rules, hardblank)
+	// Calculate the correct smush amount
+	smushAmount := computeSmushAmount(canvas, canvasWidth, g, rules, hardblank)
 	
-	prefix := canvasWidth - overlap
+	// The new width is the original width plus glyph width minus smush overlap
+	newWidth := canvasWidth + g.width - smushAmount
 	
 	// Build new canvas
-	newWidth := prefix + g.width
 	newCanvas := make([][]rune, height)
-		for r := 0; r < height; r++ {
-			row := canvas[r]
-			if len(row) < canvasWidth {
-				pad := make([]rune, canvasWidth-len(row))
-				for i := range pad {
-					pad[i] = ' '
-				}
-				row = append(row, pad...)
+	for r := 0; r < height; r++ {
+		// Ensure canvas row is properly sized
+		row := canvas[r]
+		if len(row) < canvasWidth {
+			pad := make([]rune, canvasWidth-len(row))
+			for i := range pad {
+				pad[i] = ' '
 			}
-			newRow := make([]rune, 0, newWidth)
-			newRow = append(newRow, row[:prefix]...)
-			for i := 0; i < g.width; i++ {
-				right := ' '
-				if i < len(g.lines[r]) {
-					right = g.lines[r][i]
+			row = append(row, pad...)
+		}
+		
+		// Create new row
+		newRow := make([]rune, newWidth)
+		
+		// Copy original canvas content
+		for i := 0; i < canvasWidth; i++ {
+			if i < len(row) {
+				newRow[i] = row[i]
+			} else {
+				newRow[i] = ' '
+			}
+		}
+		
+		// Add glyph content with proper smushing
+		for i := 0; i < g.width; i++ {
+			pos := canvasWidth - smushAmount + i
+			if pos >= 0 && pos < newWidth {
+				var glyphChar rune = ' '
+				if r < len(g.lines) && i < len(g.lines[r]) {
+					glyphChar = g.lines[r][i]
 				}
-				if i < overlap {
-					left := row[prefix+i]
-					if left == ' ' {
-						newRow = append(newRow, right)
-					} else if right == ' ' {
-						newRow = append(newRow, left)
-					} else if left == hardblank && right == hardblank {
-						newRow = append(newRow, hardblank)
-					} else if left == hardblank {
-						newRow = append(newRow, right)
-					} else if right == hardblank {
-						newRow = append(newRow, left)
+				
+				if pos < canvasWidth {
+					// This is an overlap position - need to smush
+					canvasChar := newRow[pos]
+					if canvasChar == ' ' || canvasChar == 0 {
+						newRow[pos] = glyphChar
+					} else if glyphChar == ' ' || glyphChar == 0 {
+						// Keep canvas char
 					} else {
-						// Both are real characters - apply smushing rules
-						res, ok := controlledSmushResult(left, right, rules, hardblank)
-						if ok {
-							newRow = append(newRow, res)
+						// Both are non-space - apply smushing rules
+						if result, ok := controlledSmushResult(canvasChar, glyphChar, rules, hardblank); ok {
+							newRow[pos] = result
 						} else {
-							// This shouldn't happen if our overlap detection worked correctly
-							// but as fallback, prefer the right character
-							newRow = append(newRow, right)
+							// If can't smush, prefer the new character
+							newRow[pos] = glyphChar
 						}
 					}
 				} else {
-					newRow = append(newRow, right)
+					// Non-overlap position
+					newRow[pos] = glyphChar
 				}
 			}
-			newCanvas[r] = newRow
 		}
-		return newCanvas, newWidth
+		
+		newCanvas[r] = newRow
+	}
+	
+	return newCanvas, newWidth
 }
 
 func canControlledSmush(left, right rune, rules SmushRules) bool {

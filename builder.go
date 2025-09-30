@@ -94,6 +94,9 @@ func (b *Builder) Add(widget Widget) *Builder {
 		case *Box:
 			top.Add(widget)
 			widget.SetParent(top)
+		case *Dialog:
+			top.Add(widget)
+			widget.SetParent(top)
 		case *Flex:
 			top.Add(widget)
 			widget.SetParent(top)
@@ -133,6 +136,9 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focus", "hover")
 	case *Custom:
 		b.theme.Apply(widget, b.selector("custom", widget.ID()))
+	case *Dialog:
+		b.theme.Apply(widget, b.selector("dialog", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("dialog/title", widget.ID()), "focus")
 	case *Digits:
 		b.theme.Apply(widget, b.selector("digits", widget.ID()))
 	case *Editor:
@@ -214,6 +220,12 @@ func (b *Builder) Checkbox(id string, text string, checked bool) *Builder {
 	b.Add(checkbox)
 	// Size hint: 4 characters for "[x] " plus text length
 	checkbox.SetHint(4+len([]rune(text)), 1)
+	return b
+}
+
+func (b *Builder) Dialog(id, title string) *Builder {
+	dialog := NewDialog(id, title)
+	b.Add(dialog)
 	return b
 }
 
@@ -395,7 +407,7 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string, data any
 			line = l
 		}
 
-		widget := b.buildFormControl(control, sf.Name, form, fv)
+		widget := b.buildFormControl(control, sf.Name, fv)
 		widget.SetHint(width, 1)
 		widget.SetParent(b.stack.Peek())
 		widget.On("change", form.Update(fv))
@@ -411,7 +423,6 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string, data any
 // Parameters:
 //   - control: Explicit control type from struct tag ("input", "checkbox", "password")
 //   - id: Widget ID (typically the struct field name)
-//   - form: Parent form for context
 //   - v: reflect.Value of the struct field
 //
 // Returns:
@@ -421,7 +432,7 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string, data any
 //   - If control tag is specified, uses that type
 //   - If no control tag: bool fields become checkboxes, others become inputs
 //   - Supported types: "input", "checkbox", "password"
-func (b *Builder) buildFormControl(control, id string, form *Form, v reflect.Value) Widget {
+func (b *Builder) buildFormControl(control, id string, v reflect.Value) Widget {
 	if control == "" {
 		switch v.Kind() {
 		case reflect.Bool:

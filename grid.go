@@ -347,7 +347,7 @@ func (g *Grid) Layout() {
 		} else {
 			// First column starts after margins, padding, and border
 			gx[i] = g.x + style.Margin.Left + style.Padding.Left
-			if style.Border != "" {
+			if style.Border != "" && style.Border != "none" {
 				gx[i]++ // Account for border line
 			}
 		}
@@ -394,7 +394,7 @@ func (g *Grid) Layout() {
 		} else {
 			// First row starts after margins, padding, and border
 			gy[i] = g.y + style.Margin.Top + style.Padding.Top
-			if style.Border != "" {
+			if style.Border != "" && style.Border != "" {
 				gy[i]++ // Account for border line
 			}
 		}

@@ -28,6 +28,8 @@ func MidnightNeonTheme() Theme {
 		"button":                    NewStyle("$fg1", "$bg3").SetBorder("lines").SetPadding(0, 2),
 		"button:focus":              NewStyle("$cyan", "$bg3"),
 		"button:hover":              NewStyle("$fg0", "$bg3"),
+		"button.dialog":             NewStyle("$fg1", "$bg3"),
+		"dialog":                    NewStyle("$fg0", "$blue").SetBorder("thick").SetPadding(1, 2),
 		"grid":                      NewStyle("$fg2", "$bg0").SetBorder("thin"),
 		"input":                     NewStyle("$fg0", "$bg2").SetCursor("*bar").SetBorder("round"),
 		"input:focus":               NewStyle("$bg0", "$blue"),

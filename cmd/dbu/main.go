@@ -77,7 +77,7 @@ func content(builder *Builder) {
 		End().
 		End()
 
-	With[*Grid](builder.Container(), "grid", func(grid *Grid) {
+	With(builder.Container(), "grid", func(grid *Grid) {
 		grid.Columns(30, -1)
 		grid.Rows(5, -1)
 
@@ -93,7 +93,7 @@ func content(builder *Builder) {
 	})
 
 	current := builder.Container()
-	With[*Tabs](current, "tabs", func(tabs *Tabs) {
+	With(current, "tabs", func(tabs *Tabs) {
 		tabs.On("activate", func(widget Widget, event string, params ...any) bool {
 			if t, ok := widget.(*Tabs); ok {
 				switch t.Selected {

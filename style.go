@@ -150,7 +150,7 @@ func (s *Style) Horizontal() int {
 	if s.Padding != nil {
 		result += s.Padding.Horizontal()
 	}
-	if s.Border != "" {
+	if s.Border != "" && s.Border != "none" {
 		result += 2
 	}
 	return result
@@ -182,7 +182,7 @@ func (s *Style) Vertical() int {
 	if s.Padding != nil {
 		result += s.Padding.Vertical()
 	}
-	if s.Border != "" {
+	if s.Border != "" && s.Border != "none" {
 		result += 2
 	}
 	return result

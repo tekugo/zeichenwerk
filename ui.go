@@ -73,33 +73,33 @@ import (
 // and rendering order for overlay elements.
 type UI struct {
 	BaseWidget
-	
+
 	// State management
 	debug bool // Debug mode flag for showing debug information overlay and logging
 	dirty bool // Flag indicating if a screen redraw is needed due to state changes
-	
+
 	// Event handling channels
 	events chan tcell.Event // Buffered channel for incoming tcell events (keyboard, mouse, resize)
 	quit   chan struct{}    // Channel for signaling graceful application shutdown
-	
+
 	// Rendering channels
-	redraw  chan Widget      // Buffered channel for triggering individual widget redraws (performance optimization)
-	refresh chan struct{}    // Buffered channel for triggering full screen redraws
-	
+	redraw  chan Widget   // Buffered channel for triggering individual widget redraws (performance optimization)
+	refresh chan struct{} // Buffered channel for triggering full screen redraws
+
 	// Widget state tracking
 	focus Widget // Currently focused widget that receives keyboard input and cursor positioning
 	hover Widget // Currently hovered widget for mouse interaction feedback and styling
-	
+
 	// Layer management
 	layers []Container // Stack of widget layers (base layer + popups/modals) for proper z-order rendering
-	
+
 	// Debug infrastructure
 	logger *Text // Debug log widget for runtime messages with auto-scrolling capability
-	
+
 	// Performance counters
 	redraws  int // Counter for individual widget redraws (debugging and performance monitoring)
 	refreshs int // Counter for full screen refreshes (debugging and performance monitoring)
-	
+
 	// Rendering system
 	renderer Renderer     // Renderer instance responsible for drawing widgets to the terminal
 	screen   tcell.Screen // The terminal screen interface for low-level cell manipulation and event polling
@@ -270,8 +270,18 @@ func (ui *UI) Handle(event tcell.Event) bool {
 				at.SetHovered(true)
 			}
 			ui.Refresh()
+		} else {
+			switch event.Buttons() {
+			case tcell.Button1:
+				if at.Focusable() && at != ui.focus {
+					ui.Focus(at)
+				}
+			}
 		}
 		ui.propagate(ui.hover, event)
+
+	case *tcell.EventPaste:
+		ui.propagate(ui.focus, event)
 
 	case *tcell.EventResize:
 		ui.width, ui.height = ui.screen.Size()
@@ -885,6 +895,70 @@ func (ui *UI) FindOn(id, event string, handler func(Widget, string, ...any) bool
 	}
 }
 
+// ---- Builder method -------------------------------------------------------
+
+// Builder returns a builder to construct UIs or parts like popups using the
+// currently set theme.
+func (ui *UI) Builder() *Builder {
+	return NewBuilder(ui.Theme())
+}
+
+// ---- Dialog methds --------------------------------------------------------
+
+// Confirm displays a popup dialog with a confirmation message.
+func (ui *UI) Confirm(title, message, ok, cancel string, fn func()) {
+	dialog := ui.Builder().Dialog("std-confirm", title).Class("dialog").
+		Flex("std-confirm-flex", "vertical", "stretch", 1).Padding(1, 2).
+		Label("std-confirm-label", message, 0).
+		Flex("std-confirm-buttons", "horizontal", "start", 2).
+		Spacer().
+		Button("std-confirm-ok", ok).
+		Button("std-confirm-cancel", cancel).
+		End().
+		End().
+		Container().(*Dialog)
+
+	With(dialog, "std-confirm-ok", func(btn *Button) {
+		btn.On("click", func(_ Widget, _ string, _ ...any) bool {
+			ui.Close()
+			fn()
+			return true
+		})
+	})
+
+	With(dialog, "std-confirm-cancel", func(btn *Button) {
+		btn.On("click", func(_ Widget, _ string, _ ...any) bool {
+			ui.Close()
+			return true
+		})
+	})
+
+	dialog.Layout()
+	w, h := dialog.Hint()
+	ui.Log(dialog, "debug", "Dialog Hint %d.%d", w, h)
+	ui.Popup(-1, -1, 0, 0, dialog)
+}
+
+// Info shows an information message.
+func (ui *UI) Message(title, message, ok string) {
+	dialog := ui.Builder().Dialog("std-info", title).Class("dialog").
+		Flex("std-info-flex", "vertical", "stretch", 1).Padding(1, 2).
+		Label("std-info-label", message, 0).
+		Flex("std-info-buttons", "horizontal", "start", 2).
+		Spacer().
+		Button("std-info.ok", ok).
+		End().
+		End().
+		Container().(*Dialog)
+
+	With(dialog, "std-info-ok", func(btn *Button) {
+		btn.On("click", func(_ Widget, _ string, _ ...any) bool {
+			ui.Close()
+			return true
+		})
+	})
+}
+
 // ---- Run Loop -------------------------------------------------------------
 
 // Run starts the main application event loop and blocks until the application
@@ -894,6 +968,7 @@ func (ui *UI) FindOn(id, event string, handler func(Widget, string, ...any) bool
 // # Initialization Phase
 //
 // Before entering the event loop, Run performs the following initialization:
+//
 //  1. Creates and initializes a new tcell screen for terminal interaction
 //  2. Enables mouse event support for hover detection and click interactions
 //  3. Sets up the default screen style (black background, white foreground)
@@ -1031,6 +1106,32 @@ func (ui *UI) EventLoop() {
 //
 //	// Switch to Tokyo Night theme
 //	ui.SetTheme(TokyoNightTheme())
+//
+// SetTheme applies a new theme to the UI and all its widgets.
+// This method updates the renderer's theme and re-applies theme styles
+// to all widgets in the widget hierarchy, ensuring consistent visual
+// appearance throughout the application.
+//
+// The method performs the following operations:
+//   - Updates the renderer's theme reference
+//   - Creates a new builder with the new theme
+//   - Traverses all widgets and applies the new theme styles
+//   - Triggers a UI refresh to update the display
+//
+// Parameters:
+//   - theme: The new theme to apply to the UI and all widgets
+//
+// Example usage:
+//
+//	// Switch to dark theme
+//	ui.SetTheme(NewDarkTheme())
+//
+//	// Apply a custom theme
+//	customTheme := NewCustomTheme()
+//	ui.SetTheme(customTheme)
+//
+// Note: This operation affects all widgets in the UI hierarchy and
+// triggers a complete visual refresh of the interface.
 func (ui *UI) SetTheme(theme Theme) {
 	ui.renderer.theme = theme
 
@@ -1043,13 +1144,13 @@ func (ui *UI) SetTheme(theme Theme) {
 	ui.Refresh()
 }
 
-// GetTheme returns the currently active theme.
+// Theme returns the currently active theme.
 // This method provides access to the current theme for inspection or
 // for storing the current theme before switching to a different one.
 //
 // Returns:
 //   - Theme: The currently active theme
-func (ui *UI) GetTheme() Theme {
+func (ui *UI) Theme() Theme {
 	return ui.renderer.theme
 }
 

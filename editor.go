@@ -669,62 +669,60 @@ func (e *Editor) Emit(event string, data ...any) bool {
 
 // Handle processes keyboard events for the editor widget.
 func (e *Editor) Handle(evt tcell.Event) bool {
-	event, ok := evt.(*tcell.EventKey)
-	if !ok {
-		return false
-	}
-
-	switch event.Key() {
-	case tcell.KeyLeft:
-		e.Left()
-		return true
-	case tcell.KeyRight:
-		e.Right()
-		return true
-	case tcell.KeyUp:
-		e.Up()
-		return true
-	case tcell.KeyDown:
-		e.Down()
-		return true
-	case tcell.KeyHome:
-		e.Home()
-		return true
-	case tcell.KeyEnd:
-		e.End()
-		return true
-	case tcell.KeyPgUp:
-		e.PageUp()
-		return true
-	case tcell.KeyPgDn:
-		e.PageDown()
-		return true
-	case tcell.KeyCtrlA:
-		e.DocumentHome()
-		return true
-	case tcell.KeyCtrlE:
-		e.DocumentEnd()
-		return true
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		e.Delete()
-		return true
-	case tcell.KeyDelete:
-		e.DeleteForward()
-		return true
-	case tcell.KeyEnter:
-		e.Enter()
-		return true
-	case tcell.KeyTab:
-		e.Insert('\t')
-		return true
-	case tcell.KeyRune:
-		ch := event.Rune()
-		if unicode.IsPrint(ch) {
-			e.Insert(ch)
+	switch event := evt.(type) {
+	case *tcell.EventKey:
+		switch event.Key() {
+		case tcell.KeyLeft:
+			e.Left()
 			return true
+		case tcell.KeyRight:
+			e.Right()
+			return true
+		case tcell.KeyUp:
+			e.Up()
+			return true
+		case tcell.KeyDown:
+			e.Down()
+			return true
+		case tcell.KeyHome:
+			e.Home()
+			return true
+		case tcell.KeyEnd:
+			e.End()
+			return true
+		case tcell.KeyPgUp:
+			e.PageUp()
+			return true
+		case tcell.KeyPgDn:
+			e.PageDown()
+			return true
+		case tcell.KeyCtrlA:
+			e.DocumentHome()
+			return true
+		case tcell.KeyCtrlE:
+			e.DocumentEnd()
+			return true
+		case tcell.KeyBackspace, tcell.KeyBackspace2:
+			e.Delete()
+			return true
+		case tcell.KeyDelete:
+			e.DeleteForward()
+			return true
+		case tcell.KeyEnter:
+			e.Enter()
+			return true
+		case tcell.KeyTab:
+			e.Insert('\t')
+			return true
+		case tcell.KeyRune:
+			ch := event.Rune()
+			if unicode.IsPrint(ch) {
+				e.Insert(ch)
+				return true
+			}
+		default:
+			return e.Emit("key", event)
 		}
-	default:
-		return e.Emit("key", event)
 	}
 
 	return false

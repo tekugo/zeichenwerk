@@ -118,7 +118,7 @@ func (r *Renderer) renderTable(table *Table) {
 	x, y, w, h := table.Content()
 	headerStyle := table.Style("header")
 	gridStyle := table.Style("grid")
-	if gridStyle.Border != "" {
+	if gridStyle.Border != "" && gridStyle.Border != "none" {
 		table.Log(table, "debug", "Grid border is %s", gridStyle.Border)
 		table.grid = r.theme.Border(gridStyle.Border)
 		r.renderTableHeader(table, x, y, w, h, headerStyle, gridStyle)

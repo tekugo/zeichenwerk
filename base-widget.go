@@ -65,7 +65,7 @@ func (bw *BaseWidget) Content() (int, int, int, int) {
 		iy := bw.y + style.Margin.Top + style.Padding.Top
 		iw := bw.width - style.Horizontal()
 		ih := bw.height - style.Vertical()
-		if style.Border != "" {
+		if style.Border != "" && style.Border != "" {
 			ix++
 			iy++
 		}

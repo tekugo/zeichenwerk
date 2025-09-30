@@ -829,7 +829,7 @@ func TestUI_SetTheme(t *testing.T) {
 	})
 
 	t.Run("returns current theme", func(t *testing.T) {
-		currentTheme := ui.GetTheme()
+		currentTheme := ui.Theme()
 
 		if currentTheme != theme2 {
 			t.Error("Expected GetTheme to return current theme")
@@ -923,4 +923,3 @@ func TestUI_Performance(t *testing.T) {
 		}
 	})
 }
-
