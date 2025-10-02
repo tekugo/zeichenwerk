@@ -8,8 +8,6 @@ package zeichenwerk
 //   - Child management: Add, remove, and organize child widgets
 //   - Widget lookup: Find widgets by ID or screen coordinates
 //   - Layout coordination: Position and size child widgets appropriately
-//   - Event propagation: Route events to appropriate child widgets
-//   - Hierarchy management: Maintain parent-child relationships
 //
 // Common implementations: Box, Flex, Grid, Stack, Switcher, Scroller, Tabs
 type Container interface {

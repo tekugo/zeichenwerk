@@ -4,12 +4,12 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// Widget represents a UI component that can be rendered and interact with user input.
-// All UI elements in the TUI framework must implement this interface to participate
-// in the rendering pipeline, event handling system, and layout management.
+// Widget represents a UI component that can be rendered and interact with
+// user input. All UI elements in the TUI framework must implement this
+// interface to participate in the rendering pipeline, event handling system,
+// and layout management.
 //
 // Core responsibilities:
-//   - Rendering: Provide size hints and handle visual display
 //   - Layout: Manage position, bounds, and content area calculations
 //   - Events: Process keyboard, mouse, and custom events
 //   - Hierarchy: Maintain parent-child relationships
@@ -17,15 +17,19 @@ import (
 //   - Focus: Participate in focus management and keyboard navigation
 //
 // Widget lifecycle:
-//   1. Creation with unique ID and initial properties
-//   2. Parent assignment and hierarchy establishment
-//   3. Layout calculation and bounds setting
-//   4. Style application based on theme and state
-//   5. Event handling and user interaction
-//   6. Rendering and visual updates
+//  1. Creation with unique ID and initial properties
+//  2. Parent assignment and hierarchy establishment
+//  3. Layout calculation and bounds setting
+//  4. Style application based on theme and state
+//  5. Event handling and user interaction
+//  6. Rendering and visual updates
 //
 // All widgets share common functionality through BaseWidget, which provides
 // default implementations for most interface methods.
+//
+// Rendering is not part of the widget itself, but done by the renderer. The
+// widget however manages its style, which is used by the renderer. So except
+// for the event handling and event types, widgets should not use tcell.
 type Widget interface {
 	// Bounds returns the widget's position and size as (x, y, width, height).
 	// These coordinates define the widget's outer boundaries including any
@@ -39,7 +43,7 @@ type Widget interface {
 
 	// Cursor returns the current cursor position as (x, y) coordinates.
 	// Returns (-1, -1) if the widget doesn't support or currently show a
-	// cursor. The position is relative to the top-left content area.
+	// cursor. The cursor position is relative to the top-left content area.
 	Cursor() (int, int)
 
 	// Focusable returns the focusability of the widget.
@@ -53,8 +57,8 @@ type Widget interface {
 	//   - bool: true if the widget is currently focused, false otherwise
 	Focused() bool
 
-	// Handle processes the given tcell.Event and returns true if the event was consumed.
-	// Events include keyboard input, mouse events, and resize events.
+	// Handle processes the given tcell.Event and returns true if the event was
+	// consumed. Events include keyboard input, mouse events, and resize events.
 	// Return true to consume the event and prevent further propagation.
 	Handle(tcell.Event) bool
 
@@ -117,7 +121,9 @@ type Widget interface {
 
 	// Refresh triggers a redraw of the widget.
 	// This should be called when the widget's visual state has changed
-	// and needs to be updated on the screen.
+	// and needs to be updated on the screen. Refreshes shoukld be as
+	// efficient as possible. As the widget does not render itself, it
+	// should delegate the refresh to the UI.
 	Refresh()
 
 	// SetBounds sets the widget's position and size as (x, y, width, height).
@@ -125,8 +131,8 @@ type Widget interface {
 	SetBounds(int, int, int, int)
 
 	// SetFocused sets the widget's focus state.
-	// When a widget gains focus, it typically becomes the target for keyboard input
-	// and may update its visual appearance to indicate the focused state.
+	// When a widget gains focus, it typically becomes the target for keyboard
+	// input and may update its visual appearance to indicate the focused state.
 	//
 	// Parameters:
 	//   - bool: true to focus the widget, false to unfocus it
@@ -135,7 +141,7 @@ type Widget interface {
 	// SetHint sets the sizing hint of the widget.
 	// The sizing hint is part of the style but is not context-sensitive, when
 	// set via the style. With this method, set sizing hint can be set
-	// dynamically
+	// dynamically.
 	//
 	// Parameters:
 	//   - int: Preferred content width of the widget
@@ -152,8 +158,8 @@ type Widget interface {
 	SetHovered(bool)
 
 	// SetParent sets the parent widget in the widget hierarchy.
-	// This establishes the parent-child relationship that enables event propagation,
-	// layout management, and widget tree traversal.
+	// This establishes the parent-child relationship that enables event
+	// propagation, layout management, and widget tree traversal.
 	//
 	// Parameters:
 	//   - Container: The parent container widget
@@ -171,9 +177,10 @@ type Widget interface {
 	//   - int: The new y-coordinate for the widget's position
 	SetPosition(int, int)
 
-	// SetSize sets the content size of the widget, taking into account margin,
-	// padding and border. This method calculates the total widget bounds needed
-	// to accommodate the specified content size plus any styling elements.
+	// SetSize sets the content size of the widget. It sets the new bounds
+	// taking into account margin, padding and border. This method calculates
+	// the total widget bounds needed/ to accommodate the specified content size
+	// plus any styling elements.
 	//
 	// Parameters:
 	//   - int: The desired content width
@@ -184,7 +191,7 @@ type Widget interface {
 	// Controls visual appearance such as colors, borders, and text formatting.
 	//
 	// Parameters:
-	//   - string: Style selector (e.g., "", ":focus", "/bar", "/bar:hover")
+	//   - string: Style selector (e.g., "", ":focus", "bar", "bar:hover")
 	//   - *Style: The style configuration to apply, or nil to remove
 	SetStyle(string, *Style)
 
@@ -213,25 +220,25 @@ type Widget interface {
 	State() string
 
 	// Style returns the current style configuration applied to the widget for
-	// the given selector. This method is used during rendering to determine the
-	// visual appearance of the widget.
+	// the given selector. This method is used during layout and rendering to
+	// determine the required size and visual appearance of the widget.
 	//
-	// The style may consist of a part prefixed by a slash and the state prefixed
-	// by a colon. The renderer decides, what style to use, but the widget should
-	// return defaults for styles not set. So if there is not part/state
-	// combination, first use the state, then the part.
+	// The style may consist of a part and the state prefixed by a colon. The
+	// renderer decides, what style to use, but the widget should return defaults
+	// for styles not set. So if there is not part/state combination, first use
+	// the state, then the part.
 	//
 	// Parameters:
-	//   - string: The style selector to retrieve (e.g., "/bar", ":focus", "/bar:hover")
+	//   - string: The style selector to retrieve (e.g., "bar", ":focus", "bar:hover")
 	//
 	// Returns:
 	//   - *Style: The style configuration for the selector, or an alternative
-	Style(string) *Style
+	Style(...string) *Style
 
 	// Styles returns a list of all defined part/state styles selector names.
 	// This is mainly for debugging or introspection purposes.
 	//
-	// Only set styles should be returned.
+	// Only actually set styles should be returned.
 	//
 	// Returns:
 	//   - []string: All selector names

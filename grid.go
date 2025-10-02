@@ -275,7 +275,7 @@ func (g *Grid) Rows(rows ...int) {
 //   - Margin, padding, and border considerations
 //   - Recursive layout of child containers
 func (g *Grid) Layout() {
-	style := g.Style("")              // Grid style for margins, padding, borders
+	style := g.Style()                // Grid style for margins, padding, borders
 	iw, ih := g.Size()                // Available content size
 	cf, rf := 0, 0                    // Total column and row fractions
 	lc, lr := 0, 0                    // Last fractional column/row indices
@@ -346,8 +346,9 @@ func (g *Grid) Layout() {
 			}
 		} else {
 			// First column starts after margins, padding, and border
-			gx[i] = g.x + style.Margin.Left + style.Padding.Left
-			if style.Border != "" && style.Border != "none" {
+			gx[i] = g.x + style.Margin().Left + style.Padding().Left
+			border := style.Border()
+			if border != "" && border != "none" {
 				gx[i]++ // Account for border line
 			}
 		}
@@ -393,8 +394,9 @@ func (g *Grid) Layout() {
 			}
 		} else {
 			// First row starts after margins, padding, and border
-			gy[i] = g.y + style.Margin.Top + style.Padding.Top
-			if style.Border != "" && style.Border != "" {
+			gy[i] = g.y + style.Margin().Top + style.Padding().Top
+			border := style.Border()
+			if border != "" && border != "none" {
 				gy[i]++ // Account for border line
 			}
 		}

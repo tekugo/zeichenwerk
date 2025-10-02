@@ -95,8 +95,8 @@ func (t *ThemeSwitch) FindAt(x, y int) Widget {
 //  2. Add the child widget's preferred dimensions (if child exists)
 //  3. Return the total required space for optimal display
 func (t *ThemeSwitch) Hint() (int, int) {
-	w := t.Style("").Horizontal()
-	h := t.Style("").Vertical()
+	w := t.Style().Horizontal()
+	h := t.Style().Vertical()
 	if t.child != nil {
 		cw, ch := t.child.Hint()
 		w += cw

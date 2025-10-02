@@ -20,10 +20,11 @@ type FormField struct {
 //   - Automatic sizing based on content
 //
 // Example usage:
-//   group := NewFormGroup("contact-group", "Contact Information", "horizontal")
-//   group.Add(0, "Name", nameInput)
-//   group.Add(0, "Email", emailInput)  // Same line as name
-//   group.Add(1, "Phone", phoneInput)  // New line
+//
+//	group := NewFormGroup("contact-group", "Contact Information", "horizontal")
+//	group.Add(0, "Name", nameInput)
+//	group.Add(0, "Email", emailInput)  // Same line as name
+//	group.Add(1, "Phone", phoneInput)  // New line
 type FormGroup struct {
 	BaseWidget
 	Title     string         // Group title displayed in border or header
@@ -38,18 +39,19 @@ type FormGroup struct {
 //   - id: Unique identifier for the form group
 //   - title: Display title for the group (can be empty)
 //   - placement: Label placement relative to controls ("horizontal" or "vertical")
-//     - "horizontal": Labels appear to the left of controls, aligned in columns
-//     - "vertical": Labels appear above controls
+//   - "horizontal": Labels appear to the left of controls, aligned in columns
+//   - "vertical": Labels appear above controls
 //
 // Returns:
 //   - *FormGroup: New form group widget instance
 //
 // Example:
-//   // Horizontal layout - labels left of controls
-//   group := NewFormGroup("user-info", "User Information", "horizontal")
-//   
-//   // Vertical layout - labels above controls  
-//   group := NewFormGroup("settings", "Settings", "vertical")
+//
+//	// Horizontal layout - labels left of controls
+//	group := NewFormGroup("user-info", "User Information", "horizontal")
+//
+//	// Vertical layout - labels above controls
+//	group := NewFormGroup("settings", "Settings", "vertical")
 func NewFormGroup(id, title, placement string) *FormGroup {
 	return &FormGroup{
 		BaseWidget: BaseWidget{id: id, focusable: false},
@@ -71,10 +73,11 @@ func NewFormGroup(id, title, placement string) *FormGroup {
 // to accommodate the specified line number.
 //
 // Example:
-//   group.Add(0, "First Name", firstNameInput)
-//   group.Add(0, "Last Name", lastNameInput)   // Same line
-//   group.Add(1, "Email", emailInput)          // New line
-//   group.Add(1, "Phone", phoneInput)          // Same line as email
+//
+//	group.Add(0, "First Name", firstNameInput)
+//	group.Add(0, "Last Name", lastNameInput)   // Same line
+//	group.Add(1, "Email", emailInput)          // New line
+//	group.Add(1, "Phone", phoneInput)          // Same line as email
 func (fg *FormGroup) Add(line int, label string, widget Widget) {
 	if widget == nil {
 		panic("Cannot add nil widget")
@@ -149,8 +152,9 @@ func (fg *FormGroup) Hint() (int, int) {
 
 			// Determine field width and height including styling
 			fw, fh := field.Control.Hint() // field width and height
-			fw += field.Control.Style("").Horizontal()
-			fh += field.Control.Style("").Vertical()
+			style := field.Control.Style()
+			fw += style.Horizontal()
+			fh += style.Vertical()
 
 			lw += fw
 			if fh > lh {
@@ -212,8 +216,9 @@ func (fg *FormGroup) Layout() {
 
 			// Control position
 			fw, fh := field.Control.Hint()
-			fw += field.Control.Style("").Horizontal()
-			fh += field.Control.Style("").Vertical()
+			style := field.Control.Style()
+			fw += style.Horizontal()
+			fh += style.Vertical()
 			if j < len(line)-1 {
 				field.Control.SetBounds(lx, ly, fw, fh)
 				lx += fw + 1

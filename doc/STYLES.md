@@ -1,10 +1,15 @@
 # Styles
 
-This document describes all the style selectors used by widgets in the zeichenwerk framework. Styles are automatically applied by the builder when widgets are created and can be customized through themes.
+This document describes all the style selectors used by widgets in the
+zeichenwerk framework. Styles are automatically applied by the builder
+when widgets are created and can be customized through themes.
 
 ## Style System Overview
 
-The zeichenwerk style system uses CSS-like selectors to apply different styles to widgets based on their type, state, and component parts. Styles are applied automatically by the `Apply()` method in the builder when widgets are created.
+The zeichenwerk style system uses CSS-like selectors to apply different
+styles to widgets based on their type, state, and component parts. Styles
+are applied automatically by the `Apply()` method in the builder when widgets
+are created.
 
 ### Selector Format
 
@@ -19,6 +24,7 @@ Selectors follow the pattern: `widget-type[.class][#id][/component][:state]`
 ## Widget Styles by Type
 
 ### Box
+
 | Selector | Description |
 |----------|-------------|
 | `box` | Default box container styling |
@@ -27,6 +33,7 @@ Selectors follow the pattern: `widget-type[.class][#id][/component][:state]`
 **States**: None (containers don't have interactive states)
 
 ### Button
+
 | Selector | Description |
 |----------|-------------|
 | `button` | Default button appearance |
@@ -35,14 +42,8 @@ Selectors follow the pattern: `widget-type[.class][#id][/component][:state]`
 | `button:hover` | Button when mouse is hovering over it |
 | `button:pressed` | Button when being pressed/activated |
 
-**Example Usage**:
-```go
-// Create a primary button with custom styling
-builder.Class("primary").Button("submit", "Submit").Class("")
-// This creates selector: "button.primary#submit"
-```
-
 ### Checkbox
+
 | Selector | Description |
 |----------|-------------|
 | `checkbox` | Default checkbox appearance (box and label) |
@@ -51,6 +52,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 | `checkbox:hover` | Checkbox when mouse hovers over it |
 
 ### Custom
+
 | Selector | Description |
 |----------|-------------|
 | `custom` | Custom widget styling |
@@ -58,6 +60,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Note**: Custom widgets handle their own rendering, styles provide background/border
 
 ### Digits
+
 | Selector | Description |
 |----------|-------------|
 | `digits` | Large digit display styling |
@@ -65,13 +68,17 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: For displaying large ASCII art numbers/letters
 
 ### Editor
+
 | Selector | Description |
 |----------|-------------|
 | `editor` | Multi-line text editor styling |
-
-**Note**: Editor handles cursor, text selection, and line number styling internally
+| `editor/current-line` | Current editing line |
+| `editor/current-line-number` | Current line number |
+| `editor/line-numbers` | Line numbers |
+| `editor/separator` | Separator between line numbers and editor |
 
 ### Flex
+
 | Selector | Description |
 |----------|-------------|
 | `flex` | Flex container styling |
@@ -80,13 +87,16 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Layout container - styling typically applies to background and borders
 
 ### Grid
+
 | Selector | Description |
 |----------|-------------|
 | `grid` | Grid container styling |
 
-**Usage**: Table-like layout container - styling for background, borders, and grid lines
+**Usage**: Table-like layout container - styling for background, borders, and
+grid lines
 
 ### Hidden
+
 | Selector | Description |
 |----------|-------------|
 | `hidden` | Hidden widget (spacer) styling |
@@ -94,6 +104,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Invisible widgets used for spacing in layouts
 
 ### Input
+
 | Selector | Description |
 |----------|-------------|
 | `input` | Default text input field styling |
@@ -102,6 +113,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Single-line text input with cursor and placeholder support
 
 ### Label
+
 | Selector | Description |
 |----------|-------------|
 | `label` | Static text label styling |
@@ -109,6 +121,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Non-interactive text display
 
 ### List
+
 | Selector | Description |
 |----------|-------------|
 | `list` | List container styling |
@@ -120,6 +133,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Scrollable list of selectable items
 
 ### ProgressBar
+
 | Selector | Description |
 |----------|-------------|
 | `progress-bar` | Progress bar container/background |
@@ -128,6 +142,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Visual progress indicators with customizable fill styling
 
 ### Scroller
+
 | Selector | Description |
 |----------|-------------|
 | `scroller` | Scroll container styling |
@@ -136,6 +151,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Scrollable viewport container with scrollbars
 
 ### Separator
+
 | Selector | Description |
 |----------|-------------|
 | `separator` | Horizontal/vertical line separator styling |
@@ -143,6 +159,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Visual dividers between content sections
 
 ### Spinner
+
 | Selector | Description |
 |----------|-------------|
 | `spinner` | Animated loading indicator styling |
@@ -150,6 +167,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Animated characters for loading states
 
 ### Switcher
+
 | Selector | Description |
 |----------|-------------|
 | `switcher` | Content switcher container styling |
@@ -157,6 +175,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Container that displays one of multiple child widgets
 
 ### Table
+
 | Selector | Description |
 |----------|-------------|
 | `table` | Table container styling |
@@ -171,6 +190,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Data tables with headers, grid lines, and row selection
 
 ### Tabs
+
 | Selector | Description |
 |----------|-------------|
 | `tabs` | Tab container styling |
@@ -185,6 +205,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Tab-based navigation with visual indicators
 
 ### Text
+
 | Selector | Description |
 |----------|-------------|
 | `text` | Multi-line text display styling |
@@ -192,6 +213,7 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 **Usage**: Read-only text content with scrolling support
 
 ### ThemeSwitch
+
 | Selector | Description |
 |----------|-------------|
 | `theme-switch` | Theme switcher container styling |
@@ -203,36 +225,40 @@ builder.Class("primary").Button("submit", "Submit").Class("")
 Each style can define the following properties:
 
 ### Visual Properties
+
 - **Background**: Background color (color name or hex)
 - **Foreground**: Text/foreground color  
 - **Border**: Border style ("", "thin", "thick", "round", "double", etc.)
 - **Font**: Font styling ("bold", "italic", "underline", "strikethrough")
 
 ### Layout Properties  
+
 - **Margin**: External spacing around widget
 - **Padding**: Internal spacing within widget
 - **Width/Height**: Size hints for layout system
 
 ### Example Style Definition
+
 ```go
 // In a theme file
-theme.SetStyle("button", NewStyle("white", "blue").
-    SetBorder("round").
-    SetPadding(0, 1).
-    SetMargin(0, 1))
+theme.SetStyle("button", NewStyle().
+    WithBorder("round").
+    WithPadding(0, 1).
+    WithMargin(0, 1))
 
-theme.SetStyle("button:focus", NewStyle("black", "cyan").
-    SetBorder("double"))
+theme.SetStyle("button:focus", NewStyle().
+    WithBorder("double"))
 ```
 
 ## Custom Styling
 
 ### Using Builder Methods
+
 The builder provides methods to customize widget styling:
 
 ```go
 builder.Button("submit", "Submit").
-    Background("", "blue").        // Default state background
+    Background("blue").            // Default state background
     Foreground(":focus", "white"). // Focus state foreground  
     Border("", "round").           // Default border
     Font("", "bold").              // Bold text
@@ -241,6 +267,7 @@ builder.Button("submit", "Submit").
 ```
 
 ### Using Classes
+
 Apply CSS-like classes for reusable styling:
 
 ```go
@@ -254,6 +281,7 @@ builder.Class("primary").
 ```
 
 ### State-Based Styling
+
 Different styles for different widget states:
 
 ```go
@@ -293,6 +321,7 @@ When creating custom themes:
 5. **Border Consistency**: Use consistent border styles for visual coherence
 
 Example theme structure:
+
 ```go
 func MyCustomTheme() Theme {
     theme := NewTheme()
@@ -311,3 +340,4 @@ func MyCustomTheme() Theme {
     return theme
 }
 ```
+

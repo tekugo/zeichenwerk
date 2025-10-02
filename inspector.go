@@ -134,7 +134,7 @@ type Inspector struct {
 //
 //	// Create inspector for main application UI
 //	inspector := NewInspector(mainContainer)
-//	
+//
 //	// Display as popup (typically triggered by Ctrl+D)
 //	ui.Popup(-1, -1, 0, 0, inspector.UI())
 func NewInspector(root Container) *Inspector {
@@ -210,31 +210,39 @@ func NewInspector(root Container) *Inspector {
 //   - Responsive event handling for smooth navigation
 //   - Minimal resource overhead for development use
 func (i *Inspector) BuildUI() {
+	ui := FindUI(i.container)
 	i.ui = NewBuilder(TokyoNightTheme()).
 		Class("inspector").
 		Box("inspector-box", "Inspector").Border("", "double").
-		Flex("inspector", "vertical", "stretch", 0).Background("", "$comments").
+		Flex("inspector", "vertical", "stretch", 0).
+		Tabs("inspector-tabs").
+		Switcher("inspector-switcher", true).
+		Tab("Widgets").
+		Flex("inspector-widgets", "vertical", "stretch", 0).
 		Label("breadcrumbs", "Breadcrumbs", 0).
 		Flex("inspector-content", "horizontal", "stretch", 0).
 		Flex("inspector-lists", "vertical", "stretch", 0).
 		Box("widget-box", "Widgets").Border("", "round").
 		List("children", []string{}).Border("", "").Border("focus", "").Hint(30, 15).
-		End().
+		End(). // Box
 		Box("styles-box", "Styles").Border("", "round").
 		List("styles", []string{}).Border("", "").Border("focus", "").Hint(30, 10).
-		End().
-		End().
+		End(). // Box
+		End(). // Flex
 		Flex("info-boxes", "vertical", "stretch", 0).
 		Box("widget-info-box", "Information").Border("", "round").
 		Text("widget-info", []string{}, false, 0).Hint(50, 15).
-		End().
+		End(). // Box
 		Box("style-info-box", "Information").Border("", "round").
 		Text("style-info", []string{}, false, 0).Hint(50, 10).
-		End().
-		End().
-		End().
-		End().
-		End().
+		End(). // Box
+		End(). // Flex
+		End(). // Flex
+		End(). // Flex
+		Tab("Debug Log").
+		Table("inspector-log-table", ui.log).Border("grid", "double-thin").Hint(50, 25).
+		End(). // Swticher
+		End(). // Flex
 		Class("").
 		Container()
 

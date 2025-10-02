@@ -2,10 +2,10 @@ package zeichenwerk
 
 import "github.com/gdamore/tcell/v2"
 
-// Custom represents a widget with user-defined rendering and event handling behavior.
-// It provides a flexible foundation for creating specialized widgets that don't fit
-// the standard widget patterns, allowing complete control over visual appearance
-// and interaction logic.
+// Custom represents a widget with user-defined rendering and event handling
+// behavior. It provides a flexible foundation for creating specialized
+// widgets that don't fit the standard widget patterns, allowing complete
+// control over visual appearance and interaction logic.
 //
 // Features:
 //   - Custom rendering function for complete visual control
@@ -27,11 +27,12 @@ import "github.com/gdamore/tcell/v2"
 // layout management and event propagation systems.
 type Custom struct {
 	BaseWidget
+
 	// handler is the user-defined function that processes events for this widget.
 	// It should return true if the event was handled, false otherwise.
 	// If nil, the widget will not handle any events.
 	handler func(tcell.Event) bool
-	
+
 	// renderer is the user-defined function that draws the widget's visual content.
 	// It receives the widget instance and screen interface for drawing operations.
 	// If nil, the widget will not render anything.
@@ -62,7 +63,7 @@ type Custom struct {
 //		width, height := widget.Size()
 //		x, y := widget.Position()
 //		style := tcell.StyleDefault.Foreground(tcell.ColorWhite)
-//		
+//
 //		// Draw a horizontal line across the widget
 //		for i := 0; i < width; i++ {
 //			screen.SetContent(x+i, y, '─', nil, style)

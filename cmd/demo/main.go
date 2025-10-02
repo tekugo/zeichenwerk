@@ -64,7 +64,7 @@ func content(builder *Builder) {
 		Cell(0, 0, 1, 1).
 		List("demos", demos).
 		Cell(1, 0, 1, 1).
-		Switcher("demo").
+		Switcher("demo", false).
 		With(overview).
 		With(box).
 		With(button).
@@ -417,7 +417,7 @@ func custom() Widget {
 			}
 		}
 	})
-	result.SetStyle("", NewStyle("green", "black").SetMargin(0).SetPadding(0))
+	result.SetStyle("", NewStyle().WithColors("green", "black").WithMargin(0).WithPadding(0))
 	result.SetHint(200, 100)
 	return result
 }

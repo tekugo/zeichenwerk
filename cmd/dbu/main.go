@@ -69,10 +69,10 @@ func content(builder *Builder) {
 		Editor("sql").
 		Cell(1, 1, 1, 1).
 		Flex("main", "vertical", "stretch", 0).
-		Tabs("tabs", "Result", "Debug").
-		Switcher("switcher").Hint(-1, -1).
-		Table("result", NewArrayTableProvider([]string{}, [][]string{})).
-		Text("debug-log", []string{}, true, 1000).
+		Tabs("tabs").
+		Switcher("switcher", true).Hint(-1, -1).
+		Tab("Query Result").Table("result", NewArrayTableProvider([]string{}, [][]string{})).
+		Tab("Debug Log").Text("debug-log", []string{}, true, 1000).
 		End().
 		End().
 		End()
@@ -89,21 +89,6 @@ func content(builder *Builder) {
 			default:
 				return false
 			}
-		})
-	})
-
-	current := builder.Container()
-	With(current, "tabs", func(tabs *Tabs) {
-		tabs.On("activate", func(widget Widget, event string, params ...any) bool {
-			if t, ok := widget.(*Tabs); ok {
-				switch t.Selected {
-				case 0:
-					Update(current, "switcher", "result")
-				case 1:
-					Update(current, "switcher", "debug-log")
-				}
-			}
-			return true
 		})
 	})
 

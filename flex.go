@@ -2,8 +2,6 @@ package zeichenwerk
 
 import (
 	"fmt"
-
-	"github.com/gdamore/tcell/v2"
 )
 
 // Flex is a container widget that arranges child widgets in a linear layout,
@@ -106,19 +104,6 @@ func (f *Flex) FindAt(x, y int) Widget {
 	return FindAt(f, x, y)
 }
 
-// Handle processes events for the flex container.
-// The base implementation doesn't handle any events directly, as flex containers
-// typically delegate event handling to their child widgets.
-//
-// Parameters:
-//   - event: The tcell.Event to process
-//
-// Returns:
-//   - bool: Always returns false as flex containers don't handle events directly
-func (f *Flex) Handle(event tcell.Event) bool {
-	return false
-}
-
 // Hint calculates and returns the preferred size for the flex container
 // based on its children's size hints and the layout orientation.
 //
@@ -138,8 +123,8 @@ func (f *Flex) Hint() (int, int) {
 		// Horizontal layout: sum widths, take max height
 		for i, child := range f.children {
 			cw, ch := child.Hint()
-			cw += child.Style("").Horizontal()
-			ch += child.Style("").Vertical()
+			cw += child.Style().Horizontal()
+			ch += child.Style().Vertical()
 			width += cw
 			if i > 0 { // Add spacing between children (not before first)
 				width += f.Spacing
@@ -152,8 +137,8 @@ func (f *Flex) Hint() (int, int) {
 		// Vertical layout: take max width, sum heights
 		for i, child := range f.children {
 			cw, ch := child.Hint()
-			cw += child.Style("").Horizontal()
-			ch += child.Style("").Vertical()
+			cw += child.Style().Horizontal()
+			ch += child.Style().Vertical()
 			height += ch
 			if i > 0 { // Add spacing between children (not before first)
 				height += f.Spacing
@@ -196,16 +181,18 @@ func (f *Flex) Info() string {
 //   - Flexible: Negative values are fractional units of remaining space
 func (f *Flex) Layout() {
 	if f.Orientation == "horizontal" {
-		f.layoutH()
+		f.layoutHorizontal()
 	} else if f.Orientation == "vertical" {
-		f.layoutV()
+		f.layoutVertical()
+	} else {
+		f.Log(f, "error", "Unknown flex orientation '%s'", f.Orientation)
 	}
 
 	// Refresh and lay out children
 	Layout(f)
 }
 
-// layoutH performs horizontal layout of child widgets.
+// layoutHorizontal performs horizontal layout of child widgets.
 // This method arranges children from left to right, calculating widths
 // based on style hints and distributing remaining space among flexible children.
 //
@@ -219,7 +206,7 @@ func (f *Flex) Layout() {
 //   - Fixed width (positive): Use exact value plus horizontal margins/padding
 //   - Flexible width (negative): Use fractional units of remaining space
 //   - Last flexible child gets any remaining pixels to avoid rounding errors
-func (f *Flex) layoutH() {
+func (f *Flex) layoutHorizontal() {
 	var style *Style
 	var fraction int
 
@@ -230,15 +217,14 @@ func (f *Flex) layoutH() {
 	last := -1
 	rest := cw
 	for i, child := range f.children {
-		style = child.Style("")
-		if style.Width < 0 {
-			fractions -= style.Width // Accumulate fraction units (negative values)
+		hw, _ := child.Hint()
+		style = child.Style()
+
+		if hw < 0 {
+			fractions -= hw // Accumulate fraction units (negative values)
 			last = i
-		} else if style.Width == 0 {
-			pw, _ := child.Hint()
-			rest = rest - pw - style.Horizontal()
 		} else {
-			rest = rest - style.Width - style.Horizontal()
+			rest = rest - hw - style.Horizontal()
 		}
 		if i > 0 {
 			rest -= f.Spacing
@@ -253,30 +239,28 @@ func (f *Flex) layoutH() {
 	// Position children from left to right
 	x := cx
 	for i, child := range f.children {
-		style = child.Style("")
+		hw, hh := child.Hint()
+		style = child.Style()
 
 		// Calculate x position and width according to alignment
-		wy, wh := align(f.Alignment, cy, cy+ch, style.Height+style.Vertical())
-		if style.Width < 0 {
+		wy, wh := align(f.Alignment, cy, cy+ch, hh+style.Vertical())
+		if hw < 0 {
 			if i != last {
-				child.SetBounds(x, wy, -fraction*style.Width, wh)
+				child.SetBounds(x, wy, -fraction*hw, wh)
 			} else {
 				// Last flexible child gets remaining space to handle rounding
 				child.SetBounds(x, wy, rest, wh)
 			}
-			rest = rest - fraction*(-style.Width)
-		} else if style.Width == 0 {
-			pw, _ := child.Hint()
-			child.SetBounds(x, wy, pw+style.Horizontal(), wh)
+			rest = rest - fraction*(-hw)
 		} else {
-			child.SetBounds(x, wy, style.Width+style.Horizontal(), wh)
+			child.SetBounds(x, wy, hw+style.Horizontal(), wh)
 		}
 		_, _, width, _ := child.Bounds()
 		x += width + f.Spacing
 	}
 }
 
-// layoutV performs vertical layout of child widgets.
+// layoutVertical performs vertical layout of child widgets.
 // This method arranges children from top to bottom, calculating heights
 // based on style hints and distributing remaining space among flexible children.
 // It also applies horizontal alignment for each child.
@@ -292,7 +276,7 @@ func (f *Flex) layoutH() {
 //   - Auto height (zero): Use widget's preferred height hint
 //   - Flexible height (negative): Use fractional units of remaining space
 //   - Last flexible child gets any remaining pixels to avoid rounding errors
-func (f *Flex) layoutV() {
+func (f *Flex) layoutVertical() {
 	var style *Style
 	var fraction int
 
@@ -303,15 +287,14 @@ func (f *Flex) layoutV() {
 	last := -1
 	rest := ch
 	for i, child := range f.children {
-		style = child.Style("")
-		if style.Height < 0 {
-			fractions -= style.Height // Accumulate fraction units (negative values)
+		_, hh := child.Hint()
+		style = child.Style()
+
+		if hh < 0 {
+			fractions -= hh // Accumulate fraction units (negative values)
 			last = i
-		} else if style.Height == 0 {
-			_, ph := child.Hint()
-			rest = rest - ph - style.Vertical()
 		} else {
-			rest = rest - style.Height - style.Vertical()
+			rest = rest - hh - style.Vertical()
 		}
 		if i > 0 {
 			rest -= f.Spacing
@@ -326,23 +309,21 @@ func (f *Flex) layoutV() {
 	// Position children from top to bottom
 	y := cy
 	for i, child := range f.children {
-		style = child.Style("")
+		hw, hh := child.Hint()
+		style = child.Style()
 
 		// Calculate x position and width according to alignment
-		wx, ww := align(f.Alignment, cx, cx+cw, style.Width+style.Horizontal())
-		if style.Height < 0 {
+		wx, ww := align(f.Alignment, cx, cx+cw, hw+style.Horizontal())
+		if hh < 0 {
 			if i != last {
-				child.SetBounds(wx, y, ww, -fraction*style.Height)
-				rest = rest - fraction*(-style.Height)
+				child.SetBounds(wx, y, ww, -fraction*hh)
+				rest = rest - fraction*(-hh)
 			} else {
 				// Last flexible child gets remaining space to handle rounding
 				child.SetBounds(wx, y, ww, rest)
 			}
-		} else if style.Height == 0 {
-			_, ph := child.Hint()
-			child.SetBounds(wx, y, ww, ph+style.Vertical())
 		} else {
-			child.SetBounds(wx, y, ww, style.Height+style.Vertical())
+			child.SetBounds(wx, y, ww, hh+style.Vertical())
 		}
 		_, _, _, height := child.Bounds()
 		y += height + f.Spacing

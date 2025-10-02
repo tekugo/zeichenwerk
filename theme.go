@@ -1,21 +1,9 @@
-// Package theme.go implements the theming and styling system for zeichenwerk.
-//
-// This file provides a CSS-like styling framework that allows widgets to be
-// styled using hierarchical selectors. The theming system supports:
-//   - Widget type-based styling (e.g., "button", "input")
-//   - Class-based styling (e.g., ".primary", ".large")
-//   - ID-based styling (e.g., "#submit-button")
-//   - State-based styling (e.g., ":focus", ":hover")
-//   - Part-based styling (e.g., "/placeholder", "/bar")
-//   - Complex combinations of the above
-//
-// The system uses a cascading resolution algorithm where more specific
-// selectors override more general ones, similar to CSS precedence rules.
-
 package zeichenwerk
 
 import (
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -39,13 +27,8 @@ import (
 //   - "button.primary#submit/text" - part after ID
 //
 // This dual placement provides compatibility with different styling conventions.
-//
-// defaultStyle provides the base styling foundation for all widgets when no
-// specific theme styles are defined. It uses a green-on-black color scheme
-// with no margins or padding.
 var (
 	styleRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*)/?([0-9A-Za-z_\-]*)\.?([0-9A-Za-z_\-]*)#?([0-9A-Za-z_\-]*)/?([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
-	defaultStyle   = NewStyle("green", "black").SetMargin(0).SetPadding(0)
 )
 
 // Theme provides a comprehensive styling system for widgets using CSS-like selectors.
@@ -85,6 +68,14 @@ var (
 // More specific styles override less specific ones, allowing for
 // hierarchical theming with sensible defaults and targeted overrides.
 type Theme interface {
+	// Add adds a the given style to the theme.
+	// The selector is taken from the style and the style is fixed, when
+	// added to the theme.
+	//
+	// Parameters:
+	//   - style: The style to add to the theme
+	Add(*Style)
+
 	// Apply applies theme styles to a widget for multiple states/parts.
 	// This is a convenience method that applies the base style and any
 	// additional part-specific styles (e.g., focus, hover) to the widget.
@@ -152,7 +143,7 @@ type Theme interface {
 	//
 	// Returns:
 	//   - Style: The resolved style (never nil, returns default as fallback)
-	Get(string) Style
+	Get(string) *Style
 
 	// Rune retrieves a special Unicode character by name from the theme.
 	// These characters are used for drawing borders, arrows, bullets,
@@ -164,15 +155,6 @@ type Theme interface {
 	// Returns:
 	//   - rune: The Unicode character
 	Rune(string) rune
-
-	// Set assigns a style to the specified selector in the theme.
-	// This allows for dynamic theme customization and style registration
-	// at runtime, enabling flexible theming systems.
-	//
-	// Parameters:
-	//   - string: The CSS-like selector to associate with the style
-	//   - *Style: The style configuration to assign
-	Set(string, *Style)
 
 	// SetBorders updates the theme's border style registry with the provided map.
 	// This replaces the existing border definitions with the new set.
@@ -207,7 +189,7 @@ type Theme interface {
 	//
 	// Parameters:
 	//   - map[string]*Style: Map of selectors to their style definitions
-	SetStyles(map[string]*Style)
+	SetStyles(...*Style)
 
 	// Styles returns the complete map of selectors to styles defined in the theme.
 	// This provides access to all style definitions for inspection or
@@ -215,7 +197,7 @@ type Theme interface {
 	//
 	// Returns:
 	//   - map[string]*Style: Map of selectors to their style definitions
-	Styles() map[string]*Style
+	Styles() []*Style
 }
 
 // MapTheme is a concrete implementation of the Theme interface that stores
@@ -288,52 +270,33 @@ func NewMapTheme() *MapTheme {
 	}
 }
 
-// Apply resolves and assigns theme styles to a widget for multiple states.
-// This is the primary method for applying theme styling to widgets, handling
-// both base styles and state-specific variations in a single operation.
-//
-// # Style Application Process
-//
-// The method follows these steps:
-//  1. Parses the selector to determine if it contains a widget part
-//  2. Resolves the base style using the theme's cascading algorithm
-//  3. Applies the base style to the widget's style registry
-//  4. For each additional state, resolves "selector:state" and applies it
-//  5. Stores all styles in the widget for efficient runtime lookup
-//
-// # Part Handling
-//
-// If the selector contains a part (e.g., "input/placeholder"), the styles
-// are applied to that specific part of the widget. Otherwise, they are
-// applied to the widget's base styling.
-//
-// # State Combinations
-//
-// Each state parameter creates a combined selector:
-//   - Base: "button.primary" → applied to widget's default style
-//   - State: "focus" → creates "button.primary:focus" selector
-//   - Result: Widget has both default and focus-specific styling
-//
-// # Performance Benefits
-//
-// Batch application reduces:
-//   - Individual style resolution calls
-//   - Widget style map updates
-//   - Memory allocations for style objects
-//
-// # Example Usage
-//
-//	theme.Apply(button, "button.primary", "focus", "hover", "disabled")
-//	// Results in widget having styles for:
-//	// - "button.primary" (base state)
-//	// - "button.primary:focus" (focused state)
-//	// - "button.primary:hover" (hovered state)
-//	// - "button.primary:disabled" (disabled state)
+// Add adds a style to the theme.
+// The style is automatically assigned a parent based on the style selector.
+// THrough this mechanism, inheritance/cascading is implemented.
+func (m *MapTheme) Add(style *Style) {
+	parts := split(style.selector)
+	key, priority := selector(0, parts)
+
+	var parent *Style
+	for priority > 0 {
+		key, priority = selector(priority, parts)
+		parent = m.styles[key]
+		if parent != nil {
+			style.WithParent(parent)
+			break
+		}
+	}
+
+	m.styles[style.selector] = style
+	style.Fix()
+}
+
+// Apply applies styles to a widget based on its type and id.
 //
 // Parameters:
-//   - widget: The widget to apply styles to
-//   - selector: The base CSS-like selector for the widget
-//   - states: Additional states to apply (e.g., "focus", "hover", "disabled")
+//   - widget: The widget to apply the styles to
+//   - selector: Style selector
+//   - states: Additional states to assign styles to
 func (m *MapTheme) Apply(widget Widget, selector string, states ...string) {
 	parts := split(selector)
 	part := ""
@@ -345,17 +308,17 @@ func (m *MapTheme) Apply(widget Widget, selector string, states ...string) {
 
 	if part != "" {
 		style := m.Get(selector)
-		widget.SetStyle(part, &style)
+		widget.SetStyle(part, style)
 		for _, state := range states {
 			style := m.Get(selector + ":" + state)
-			widget.SetStyle(part+":"+state, &style)
+			widget.SetStyle(part+":"+state, style)
 		}
 	} else {
 		style := m.Get(selector)
-		widget.SetStyle("", &style)
+		widget.SetStyle("", style)
 		for _, state := range states {
 			style := m.Get(selector + ":" + state)
-			widget.SetStyle(":"+state, &style)
+			widget.SetStyle(":"+state, style)
 		}
 	}
 }
@@ -364,19 +327,6 @@ func (m *MapTheme) Apply(widget Widget, selector string, states ...string) {
 // Returns the zero value BorderStyle if the border name is not found.
 func (m *MapTheme) Border(border string) BorderStyle {
 	return m.borders[border]
-}
-
-// Cascade applies styles from the specified selector to the target style object.
-// This is an internal method used by the Get() method to implement the cascading
-// algorithm. If the selector exists in the theme, its style properties are
-// merged into the target style, with the selector's properties taking precedence.
-//
-// Parameters:
-//   - style: The target style to cascade properties into
-//   - selector: The selector whose style should be cascaded
-func (m *MapTheme) Cascade(style *Style, selector string) {
-	other := m.styles[selector]
-	style.Cascade(other)
 }
 
 // Color resolves a color name or variable to its actual color value.
@@ -415,129 +365,30 @@ func (m *MapTheme) Colors() map[string]string {
 	return m.colors
 }
 
-// Define replaces the entire style registry with the provided map.
-// This method is used for bulk theme loading and complete theme replacement.
-//
-// # Warning
-//
-// This method completely replaces the existing styles map, discarding
-// any previously defined styles. Use Set() for individual style updates
-// or SetStyles() for safer bulk operations.
-//
-// Parameters:
-//   - styles: The new style registry to replace the current one
-func (m *MapTheme) Define(styles map[string]*Style) {
-	m.styles = styles
-}
-
 // Flag retrieves a boolean configuration flag from the theme's flag registry.
 // Returns false if the flag name is not found.
 func (m *MapTheme) Flag(flag string) bool {
 	return m.flags[flag]
 }
 
-// Get retrieves the resolved style for the given selector using hierarchical cascading.
-// This method implements the core style resolution algorithm that mimics CSS
-// specificity rules, building the final style through progressive cascading
-// from general to specific selectors.
-//
-// # Resolution Algorithm
-//
-// The method builds the final style through cascading in this order:
-//  1. Default style (base foundation)
-//  2. Empty selector ("") - global base styles
-//  3. Type-only selectors (e.g., "button")
-//  4. Type + part selectors (e.g., "button/text")
-//  5. Class-only selectors (e.g., ".primary")
-//  6. Type + class selectors (e.g., "button.primary")
-//  7. Type + part + class selectors (e.g., "button/text.primary")
-//  8. State-only selectors (e.g., ":focus")
-//  9. Type + state selectors (e.g., "button:focus")
-// 10. Type + class + state selectors (e.g., "button.primary:focus")
-// 11. Type + part + state selectors (e.g., "button/text:focus")
-// 12. Type + part + class + state selectors (e.g., "button/text.primary:focus")
-// 13. ID-only selectors (e.g., "#submit") - highest specificity
-// 14. ID + state selectors (e.g., "#submit:focus")
-// 15. ID + part selectors (e.g., "#submit/text")
-// 16. ID + part + state selectors (e.g., "#submit/text:focus")
-//
-// # Specificity Rules
-//
-// Higher specificity selectors override lower specificity ones:
-//   - ID selectors have highest precedence
-//   - Type + class + state combinations come next
-//   - Type + class combinations follow
-//   - Type-only selectors have lowest precedence
-//
-// # Cascading Process
-//
-// Each matching selector cascades its properties onto the result style,
-// with more specific selectors overriding properties set by less specific ones.
-// This ensures that the final style contains the most appropriate value
-// for each style property.
-//
-// # Fallback Guarantee
-//
-// The method always returns a valid Style object, using the default style
-// as the foundation. This prevents nil pointer exceptions and ensures
-// consistent rendering even for undefined selectors.
+// Get returns a style which maps the given selector the best.
 //
 // Parameters:
-//   - selector: The CSS-like selector string to resolve (e.g., "button.primary:focus")
-//
-// Returns:
-//   - Style: The fully resolved style with all applicable properties cascaded
-func (m *MapTheme) Get(selector string) Style {
-	// Copy the default style first
-	result := *defaultStyle
+//   - s: Style selector
+func (m *MapTheme) Get(s string) *Style {
+	parts := split(s)
+	key := s
+	prio := 0
 
-	parts := split(selector)
-	m.Cascade(&result, "")
-
-	if parts[1] != "" {
-		m.Cascade(&result, parts[1])
-	}
-	if parts[1] != "" && parts[2] != "" {
-		m.Cascade(&result, parts[1]+"/"+parts[2])
-	}
-	if parts[3] != "" {
-		m.Cascade(&result, "."+parts[3])
-	}
-	if parts[1] != "" && parts[3] != "" {
-		m.Cascade(&result, parts[1]+"."+parts[3])
-	}
-	if parts[1] != "" && parts[2] != "" && parts[3] != "" {
-		m.Cascade(&result, parts[1]+"/"+parts[2]+"."+parts[3])
-	}
-	if parts[6] != "" {
-		m.Cascade(&result, ":"+parts[6])
-	}
-	if parts[1] != "" && parts[6] != "" {
-		m.Cascade(&result, parts[1]+":"+parts[6])
-	}
-	if parts[1] != "" && parts[3] != "" && parts[6] != "" {
-		m.Cascade(&result, parts[1]+"."+parts[3]+":"+parts[6])
-	}
-	if parts[1] != "" && parts[2] != "" && parts[6] != "" {
-		m.Cascade(&result, parts[1]+"/"+parts[2]+":"+parts[6])
-	}
-	if parts[1] != "" && parts[2] != "" && parts[3] != "" && parts[6] != "" {
-		m.Cascade(&result, parts[1]+"/"+parts[2]+"."+parts[3]+":"+parts[6])
-	}
-	if parts[4] != "" {
-		m.Cascade(&result, "#"+parts[4])
-	}
-	if parts[4] != "" && parts[6] != "" {
-		m.Cascade(&result, "#"+parts[4]+":"+parts[6])
-	}
-	if parts[4] != "" && parts[5] != "" {
-		m.Cascade(&result, "#"+parts[4]+"/"+parts[5])
-	}
-	if parts[4] != "" && parts[5] != "" && parts[6] != "" {
-		m.Cascade(&result, "#"+parts[4]+"/"+parts[5]+":"+parts[6])
+	for prio >= 0 {
+		key, prio = selector(prio, parts)
+		style := m.styles[key]
+		if style != nil {
+			return style
+		}
 	}
 
-	return result
+	return &DefaultStyle
 }
 
 // Rune retrieves a special Unicode character by name from the theme's rune registry.
@@ -552,40 +403,6 @@ func (m *MapTheme) Get(selector string) Style {
 //   - Border drawing characters for custom borders
 func (m *MapTheme) Rune(name string) rune {
 	return m.runes[name]
-}
-
-// Set assigns a style to the specified selector in the theme registry.
-// This method validates the selector format and stores the style for later
-// retrieval during the cascading resolution process.
-//
-// # Validation
-//
-// The method validates the selector using the internal regex parser.
-// Invalid selectors (those that don't match the expected CSS-like format)
-// are silently ignored to prevent corrupting the theme registry.
-//
-// # Storage
-//
-// Valid selectors are stored exactly as provided, maintaining the original
-// string format for efficient lookup during style resolution. The style
-// object is stored by reference, allowing for shared style instances.
-//
-// # Usage Patterns
-//
-// Common usage includes:
-//   - Defining base widget styles: Set("button", style)
-//   - Creating themed variants: Set("button.primary", style)
-//   - Specifying state styles: Set("button:focus", style)
-//   - Complex combinations: Set("input/placeholder.large:focus", style)
-//
-// Parameters:
-//   - selector: The CSS-like selector string (e.g., "button.primary:focus")
-//   - style: The style configuration to associate with the selector
-func (m *MapTheme) Set(selector string, style *Style) {
-	parts := split(selector)
-	if parts != nil {
-		m.styles[selector] = style
-	}
 }
 
 // SetBorders replaces the theme's border style registry with the provided map.
@@ -637,14 +454,16 @@ func (m *MapTheme) SetRunes(runes map[string]rune) {
 //
 // Parameters:
 //   - styles: Map of CSS-like selectors to their Style definitions
-func (m *MapTheme) SetStyles(styles map[string]*Style) {
-	m.styles = styles
+func (m *MapTheme) SetStyles(styles ...*Style) {
+	for _, style := range styles {
+		m.Add(style)
+	}
 }
 
 // Styles returns a direct reference to the theme's style registry.
 // This allows for inspection and iteration over all defined styles.
-func (m *MapTheme) Styles() map[string]*Style {
-	return m.styles
+func (m *MapTheme) Styles() []*Style {
+	return slices.Collect(maps.Values(m.styles))
 }
 
 // split parses a CSS-like selector string into its component parts using
@@ -687,4 +506,57 @@ func (m *MapTheme) Styles() map[string]*Style {
 func split(selector string) []string {
 	result := styleRegExp.FindStringSubmatch(selector)
 	return result
+}
+
+// selector returns a stripped down selector string based on the priority.
+//
+// The priority of the selectors implicitly defined the cascading of styles.
+func selector(priority int, parts []string) (string, int) {
+	if priority < 1 && parts[4] != "" && parts[5] != "" && parts[6] != "" {
+		return "#" + parts[4] + "/" + parts[5] + ":" + parts[6], 1
+	}
+	if priority < 2 && parts[4] != "" && parts[5] != "" {
+		return "#" + parts[4] + "/" + parts[5], 2
+	}
+	if priority < 3 && parts[4] != "" && parts[6] != "" {
+		return "#" + parts[4] + ":" + parts[6], 3
+	}
+	if priority < 4 && parts[4] != "" {
+		return "#" + parts[4], 4
+	}
+	if priority < 5 && parts[1] != "" && parts[2] != "" && parts[3] != "" && parts[6] != "" {
+		return parts[1] + "/" + parts[2] + "." + parts[3] + ":" + parts[6], 5
+	}
+	if priority < 6 && parts[1] != "" && parts[2] != "" && parts[6] != "" {
+		return parts[1] + "/" + parts[2] + ":" + parts[6], 6
+	}
+	if priority < 7 && parts[1] != "" && parts[3] != "" && parts[6] != "" {
+		return parts[1] + "." + parts[3] + ":" + parts[6], 7
+	}
+	if priority < 8 && parts[1] != "" && parts[6] != "" {
+		return parts[1] + ":" + parts[6], 8
+	}
+	if priority < 9 && parts[6] != "" {
+		return ":" + parts[6], 9
+	}
+	if priority < 10 && parts[1] != "" && parts[2] != "" && parts[3] != "" {
+		return parts[1] + "/" + parts[2] + "." + parts[3], 10
+	}
+	if priority < 11 && parts[1] != "" && parts[3] != "" {
+		return parts[1] + "." + parts[3], 11
+	}
+	if priority < 12 && parts[3] != "" {
+		return "." + parts[3], 12
+	}
+	if priority < 13 && parts[1] != "" && parts[2] != "" {
+		return parts[1] + "/" + parts[2], 13
+	}
+	if priority < 14 && parts[1] != "" {
+		return parts[1], 14
+	}
+	if priority < 15 {
+		return "", 15
+	}
+
+	return "", -1
 }

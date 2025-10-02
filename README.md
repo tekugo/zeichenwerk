@@ -155,7 +155,7 @@ In no particular order!
 - [ ] Improve theme variables and make them visible in the inspector
 - [ ] Add Animator widget
 - [ ] Add Connect helper method to connect widgets (Tabs->Switcher)
-- [ ] Add Tab method to Builder to create switched Tabs directly
+- [x] Add Tab method to Builder to create switched Tabs directly
 - [ ] Add support to underline colors in the styles
 
 ## Ideas

@@ -195,7 +195,7 @@ func (i *Input) SetText(text string) {
 		return
 	}
 
-	runes := []rune(i.Text)
+	runes := []rune(text)
 	if i.Max > 0 && len(runes) > i.Max {
 		text = string(runes[:i.Max])
 	}
@@ -242,6 +242,7 @@ func (i *Input) Left() {
 		i.Pos--
 		i.adjust()
 	}
+	i.Refresh()
 }
 
 // Right moves the cursor one position to the right within the text.
@@ -254,6 +255,7 @@ func (i *Input) Right() {
 		i.Pos++
 		i.adjust()
 	}
+	i.Refresh()
 }
 
 // Start moves the cursor to the beginning of the text (position 0).
@@ -263,6 +265,7 @@ func (i *Input) Right() {
 func (i *Input) Start() {
 	i.Pos = 0
 	i.adjust()
+	i.Refresh()
 }
 
 // End moves the cursor to the end of the text (after the last character).
@@ -272,6 +275,7 @@ func (i *Input) Start() {
 func (i *Input) End() {
 	i.Pos = len(i.Text)
 	i.adjust()
+	i.Refresh()
 }
 
 // ---- Editing --------------------------------------------------------------
@@ -306,6 +310,7 @@ func (i *Input) Insert(ch rune) {
 	i.Text = string(runes)
 	i.Pos++
 	i.adjust()
+	i.Refresh()
 
 	i.Emit("change", i.Text)
 }
@@ -332,6 +337,7 @@ func (i *Input) Delete() {
 	i.Text = string(runes)
 	i.Pos--
 	i.adjust()
+	i.Refresh()
 
 	i.Emit("change", i.Text)
 }
@@ -357,6 +363,7 @@ func (i *Input) DeleteForward() {
 	runes = append(runes[:i.Pos], runes[i.Pos+1:]...)
 	i.Text = string(runes)
 	i.adjust()
+	i.Refresh()
 
 	i.Emit("change", i.Text)
 }
@@ -382,6 +389,7 @@ func (i *Input) Clear() {
 	i.Text = ""
 	i.Pos = 0
 	i.Offset = 0
+	i.Refresh()
 
 	i.Emit("change", i.Text)
 }
@@ -463,33 +471,32 @@ func (i *Input) Visible() string {
 		return ""
 	}
 
-	displayText := i.Text
+	display := []rune(i.Text)
 	if i.Masked {
 		// Replace all characters with mask character for password fields
 		// Handle Unicode characters properly by converting to runes first
-		textRunes := []rune(i.Text)
-		maskRunes := make([]rune, len(textRunes))
+		maskRunes := make([]rune, len(display))
 		for j := range maskRunes {
 			maskRunes[j] = i.MaskChar
 		}
-		displayText = string(maskRunes)
+		display = maskRunes
 	}
 
 	// Apply horizontal scrolling to show the relevant portion
-	if i.Offset >= len(displayText) {
+	if i.Offset >= len(display) {
 		return ""
 	}
 
 	// Calculate the end position for the visible text
-	endX := min(i.Offset+iw, len(displayText))
+	endX := min(i.Offset+iw, len(display))
 
 	// Ensure we don't go beyond text boundaries
 	if i.Offset < 0 {
 		i.Offset = 0
-		return displayText[:endX]
+		return string(display[:endX])
 	}
 
-	return displayText[i.Offset:endX]
+	return string(display[i.Offset:endX])
 }
 
 // Handle processes keyboard events for the input widget and performs the appropriate
@@ -557,20 +564,28 @@ func (i *Input) Handle(evt tcell.Event) bool {
 	switch event.Key() {
 	case tcell.KeyLeft:
 		i.Left()
+		return true
 	case tcell.KeyRight:
 		i.Right()
+		return true
 	case tcell.KeyHome:
 		i.Start()
+		return true
 	case tcell.KeyEnd:
 		i.End()
+		return true
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		i.Delete()
+		return true
 	case tcell.KeyDelete:
 		i.DeleteForward()
+		return true
 	case tcell.KeyCtrlA:
 		i.Start()
+		return true
 	case tcell.KeyCtrlE:
 		i.End()
+		return true
 	case tcell.KeyCtrlK:
 		// Delete from cursor to end of text
 		if !i.ReadOnly {
@@ -578,29 +593,34 @@ func (i *Input) Handle(evt tcell.Event) bool {
 			i.adjust()
 			i.Emit("change", i.Text)
 		}
+		i.Refresh()
+		return true
 	case tcell.KeyCtrlU:
 		// Delete from beginning of text to cursor
 		if !i.ReadOnly {
 			i.Text = i.Text[i.Pos:]
 			i.Pos = 0
 			i.adjust()
+			i.Refresh()
 			i.Emit("change", i.Text)
+			return true
 		}
 	case tcell.KeyEnter:
 		i.Emit("enter", i.Text)
+		return true
 	case tcell.KeyRune:
 		ch := event.Rune()
 		if unicode.IsPrint(ch) {
 			i.Insert(ch)
+			i.Refresh()
+			return true
 		} else {
 			return false
 		}
 	default:
 		return i.Emit("key", event)
 	}
-
-	i.Refresh()
-	return true
+	return false
 }
 
 // ShouldShowPlaceholder returns whether the placeholder text should be displayed

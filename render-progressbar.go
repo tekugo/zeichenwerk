@@ -41,8 +41,8 @@ func (r *Renderer) renderProgressBar(widget *ProgressBar, x, y, w, h int) {
 //
 // The method automatically handles edge cases like zero progress, full progress,
 // and ensures the visual representation accurately reflects the current value.
-func (r *Renderer) renderHorizontalProgressBar(widget *ProgressBar, x, y, w, h int) {
-	hint := widget.Style("").Render
+func (r *Renderer) renderHorizontalProgressBar(widget *ProgressBar, x, y, w, _ int) {
+	hint := "fira-code"
 	size := w * widget.Value / (widget.Max - widget.Min)
 	rest := w - size
 
@@ -72,13 +72,13 @@ func (r *Renderer) renderHorizontalProgressBar(widget *ProgressBar, x, y, w, h i
 	case "bar":
 		r.SetStyle(widget.Style("bar"))
 		r.text(x, y, strings.Repeat("\u2501", size), size)
-		r.SetStyle(widget.Style(""))
+		r.SetStyle(widget.Style())
 		r.text(x+size, y, strings.Repeat("\u2501", rest), rest)
 
 	case "unicode":
 		r.SetStyle(widget.Style("bar"))
 		r.text(x, y, strings.Repeat("\u2588", size), size)
-		r.SetStyle(widget.Style(""))
+		r.SetStyle(widget.Style())
 		r.text(x+size, y, strings.Repeat("\u2591", rest), rest)
 
 	default:

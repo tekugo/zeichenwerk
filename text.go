@@ -4,9 +4,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// Text represents a multi-line text display widget with scrolling and automatic content management.
-// It provides a scrollable text area that can display multiple lines of text with support for
-// automatic scrolling, content limiting, and both manual and automatic scroll positioning.
+// Text represents a multi-line text display widget with scrolling and
+// automatic content management. It provides a scrollable text area that can
+// display multiple lines of text with support for automatic scrolling,
+// content limiting, and both manual and automatic scroll positioning.
 //
 // Features:
 //   - Multi-line text display with line-by-line rendering

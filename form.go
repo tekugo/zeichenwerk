@@ -9,13 +9,14 @@ import "reflect"
 // to UI controls. It supports automatic field validation, data updates, and event handling.
 //
 // Example usage:
-//   data := &struct {
-//     Name  string `label:"Full Name" width:"30"`
-//     Email string `label:"Email Address" width:"40"`
-//     Age   int    `label:"Age" width:"10"`
-//   }{}
-//   
-//   form := NewForm("user-form", "User Registration", data)
+//
+//	data := &struct {
+//	  Name  string `label:"Full Name" width:"30"`
+//	  Email string `label:"Email Address" width:"40"`
+//	  Age   int    `label:"Age" width:"10"`
+//	}{}
+//
+//	form := NewForm("user-form", "User Registration", data)
 //
 // Struct tag attributes supported:
 //   - label: Display label for the field (default: field name)
@@ -29,6 +30,37 @@ type Form struct {
 	Title string // Form title displayed in the container border
 	Data  any    // Form data as pointer to struct - must be a pointer for updates to work
 	child Widget // Child container (typically a FormGroup or layout container)
+}
+
+// NewForm creates a new form widget with the specified ID, title, and data structure.
+//
+// The data parameter must be a pointer to a struct. The struct fields will be automatically
+// converted to form controls based on their types and struct tags.
+//
+// Parameters:
+//   - id: Unique identifier for the form widget
+//   - title: Display title for the form (shown in border if styled)
+//   - data: Pointer to struct containing the form data
+//
+// Returns:
+//   - *Form: New form widget instance
+//
+// Example:
+//
+//	type User struct {
+//	  Name  string `label:"Full Name" width:"30"`
+//	  Email string `label:"Email" width:"40"`
+//	  Admin bool   `label:"Administrator"`
+//	}
+//
+//	user := &User{}
+//	form := NewForm("user-form", "User Details", user)
+func NewForm(id, title string, data any) *Form {
+	return &Form{
+		BaseWidget: BaseWidget{id: id, focusable: false},
+		Title:      title,
+		Data:       data,
+	}
 }
 
 // Add sets the child widget for this form container.
@@ -59,13 +91,9 @@ func (f *Form) FindAt(x, y int) Widget {
 func (f *Form) Hint() (int, int) {
 	if f.child != nil {
 		w, h := f.child.Hint()
-		w += f.child.Style("").Horizontal()
-		h += f.child.Style("").Vertical()
-		style := f.Style("")
-		if style != nil {
-			style.Width = w
-			style.Height = h
-		}
+		style := f.child.Style()
+		w += style.Horizontal()
+		h += style.Vertical()
 		return w, h
 	} else {
 		return 0, 0
@@ -80,7 +108,7 @@ func (f *Form) Layout() {
 	Layout(f)
 }
 
-// Update creates an event handler function that synchronizes form control values 
+// Update creates an event handler function that synchronizes form control values
 // back to the bound struct field when the control's value changes.
 //
 // This method is typically called automatically during form construction to set up
@@ -104,35 +132,5 @@ func (f *Form) Update(value reflect.Value) func(Widget, string, ...any) bool {
 			value.SetString(widget.Text)
 		}
 		return false
-	}
-}
-
-// NewForm creates a new form widget with the specified ID, title, and data structure.
-//
-// The data parameter must be a pointer to a struct. The struct fields will be automatically
-// converted to form controls based on their types and struct tags.
-//
-// Parameters:
-//   - id: Unique identifier for the form widget
-//   - title: Display title for the form (shown in border if styled)
-//   - data: Pointer to struct containing the form data
-//
-// Returns:
-//   - *Form: New form widget instance
-//
-// Example:
-//   type User struct {
-//     Name  string `label:"Full Name" width:"30"`
-//     Email string `label:"Email" width:"40"`
-//     Admin bool   `label:"Administrator"`
-//   }
-//   
-//   user := &User{}
-//   form := NewForm("user-form", "User Details", user)
-func NewForm(id, title string, data any) *Form {
-	return &Form{
-		BaseWidget: BaseWidget{id: id, focusable: false},
-		Title:      title,
-		Data:       data,
 	}
 }

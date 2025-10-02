@@ -24,7 +24,8 @@ type Button struct {
 
 // NewButton creates a new button widget with the specified ID and text.
 // The button is initialized in the default state with no action handler.
-// You should set the Action field to define what happens when the button is clicked.
+// An action handler should be registered for the "click" event with
+// On("click", ...)
 //
 // Parameters:
 //   - id: Unique identifier for the button widget
@@ -36,7 +37,7 @@ type Button struct {
 // Example usage:
 //
 //	button := NewButton("ok-btn", "OK")
-//	button.Action = func(b *Button) { fmt.Println("Button clicked!") }
+//	button.On("click", ...)
 func NewButton(id, text string) *Button {
 	return &Button{
 		BaseWidget: BaseWidget{id: id, focusable: true},
@@ -46,25 +47,12 @@ func NewButton(id, text string) *Button {
 }
 
 // Click programmatically triggers the button's action handler.
-// This method executes the Action callback if one is set. If no Action
-// is defined, calling this method has no effect.
 //
 // This method can be called programmatically to simulate a button click
 // or can be used internally when the button is activated through user input.
 // The method also emits a "click" event for any registered event handlers.
 func (b *Button) Click() {
 	b.Emit("click")
-}
-
-// Cursor returns the cursor position for the button widget.
-// Buttons don't typically display a cursor, so this always returns (-1, -1)
-// to indicate that no cursor should be shown.
-//
-// Returns:
-//   - int: x-coordinate (always -1)
-//   - int: y-coordinate (always -1)
-func (b *Button) Cursor() (int, int) {
-	return -1, -1
 }
 
 // Emit triggers an event handler for the specified event type.

@@ -56,7 +56,7 @@ func TestNewInsets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewInsets(tt.values...)
-			if got != tt.want {
+			if *got != tt.want {
 				t.Errorf("NewInsets(%v) = %+v, want %+v", tt.values, got, tt.want)
 			}
 		})
@@ -126,19 +126,19 @@ func TestInsetsSet(t *testing.T) {
 // TestInsetsSetOverwrite tests that Set properly overwrites existing values
 func TestInsetsSetOverwrite(t *testing.T) {
 	insets := Insets{Top: 10, Right: 20, Bottom: 30, Left: 40}
-	
+
 	// Set with new values should overwrite existing ones
 	insets.Set(1, 2, 3, 4)
 	want := Insets{Top: 1, Right: 2, Bottom: 3, Left: 4}
-	
+
 	if insets != want {
 		t.Errorf("Set() after existing values = %+v, want %+v", insets, want)
 	}
-	
+
 	// Set with single value should overwrite all
 	insets.Set(99)
 	want = Insets{Top: 99, Right: 99, Bottom: 99, Left: 99}
-	
+
 	if insets != want {
 		t.Errorf("Set() single value overwrite = %+v, want %+v", insets, want)
 	}
@@ -284,10 +284,10 @@ func TestInsetsVertical(t *testing.T) {
 // TestInsetsTotal tests the Total method
 func TestInsetsTotal(t *testing.T) {
 	tests := []struct {
-		name        string
-		insets      Insets
-		wantHoriz   int
-		wantVert    int
+		name      string
+		insets    Insets
+		wantHoriz int
+		wantVert  int
 	}{
 		{
 			name:      "all zeros",
@@ -304,7 +304,7 @@ func TestInsetsTotal(t *testing.T) {
 		{
 			name:      "negative values",
 			insets:    Insets{Top: -3, Right: -5, Bottom: -7, Left: -2},
-			wantHoriz: -7, // -5 + (-2)
+			wantHoriz: -7,  // -5 + (-2)
 			wantVert:  -10, // -3 + (-7)
 		},
 		{
@@ -385,10 +385,10 @@ func TestInsetsEdgeCases(t *testing.T) {
 	t.Run("large positive values", func(t *testing.T) {
 		const largeInt = 1000000
 		insets := NewInsets(largeInt, 0, largeInt, 0)
-		
+
 		horizontal := insets.Horizontal()
 		vertical := insets.Vertical()
-		
+
 		if horizontal != 0 {
 			t.Errorf("Large int horizontal = %d, want 0", horizontal)
 		}
@@ -400,10 +400,10 @@ func TestInsetsEdgeCases(t *testing.T) {
 	t.Run("large negative values", func(t *testing.T) {
 		const largeNegInt = -1000000
 		insets := NewInsets(largeNegInt, 0, largeNegInt, 0)
-		
+
 		horizontal := insets.Horizontal()
 		vertical := insets.Vertical()
-		
+
 		if horizontal != 0 {
 			t.Errorf("Large negative int horizontal = %d, want 0", horizontal)
 		}
@@ -416,15 +416,16 @@ func TestInsetsEdgeCases(t *testing.T) {
 		insets := NewInsets(1, 2, 3, 4)
 		insets.Set() // Should reset to all zeros
 		want := Insets{Top: 0, Right: 0, Bottom: 0, Left: 0}
-		
-		if insets != want {
+
+		if *insets != want {
 			t.Errorf("Set() empty = %+v, want %+v", insets, want)
 		}
-		
+
 		// Do it again to ensure it's consistent
 		insets.Set()
-		if insets != want {
+		if *insets != want {
 			t.Errorf("Set() empty second time = %+v, want %+v", insets, want)
 		}
 	})
 }
+

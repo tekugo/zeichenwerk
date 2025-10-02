@@ -76,8 +76,9 @@ func (d *Dialog) Handle(evt tcell.Event) bool {
 func (d *Dialog) Hint() (int, int) {
 	if d.child != nil {
 		w, h := d.child.Hint()
-		w += d.Style("").Horizontal()
-		h += d.Style("").Vertical()
+		style := d.child.Style()
+		w += style.Horizontal()
+		h += style.Vertical()
 		return w, h
 	} else {
 		return 0, 0

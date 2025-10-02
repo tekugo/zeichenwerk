@@ -22,46 +22,5 @@ func MidnightNeonTheme() Theme {
 		"$magenta": "#c792ea",
 	})
 
-	t.SetStyles(map[string]*Style{
-		// Default widget styles
-		"":                          NewStyle("$fg0", "$bg0").SetMargin(0).SetPadding(0),
-		"button":                    NewStyle("$fg1", "$bg3").SetBorder("lines").SetPadding(0, 2),
-		"button:focus":              NewStyle("$cyan", "$bg3"),
-		"button:hover":              NewStyle("$fg0", "$bg3"),
-		"button.dialog":             NewStyle("$fg1", "$bg3"),
-		"dialog":                    NewStyle("$fg0", "$blue").SetBorder("thick").SetPadding(1, 2),
-		"grid":                      NewStyle("$fg2", "$bg0").SetBorder("thin"),
-		"input":                     NewStyle("$fg0", "$bg2").SetCursor("*bar").SetBorder("round"),
-		"input:focus":               NewStyle("$bg0", "$blue"),
-		"list/highlight:focus":      NewStyle("$bg0", "$cyan"),
-		"list/highlight":            NewStyle("$bg0", "$fg1"),
-		"progress-bar":              NewStyle("$fg1", "").SetRender("unicode"),
-		"scroller":                  NewStyle("$fg1", "$bg2"),
-		"progress-bar/bar":          NewStyle("$orange", ""),
-		"tabs/highlight":            NewStyle("$bg0", "$orange"),
-		"tabs/highlight-line":       NewStyle("$orange", ""),
-		"tabs/line:focus":           NewStyle("$blue", ""),
-		"tabs/highlight:focus":      NewStyle("$bg0", "$cyan"),
-		"tabs/highlight-line:focus": NewStyle("$cyan", ""),
-
-		// Header style
-		".header": NewStyle("$fg0", "$fg1"),
-
-		// Inspector style
-		"flex.inspector":      NewStyle("", "$bg2"),
-		"box.inspector:title": NewStyle("$cyan", ""),
-
-		".footer": NewStyle("$fg0", "$fg1"),
-
-		".popup":       NewStyle("", "$fg1"),
-		"button.popup": NewStyle("", "$cyan"),
-		".popup#title": NewStyle("$bg0", "$fg0"),
-
-		".shortcut": NewStyle("$cyan", "$fg1").SetPadding(0, 1),
-
-		"#popup/shadow": NewStyle("$bg1", "black"),
-		"#debug-log":    NewStyle("$green", "$bg1"),
-	})
-
 	return t
 }

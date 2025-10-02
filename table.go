@@ -93,10 +93,11 @@ type Table struct {
 //   - *Table: Configured table widget ready for use
 //
 // Example:
-//   headers := []string{"Name", "Age", "City"}
-//   data := [][]string{{"John", "25", "NYC"}, {"Jane", "30", "LA"}}
-//   provider := NewArrayTableProvider(headers, data)
-//   table := NewTable("my-table", provider)
+//
+//	headers := []string{"Name", "Age", "City"}
+//	data := [][]string{{"John", "25", "NYC"}, {"Jane", "30", "LA"}}
+//	provider := NewArrayTableProvider(headers, data)
+//	table := NewTable("my-table", provider)
 func NewTable(id string, provider TableProvider) *Table {
 	table := &Table{
 		BaseWidget: BaseWidget{id: id, focusable: true},
@@ -137,6 +138,10 @@ func (t *Table) Set(provider TableProvider) {
 // Note: The actual rendered size may differ based on container constraints.
 // The hint helps layout containers determine optimal sizing.
 func (t *Table) Hint() (int, int) {
+	if t.widthHint != 0 && t.heightHint != 0 {
+		return t.widthHint, t.heightHint
+	}
+
 	w := 0
 	h := t.provider.Length()
 	for i, column := range t.provider.Columns() {

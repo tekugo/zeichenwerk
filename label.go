@@ -20,8 +20,8 @@ import "fmt"
 //   - Descriptive text in forms and dialogs
 type Label struct {
 	BaseWidget
-	Text  string // The text content to display in the label
-	Align string // Text alignment within the label bounds ("left", "center", "right")
+	Text      string // The text content to display in the label
+	Alignment string // Text alignment within the label bounds ("left", "center", "right")
 }
 
 // NewLabel creates a new label widget with the specified ID and text content.
@@ -43,7 +43,7 @@ func NewLabel(id string, text string) *Label {
 	return &Label{
 		BaseWidget: BaseWidget{id: id},
 		Text:       text,
-		Align:      "left", // Set default alignment
+		Alignment:  "left", // Set default alignment
 	}
 }
 
@@ -81,6 +81,6 @@ func (l *Label) SetText(text string) {
 // Parameters:
 //   - align: The alignment mode ("left", "center", "right")
 func (l *Label) SetAlignment(align string) {
-	l.Align = align
+	l.Alignment = align
 	l.Refresh()
 }

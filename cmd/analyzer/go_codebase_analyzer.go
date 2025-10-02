@@ -48,7 +48,7 @@ func (m CodebaseMetrics) String() string {
 	if m.TotalLines == 0 {
 		return "No Go files found"
 	}
-	
+
 	return fmt.Sprintf(`=== CODEBASE ANALYSIS ===
 Total Go files: %d
 Code files: %d
@@ -83,21 +83,21 @@ Blank lines: %d lines (%.1f%%)`,
 //   - error: Any error encountered during analysis
 func AnalyzeGoCodebase(rootDir string) (*CodebaseMetrics, error) {
 	metrics := &CodebaseMetrics{}
-	
+
 	// Regular expressions for identifying different types of lines
 	commentRegex := regexp.MustCompile(`^\s*(//|/\*|\*|.*\*/)`)
 	blankRegex := regexp.MustCompile(`^\s*$`)
-	
+
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// Skip directories and non-Go files
 		if info.IsDir() || !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		
+
 		// Count files
 		metrics.TotalFiles++
 		isTestFile := strings.HasSuffix(path, "_test.go")
@@ -106,34 +106,33 @@ func AnalyzeGoCodebase(rootDir string) (*CodebaseMetrics, error) {
 		} else {
 			metrics.CodeFiles++
 		}
-		
+
 		// Analyze file content
 		fileMetrics, err := analyzeFile(path, commentRegex, blankRegex)
 		if err != nil {
 			return fmt.Errorf("failed to analyze file %s: %w", path, err)
 		}
-		
+
 		// Update totals
 		metrics.TotalLines += fileMetrics.totalLines
 		metrics.DocumentationLines += fileMetrics.docLines
 		metrics.BlankLines += fileMetrics.blankLines
-		
+
 		// Calculate code lines for this file
 		codeLines := fileMetrics.totalLines - fileMetrics.docLines - fileMetrics.blankLines
 		metrics.CodeLines += codeLines
-		
+
 		// If it's a test file, add to test code lines
 		if isTestFile {
 			metrics.TestCodeLines += codeLines
 		}
-		
+
 		return nil
 	})
-	
 	if err != nil {
 		return nil, fmt.Errorf("failed to walk directory %s: %w", rootDir, err)
 	}
-	
+
 	return metrics, nil
 }
 
@@ -151,30 +150,30 @@ func analyzeFile(filePath string, commentRegex, blankRegex *regexp.Regexp) (*fil
 		return nil, err
 	}
 	defer file.Close()
-	
+
 	metrics := &fileMetrics{}
 	scanner := bufio.NewScanner(file)
 	inBlockComment := false
-	
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		metrics.totalLines++
-		
+
 		trimmed := strings.TrimSpace(line)
-		
+
 		// Check for blank lines first
 		if blankRegex.MatchString(line) {
 			metrics.blankLines++
 			continue
 		}
-		
+
 		// Handle block comments - start of block comment without end
 		if strings.Contains(trimmed, "/*") && !strings.Contains(trimmed, "*/") {
 			inBlockComment = true
 			metrics.docLines++
 			continue
 		}
-		
+
 		// Handle block comments - continuation or end
 		if inBlockComment {
 			metrics.docLines++
@@ -183,18 +182,18 @@ func analyzeFile(filePath string, commentRegex, blankRegex *regexp.Regexp) (*fil
 			}
 			continue
 		}
-		
+
 		// Handle single-line comments and complete block comments on one line
 		if commentRegex.MatchString(line) {
 			metrics.docLines++
 			continue
 		}
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	
+
 	return metrics, nil
 }
 
@@ -205,22 +204,23 @@ func main() {
 	if len(os.Args) >= 2 {
 		rootDir = os.Args[1]
 	}
-	
+
 	fmt.Printf("Analyzing Go codebase in: %s\n\n", rootDir)
-	
+
 	// Analyze the codebase
 	metrics, err := AnalyzeGoCodebase(rootDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error analyzing codebase: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Print the results
 	fmt.Println(metrics)
-	
+
 	// Additional metrics
 	fmt.Printf("\n=== ADDITIONAL METRICS ===\n")
 	fmt.Printf("Production code lines: %d\n", metrics.ProductionCodeLines())
 	fmt.Printf("Documentation ratio: %.1f%%\n", metrics.DocumentationRatio())
 	fmt.Printf("Test coverage ratio: %.1f%%\n", metrics.TestCoverageRatio())
 }
+

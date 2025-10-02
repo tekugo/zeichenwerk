@@ -1,27 +1,3 @@
-// Package renderer.go implements the core rendering engine for zeichenwerk.
-//
-// This file contains the central Renderer type and Screen abstraction that
-// handle the visual presentation of widgets to the terminal. The rendering
-// system provides:
-//   - Widget-specific rendering methods for all widget types
-//   - Style management and theme integration
-//   - Coordinate clipping and viewport management
-//   - Primitive drawing operations (text, lines, borders, backgrounds)
-//   - Visual effects (shadows, dimming, colorization)
-//
-// # Architecture
-//
-// The rendering system uses a two-level architecture:
-//   - Screen interface: Abstraction over terminal operations
-//   - Renderer struct: High-level widget rendering coordination
-//
-// # Modular Design
-//
-// Complex widget rendering is split across multiple files:
-//   - renderer.go: Core renderer and simple widgets
-//   - render-*.go: Specialized rendering for complex widgets
-//   - This keeps file sizes manageable and organizes related functionality
-
 package zeichenwerk
 
 import (
@@ -161,20 +137,25 @@ type Renderer struct {
 // Parameters:
 //   - style: The Style object containing colors and font attributes to apply
 func (r *Renderer) SetStyle(style *Style) {
+	r.SetStyle2(style.Foreground(), style.Background(), style.Font())
+}
+
+func (r *Renderer) SetStyle2(foreground, background, font string) {
 	result := tcell.StyleDefault
 
-	if style.Background != "" {
-		if bg, err := ParseColor(r.theme.Color(style.Background)); err == nil {
+	if background != "" {
+		if bg, err := ParseColor(r.theme.Color(background)); err == nil {
 			result = result.Background(bg)
 		}
 	}
-	if style.Foreground != "" {
-		if fg, err := ParseColor(r.theme.Color(style.Foreground)); err == nil {
+
+	if foreground != "" {
+		if fg, err := ParseColor(r.theme.Color(foreground)); err == nil {
 			result = result.Foreground(fg)
 		}
 	}
 
-	for part := range strings.SplitSeq(style.Font, ",") {
+	for part := range strings.SplitSeq(font, ",") {
 		option := strings.ToLower(strings.TrimSpace(part))
 		switch option {
 		case "blink":
@@ -319,45 +300,6 @@ func (r *Renderer) colorize(x, y, width, height int) {
 	}
 }
 
-// dim applies a dimming effect to all characters in a rectangular area.
-// This method preserves existing characters and their styles while adding
-// a dimming attribute to reduce visual prominence.
-//
-// # Operation
-//
-// For each position in the rectangle:
-//  1. Reads the existing character and its current style
-//  2. Applies the dim attribute to the existing style
-//  3. Rewrites the character with the dimmed style
-//
-// # Visual Effect
-//
-// The dimming effect typically:
-//   - Reduces color saturation and brightness
-//   - Makes text appear faded or less prominent
-//   - Provides visual hierarchy by de-emphasizing content
-//   - Maintains readability while indicating secondary importance
-//
-// # Use Cases
-//
-// Common applications include:
-//   - Disabled widget states
-//   - Background or inactive content
-//   - Shadow effects for overlays
-//   - Visual depth and layering
-//
-// Parameters:
-//   - x, y: Top-left corner of the area to dim
-//   - width, height: Dimensions of the area to process
-func (r *Renderer) dim(x, y, width, height int) {
-	for i := range width {
-		for j := range height {
-			ch, _, style, _ := r.screen.GetContent(x+i, y+j)
-			r.screen.SetContent(x+i, y+j, ch, nil, style.Dim(true))
-		}
-	}
-}
-
 // line draws a line using specified start, middle, and end characters.
 // This method is used for drawing borders, separators, and decorative elements
 // with proper terminal characters for clean visual presentation.
@@ -468,7 +410,7 @@ func (r *Renderer) repeat(x, y, dx, dy, length int, ch rune) {
 // for all text display in labels, buttons, inputs, and other text-based widgets.
 func (r *Renderer) text(x, y int, s string, max int) {
 	i := 0
-	for _, ch := range []rune(s) {
+	for _, ch := range s {
 		if max > 0 && i >= max {
 			break
 		}
@@ -541,8 +483,9 @@ func (r *Renderer) render(widget Widget) {
 	switch widget := widget.(type) {
 	case *Box:
 		r.renderBorder(x, y, w, h, style)
-		r.SetStyle(widget.Style("title"))
-		r.text(x+style.Margin.Left+2, y+style.Margin.Top, " "+widget.Title+" ", 0)
+		style2 := widget.Style("title")
+		r.SetStyle(style2)
+		r.text(x+style.Margin().Left+2, y+style.Margin().Top, " "+widget.Title+" ", 0)
 		r.render(widget.child)
 	case *Button:
 		r.renderBorder(x, y, w, h, style)
@@ -555,8 +498,9 @@ func (r *Renderer) render(widget Widget) {
 		widget.renderer(widget, r.screen)
 	case *Dialog:
 		r.renderBorder(x, y, w, h, style)
-		r.SetStyle(widget.Style("title"))
-		r.text(x+style.Margin.Left+2, y+style.Margin.Top, " "+widget.Title+" ", 0)
+		style2 := widget.Style("title")
+		r.SetStyle(style2)
+		r.text(x+style.Margin().Left+2, y+style.Margin().Top, " "+widget.Title+" ", 0)
 		r.render(widget.child)
 	case *Digits:
 		r.renderBorder(x, y, w, h, style)
@@ -580,7 +524,7 @@ func (r *Renderer) render(widget Widget) {
 		r.renderFormGroup(widget)
 	case *Grid:
 		r.renderBorder(x, y, w, h, style)
-		r.renderGrid(widget, r.theme.Border(widget.Style("").Border))
+		r.renderGrid(widget, r.theme.Border(widget.Style().Border()))
 	case *Input:
 		r.renderBorder(x, y, w, h, style)
 		r.renderInput(widget, cx, cy, cw, ch)
@@ -599,7 +543,8 @@ func (r *Renderer) render(widget Widget) {
 	case *Separator:
 		if widget.Border != "" && widget.Border != "none" {
 			box := r.theme.Border(widget.Border)
-			if style.Height == 1 {
+			_, hh := widget.Hint()
+			if hh == 1 {
 				r.line(cx, cy, 1, 0, cw-2, box.Top, box.Top, box.Top)
 			} else {
 				r.line(cx, cy, 0, 1, ch-2, box.Left, box.Left, box.Left)
@@ -669,24 +614,24 @@ func (r *Renderer) render(widget Widget) {
 //   - w, h: Total width and height of the widget area
 //   - style: Style containing background, border, and margin specifications
 func (r *Renderer) renderBorder(x, y, w, h int, style *Style) {
-	if style.Border == "" || style.Border == "none" {
-		return
+	border := style.Border()
+	if style.Background() != "" {
+		margin := style.Margin()
+		r.clear(x+margin.Left, y+margin.Top, w-margin.Left-margin.Right, h-margin.Top-margin.Bottom)
 	}
-	if style.Background != "" {
-		r.clear(x+style.Margin.Left, y+style.Margin.Top, w-style.Margin.Left-style.Margin.Right, h-style.Margin.Top-style.Margin.Bottom)
-	}
-	if style.Border != "" && style.Border != "none" {
-		parts := strings.Split(style.Border, " ")
+	if border != "" && border != "none" {
+		parts := strings.Split(border, " ")
 		if len(parts) > 1 {
 			fg := parts[1]
-			bg := style.Background
+			bg := style.Background()
 			if len(parts) > 2 {
 				bg = parts[2]
 			}
-			r.SetStyle(NewStyle(fg, bg))
+			r.SetStyle2(fg, bg, "")
 		}
-		box := r.theme.Border(style.Border)
-		r.border(x+style.Margin.Left, y+style.Margin.Top, w-style.Margin.Left-style.Margin.Right-2, h-style.Margin.Top-style.Margin.Bottom-2, box)
+		box := r.theme.Border(style.Border())
+		margin := style.Margin()
+		r.border(x+margin.Left, y+margin.Top, w-margin.Left-margin.Right-2, h-margin.Top-margin.Bottom-2, box)
 		r.SetStyle(style)
 	}
 }

@@ -8,7 +8,7 @@ func (r *Renderer) renderTabs(tabs *Tabs, x, y, w int) {
 		// Use focus-specific styles when tabs widget has focus
 		normal = tabs.Style("line:focus")
 		if normal == nil {
-			normal = tabs.Style("")
+			normal = tabs.Style()
 		}
 		highlight = tabs.Style("highlight:focus")
 		if highlight == nil {
@@ -20,7 +20,7 @@ func (r *Renderer) renderTabs(tabs *Tabs, x, y, w int) {
 		}
 	} else {
 		// Use normal styles when tabs widget doesn't have focus
-		normal = tabs.Style("")
+		normal = tabs.Style()
 		highlight = tabs.Style("highlight")
 		line = tabs.Style("highlight-line")
 	}

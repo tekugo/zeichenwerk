@@ -34,10 +34,10 @@ type Insets struct {
 //	NewInsets(5)          // All sides = 5
 //	NewInsets(10, 20)     // Top/Bottom = 10, Left/Right = 20
 //	NewInsets(1, 2, 3, 4) // Top = 1, Right = 2, Bottom = 3, Left = 4
-func NewInsets(values ...int) Insets {
+func NewInsets(values ...int) *Insets {
 	insets := Insets{}
 	insets.Set(values...)
-	return insets
+	return &insets
 }
 
 // Info returns a human-readable string representation of the insets.

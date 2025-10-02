@@ -22,56 +22,55 @@ func TokyoNightTheme() Theme {
 		"$green":   "#9ece6a",
 	})
 
-	t.SetStyles(map[string]*Style{
-		// Default widget styles
-		"":                          NewStyle("$fg0", "$bg0").SetMargin(0).SetPadding(0),
-		"button":                    NewStyle("$bg0", "$blue").SetBorder("lines").SetPadding(0, 2),
-		"button:focus":              NewStyle("$fg0", "$blue"),
-		"button:hover":              NewStyle("$red", "$blue"),
-		"button.dialog":             NewStyle("$fg1", "$bg3").SetBorder("none").SetPadding(0, 2),
-		"dialog":                    NewStyle("$fg0", "$blue").SetBorder("thick").SetPadding(1, 2),
-		"digits":                    NewStyle("$green", ""),
-		"editor":                    NewStyle("", "").SetCursor("*block"),
-		"form":                      NewStyle("$fg0", "$bg0"),
-		"form-group":                NewStyle("$fg1", "$bg0"),
-		"grid":                      NewStyle("$fg1", "$bg0").SetBorder("thin"),
-		"input":                     NewStyle("$fg0", "$bg2").SetCursor("*bar"),
-		"input:focus":               NewStyle("$bg0", "$blue"),
-		"label":                     NewStyle("fg0", ""),
-		"list/highlight:focus":      NewStyle("$bg0", "$red"),
-		"list/highlight":            NewStyle("$bg0", "$fg1"),
-		"progress-bar":              NewStyle("$fg1", "").SetRender("unicode"),
-		"scroller":                  NewStyle("$fg1", "$bg2"),
-		"progress-bar/bar":          NewStyle("$orange", ""),
-		"table":                     NewStyle("", ""),
-		"table/grid":                NewStyle("$fg1", "$bg0").SetBorder("thin"),
-		"table/header":              NewStyle("$fg0", "$bg0"),
-		"table/highlight":           NewStyle("$bg0", "$fg1"),
-		"table/highlight:focus":     NewStyle("$bg0", "$red"),
-		"tabs/highlight":            NewStyle("$bg0", "$fg0"),
-		"tabs/highlight-line":       NewStyle("$bg3", ""),
-		"tabs/line:focus":           NewStyle("$blue", ""),
-		"tabs/highlight:focus":      NewStyle("$bg0", "$orange"),
-		"tabs/highlight-line:focus": NewStyle("$orange", ""),
+	t.SetStyles(
+		NewStyle("").WithColors("$fg0", "$bg0").WithMargin(0).WithPadding(0),
+		NewStyle("button").WithColors("$bg0", "$blue").WithBorder("lines").WithPadding(0, 2),
+		NewStyle("button:focus").WithForeground("$fg0").WithBackground("$blue"),
+		NewStyle("button:hover").WithColors("$red", "$blue"),
+		NewStyle("button.dialog").WithColors("$fg1", "$bg2").WithBorder("none").WithPadding(0, 2),
+		NewStyle("dialog").WithColors("$fg0", "$blue").WithBorder("thick").WithPadding(1, 2),
+		NewStyle("digits").WithForeground("$green"),
+		NewStyle("editor").WithCursor("*block"),
+		NewStyle("editor/current-line").WithBackground("$gray"),
+		NewStyle("editor/current-line-number").WithBackground("$gray"),
+		NewStyle("editor/line-numbers").WithForeground("$green"),
+		NewStyle("editor/separator").WithForeground("$gray"),
+		NewStyle("form").WithColors("$fg0", "$bg0"),
+		NewStyle("form-group").WithColors("$fg1", "$bg0"),
+		NewStyle("grid").WithColors("$fg1", "$bg0").WithBorder("thin"),
+		NewStyle("input").WithColors("$fg0", "$bg2").WithCursor("*bar"),
+		NewStyle("input:focus").WithColors("$bg0", "$blue"),
+		NewStyle("label").WithForeground("fg0"),
+		NewStyle("list/highlight:focus").WithColors("$bg0", "$red"),
+		NewStyle("list/highlight").WithColors("$bg0", "$fg1"),
+		NewStyle("progress-bar").WithForeground("$fg1"),
+		NewStyle("progress-bar/bar").WithForeground("$orange"),
+		NewStyle("scroller").WithColors("$fg1", "$bg2"),
+		NewStyle("table").WithColors("", ""),
+		NewStyle("table/grid").WithColors("$fg1", "$bg0").WithBorder("thin"),
+		NewStyle("table/header").WithColors("$fg0", "$bg0"),
+		NewStyle("table/highlight").WithColors("$bg0", "$fg1"),
+		NewStyle("table/highlight:focus").WithColors("$bg0", "$red"),
+		NewStyle("tabs/highlight").WithColors("$bg0", "$fg0"),
+		NewStyle("tabs/highlight-line").WithForeground("$bg3"),
+		NewStyle("tabs/line:focus").WithForeground("$blue"),
+		NewStyle("tabs/highlight:focus").WithColors("$bg0", "$orange"),
+		NewStyle("tabs/highlight-line:focus").WithForeground("$orange"),
 
-		// Header style
-		".header": NewStyle("$fg0", "$fg1"),
+		// Dialog styles
+		NewStyle(".dialog").WithColors("$fg0", "$blue"),
+		NewStyle("button.dialog").WithColors("$fg0", "$red"),
+
+		// Header & Footer style
+		NewStyle(".header").WithColors("$fg0", "$fg1"),
+		NewStyle(".footer").WithColors("$fg0", "$fg1"),
 
 		// Inspector style
-		".inspector":          NewStyle("", "$bg2"),
-		"box.inspector:title": NewStyle("$cyan", ""),
-
-		".footer": NewStyle("$fg0", "$fg1"),
-
-		".popup":            NewStyle("", "$bg2"),
-		"flex/shadow.popup": NewStyle("$bg1", "black"),
-		"button.popup":      NewStyle("", "$cyan"),
-		".popup#title":      NewStyle("$bg0", "$fg1"),
-
-		".shortcut": NewStyle("$cyan", "$fg1").SetPadding(0, 1),
-
-		"#debug-log": NewStyle("$green", "$bg1"),
-	})
+		NewStyle(".inspector").WithColors("", "$bg2"),
+		NewStyle("box.inspector:title").WithColors("$cyan", ""),
+		NewStyle(".shortcut").WithColors("$cyan", "$fg1").WithPadding(0, 1),
+		NewStyle("#debug-log").WithColors("$green", "$bg1"),
+	)
 
 	return t
 }

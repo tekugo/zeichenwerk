@@ -1,6 +1,7 @@
 # Form System Overview
 
-The zeichenwerk form system provides automatic data binding between Go structs and form controls, enabling rapid development of data entry interfaces.
+The zeichenwerk form system provides automatic data binding between Go structs
+and form controls, enabling rapid development of data entry interfaces.
 
 ## Quick Reference
 

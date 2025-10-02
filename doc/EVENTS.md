@@ -24,7 +24,10 @@
 
 ## Event System Overview
 
-The zeichenwerk event system provides a flexible way to handle user interactions and widget state changes. All widgets inherit basic event capabilities from BaseWidget and can emit custom events specific to their functionality.
+The zeichenwerk event system provides a flexible way to handle user
+interactions and widget state changes. All widgets inherit basic event
+capabilities from BaseWidget and can emit custom events specific to their
+functionality.
 
 ### Basic Event Handling
 
@@ -40,10 +43,13 @@ widget.On("eventName", func(widget Widget, event string, data ...any) bool {
 
 ### Event Handler Helpers
 
-For common event patterns, zeichenwerk provides helper functions that simplify event handling:
+For common event patterns, zeichenwerk provides helper functions that simplify
+event handling:
 
 #### HandleInputEvent
+
 Simplified event handling for Input widgets:
+
 ```go
 HandleInputEvent(container, "username", "change", func(input *Input, event string, text string) bool {
     fmt.Printf("Username changed to: %s\n", text)
@@ -52,7 +58,9 @@ HandleInputEvent(container, "username", "change", func(input *Input, event strin
 ```
 
 #### HandleListEvent
+
 Simplified event handling for List widgets:
+
 ```go
 HandleListEvent(container, "menu", "activate", func(list *List, event string, index int) bool {
     fmt.Printf("Menu item %d activated\n", index)
@@ -61,7 +69,9 @@ HandleListEvent(container, "menu", "activate", func(list *List, event string, in
 ```
 
 #### HandleKeyEvent
+
 Raw keyboard event handling for any widget:
+
 ```go
 HandleKeyEvent(container, "editor", func(widget Widget, key *tcell.EventKey) bool {
     if key.Key() == tcell.KeyCtrlS {
@@ -82,6 +92,7 @@ HandleKeyEvent(container, "editor", func(widget Widget, key *tcell.EventKey) boo
 ## Common Event Patterns
 
 ### Form Validation
+
 ```go
 // Validate input on change
 HandleInputEvent(form, "email", "change", func(input *Input, event string, text string) bool {
@@ -101,6 +112,7 @@ HandleInputEvent(form, "email", "enter", func(input *Input, event string, text s
 ```
 
 ### Navigation
+
 ```go
 // Handle tab navigation
 HandleListEvent(sidebar, "menu", "activate", func(list *List, event string, index int) bool {
@@ -118,6 +130,7 @@ table.On("select", func(widget Widget, event string, data ...any) bool {
 ```
 
 ### State Management
+
 ```go
 // Sync checkbox state
 checkbox.On("change", func(widget Widget, event string, data ...any) bool {

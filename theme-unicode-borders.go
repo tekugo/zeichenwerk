@@ -100,6 +100,32 @@ func AddUnicodeBorders(theme Theme) {
 			InnerLeftT:   rune(0x2560), // ╠ (double inner left T)
 		},
 
+		// "double-thin" - Double outer borders with thin inner grid lines (╔═╗║╚═╝ with ─│┼)
+		// Combines strong visual emphasis of double borders with subtle inner organization.
+		// Perfect for important containers that need internal structure, like data tables
+		// in dialogs, primary dashboard widgets, or featured content sections with subdivisions.
+		"double-thin": {
+			Top:          rune(0x2550), // ═ (double horizontal)
+			Right:        rune(0x2551), // ║ (double vertical)
+			Bottom:       rune(0x2550), // ═ (double horizontal)
+			Left:         rune(0x2551), // ║ (double vertical)
+			TopLeft:      rune(0x2554), // ╔ (double top-left)
+			TopRight:     rune(0x2557), // ╗ (double top-right)
+			BottomRight:  rune(0x255d), // ╝ (double bottom-right)
+			BottomLeft:   rune(0x255a), // ╚ (double bottom-left)
+			TopT:         rune(0x2564), // ╤ (double-thin top T)
+			RightT:       rune(0x2562), // ╡ (double-thin right T)
+			BottomT:      rune(0x2567), // ╧ (double-thin bottom T)
+			LeftT:        rune(0x255f), // ╞ (double-thin left T)
+			InnerH:       rune(0x2500), // ─ (thin inner horizontal)
+			InnerV:       rune(0x2502), // │ (thin inner vertical)
+			InnerX:       rune(0x253c), // ┼ (thin inner cross)
+			InnerTopT:    rune(0x252c), // ┬ (thin inner top T)
+			InnerRightT:  rune(0x2524), // ┤ (thin inner right T)
+			InnerBottomT: rune(0x2534), // ┴ (thin inner bottom T)
+			InnerLeftT:   rune(0x251c), // ├ (thin inner left T)
+		},
+
 		// "round" - Rounded corners with thin lines (╭─╮│╰─╯)
 		// Provides a modern, friendly appearance with softer visual impact.
 		// Ideal for user-friendly interfaces, welcome screens, or casual applications.

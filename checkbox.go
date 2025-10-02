@@ -4,8 +4,9 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// Checkbox represents a boolean input widget that can be toggled between checked and unchecked states.
-// It displays a checkbox indicator with optional label text and responds to keyboard and mouse input.
+// Checkbox represents a boolean input widget that can be toggled between
+// checked and unchecked states. It displays a checkbox indicator with
+// optional label text and responds to keyboard and mouse input.
 //
 // Features:
 //   - Boolean checked/unchecked state
@@ -15,7 +16,8 @@ import (
 //   - Customizable label text
 //   - State-based styling support (normal, focus, hover, disabled)
 //
-// The checkbox provides a simple way to capture boolean user input in forms and settings interfaces.
+// The checkbox provides a simple way to capture boolean user input in forms
+// and settings interfaces.
 type Checkbox struct {
 	BaseWidget
 	Text    string // The label text displayed next to the checkbox
@@ -23,8 +25,9 @@ type Checkbox struct {
 	state   string // Current checkbox state (disabled, etc.)
 }
 
-// NewCheckbox creates a new checkbox widget with the specified ID, label text, and initial checked state.
-// The checkbox is initialized as focusable and responds to user input.
+// NewCheckbox creates a new checkbox widget with the specified ID, label
+// text, and initial checked state. The checkbox is initialized as focusable
+// and responds to user input.
 //
 // Parameters:
 //   - id: Unique identifier for the checkbox widget
@@ -65,8 +68,8 @@ func (c *Checkbox) Toggle() {
 }
 
 // Cursor returns the cursor position for the checkbox widget.
-// Checkboxes don't typically display a cursor, so this always returns (-1, -1)
-// to indicate that no cursor should be shown.
+// Checkboxes don't typically display a cursor, so this always returns
+// (-1, -1) to indicate that no cursor should be shown.
 //
 // Returns:
 //   - int: x-coordinate (always -1)
@@ -117,7 +120,8 @@ func (c *Checkbox) Emit(event string, data ...any) bool {
 }
 
 // Handle processes keyboard and mouse events for the checkbox widget.
-// The checkbox responds to space bar, enter key, and mouse clicks for toggling.
+// The checkbox responds to space bar, enter key, and mouse clicks for
+// toggling.
 //
 // Supported events:
 //   - Keyboard: Space bar and Enter key toggle the checkbox state

@@ -99,6 +99,10 @@ func NewEditor(id string) *Editor {
 	}
 }
 
+func (e *Editor) Refresh() {
+	Redraw(e)
+}
+
 // ---- Content Management ---------------------------------------------------
 
 // SetContent replaces all editor content with the provided lines.
@@ -300,10 +304,15 @@ func (e *Editor) MoveTo(line, column int) {
 		column = lineLength
 	}
 
+	refresh := e.line != line
 	e.line = line
 	e.column = column
 	e.adjustViewport()
-	e.RefreshCursor()
+	if refresh {
+		e.Refresh()
+	} else {
+		e.RefreshCursor()
+	}
 }
 
 // ---- Movement Operations ----
@@ -312,13 +321,15 @@ func (e *Editor) MoveTo(line, column int) {
 func (e *Editor) Left() {
 	if e.column > 0 {
 		e.column--
+		e.adjustViewport()
+		e.RefreshCursor()
 	} else if e.line > 0 {
 		// Move to end of previous line
 		e.line--
 		e.column = e.content[e.line].Length()
+		e.adjustViewport()
+		e.Refresh()
 	}
-	e.adjustViewport()
-	e.RefreshCursor()
 }
 
 // Right moves cursor one position right, handling line boundaries.
@@ -326,13 +337,15 @@ func (e *Editor) Right() {
 	lineLength := e.content[e.line].Length()
 	if e.column < lineLength {
 		e.column++
+		e.adjustViewport()
+		e.RefreshCursor()
 	} else if e.line < len(e.content)-1 {
 		// Move to beginning of next line
 		e.line++
 		e.column = 0
+		e.adjustViewport()
+		e.Refresh()
 	}
-	e.adjustViewport()
-	e.RefreshCursor()
 }
 
 // Up moves cursor one position up, maintaining column position when possible.
@@ -345,7 +358,7 @@ func (e *Editor) Up() {
 			e.column = lineLength
 		}
 		e.adjustViewport()
-		e.RefreshCursor()
+		e.Refresh()
 	}
 }
 
@@ -359,7 +372,7 @@ func (e *Editor) Down() {
 			e.column = lineLength
 		}
 		e.adjustViewport()
-		e.RefreshCursor()
+		e.Refresh()
 	}
 }
 

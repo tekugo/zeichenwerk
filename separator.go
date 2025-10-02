@@ -1,8 +1,9 @@
 package zeichenwerk
 
-// Separator represents a visual divider widget used to create visual separation
-// between UI elements. It renders as a horizontal or vertical line using the
-// specified border style, providing clear visual grouping in layouts.
+// Separator represents a visual divider widget used to create visual
+// separation between UI elements. It renders as a horizontal or vertical
+// line using the specified border style, providing clear visual grouping
+// in layouts.
 //
 // Features:
 //   - Horizontal and vertical line rendering

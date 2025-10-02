@@ -76,7 +76,7 @@ func (r *Renderer) renderList(list *List, x, y, w, h int) {
 		}
 
 		// Reset style
-		r.SetStyle(list.Style(""))
+		r.SetStyle(list.Style())
 	}
 
 	// Render scrollbar if needed

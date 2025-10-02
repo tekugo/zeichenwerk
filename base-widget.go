@@ -10,9 +10,10 @@ import (
 )
 
 // RE to parse part:state style expressions
-// stylePartRegExp is a compiled regular expression used to parse style part selectors.
-// It matches patterns like "part:state" where both the part and state components
-// are optional and consist of alphanumeric characters, underscores, and hyphens.
+// stylePartRegExp is a compiled regular expression used to parse style part
+// selectors. It matches patterns like "part:state" where both the part and
+// state components are optional and consist of alphanumeric characters,
+// underscores, and hyphens.
 //
 // Pattern breakdown:
 //   - ([0-9A-Za-z_\-]*): Captures the part name (optional)
@@ -32,15 +33,18 @@ var stylePartRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 // The Widget is not responsible for rendering, so all rendering is done in
 // the renderer. For new widgets, you also have to extend the renderer to be
 // able to render the widget.
+//
+// Also do not forget to add it to the builder for building and styling.
 type BaseWidget struct {
-	id                  string            // widget identification datum
-	parent              Container         // reference to the parent container
-	x, y, width, height int               // screen area of the widget (outer bounds)
-	focusable           bool              // whether the widget can receive keyboard focus
-	focused             bool              // focus state for keyboard input
-	hovered             bool              // hover state for mouse interaction
-	styles              map[string]*Style // visual styling information
-	handlers            map[string]func(Widget, string, ...any) bool
+	id                    string            // widget identification datum
+	parent                Container         // reference to the parent container
+	x, y, width, height   int               // screen area of the widget (outer bounds)
+	widthHint, heightHint int               // preferred content width and height
+	focusable             bool              // whether the widget can receive keyboard focus
+	focused               bool              // focus state for keyboard input
+	hovered               bool              // hover state for mouse interaction
+	styles                map[string]*Style // visual styling information
+	handlers              map[string]func(Widget, string, ...any) bool
 }
 
 // Bounds returns the widget's outer boundaries as (x, y, width, height).
@@ -56,16 +60,17 @@ func (bw *BaseWidget) Bounds() (int, int, int, int) {
 // margins, padding, and border space from the outer bounds. The returned
 // coordinates represent the area where the actual content should be rendered.
 func (bw *BaseWidget) Content() (int, int, int, int) {
-	style := bw.Style("")
+	style := bw.Style()
 	if style == nil {
 		return bw.x, bw.y, bw.width, bw.height
 	}
-	if style.Margin != nil && style.Padding != nil {
-		ix := bw.x + style.Margin.Left + style.Padding.Left
-		iy := bw.y + style.Margin.Top + style.Padding.Top
+	if style.Margin() != nil && style.Padding() != nil {
+		ix := bw.x + style.Margin().Left + style.Padding().Left
+		iy := bw.y + style.Margin().Top + style.Padding().Top
 		iw := bw.width - style.Horizontal()
 		ih := bw.height - style.Vertical()
-		if style.Border != "" && style.Border != "" {
+		border := style.Border()
+		if border != "" && border != "none" {
 			ix++
 			iy++
 		}
@@ -82,7 +87,7 @@ func (bw *BaseWidget) Content() (int, int, int, int) {
 // position.
 //
 // The returned position is relative to the content area of the widget,
-// so 0,0 is the top-left corner of the content.
+// so 0,0 is the top-left corner of the content area.
 func (bw *BaseWidget) Cursor() (int, int) {
 	return -1, -1
 }
@@ -176,32 +181,21 @@ func (bw *BaseWidget) Handle(event tcell.Event) bool {
 	return false
 }
 
-// Hint returns the widget's preferred size based on the default style.
-// The base implementation retrieves the width and height from the default
-// style ("") if available. If no style is set or no dimensions are specified
-// in the style, it returns (0, 0) as a fallback.
+// Hint returns the widget's preferred content size of the widget.
+// THe preferred size is just an attribute of the widget and can be set
+// using SetHint(w, h). The preferred size is the size of the content area
+// and must not include margin, border or padding. Some containers support
+// negative for with or height for fractional sizing.
 //
-// Concrete widget implementations should override this method to provide
-// more sophisticated size calculations based on content, text metrics,
-// or other widget-specific requirements.
+// By default, the preferred size is 0, 0, but if it is not set to a
+// negative value, containers might calculate their preferred size and
+// return the calculated values.
 //
 // Returns:
-//   - int: Preferred width from default style, or 0 if not specified
-//   - int: Preferred height from default style, or 0 if not specified
+//   - int: preferred width, might be negative for fractional sizes
+//   - int: preferred height, might be negative for fractional sizes
 func (bw *BaseWidget) Hint() (int, int) {
-	style := bw.Style("")
-	if style != nil {
-		w := style.Width
-		h := style.Height
-		if w < 0 {
-			w = 10
-		}
-		if h < 0 {
-			h = 1
-		}
-		return w, h
-	}
-	return 0, 0
+	return bw.widthHint, bw.heightHint
 }
 
 // Hovered returns the current hover state of the widget.
@@ -216,9 +210,9 @@ func (bw *BaseWidget) Hovered() bool {
 }
 
 // ID returns the unique identifier string for this widget instance.
-// This identifier can be used for debugging, testing, or widget lookup
-// within a widget hierarchy. The ID should be unique within the scope
-// of the application to ensure proper widget identification.
+// This identifier can be used for styling, debugging, testing, or widget
+// lookup within the widget hierarchy. The ID should be unique within the
+// scope of the application to ensure proper widget identification.
 //
 // Returns:
 //   - string: The widget's unique identifier
@@ -267,6 +261,8 @@ func (bw *BaseWidget) Log(source Widget, level string, msg string, params ...any
 
 // On registers an event handler for widget-specific events.
 // This event handler is called, whenever the widget emits an event.
+// Currently, only one handler per event is supported. If a second handler is
+// registered, it will overwrite the previous one.
 //
 // Parameters:
 //   - handler: event handler function
@@ -301,8 +297,8 @@ func (bw *BaseWidget) Position() (int, int) {
 // should be called whenever the widget's visual state changes and needs to
 // be reflected on screen.
 //
-// Concrete widget implementations may override this method to perform
-// widget-specific refresh operations before delegating to the parent.
+// It should be overridden by concrete widgets to optimize screen refreshes,
+// as the base implementation redraws the whole UI.
 func (bw *BaseWidget) Refresh() {
 	if bw.parent != nil {
 		bw.parent.Refresh()
@@ -335,7 +331,8 @@ func (bw *BaseWidget) SetFocusable(focusable bool) {
 
 // SetFocused sets the focus state of the widget.
 // When a widget gains focus, it typically becomes the target for keyboard input
-// and may update its visual appearance to indicate the focused state.
+// and may update its visual appearance to indicate the focused state. Changing
+// the focus makes the widget to emit "blur" and "focus" events.
 //
 // Parameters:
 //   - focused: true to focus the widget, false to unfocus it
@@ -348,19 +345,15 @@ func (bw *BaseWidget) SetFocused(focused bool) {
 	bw.focused = focused
 }
 
-// SetHint sets the sizing hint of the widget.
-// The sizing hint is part of the default styling of the widget and with
-// this method, it can be set dynamically according e.g. to label width.
+// SetHint sets the sizing hint/preferred size of the widget.
+// Some containers support negative values for fractional sizes.
 //
 // Parameters:
 //   - width: preferred widget content width
 //   - height: preferred widget content height
 func (bw *BaseWidget) SetHint(width, height int) {
-	style := bw.Style("")
-	if style != nil {
-		style.Width = width
-		style.Height = height
-	}
+	bw.widthHint = width
+	bw.heightHint = height
 }
 
 // SetHovered sets the hover state of the widget.
@@ -377,16 +370,18 @@ func (bw *BaseWidget) SetHovered(hovered bool) {
 	bw.hovered = hovered
 }
 
-// SetParent establishes a parent-child relationship by setting the parent widget.
-// Pass nil to remove the widget from its current parent. This is typically
-// called during widget hierarchy construction or when moving widgets between containers.
+// SetParent establishes a parent-child relationship by setting the parent
+// widget. Pass nil to remove the widget from its current parent. This is
+// typically called during widget hierarchy construction or when moving
+// widgets between containers.
 func (bw *BaseWidget) SetParent(parent Container) {
 	bw.parent = parent
 }
 
 // SetPosition sets the widget's position to the specified coordinates.
-// This method updates the widget's location within its parent container
-// or on the screen, affecting where the widget will be rendered.
+// This method updates the widget's location on the screen, affecting where
+// the widget will be rendered. The widget coordinates are normally absolute
+// screen coordinates (exceptions are e.g. Scroller).
 //
 // Parameters:
 //   - x: The new x-coordinate for the widget's position
@@ -396,10 +391,11 @@ func (bw *BaseWidget) SetPosition(x, y int) {
 	bw.y = y
 }
 
-// SetSize sets the content size of the widget, automatically calculating outer bounds.
-// This method takes the desired content dimensions and adds margins, padding, and
-// border space to determine the widget's total outer bounds. The content size
-// represents the actual usable area for text or child widgets.
+// SetSize sets the content size of the widget, automatically calculating
+// outer bounds. This method takes the desired content dimensions and adds
+// margins, padding, and border space to determine the widget's total outer
+// bounds. The content size represents the actual usable area for content or
+// child widgets.
 //
 // The calculation includes:
 //   - Content size (the specified width and height)
@@ -411,7 +407,7 @@ func (bw *BaseWidget) SetPosition(x, y int) {
 //   - width: The desired content width in characters/cells
 //   - height: The desired content height in characters/cells
 func (bw *BaseWidget) SetSize(width, height int) {
-	style := bw.Style("")
+	style := bw.Style()
 	if style != nil {
 		bw.width = width + style.Horizontal()
 		bw.height = height + style.Vertical()
@@ -421,13 +417,14 @@ func (bw *BaseWidget) SetSize(width, height int) {
 	}
 }
 
-// SetStyle applies the given style configuration to the widget for a specific selector.
-// The style controls visual appearance including colors, borders, margins, and padding.
-// Selectors allow different styles for different widget states (e.g., "", "focus", "hover").
+// SetStyle applies the given style configuration to the widget for a
+// specific selector. The style controls visual appearance including colors,
+// borders, margins, and padding. Selectors allow different styles for
+// different widget states (e.g., "", "focus", "hover").
 //
 // Parameters:
 //   - selector: The style selector (e.g., "", "focus", "hover", "disabled")
-//   - style: The style configuration to apply, or nil to remove the style for this selector
+//   - style: The style to apply, or nil to remove the style for the selector
 func (bw *BaseWidget) SetStyle(selector string, style *Style) {
 	if bw.styles == nil {
 		bw.styles = make(map[string]*Style)
@@ -453,7 +450,7 @@ func (bw *BaseWidget) SetStyle(selector string, style *Style) {
 //   - int: The content width in characters/cells
 //   - int: The content height in characters/cells
 func (bw *BaseWidget) Size() (int, int) {
-	style := bw.Style("")
+	style := bw.Style()
 	if style != nil {
 		return bw.width - style.Horizontal(), bw.height - style.Vertical()
 	} else {
@@ -482,26 +479,31 @@ func (bw *BaseWidget) State() string {
 	}
 }
 
-// Style returns the style configuration for the specified selector.
-// If the requested selector is not found, it falls back to the default style ("").
-// Returns nil if no styles have been set for the widget.
+// Style returns the style for the specified selector.
+// If the requested selector is not found, it falls back to the default style.
 //
 // The style system supports CSS-like selectors for different widget states:
 //   - "": default/base style
-//   - "focus": style when widget has keyboard focus
-//   - "hover": style when mouse is over the widget
-//   - "disabled": style when widget is disabled
+//   - ":focus": style when widget has keyboard focus
+//   - ":hover": style when mouse is over the widget
+//   - ":disabled": style when widget is disabled
 //
 // Parameters:
-//   - selector: The style selector to retrieve (e.g., "", "focus", "hover")
+//   - params: The style selector to retrieve (e.g., "part", ":state", "part:state")
 //
 // Returns:
 //   - *Style: The style configuration for the selector, or nil if not found
-func (bw *BaseWidget) Style(selector string) *Style {
+func (bw *BaseWidget) Style(params ...string) *Style {
+	// If no parameter is specified, we get the default style ""
+	selector := ""
+	if len(params) > 0 {
+		selector = params[0]
+	}
+
 	// If no style is set, we create an empty default one
 	if bw.styles == nil {
 		bw.styles = make(map[string]*Style)
-		bw.styles[""] = NewStyle("", "")
+		bw.styles[""] = NewStyle("")
 	}
 
 	style, ok := bw.styles[selector]
@@ -521,7 +523,8 @@ func (bw *BaseWidget) Style(selector string) *Style {
 
 // Styles returns a list of all style selectors currently defined for this widget.
 // This is useful for debugging, introspection, or iterating over all available
-// widget styles. The returned slice contains selector strings like "", "focus", "hover", etc.
+// widget styles. The returned slice contains selector strings like "", "part",
+// ":focus", "part:focus", etc.
 //
 // Returns:
 //   - []string: A slice of all style selector names defined for this widget

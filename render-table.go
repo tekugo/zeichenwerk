@@ -71,7 +71,7 @@ func (r *Renderer) renderTableContent(table *Table, x, y, w, h int, gridStyle *S
 		} else if row == table.row {
 			style = table.Style("highlight")
 		} else {
-			style = table.Style("")
+			style = table.Style()
 		}
 
 		rx := 0 // render x position
@@ -118,9 +118,10 @@ func (r *Renderer) renderTable(table *Table) {
 	x, y, w, h := table.Content()
 	headerStyle := table.Style("header")
 	gridStyle := table.Style("grid")
-	if gridStyle.Border != "" && gridStyle.Border != "none" {
+	border := gridStyle.Border()
+	if border != "" && border != "none" {
 		table.Log(table, "debug", "Grid border is %s", gridStyle.Border)
-		table.grid = r.theme.Border(gridStyle.Border)
+		table.grid = r.theme.Border(border)
 		r.renderTableHeader(table, x, y, w, h, headerStyle, gridStyle)
 		r.renderTableContent(table, x, y+2, w, h-2, gridStyle)
 	} else {

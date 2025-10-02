@@ -392,6 +392,8 @@ func WidgetDetails(widget Widget) string {
 	result += fmt.Sprintf("\nBounds    : x=%d, y=%d, w=%d, h=%d", x, y, w, h)
 	x, y, w, h = widget.Content()
 	result += fmt.Sprintf("\nContent   : x=%d, y=%d, w=%d, h=%d", x, y, w, h)
+	w, h = widget.Hint()
+	result += fmt.Sprintf("\nHint      : w=%d, h=%d", w, h)
 	result += fmt.Sprintf("\nState     : %s", widget.State())
 
 	flags := make([]string, 0)

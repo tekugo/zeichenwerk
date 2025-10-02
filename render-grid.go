@@ -53,43 +53,43 @@ func (r *Renderer) renderGrid(g *Grid, box BorderStyle) {
 //   - Proper padding and margin calculations
 //   - Border integration with internal grid structure
 func (r *Renderer) renderGridLines(g *Grid, box BorderStyle) {
-	style := g.Style("")
+	style := g.Style()
 	_, _, iw, ih := g.Content()
 
 	// draw top and bottom Ts
-	cx := g.x + style.Margin.Left + style.Padding.Left
-	by := g.y + style.Margin.Top + style.Padding.Top + style.Padding.Bottom + 1 + ih
+	cx := g.x + style.Margin().Left + style.Padding().Left
+	by := g.y + style.Margin().Top + style.Padding().Top + style.Padding().Bottom + 1 + ih
 	for i := range len(g.columns) - 1 {
 		cx += g.widths[i] + 1
 		if g.separators[0][i]&GridV > 0 {
-			r.screen.SetContent(cx, g.y+style.Margin.Top, box.TopT, nil, r.style)
-			r.repeat(cx, g.y+style.Margin.Top+1, 0, 1, style.Padding.Top, box.InnerV)
+			r.screen.SetContent(cx, g.y+style.Margin().Top, box.TopT, nil, r.style)
+			r.repeat(cx, g.y+style.Margin().Top+1, 0, 1, style.Padding().Top, box.InnerV)
 		}
 		if g.separators[len(g.rows)-1][i]&GridV > 0 {
 			r.screen.SetContent(cx, by, box.BottomT, nil, r.style)
-			r.repeat(cx, by-1, 0, -1, style.Padding.Bottom, box.InnerV)
+			r.repeat(cx, by-1, 0, -1, style.Padding().Bottom, box.InnerV)
 		}
 	}
 
 	// draw left and right Ts
-	cy := g.y + style.Margin.Top + style.Padding.Top
-	rx := g.x + style.Margin.Left + style.Padding.Left + style.Padding.Right + 1 + iw
+	cy := g.y + style.Margin().Top + style.Padding().Top
+	rx := g.x + style.Margin().Left + style.Padding().Left + style.Padding().Right + 1 + iw
 	for i := range len(g.rows) - 1 {
 		cy += g.heights[i] + 1
 		if g.separators[i][0]&GridH > 0 {
-			r.screen.SetContent(g.x+style.Margin.Left, cy, box.LeftT, nil, r.style)
-			r.repeat(g.x+style.Margin.Left+1, cy, 1, 0, style.Padding.Left, box.InnerH)
+			r.screen.SetContent(g.x+style.Margin().Left, cy, box.LeftT, nil, r.style)
+			r.repeat(g.x+style.Margin().Left+1, cy, 1, 0, style.Padding().Left, box.InnerH)
 		}
 		if g.separators[i][len(g.columns)-1]&GridH > 0 {
 			r.screen.SetContent(rx, cy, box.RightT, nil, r.style)
-			r.repeat(rx-1, cy, -1, 0, style.Padding.Right, box.InnerH)
+			r.repeat(rx-1, cy, -1, 0, style.Padding().Right, box.InnerH)
 		}
 	}
 
 	// draw inner grid lines
-	cy = g.y + style.Margin.Top + style.Padding.Top
+	cy = g.y + style.Margin().Top + style.Padding().Top
 	for row := range len(g.rows) {
-		cx = g.x + style.Margin.Left + style.Padding.Left + g.widths[0] + 1
+		cx = g.x + style.Margin().Left + style.Padding().Left + g.widths[0] + 1
 		cy += g.heights[row] + 1
 		for c := range len(g.columns) {
 			connector := 0

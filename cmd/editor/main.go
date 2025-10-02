@@ -15,7 +15,9 @@ func main() {
 	editor.SetTabWidth(4)
 	editor.UseSpaces(false)
 	editor.SetAutoIndent(true)
-	editor.SetStyle("", NewStyle("", "").SetCursor("*bar"))
+
+	builder := NewBuilder(TokyoNightTheme())
+	builder.Apply(editor)
 
 	// Load some sample content
 	sampleText := `// Welcome to the Zeichenwerk Editor!

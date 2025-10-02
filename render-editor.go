@@ -111,7 +111,7 @@ func (r *Renderer) renderEditor(editor *Editor, x, y, w, h int) {
 //   - Consistent spacing and padding for professional appearance
 func (r *Renderer) renderLineNumbers(editor *Editor, x, y, width, height int) {
 	// Use a dimmed style for line numbers
-	r.SetStyle(editor.Style("linenumber"))
+	r.SetStyle(editor.Style("line-numbers"))
 
 	for i := 0; i < height && editor.offsetY+i < len(editor.content); i++ {
 		lineNum := editor.offsetY + i + 1 // 1-based line numbers
@@ -127,13 +127,13 @@ func (r *Renderer) renderLineNumbers(editor *Editor, x, y, width, height int) {
 
 		// Highlight current line number if this is the cursor line
 		if editor.offsetY+i == editor.line {
-			r.SetStyle(editor.Style("linenumber:current"))
+			r.SetStyle(editor.Style("current-line-number"))
 			if padding > 0 {
 				r.text(x, y+i, strings.Repeat(" ", padding)+lineStr, width)
 			} else {
 				r.text(x, y+i, lineStr, width)
 			}
-			r.SetStyle(editor.Style("linenumber"))
+			r.SetStyle(editor.Style("line-numbers"))
 		}
 	}
 
@@ -174,7 +174,7 @@ func (r *Renderer) renderLineNumbers(editor *Editor, x, y, width, height int) {
 //   - Control characters may be visualized (future enhancement)
 func (r *Renderer) renderEditorContent(editor *Editor, x, y, w, h int) {
 	// Set normal text style
-	r.SetStyle(editor.Style(""))
+	r.SetStyle(editor.Style())
 
 	// Render visible lines
 	for i := range h {
@@ -192,11 +192,12 @@ func (r *Renderer) renderEditorContent(editor *Editor, x, y, w, h int) {
 		visibleLine := r.getVisibleLineContent(line, editor.offsetX, w, editor.tab)
 
 		// Render the line
-		r.text(x, y+i, visibleLine, w)
-
-		// Highlight current line if this is the cursor line
 		if lineIndex == editor.line && editor.Focused() {
-			r.renderCurrentLineHighlight(editor, x, y+i, w)
+			r.SetStyle(editor.Style("current-line"))
+			r.text(x, y+i, visibleLine, w)
+			r.SetStyle(editor.Style())
+		} else {
+			r.text(x, y+i, visibleLine, w)
 		}
 	}
 
@@ -267,23 +268,6 @@ func (r *Renderer) expandTabs(line string, tabWidth int) string {
 	}
 
 	return result.String()
-}
-
-// renderCurrentLineHighlight provides visual highlighting for the current line.
-// This method applies subtle background highlighting to improve cursor visibility.
-//
-// Parameters:
-//   - editor: The Editor widget for style access
-//   - x, y: Position of the line to highlight
-//   - width: Width of the highlighting area
-func (r *Renderer) renderCurrentLineHighlight(editor *Editor, x, y, width int) {
-	// Use current line style if available
-	if style := editor.Style("currentline"); style != nil {
-		r.SetStyle(style)
-		// Apply background highlighting by re-colorizing the line
-		r.colorize(x, y, width, 1)
-		r.SetStyle(editor.Style(""))
-	}
 }
 
 // Helper method to get a substring of runes safely

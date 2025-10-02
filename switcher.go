@@ -126,6 +126,11 @@ func (s *Switcher) FindAt(x, y int) Widget {
 // Hint determines the preferred size of the switcher.
 // The preferred size is the maximum width and height of all children.
 func (s *Switcher) Hint() (int, int) {
+	// If a hint is set manually, we return it instead
+	if s.widthHint != 0 && s.heightHint != 0 {
+		return s.widthHint, s.heightHint
+	}
+
 	width := 0
 	height := 0
 

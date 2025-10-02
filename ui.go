@@ -94,6 +94,7 @@ type UI struct {
 	layers []Container // Stack of widget layers (base layer + popups/modals) for proper z-order rendering
 
 	// Debug infrastructure
+	log    *Log  // Log messages
 	logger *Text // Debug log widget for runtime messages with auto-scrolling capability
 
 	// Performance counters
@@ -156,6 +157,7 @@ func NewUI(theme Theme, root Container, debug bool) (*UI, error) {
 		renderer:   Renderer{theme: theme},
 		layers:     []Container{root},
 		debug:      debug,
+		log:        NewLog(2000),
 		dirty:      true, // Initial draw needed
 		quit:       make(chan struct{}),
 		events:     make(chan tcell.Event, 10),
@@ -715,7 +717,7 @@ func (ui *UI) ShowCursor() {
 	if ui.focus != nil {
 		x, y, _, _ := ui.focus.Content()
 		cx, cy := ui.focus.Cursor()
-		cursor := ui.focus.Style("").Cursor
+		cursor := ui.focus.Style().Cursor()
 		if cursor != "" && cx >= 0 && cy >= 0 {
 			cs := tcell.CursorStyleDefault
 			switch cursor {
@@ -751,8 +753,9 @@ func (ui *UI) ShowCursor() {
 //   - level: Log level
 //   - message: The debug message to add to the log
 func (ui *UI) Log(source Widget, level, message string, params ...any) {
+	ui.log.Add(source.ID(), level, message, params...)
 	if ui.logger != nil {
-		ui.logger.Add(time.Now().Format("15:04:05.000") + fmt.Sprintf(" %-6s %-16s %-10s ", level, source.ID(), WidgetType(source)) + fmt.Sprintf(message, params...))
+		ui.logger.Add(fmt.Sprintf("[%s] %-6s (%-16s) %-10s ", time.Now().Format("15:04:05.000"), level, source.ID(), WidgetType(source)) + fmt.Sprintf(message, params...))
 	}
 }
 
@@ -795,6 +798,9 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 	// Auto sizing
 	if w == 0 || h == 0 {
 		pw, ph := popup.Hint()
+		style := popup.Style()
+		pw += style.Horizontal()
+		ph += style.Vertical()
 		if w == 0 {
 			w = pw
 		}
