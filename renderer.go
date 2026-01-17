@@ -534,6 +534,9 @@ func (r *Renderer) render(widget Widget) {
 	case *List:
 		r.renderBorder(x, y, w, h, style)
 		r.renderList(widget, cx, cy, cw, ch)
+	case *Navigator:
+		r.renderBorder(x, y, w, h, style)
+		r.renderNavigator(widget, cx, cy, cw, ch)
 	case *ProgressBar:
 		r.renderBorder(x, y, w, h, style)
 		r.renderProgressBar(widget, x, y, w, h)

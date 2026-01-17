@@ -1,0 +1,51 @@
+@startuml
+class Insets {
+  Top: int
+  Left: int
+  Bottom: int
+  Right: int
+
+  Horizontal() int
+  Info() string
+  Set(...int)
+  Total() (int, int)
+  Vertical() int
+}
+
+class Style {
+  selector: string
+  fixed: bool
+  background: string
+  foreground: string
+  font: string
+  border: string
+  cursor: string
+
+  Left() int
+  Top() int
+  Horizontal() int
+  Vertical() int
+}
+
+Style -> Style: parent
+Style -down-> Insets: margin
+Style -down-> Insets: padding
+
+class BaseWidget {
+  id: string
+  parent: Container
+  x: int
+  y: int
+  width: int
+  height: int
+  widthHint: int
+  heightHint: int
+  focusable: bool
+  focused: bool
+  hovered: bool
+  styles: map[string]*Style
+  handlers: map[string]Handler
+}
+
+BaseWidget -right-> Style: styles
+@enduml

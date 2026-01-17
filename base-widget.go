@@ -9,7 +9,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// RE to parse part:state style expressions
+// Regular expression to parse part:state style expressions.
+//
 // stylePartRegExp is a compiled regular expression used to parse style part
 // selectors. It matches patterns like "part:state" where both the part and
 // state components are optional and consist of alphanumeric characters,
@@ -34,7 +35,7 @@ var stylePartRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 // the renderer. For new widgets, you also have to extend the renderer to be
 // able to render the widget.
 //
-// Also do not forget to add it to the builder for building and styling.
+// Also do not forget to add it to the builder for easy building and styling.
 type BaseWidget struct {
 	id                    string            // widget identification datum
 	parent                Container         // reference to the parent container
@@ -63,20 +64,8 @@ func (bw *BaseWidget) Content() (int, int, int, int) {
 	style := bw.Style()
 	if style == nil {
 		return bw.x, bw.y, bw.width, bw.height
-	}
-	if style.Margin() != nil && style.Padding() != nil {
-		ix := bw.x + style.Margin().Left + style.Padding().Left
-		iy := bw.y + style.Margin().Top + style.Padding().Top
-		iw := bw.width - style.Horizontal()
-		ih := bw.height - style.Vertical()
-		border := style.Border()
-		if border != "" && border != "none" {
-			ix++
-			iy++
-		}
-		return ix, iy, iw, ih
 	} else {
-		return bw.x, bw.y, bw.width, bw.height
+		return bw.x + style.Left(), bw.y + style.Top(), bw.width - style.Horizontal(), bw.height - style.Vertical()
 	}
 }
 

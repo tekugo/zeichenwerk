@@ -1,4 +1,4 @@
-package zeichenwerk
+package next
 
 import (
 	"reflect"
