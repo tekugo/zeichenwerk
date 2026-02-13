@@ -7,7 +7,7 @@ package next
 // Layout behavior:
 //   - Fixed sizes: Positive width/height values are treated as absolute sizes
 //   - Auto sizes: Zero values use the widget's preferred size hint
-//   - Flexible sizes: Negative values are treated as fractional units of remaining space
+//   - Flexible sizes: Negative values are treated as fractions of remaining space
 //   - Spacing: Applied between adjacent children (not at edges)
 type Flex struct {
 	Component

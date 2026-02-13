@@ -51,10 +51,11 @@ func Find(container Container, id string) Widget {
 //   - T: An array containing all found widgets, may be empty, but never nil
 func FindAll[T any](container Container) []T {
 	var result []T
-	Traverse(container, func(widget Widget) {
+	Traverse(container, func(widget Widget) bool {
 		if val, ok := widget.(T); ok {
 			result = append(result, val)
 		}
+		return true
 	})
 	return result
 }
@@ -77,7 +78,7 @@ func FindAt(container Container, x, y int) Widget {
 	}
 
 	for _, child := range container.Children() {
-		visible := child.Flag("visible")
+		visible := !child.Flag("hidden")
 		if !visible {
 			continue
 		}
@@ -97,8 +98,9 @@ func FindAt(container Container, x, y int) Widget {
 	return container
 }
 
-// Layout recursively triggers layout on all child containers within the given container.
-// Ensures the entire widget hierarchy is properly laid out after changes.
+// Layout recursively triggers layout on all child containers within the given
+// container. Ensures the entire widget hierarchy is properly laid out after
+// changes.
 //
 // Parameters:
 //   - container: The container whose child containers should be laid out
@@ -110,15 +112,17 @@ func Layout(container Container) {
 	}
 }
 
-// Traverse recursively visits all widgets in the container hierarchy and applies
-// the given function to each widget. Uses depth-first traversal order.
+// Traverse recursively visits all widgets in the container hierarchy and
+// applies the given function to each widget. Uses depth-first traversal order.
 //
 // Parameters:
 //   - container: The container to traverse
 //   - fn: The function to apply to each widget
-func Traverse(container Container, fn func(Widget)) {
+func Traverse(container Container, fn func(Widget) bool) {
 	for _, child := range container.Children() {
-		fn(child)
+		if !fn(child) {
+			continue
+		}
 		if inner, ok := child.(Container); ok {
 			Traverse(inner, fn)
 		}

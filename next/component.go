@@ -89,7 +89,7 @@ func (c *Component) Dispatch(event string, data ...any) bool {
 	handlers, ok := c.handlers[event]
 	if ok {
 		for _, handler := range handlers {
-			handled = handler(event, data...)
+			handled = handler(c, event, data...)
 			if handled {
 				return true
 			}
@@ -250,6 +250,7 @@ func (c *Component) Render(r *Renderer) {
 	if border != "" && border != "none" {
 		parts := strings.Split(border, " ")
 		if len(parts) > 1 {
+			border = parts[0]
 			fg := parts[1]
 			bg := style.Background()
 			if len(parts) > 2 {
@@ -314,6 +315,8 @@ func (c *Component) SetParent(parent Container) {
 func (c *Component) State() string {
 	if c.Flag("disabled") {
 		return "disabled"
+	} else if c.Flag("pressed") {
+		return "pressed"
 	} else if c.Flag("focused") {
 		return "focused"
 	} else if c.Flag("hovered") {
@@ -357,9 +360,14 @@ func (c *Component) SetStyle(selector string, style *Style) {
 //   - *Style: The style configuration for the selector, or nil if not found
 func (c *Component) Style(params ...string) *Style {
 	// If no parameter is specified, we get the default style ""
-	selector := ""
+	var selector string
 	if len(params) > 0 {
 		selector = params[0]
+	} else {
+		selector = c.State()
+		if selector != "" {
+			selector = ":" + selector
+		}
 	}
 
 	// If no style is set, we create an empty default one

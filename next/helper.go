@@ -27,13 +27,36 @@ func FindUI(widget Widget) *UI {
 	return nil
 }
 
-func OnKey(widget Widget, handler func(*tcell.EventKey) bool) {
-	widget.On("key", func(event string, data ...any) bool {
+// OnKey registers a key event handler for the given widget.
+func OnKey(widget Widget, handler func(Widget, *tcell.EventKey) bool) {
+	if widget == nil {
+		return
+	}
+
+	widget.On("key", func(widget Widget, event string, data ...any) bool {
 		if len(data) != 1 {
 			return false
 		}
 		if ev, ok := data[0].(*tcell.EventKey); ok {
-			return handler(ev)
+			return handler(widget, ev)
+		} else {
+			return false
+		}
+	})
+}
+
+// OnMouse registers a mouse event handler for the given widget.
+func OnMouse(widget Widget, handler func(Widget, *tcell.EventMouse) bool) {
+	if widget == nil {
+		return
+	}
+
+	widget.On("mouse", func(widget Widget, event string, data ...any) bool {
+		if len(data) != 1 {
+			return false
+		}
+		if ev, ok := data[0].(*tcell.EventMouse); ok {
+			return handler(widget, ev)
 		} else {
 			return false
 		}
@@ -48,15 +71,8 @@ func Redraw(widget Widget) {
 	}
 }
 
-// WidgetType returns a clean, human-readable string representation of the widget's type.
-// This function extracts the type name from the widget's Go type, removing the
-// package prefix and pointer notation to provide a simple type identifier.
-//
-// Parameters:
-//   - widget: The widget to get the type name for
-//
-// Returns:
-//   - string: The clean widget type name without package prefix
+// WidgetType returns a clean, human-readable string representation of the
+// widget's type.
 func WidgetType(widget Widget) string {
 	return strings.TrimPrefix(fmt.Sprintf("%T", widget), "*next.")
 }

@@ -2,7 +2,9 @@ package next
 
 import (
 	"fmt"
-	"strings"
+	"os"
+	"runtime/debug"
+	"time"
 
 	"github.com/gdamore/tcell/v3"
 )
@@ -78,7 +80,8 @@ type UI struct {
 	layers []Container // Stack of widget layers (base layer + popups/modals) for proper z-order rendering
 
 	// Debug infrastructure
-	log *Log // Log messages
+	log    *Log  // Log messages
+	logger *Text // Debug log widget for runtime messages with auto-scrolling capability
 
 	// Performance counters
 	redraws  int // Counter for individual widget redraws (debugging and performance monitoring)
@@ -103,36 +106,6 @@ type UI struct {
 // Returns:
 //   - *UI: The initialized UI application instance ready for Run()
 //   - error: Any error that occurred during initialization (currently always nil)
-//
-// # Initialization Process
-//
-//  1. Creates the UI instance with communication channels and default settings
-//  2. Establishes the parent-child relationship with the root container
-//  3. Configures the renderer with the provided theme
-//  4. Sets up the layer stack with the root container as the base layer
-//  5. Connects to debug log widget if present (ID: "debug-log")
-//
-// # Debug Mode
-//
-// When debug is true, the UI will:
-//   - Display a debug information bar at the bottom of the screen
-//   - Show performance counters, focus/hover state, and layer information
-//   - Log events and state changes to the debug log widget
-//   - Reserve the bottom line of the screen for debug display
-//
-// # Example Usage
-//
-//	theme := zeichenwerk.TokyoNightTheme()
-//	root := zeichenwerk.NewBuilder(theme).
-//		Label("hello", "Hello World", 0).
-//		Container()
-//	ui, err := zeichenwerk.NewUI(theme, root, false)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	if err := ui.Run(); err != nil {
-//		log.Fatal(err)
-//	}
 func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 	ui := &UI{
 		Component: Component{id: "root", x: 0, y: 0, width: 0, height: 0},
@@ -148,6 +121,16 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		refresh:   make(chan struct{}, 1),
 	}
 
+	// Connect debug log
+	logger := Find(ui, "debug-log")
+	if logger != nil {
+		if text, ok := logger.(*Text); ok {
+			ui.logger = text
+			ui.Log(ui, "debug", "==== Debug log started! ====")
+			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
+		}
+	}
+
 	root.SetParent(ui)
 	return ui, nil
 }
@@ -158,59 +141,23 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 // Handle processes tcell events and coordinates their handling throughout the
 // application. This is the main event processing method that handles keyboard
 // input, mouse events, and screen resize events.
-//
-// # Event Processing Flow
-//
-// The UI uses a hierarchical event handling system where events are first
-// offered to the most specific widget (focused or hovered), then propagated
-// up the parent chain until handled or reaching the root UI.
-//
-// # Event Types
-//
-// Keyboard Events (*tcell.EventKey):
-//  1. Event is first propagated to the focused widget and its parent chain
-//  2. If not handled, global application shortcuts are processed
-//  3. Unhandled events are discarded
-//
-// Mouse Events (*tcell.EventMouse):
-//   - Determines which widget is at the mouse position
-//   - Updates hover state (clearing old, setting new)
-//   - Propagates the event to the hovered widget
-//   - Triggers screen refresh if hover state changed
-//
-// Resize Events (*tcell.EventResize):
-//   - Updates UI dimensions from the screen
-//   - Recalculates layout for all layers
-//   - Synchronizes screen buffer and triggers refresh
-//
-// # Global Keyboard Shortcuts
-//
-//   - Tab: Navigate to next focusable widget
-//   - Shift+Tab: Navigate to previous focusable widget
-//   - Escape: Close current popup layer (if multiple layers exist)
-//   - Ctrl+C, Ctrl+Q: Quit the application
-//   - Ctrl+D: Open widget inspector (debug mode)
-//   - 'q', 'Q': Quit the application
-//
 // # Parameters
 //
 //   - event: The tcell.Event to process (keyboard, mouse, resize, etc.)
 //
 // # Returns
-//
 //   - bool: Always returns true as the UI is the root event handler
 func (ui *UI) Handle(event tcell.Event) bool {
 	switch event := event.(type) {
 	case *tcell.EventKey:
-		// First try to handle the event with the focused widget
-		// If the event is handled by the focused widget, we do not process the
-		// event any further.
-		if ui.propagate(ui.focus, event) {
+		// First try to handle the event with the focused widget.
+		// If the event is handled by the focused widget or one of its parents
+		// we do not process the event any further.
+		if ui.dispatch(ui.focus, "key", event) {
 			break
 		}
 
 		// Handle global app events, if the keyboard event was propagated
-		ui.Log(ui, "debug", "Handling key event %v", event)
 		switch event.Key() {
 		case tcell.KeyTab:
 			ui.SetFocus("next")
@@ -239,12 +186,12 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		at := FindAt(ui, mx, my)
 		if at != ui.hover {
 			if ui.hover != nil {
-				ui.hover.SetFlag("hover", false)
+				ui.hover.SetFlag("hovered", false)
 				ui.Redraw(ui.hover)
 			}
 			if at != nil {
 				ui.hover = at
-				at.SetFlag("hover", true)
+				at.SetFlag("hovered", true)
 				ui.Redraw(at)
 			}
 		} else {
@@ -255,16 +202,19 @@ func (ui *UI) Handle(event tcell.Event) bool {
 				}
 			}
 		}
-		ui.propagate(ui.hover, event)
+		ui.dispatch(ui.hover, "hover", event)
 
 	case *tcell.EventPaste:
-		ui.propagate(ui.focus, event)
+		ui.dispatch(ui.focus, "paste", event)
 
 	case *tcell.EventResize:
-		ui.width, ui.height = ui.screen.Size()
-		ui.Layout()
-		ui.Draw() // Redraw after resize
-		ui.screen.Sync()
+		w, h := ui.screen.Size()
+		if ui.width != w || ui.height != h {
+			ui.width, ui.height = w, h
+			ui.Layout()
+			ui.Refresh()
+			ui.screen.Sync()
+		}
 	}
 
 	return true
@@ -281,18 +231,11 @@ func (ui *UI) Handle(event tcell.Event) bool {
 //
 // Returns:
 //   - bool: true if any widget in the chain handled the event, false otherwise
-func (ui *UI) propagate(target Widget, event tcell.Event) bool {
+func (ui *UI) dispatch(target Widget, event string, data ...any) bool {
 	current := target
 	handled := false
 	for current != nil && !handled && current != ui {
-		switch event := event.(type) {
-		case *tcell.EventKey:
-			handled = current.Dispatch("key", event)
-		case *tcell.EventMouse:
-			handled = current.Dispatch("mouse", event)
-		case *tcell.EventResize:
-			handled = current.Dispatch("resize", event)
-		}
+		handled = current.Dispatch(event, data...)
 		current = current.Parent()
 	}
 	return handled
@@ -315,23 +258,6 @@ func (ui *UI) Children() []Widget {
 // This method is called automatically when the screen is resized or when
 // the UI structure changes. It ensures that all widgets are properly
 // positioned and sized according to their layout constraints.
-//
-// Layout process:
-//  1. Calculate available screen space (reserving bottom line for debug if enabled)
-//  2. Set bounds for the base layer (root container) to fill available space
-//  3. Trigger layout calculation for the root container and all its children
-//  4. Additional layers (popups) maintain their existing bounds and layouts
-//
-// Debug mode considerations:
-//   - In debug mode, the bottom line is reserved for debug information display
-//   - This reduces the available height for the main UI by one line
-//   - Popup layers are not affected by debug mode space reservation
-//
-// This method should be called whenever:
-//   - The terminal window is resized
-//   - The UI structure changes (widgets added/removed)
-//   - Debug mode is toggled
-//   - Manual layout refresh is needed
 func (ui *UI) Layout() {
 	// Set the bounds of the root widget to the screen bounds.
 	// In debug mode, the bottom line is reserved for debug information
@@ -348,18 +274,8 @@ func (ui *UI) Layout() {
 // ---- Drawing Methods -------------------------------------------------------
 
 // Draw renders the entire application to the screen.
-// This method handles cursor positioning, debug information display,
-// and coordinates the rendering of all widgets through the renderer.
-//
-// The draw process includes:
-//   - Positioning the cursor based on the focused widget
-//   - Rendering debug information if debug mode is enabled
-//   - Triggering the main widget rendering pipeline
-//   - Displaying debug logs in debug mode
-//   - Showing the final rendered frame to the user
-//
-// The method only performs actual rendering if the dirty flag is set,
-// providing efficient updates by avoiding unnecessary redraws.
+// This method handles cursor positioning, debug information display, and
+// coordinates the rendering of all widgets through the renderer.
 func (ui *UI) Draw() {
 	if !ui.dirty {
 		return
@@ -383,8 +299,6 @@ func (ui *UI) Draw() {
 // Parameters:
 //   - widget: Widget to redraw
 func (ui *UI) DrawWidget(widget Widget) {
-	ui.screen.ShowCursor(1, 10)
-	ui.screen.Show()
 	ui.redraws++
 	widget.Render(ui.renderer)
 	ui.ShowCursor()
@@ -395,40 +309,10 @@ func (ui *UI) DrawWidget(widget Widget) {
 // Redraw queues the specified widget for individual redraw optimization.
 // This method provides a performance optimization by redrawing only the
 // changed widget instead of the entire screen.
-//
-// # Behavior
-//
-// The method attempts to enqueue the widget in the redraw channel without blocking.
-// If the redraw channel is full (indicating heavy redraw activity), it falls back
-// to triggering a complete screen refresh instead.
-//
-// # Usage Guidelines
-//
-// Use Redraw when:
-//   - Only a single widget's content or state has changed
-//   - The widget's position and size remain unchanged
-//   - Other widgets on screen are not affected by the change
-//   - Performance optimization is desired for frequent updates
-//
-// Use Refresh instead when:
-//   - Multiple widgets have changed
-//   - Layout has been modified
-//   - Widget positions or sizes have changed
-//   - Focus or hover states have changed
-//
-// # Performance Benefits
-//
-// Individual widget redraws are significantly faster than full screen refreshes
-// because they:
-//   - Skip layout calculations
-//   - Only render the specific widget
-//   - Avoid traversing the entire widget hierarchy
-//   - Minimize terminal output operations
 func (ui *UI) Redraw(widget Widget) {
 	select {
 	case ui.redraw <- widget:
 	default:
-		ui.Log(ui, "debug", "Redraw queue full")
 		ui.Refresh()
 	}
 }
@@ -436,36 +320,6 @@ func (ui *UI) Redraw(widget Widget) {
 // Refresh triggers a complete screen redraw for all visible widgets.
 // This method sets the dirty flag and signals the main event loop to perform
 // a full rendering pass on the next iteration.
-//
-// # Behavior
-//
-// The method performs two operations:
-//  1. Sets the dirty flag to true, marking the screen as needing an update
-//  2. Attempts to send a signal through the refresh channel without blocking
-//
-// If the refresh channel is full (indicating a refresh is already pending),
-// the signal is skipped to avoid blocking and prevent redundant refreshes.
-//
-// # When to Use
-//
-// Call Refresh when:
-//   - Multiple widgets have changed and need updating
-//   - Layout modifications have occurred (position, size changes)
-//   - Focus or hover states have changed
-//   - Theme changes have been applied
-//   - Layer stack modifications (popups opened/closed)
-//   - Initial rendering or major state changes
-//
-// # Performance Considerations
-//
-// Full screen refreshes are more expensive than individual widget redraws
-// because they:
-//   - Traverse the entire widget hierarchy
-//   - Recalculate cursor positioning
-//   - Render debug information (if enabled)
-//   - Update all visible layers
-//
-// For single widget updates, prefer using Redraw() for better performance.
 func (ui *UI) Refresh() {
 	ui.dirty = true
 	select {
@@ -477,37 +331,8 @@ func (ui *UI) Refresh() {
 // ShowDebug renders the debug information bar at the bottom of the screen.
 // This method displays real-time debugging information when debug mode is enabled,
 // providing insights into the application's current state and performance metrics.
-//
-// Debug information displayed:
-//   - Frame counter: Number of frames rendered (performance indicator)
-//   - Screen dimensions: Current terminal width and height
-//   - Layer count: Number of active UI layers (main + popups)
-//   - Focused widget: ID of the currently focused widget (or "<nil>")
-//   - Hovered widget: ID of the currently hovered widget (or "<nil>")
-//
-// Visual formatting:
-//   - Uses green background with black text for high visibility
-//   - Positioned at the bottom line of the screen (height-1)
-//   - Spans the full width of the terminal
-//   - Uses Unicode box-drawing characters (│) as separators
-//
-// The debug bar is only rendered when debug mode is enabled and provides
-// valuable information for:
-//   - Performance monitoring (frame counter)
-//   - Layout debugging (screen dimensions, layer count)
-//   - Interaction debugging (focus and hover state)
-//   - Widget hierarchy troubleshooting
-//
-// This method is called automatically during the rendering process.
 func (ui *UI) ShowDebug() {
 	if ui.debug {
-		for i, entry := range ui.log.entries {
-			if i >= ui.height-5 {
-				break
-			}
-			ui.renderer.Text(25, 2+i, fmt.Sprintf("%16s %s", entry.Source, entry.Message), 0)
-		}
-
 		focus := "<nil>"
 		hover := "<nil>"
 		if ui.focus != nil {
@@ -533,26 +358,12 @@ func (ui *UI) ShowDebug() {
 //
 // Parameters:
 //   - widget: The widget to receive focus, or nil to clear focus
-//
-// Focus transition process:
-//  1. If a widget is currently focused and different from the target, clear its focus state
-//  2. If the target widget is not nil, set its focus state to true
-//  3. Update the UI's internal focus reference
-//  4. Trigger a screen refresh to update visual focus indicators
-//
-// Visual effects:
-//   - Previously focused widget loses focus styling (borders, highlights)
-//   - Newly focused widget gains focus styling according to its theme
-//   - Cursor positioning is updated based on the new focused widget
-//
-// The method is safe to call with nil to clear focus entirely, and handles
-// the case where the same widget is already focused without unnecessary updates.
 func (ui *UI) Focus(widget Widget) {
 	if ui.focus != nil && ui.focus != widget {
-		ui.focus.SetFlag("focus", false)
+		ui.focus.SetFlag("focused", false)
 	}
 	if widget != nil {
-		widget.SetFlag("focus", true)
+		widget.SetFlag("focused", true)
 	}
 	ui.focus = widget
 	ui.Refresh()
@@ -571,25 +382,15 @@ func (ui *UI) Focus(widget Widget) {
 //   - "next": Focus the next focusable widget (wraps to first if at end)
 //   - "previous": Focus the previous focusable widget (wraps to last if at beginning)
 //   - Any other value: Defaults to "first"
-//
-// Navigation behavior:
-//   - Only considers widgets that return true for Focusable()
-//   - Operates on the topmost layer (current popup or main UI)
-//   - Implements wrapping: next from last goes to first, previous from first goes to last
-//   - Traverses widgets in document order (depth-first tree traversal)
-//
-// Use cases:
-//   - Tab key navigation (next)
-//   - Shift+Tab navigation (previous)
-//   - Home key (first)
-//   - End key (last)
-//   - Initial focus setup when opening dialogs
 func (ui *UI) SetFocus(which string) {
 	var first, previous, next, last Widget
 	found := false
-	Traverse(ui.layers[len(ui.layers)-1], func(widget Widget) {
-		if widget.Flag("hidden") || !widget.Flag("focusable") {
-			return
+	Traverse(ui.layers[len(ui.layers)-1], func(widget Widget) bool {
+		if widget.Flag("hidden") {
+			return false
+		}
+		if !widget.Flag("focusable") {
+			return true
 		}
 		if first == nil {
 			first = widget
@@ -602,6 +403,7 @@ func (ui *UI) SetFocus(which string) {
 			next = widget
 		}
 		last = widget
+		return true
 	})
 	switch which {
 	case "last":
@@ -627,11 +429,6 @@ func (ui *UI) SetFocus(which string) {
 // The cursor appearance and position are determined by the focused widget's
 // cursor style configuration and current cursor position.
 //
-// Cursor positioning:
-//   - Uses the focused widget's content area as the base coordinate system
-//   - Adds the widget's internal cursor offset to determine final screen position
-//   - Automatically hides cursor if no widget is focused or cursor is disabled
-//
 // Supported cursor styles:
 //   - "|", "bar", "steady-bar": Steady vertical bar cursor
 //   - "*|", "*bar", "blinking-bar": Blinking vertical bar cursor
@@ -639,15 +436,6 @@ func (ui *UI) SetFocus(which string) {
 //   - "*#", "blinking-block", "*block": Blinking block cursor
 //   - "_", "underline", "steady-underline": Steady underline cursor
 //   - "*_", "blinking-underline", "*underline": Blinking underline cursor
-//
-// Cursor visibility rules:
-//   - Cursor is shown only if a widget is focused
-//   - Widget must have a non-empty cursor style configured
-//   - Widget must provide valid cursor coordinates (>= 0)
-//   - Cursor is hidden if any of the above conditions are not met
-//
-// This method is called automatically during the rendering process
-// and should not typically be called directly by application code.
 func (ui *UI) ShowCursor() {
 	// Show cursor
 	if ui.focus != nil {
@@ -689,6 +477,9 @@ func (ui *UI) ShowCursor() {
 //   - message: The debug message to add to the log
 func (ui *UI) Log(source Widget, level, message string, params ...any) {
 	ui.log.Add(source.ID(), level, message, params...)
+	if ui.logger != nil {
+		ui.logger.Add(fmt.Sprintf("[%s] %-6s (%-16s) %-10s ", time.Now().Format("15:04:05.000"), level, source.ID(), WidgetType(source)) + fmt.Sprintf(message, params...))
+	}
 }
 
 // ---- Popup and Layer Handling ---------------------------------------------
@@ -711,21 +502,6 @@ func (ui *UI) Log(source Widget, level, message string, params ...any) {
 //   - y = -1: Center vertically on screen
 //   - y < -1: Position relative to bottom edge (e.g., -3 = 1 chars from bottom)
 //   - y >= 0: Absolute position from top edge
-//
-// Layer management:
-//   - Adds popup as new topmost layer
-//   - Sets UI as parent of the popup container
-//   - Applies specified bounds and triggers layout
-//   - Automatically focuses first focusable widget in popup
-//   - Triggers screen refresh to display the popup
-//
-// Example usage:
-//
-//	// Centered dialog
-//	ui.Popup(-1, -1, 40, 10, dialog)
-//
-//	// Bottom-right positioned popup
-//	ui.Popup(-2, -3, 30, 8, contextMenu)
 func (ui *UI) Popup(x, y, w, h int, popup Container) {
 	// Auto sizing
 	if w == 0 || h == 0 {
@@ -768,22 +544,6 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 // This method is typically used to close popup dialogs, modal windows,
 // or other overlay widgets that were added as additional layers.
 // The base layer (main UI) cannot be closed using this method.
-//
-// Behavior:
-//   - Only closes layers if more than one layer exists (protects base layer)
-//   - Removes the topmost layer from the stack
-//   - Automatically sets focus to the first focusable widget in the remaining top layer
-//   - Logs the close operation for debugging purposes
-//   - Triggers a screen refresh to update the display
-//
-// Use cases:
-//   - Closing popup dialogs (OK/Cancel buttons)
-//   - Dismissing modal windows (Escape key handler)
-//   - Removing temporary overlays or context menus
-//   - Implementing navigation back functionality
-//
-// The method is safe to call even when only the base layer exists,
-// as it includes protection against closing the main UI layer.
 func (ui *UI) Close() {
 	if len(ui.layers) > 1 {
 		ui.layers = ui.layers[:len(ui.layers)-1]
@@ -792,87 +552,11 @@ func (ui *UI) Close() {
 	ui.Refresh()
 }
 
-// FindOn locates a widget by ID and attaches an event handler to it.
-// This is a convenience method that combines widget lookup with event handler
-// registration, providing a simple way to set up event handling for specific widgets.
-//
-// Parameters:
-//   - id: The unique identifier of the widget to find
-//   - event: The event name to listen for (e.g., "click", "change", "select")
-//   - handler: The event handler function to attach
-//
-// Handler function signature:
-//   - func(Widget, string, ...any) bool
-//   - First parameter: The widget that triggered the event
-//   - Second parameter: The event name
-//   - Remaining parameters: Event-specific data
-//   - Return value: true if event was handled, false to continue propagation
-//
-// Behavior:
-//   - Searches the entire widget hierarchy for the specified ID
-//   - If widget is found, attaches the handler for the specified event
-//   - If widget is not found, the operation is silently ignored
-//   - Multiple handlers can be attached to the same widget/event combination
-//
-// Common event types:
-//   - "click": Button clicks, list item activation
-//   - "change": Input field text changes, selection changes
-//   - "select": List item selection, focus changes
-//   - "key": Raw keyboard events not handled by widget
-//
-// Example usage:
-//
-//	ui.FindOn("ok-button", "click", func(w Widget, event string, data ...any) bool {
-//		fmt.Println("OK button clicked")
-//		return true
-//	})
-func (ui *UI) FindOn(id, event string, handler Handler) {
-	widget := Find(ui, id)
-	if widget != nil {
-		widget.On(event, handler)
-	}
-}
-
 // ---- Run Loop -------------------------------------------------------------
 
 // Run starts the main application event loop and blocks until the application
 // exits. This is the primary method that drives the TUI application, handling
 // all events, rendering, and application lifecycle management.
-//
-// # Initialization Phase
-//
-// Before entering the event loop, Run performs the following initialization:
-//
-//  1. Creates and initializes a new tcell screen for terminal interaction
-//  2. Enables mouse event support for hover detection and click interactions
-//  3. Sets up the default screen style (black background, white foreground)
-//  4. Configures the renderer with the screen interface
-//  5. Determines initial screen dimensions
-//  6. Sets initial focus to the first focusable widget
-//  7. Performs initial layout calculation and screen rendering
-//  8. Starts the background event polling goroutine
-//
-// # Event Loop
-//
-// The main event loop handles the following in order of priority:
-//  1. Quit signals - highest priority for graceful shutdown
-//  2. Individual widget redraw requests - performance optimization
-//  3. Full screen refresh requests - complete re-rendering
-//  4. Input events - keyboard, mouse, and resize events
-//
-// # Shutdown Process
-//
-// When a quit signal is received, the method:
-//  1. Calls screen.Fini() to restore terminal state
-//  2. Returns nil to indicate successful shutdown
-//
-// # Error Conditions
-//
-// The method returns an error if:
-//   - Screen creation fails (terminal not available, permissions, etc.)
-//   - Screen initialization fails (terminal capabilities, size detection)
-//
-// # Concurrency
 //
 // Run spawns a background goroutine (EventLoop) to poll for tcell events
 // and forward them to the main event loop channel. This prevents the main
@@ -890,6 +574,15 @@ func (ui *UI) Run() error {
 		return err
 	}
 
+	defer func() {
+		ui.screen.Fini()
+		if r := recover(); r != nil {
+			fmt.Printf("Panic: %v\n", r)
+			debug.PrintStack()
+			os.Exit(1)
+		}
+	}()
+
 	// Enable mouse events
 	ui.screen.EnableMouse()
 
@@ -901,21 +594,17 @@ func (ui *UI) Run() error {
 
 	// Take screen size for the root
 	ui.width, ui.height = ui.screen.Size()
+	ui.Layout()
 
 	// Set initial focus
 	ui.SetFocus("first")
 
-	// Initial draw
-	ui.Layout()
-	ui.Draw()
-
+	// Event handling loop
 	go ui.EventLoop()
 
-	// Event handling loop
 	for {
 		select {
 		case <-ui.quit:
-			ui.screen.Fini()
 			return nil
 		case widget := <-ui.redraw:
 			ui.DrawWidget(widget)
@@ -930,22 +619,6 @@ func (ui *UI) Run() error {
 // EventLoop continuously polls for tcell events and forwards them to the main event loop.
 // This method runs in a separate goroutine to prevent blocking the main event loop
 // during event polling operations.
-//
-// # Operation
-//
-// The method runs an infinite loop that:
-//  1. Calls screen.PollEvent() to wait for the next terminal event
-//  2. Forwards non-nil events to the main event loop via the events channel
-//  3. Continues polling until the application terminates
-//
-// # Concurrency Design
-//
-// This separation of event polling from event processing allows the main event loop
-// to handle multiple types of operations (rendering, widget updates, shutdown) without
-// being blocked by the synchronous nature of tcell's event polling.
-//
-// The goroutine automatically terminates when the screen is finalized during
-// application shutdown, as PollEvent() will return nil or panic.
 func (ui *UI) EventLoop() {
 	for {
 		ev := <-ui.screen.EventQ()
@@ -963,56 +636,14 @@ func (ui *UI) EventLoop() {
 //
 // Parameters:
 //   - theme: The new theme to apply to the application
-//
-// Process:
-//  1. Updates the renderer's theme reference
-//  2. Recursively re-applies theme styles to all widgets in all layers
-//  3. Triggers a complete screen refresh to show the new styling
-//
-// The method traverses the entire widget hierarchy and re-applies the appropriate
-// theme styles based on each widget's type, class, and ID. This ensures that
-// all visual elements immediately reflect the new theme.
-//
-// Example usage:
-//
-//	// Switch to Nord theme
-//	ui.SetTheme(NordTheme())
-//
-//	// Switch to Tokyo Night theme
-//	ui.SetTheme(TokyoNightTheme())
-//
-// SetTheme applies a new theme to the UI and all its widgets.
-// This method updates the renderer's theme and re-applies theme styles
-// to all widgets in the widget hierarchy, ensuring consistent visual
-// appearance throughout the application.
-//
-// The method performs the following operations:
-//   - Updates the renderer's theme reference
-//   - Creates a new builder with the new theme
-//   - Traverses all widgets and applies the new theme styles
-//   - Triggers a UI refresh to update the display
-//
-// Parameters:
-//   - theme: The new theme to apply to the UI and all widgets
-//
-// Example usage:
-//
-//	// Switch to dark theme
-//	ui.SetTheme(NewDarkTheme())
-//
-//	// Apply a custom theme
-//	customTheme := NewCustomTheme()
-//	ui.SetTheme(customTheme)
-//
-// Note: This operation affects all widgets in the UI hierarchy and
-// triggers a complete visual refresh of the interface.
 func (ui *UI) SetTheme(theme *Theme) {
 	ui.renderer.theme = theme
 
 	// Re-apply theme styles to all widgets
 	builder := NewBuilder(theme)
-	Traverse(ui, func(widget Widget) {
+	Traverse(ui, func(widget Widget) bool {
 		builder.Apply(widget)
+		return true
 	})
 
 	ui.Refresh()
@@ -1026,20 +657,4 @@ func (ui *UI) SetTheme(theme *Theme) {
 //   - Theme: The currently active theme
 func (ui *UI) Theme() *Theme {
 	return ui.renderer.theme
-}
-
-// ---- Helper functions -----------------------------------------------------
-
-// print recursively logs information about a container and its child widgets.
-// This is a debug utility function that traverses the widget hierarchy and
-// outputs detailed information about each widget including its type, ID, and state.
-// The level parameter controls indentation for nested containers.
-func print(level int, container Container) {
-	for i, widget := range container.Children() {
-		container.Log(widget, "debug", "%s %3d %T %s %s\n", strings.Repeat(" ", level), i, widget, widget.ID(), widget.Info())
-		c, ok := widget.(Container)
-		if ok {
-			print(level+1, c)
-		}
-	}
 }

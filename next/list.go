@@ -69,7 +69,7 @@ func NewList(id string, items []string) *List {
 		scrollbar: true,
 	}
 	list.SetFlag("focusable", true)
-	OnKey(list, list.HandleKey)
+	OnKey(list, list.handleKey)
 	return list
 }
 
@@ -79,87 +79,75 @@ func NewList(id string, items []string) *List {
 // This method should be called whenever the list's visual state has changed
 // and needs to be reflected on screen.
 func (l *List) Refresh() {
-	l.parent.Refresh()
-	// Redraw(l)
+	Redraw(l)
 }
 
 // ---- Movements ------------------------------------------------------------
 
-// Up moves the highlight position up by the specified number of items.
+// Skip skips all disabled items in the given direction.
+func (l *List) skip(index, direction int) int {
+	next := index
+	for next >= 0 && next < len(l.items) && slices.Contains(l.disabled, next) {
+		next += direction
+	}
+
+	// Did we go past the first item, then look for the first enabled one
+	if next < 0 {
+		next = -1
+		for i := range l.items {
+			if !slices.Contains(l.disabled, i) {
+				next = i
+				break
+			}
+		}
+		// Otherwise did we go past the end, look for the last enabled one
+	} else if next >= len(l.items) {
+		next = -1
+		for i := len(l.items) - 1; i >= 0; i-- {
+			if !slices.Contains(l.disabled, i) {
+				next = i
+				break
+			}
+		}
+	}
+	return next
+}
+
+// Move moves the highlight position up or down the specified number of steps.
 // This method provides intelligent navigation that skips disabled items and
 // handles boundary conditions gracefully with wraparound behavior.
 //
 // Parameters:
-//   - count: Number of items to move up (positive integer)
-func (l *List) Up(count int) {
-	if len(l.items) == 0 {
-		l.index = 0
+//   - count: Number of items to move up (positive or negative)
+func (l *List) Move(count int) {
+	if len(l.items) == 0 || count == 0 {
 		return
 	}
 
-	next := l.index - count
-
-	// Skip disabled items
-	for next >= 0 && slices.Contains(l.disabled, next) {
-		next--
+	// Determine direction and magnitude
+	steps := count
+	if steps < 0 {
+		steps = -steps
 	}
 
-	if next >= 0 {
-		l.index = next
-		l.adjust()
-		l.Dispatch("select", l.index)
-	} else {
-		// Move to first without calling First() to avoid double refresh
-		l.index = -1
-		for i := range l.items {
-			if !slices.Contains(l.disabled, i) {
-				l.index = i
-				l.adjust()
-				l.Dispatch("select", l.index)
-				break
-			}
+	// Calculate new index by moving step by step, skipping disabled items
+	newIndex := l.index
+	for i := 0; i < steps; i++ {
+		if count > 0 {
+			// Move down: find next enabled item after current
+			newIndex = l.skip(newIndex+1, 1)
+		} else {
+			// Move up: find previous enabled item before current
+			newIndex = l.skip(newIndex-1, -1)
 		}
 	}
 
-	l.Refresh()
-}
-
-// Down moves the highlight position down by the specified number of items.
-// This method provides intelligent forward navigation that skips disabled items and
-// handles boundary conditions gracefully with wraparound behavior.
-//
-// Parameters:
-//   - count: Number of items to move down (positive integer)
-func (l *List) Down(count int) {
-	if len(l.items) == 0 {
-		return
-	}
-
-	next := l.index + count
-
-	// Skip disabled items
-	for next < len(l.items) && slices.Contains(l.disabled, next) {
-		next++
-	}
-
-	if next < len(l.items) {
-		l.index = next
+	if newIndex != l.index {
+		l.index = newIndex
 		l.adjust()
 		l.Dispatch("select", l.index)
-	} else {
-		// Move to last without calling Last() to avoid double refresh
-		l.index = -1
-		for i := len(l.items) - 1; i >= 0; i-- {
-			if !slices.Contains(l.disabled, i) {
-				l.index = i
-				l.adjust()
-				l.Dispatch("select", l.index)
-				break
-			}
-		}
+		l.Refresh()
 	}
-
-	l.Refresh()
 }
 
 // First moves the highlight to the first enabled item in the list.
@@ -199,7 +187,7 @@ func (l *List) Last() {
 // by the number of visible items rather than single item steps.
 func (l *List) PageUp() {
 	_, _, _, ih := l.Content()
-	l.Up(ih)
+	l.Move(-ih)
 }
 
 // PageDown moves the highlight down by one page (viewport height).
@@ -207,15 +195,14 @@ func (l *List) PageUp() {
 // by the number of visible items rather than single item steps.
 func (l *List) PageDown() {
 	_, _, _, ih := l.Content()
-	l.Down(ih)
-	// Refresh is already called by Down(), no need to call again
+	l.Move(ih)
 }
 
 // ---- Actions --------------------------------------------------------------
 
-// Handle processes input events for the List widget, implementing comprehensive
-// keyboard navigation and interaction capabilities. This method serves as the
-// primary input processor for all list interactions.
+// handleKey processes input events for the List widget, implementing
+// comprehensive keyboard navigation and interaction capabilities. This method
+// serves as the primary input processor for all list interactions.
 //
 // # Event Processing
 //
@@ -225,54 +212,18 @@ func (l *List) PageDown() {
 //   - Search keys: Letter keys for quick item search
 //   - Custom keys: All other keys delegated to event handlers
 //
-// # Navigation Key Bindings
-//
-// Standard navigation keys are mapped as follows:
-//   - Up Arrow: Move highlight up one item
-//   - Down Arrow: Move highlight down one item
-//   - Home: Jump to first enabled item
-//   - End: Jump to last enabled item
-//   - Page Up: Move up by viewport height
-//   - Page Down: Move down by viewport height
-//   - Enter: Activate current item (emit "activate" event)
-//
-// # Quick Search Feature
-//
-// Letter key presses trigger quick search:
-//  1. Searches for items starting with the typed letter
-//  2. Performs case-insensitive matching (A matches 'a' or 'A')
-//  3. Skips disabled items during search
-//  4. Moves highlight to first matching enabled item
-//  5. Search starts from current position for efficiency
-//
-// # Event Delegation
-//
-// Unhandled events are delegated to the event system:
-//   - Custom key combinations emit "key" event
-//   - Event handlers can implement application-specific behavior
-//   - Return value indicates whether event was consumed
-//
-// # Return Value
-//
-// The method returns true if the event was handled, false otherwise:
-//   - Navigation keys: Always return true (consumed)
-//   - Enter key: Always returns true (consumed)
-//   - Quick search: Returns true if matching item found
-//   - Other keys: Delegates to event handlers, returns their result
-//
 // Parameters:
 //   - event: The tcell.Event to process (keyboard, mouse, etc.)
 //
 // Returns:
 //   - bool: true if event was handled/consumed, false if should be propagated
-func (l *List) HandleKey(event *tcell.EventKey) bool {
-	l.Log(l, "debug", "key %s", event.Str())
+func (l *List) handleKey(_ Widget, event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyUp:
-		l.Up(1)
+		l.Move(-1)
 		return true
 	case tcell.KeyDown:
-		l.Down(1)
+		l.Move(1)
 		return true
 	case tcell.KeyHome:
 		l.First()
@@ -311,38 +262,6 @@ func (l *List) HandleKey(event *tcell.EventKey) bool {
 // remains visible within the current viewport. This method implements intelligent
 // scrolling that maintains optimal user experience during navigation.
 //
-// # Viewport Calculation
-//
-// The method determines visibility requirements:
-//  1. Gets current content area height (visible item count)
-//  2. Calculates current viewport bounds (Offset to Offset+height)
-//  3. Checks if highlighted item is within visible range
-//  4. Adjusts scroll offset if item is outside viewport
-//
-// # Scroll Adjustment Logic
-//
-// Scroll adjustments follow these rules:
-//   - Item above viewport: Scroll up to make item the top visible item
-//   - Item below viewport: Scroll down to make item the bottom visible item
-//   - Item within viewport: No adjustment needed
-//   - Maintains minimal scroll movement for smooth user experience
-//
-// # Boundary Protection
-//
-// The method enforces scroll boundaries:
-//   - Minimum offset: 0 (cannot scroll above first item)
-//   - Maximum offset: max(totalItems - viewportHeight, 0)
-//   - Prevents scrolling past available content
-//   - Handles edge cases with small item counts gracefully
-//
-// # Performance Optimization
-//
-// The adjustment algorithm is optimized for:
-//   - Single calculation per navigation operation
-//   - Minimal offset changes to reduce visual jumping
-//   - Early return for invalid viewport dimensions
-//   - Efficient boundary checking
-//
 // This method is called automatically by all navigation methods and should
 // not typically be called directly by application code.
 func (l *List) adjust() {
@@ -374,40 +293,9 @@ func (l *List) adjust() {
 // This method implements virtual scrolling by calculating which items are visible
 // based on the current scroll offset and viewport dimensions.
 //
-// # Virtual Scrolling Implementation
-//
-// The method calculates visible items:
-//  1. Determines viewport height from widget dimensions
-//  2. Calculates start index from current scroll offset
-//  3. Calculates end index ensuring it doesn't exceed item count
-//  4. Returns slice of items within the calculated range
-//
-// # Edge Case Handling
-//
-// Special conditions are managed gracefully:
-//   - Empty item list: Returns empty slice
-//   - Zero viewport height: Returns empty slice
-//   - Offset beyond items: Returns empty slice
-//   - Partial viewport fill: Returns available items only
-//
-// # Performance Benefits
-//
-// Virtual scrolling provides:
-//   - Constant memory usage regardless of total item count
-//   - Fast rendering with only visible items processed
-//   - Efficient handling of large datasets
-//   - Smooth scrolling without content duplication
-//
-// # Use Cases
-//
-// This method is used by:
-//   - Rendering system to determine which items to draw
-//   - External components needing current visible content
-//   - Testing and debugging viewport calculations
-//
 // Returns:
 //   - []string: Slice of items currently visible in the viewport
-func (l *List) Visible() []string {
+func (l *List) visible() []string {
 	_, _, _, ih := l.Content()
 	if ih <= 0 || len(l.items) == 0 {
 		return []string{}
@@ -422,89 +310,19 @@ func (l *List) Visible() []string {
 	return l.items[start:end]
 }
 
-// ScrollInfo provides comprehensive information about the current scroll state
-// and capabilities. This method is used by scrollbar rendering and external
-// components that need to understand the list's scroll position.
-//
-// # Scroll State Calculation
-//
-// The method determines:
-//   - Whether scrolling up is possible (not at top)
-//   - Whether scrolling down is possible (not at bottom)
-//   - Current scroll position as a percentage (0.0 to 1.0)
-//
-// # Scroll Capability Detection
-//
-// Scroll capabilities are determined by:
-//   - canScrollUp: true if Offset > 0 (content above viewport)
-//   - canScrollDown: true if Offset < len(Items)-1 (content below viewport)
-//   - These flags indicate whether navigation in each direction is possible
-//
-// # Percentage Calculation
-//
-// Scroll percentage represents position within total scrollable range:
-//   - 0.0: At the top of the list
-//   - 1.0: At the bottom of the list
-//   - Values between: Proportional position within the list
-//   - Empty list: Always returns 0.0
-//
-// # Use Cases
-//
-// This information is used for:
-//   - Scrollbar thumb positioning and sizing
-//   - Navigation button state (enabled/disabled)
-//   - Progress indicators for long lists
-//   - Accessibility features and screen readers
-//
-// Returns:
-//   - canScrollUp: true if scrolling up is possible
-//   - canScrollDown: true if scrolling down is possible
-//   - scrollPercent: Current position as percentage (0.0-1.0)
-func (l *List) ScrollInfo() (canScrollUp, canScrollDown bool, scrollPercent float64) {
-	canScrollUp = l.offset > 0
-	canScrollDown = l.offset < len(l.items)-1
-
-	if len(l.items) > 0 {
-		scrollPercent = float64(l.offset) / float64(len(l.items)-1)
-	}
-
-	return
-}
-
 // renderList renders a List widget with items, selection highlighting, and optional scrollbar.
 // This method handles the complete visual presentation of list widgets including
 // item display, selection highlighting, line numbers, and scrollbar indicators.
 //
-// Parameters:
-//   - list: The List widget to render
-//   - x, y: Top-left coordinates of the list's content area
-//   - w, h: Width and height of the list's content area
-//
-// Rendering features:
-//  1. Displays visible items within the content area
-//  2. Applies different styles for normal, highlighted, and disabled items
-//  3. Shows optional line numbers with proper formatting
-//  4. Renders scrollbar when content exceeds visible area
-//  5. Handles item truncation for items wider than available space
-//
-// Visual elements:
-//   - Item text with appropriate styling based on state
-//   - Selection highlighting for the currently focused item
-//   - Disabled item styling for non-selectable items
-//   - Line numbers with consistent width formatting
-//   - Vertical scrollbar indicating scroll position and content size
-//
 // The method automatically adjusts text width to accommodate scrollbars
 // and line numbers, ensuring proper layout regardless of configuration.
 func (l *List) Render(r *Renderer) {
-	l.Log(l, "debug", "Render %s index=%d offset=%d len=%d", l.id, l.index, l.offset, len(l.items))
-
 	x, y, w, h := l.Content()
 	if h < 1 || w < 1 {
 		return
 	}
 
-	items := l.Visible()
+	items := l.visible()
 
 	// Calculate available width for text (reserve space for scrollbar if needed)
 	tw := w
@@ -530,17 +348,17 @@ func (l *List) Render(r *Renderer) {
 		if slices.Contains(l.disabled, i) {
 			style := l.Style(":disabled")
 			r.Set(style.Foreground(), style.Background(), style.Font())
-			l.Log(l, "debug", "  Item %d %s disabled", current, item)
 		} else if current == l.index {
-			if l.Flag("focus") {
-				style := l.Style("highlight:focus")
+			if l.Flag("focused") {
+				style := l.Style("highlight:focused")
 				r.Set(style.Foreground(), style.Background(), style.Font())
-				l.Log(l, "debug", "  Item %d %s focus %s %s", current, item, style.Foreground(), style.Background())
 			} else {
 				style := l.Style("highlight")
 				r.Set(style.Foreground(), style.Background(), style.Font())
-				l.Log(l, "debug", "  Item %d %s highlight %s %s", current, item, style.Foreground(), style.Background())
 			}
+		} else {
+			style := l.Style()
+			r.Set(style.Foreground(), style.Background(), style.Font())
 		}
 
 		// Render line number if enabled
@@ -549,14 +367,12 @@ func (l *List) Render(r *Renderer) {
 		} else {
 			r.Text(x, y+i, " "+item, tw)
 		}
-
-		// Reset style
-		style := l.Style()
-		r.Set(style.Foreground(), style.Background(), style.Font())
 	}
 
 	// Render scrollbar if needed
 	if l.scrollbar && len(l.items) > h {
+		style := l.Style()
+		r.Set(style.Foreground(), style.Background(), style.Font())
 		scrollbarX := x + w - 1
 		r.ScrollbarV(scrollbarX, y, h, l.offset, len(l.items))
 	}

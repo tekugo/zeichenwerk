@@ -14,11 +14,12 @@ import (
 // selector and value. The selector is a CSS-like selector string (e.g.,
 // ":focus", ":hover") and the value is the value to apply to the widget.
 // If only one argument is provided, it is assumed to be the value and the
-// selector is empty.
+// selector is empty (for default).
 type Builder struct {
 	theme      *Theme           // Current theme for styling widgets
 	stack      Stack[Container] // Stack of container widgets for nesting
 	current    Widget           // Currently active widget being configured
+	tabs       *Tabs            // Last tabs widget to add new tabs
 	class      string           // CSS-like class name for styling
 	x, y, w, h int              // Grid cell coordinates and dimensions
 }
@@ -93,6 +94,9 @@ func (b *Builder) With(fn func(*Builder)) *Builder {
 // Add adds a widget to the current container and sets it as the current
 // widget. If there's a container on the stack, the widget is added to it.
 // The widget's parent is set to the container for proper hierarchy handling.
+//
+// This method is normally not called from the outside, because for most
+// widgets specific builder methods exist, e.g. List or Static.
 func (b *Builder) Add(widget Widget) *Builder {
 	if len(b.stack) > 0 {
 		top := b.stack.Peek()
@@ -103,6 +107,8 @@ func (b *Builder) Add(widget Widget) *Builder {
 			top.Add(widget)
 		case *Grid:
 			top.Add(b.x, b.y, b.w, b.h, widget)
+		case *Switcher:
+			top.Add(widget)
 		}
 		widget.SetParent(top)
 	}
@@ -110,16 +116,6 @@ func (b *Builder) Add(widget Widget) *Builder {
 	b.current = widget
 	if container, ok := widget.(Container); ok {
 		b.stack.Push(container)
-	}
-	return b
-}
-
-// End finalizes the current container and pops it from the stack.
-// This should be called after adding all children to a container except
-// the root container.
-func (b *Builder) End() *Builder {
-	if len(b.stack) > 1 {
-		b.current = b.stack.Pop()
 	}
 	return b
 }
@@ -133,21 +129,59 @@ func (b *Builder) Apply(widget Widget) {
 	case *Box:
 		b.theme.Apply(widget, b.selector("box", widget.ID()))
 		b.theme.Apply(widget, b.selector("box/shadow", widget.ID()))
+	case *Button:
+		b.theme.Apply(widget, b.selector("button", widget.ID()), "disabled", "focused")
+	case *Checkbox:
+		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focused", "hovered")
 	case *Flex:
 		b.theme.Apply(widget, b.selector("flex", widget.ID()))
 	case *Grid:
 		b.theme.Apply(widget, b.selector("grid", widget.ID()))
+	case *Scanner:
+		b.theme.Apply(widget, b.selector("scanner", widget.ID()))
+	case *Editor:
+		b.theme.Apply(widget, b.selector("editor", widget.ID()))
+	case *Input:
+		b.theme.Apply(widget, b.selector("input", widget.ID()), "disabled", "focused")
 	case *List:
-		b.theme.Apply(widget, b.selector("list", widget.ID()), "disabled", "focus")
-		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("list", widget.ID()), "disabled", "focused")
+		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focused")
 	case *Static:
 		b.theme.Apply(widget, b.selector("static", widget.ID()))
+	case *Spinner:
+		b.theme.Apply(widget, b.selector("spinner", widget.ID()))
+	case *Styled:
+		b.theme.Apply(widget, b.selector("styled", widget.ID()))
+	case *Switcher:
+		b.theme.Apply(widget, b.selector("switcher", widget.ID()))
+	case *Table:
+		b.theme.Apply(widget, b.selector("table", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("table/grid", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("table/header", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("table/highlight", widget.ID()), "focused")
+	case *Tabs:
+		b.theme.Apply(widget, b.selector("tabs", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("tabs/line", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("tabs/highlight", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("tabs/highlight-line", widget.ID()), "focused")
+	case *Text:
+		b.theme.Apply(widget, b.selector("text", widget.ID()))
 	default:
 		panic(fmt.Errorf("no style for widget type %T", widget))
 	}
 }
 
-// ---- Widget Creation ------------------------------------------------------
+// End finalizes the current container and pops it from the stack.
+// This should be called after adding all children to a container except
+// the root container.
+func (b *Builder) End() *Builder {
+	if len(b.stack) > 1 {
+		b.current = b.stack.Pop()
+	}
+	return b
+}
+
+// ---- Widgets --------------------------------------------------------------
 
 // Box creates a new box widget with the specified id and display title.
 // The box is automatically styled with theme styles for the border and
@@ -155,6 +189,20 @@ func (b *Builder) Apply(widget Widget) {
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, title)
 	b.Add(box)
+	return b
+}
+
+// Button creates a new button widget with the specified id and display text.
+func (b *Builder) Button(id, text string) *Builder {
+	button := NewButton(id, text)
+	b.Add(button)
+	return b
+}
+
+// Checkbox creates a new checkbox widget with the specified id and display text.
+func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
+	checkbox := NewCheckbox(id, text, checked)
+	b.Add(checkbox)
 	return b
 }
 
@@ -182,10 +230,41 @@ func (b *Builder) Flex(id string, horizontal bool, alignment string, spacing int
 //
 // Use Cell() to specify where subsequent widgets should be placed.
 // Initially all rows and columns are initialized to use fractional sizes
-// at one fraction each (i.e. -1).
+// at one fraction each (i.e. -1). Sizes can be adjusted using the Rows
+// and Columns method.
 func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	grid := NewGrid(id, rows, columns, lines)
 	b.Add(grid)
+	return b
+}
+
+// Editor creates a new editor widget for multi-line text editing.
+func (b *Builder) Editor(id string) *Builder {
+	editor := NewEditor(id)
+	b.Add(editor)
+	return b
+}
+
+// Input creates a new input widget for entering text.
+//
+// Parameters:
+//   - id: unique identifier for the input widget
+func (b *Builder) Input(id string, params ...string) *Builder {
+	input := NewInput(id, params...)
+	b.Add(input)
+	return b
+}
+
+// Scanner creates a new scanner widget for displaying a back-and-forth
+// scanning animation with a fading trail.
+//
+// Parameters:
+//   - id: unique identifier for the scanner widget
+//   - width: display width in characters (e.g., 8)
+//   - charStyle: character set style, either "blocks" or "diamonds"
+func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
+	scanner := NewScanner(id, width, charStyle)
+	b.Add(scanner)
 	return b
 }
 
@@ -194,7 +273,7 @@ func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 // Parameters:
 //   - id: unique identifier for the list widget
 //   - values: slice of strings to display as list items
-func (b *Builder) List(id string, values []string) *Builder {
+func (b *Builder) List(id string, values ...string) *Builder {
 	list := NewList(id, values)
 	b.Add(list)
 	return b
@@ -205,6 +284,68 @@ func (b *Builder) List(id string, values []string) *Builder {
 func (b *Builder) Static(id, text string) *Builder {
 	static := NewStatic(id, text)
 	b.Add(static)
+	return b
+}
+
+// Styled creates a new styled text widget with the specified id and text.
+// The styled widget is styled with theme styles for the text.
+func (b *Builder) Styled(id string, text string) *Builder {
+	styled := NewStyled(id, text)
+	b.Add(styled)
+	return b
+}
+
+// Switcher creates a content switcher container.
+// The switcher can be automatically connected to the last tabs component for
+// tab switching. If so, every pane should be accompanied by a Tab() call
+// with the tab title.
+func (b *Builder) Switcher(id string, connect bool) *Builder {
+	switcher := NewSwitcher(id)
+	b.Add(switcher)
+	if connect && b.tabs != nil {
+		b.tabs.On("activate", func(_ Widget, _ string, params ...any) bool {
+			if len(params) > 0 {
+				if selected, ok := params[0].(int); ok {
+					switcher.Select(selected)
+				}
+			}
+			return true
+		})
+	}
+	return b
+}
+
+// Tab adds a new tab for a switcher, if a Tabs was added before.
+func (b *Builder) Tab(name string) *Builder {
+	if b.tabs != nil {
+		b.tabs.Add(name)
+	}
+	return b
+}
+
+// Table creates a table widget with the passed data provider.
+func (b *Builder) Table(id string, provider TableProvider) *Builder {
+	table := NewTable(id, provider)
+	b.Add(table)
+	return b
+}
+
+// Tabs creates a new tabs widget with the specified id and names.
+func (b *Builder) Tabs(id string, names ...string) *Builder {
+	tabs := NewTabs(id)
+	for _, name := range names {
+		tabs.Add(name)
+	}
+	b.Add(tabs)
+	b.tabs = tabs
+	return b
+}
+
+// Text creates a new text widget with the specified id and text.
+// The text widget is styled with theme styles for the text.
+func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
+	text := NewText(id, content, follow, max)
+	b.Add(text)
 	return b
 }
 
@@ -338,6 +479,7 @@ func (b *Builder) Foreground(params ...string) *Builder {
 }
 
 // Hint sets the preferred size hint for the current widget.
+//
 // Parameters:
 //   - width: preferred width in characters
 //   - height: preferred height in lines

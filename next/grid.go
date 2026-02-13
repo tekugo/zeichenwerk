@@ -1,6 +1,6 @@
 package next
 
-// Cell represents a single cell within a grid container that holds a widget
+// cell represents a single cell within a grid container that holds a widget
 // and defines its position and span within the grid layout.
 //
 // A cell specifies:
@@ -10,7 +10,7 @@ package next
 //
 // Cells can span multiple rows and/or columns, allowing for complex
 // grid layouts with widgets of varying sizes.
-type Cell struct {
+type cell struct {
 	x, y    int    // Starting column (x) and row (y) position in the grid (0-based)
 	w, h    int    // Column span (w) and row span (h) - number of cells to occupy
 	content Widget // The widget contained within this grid cell
@@ -25,9 +25,10 @@ const (
 	GridB = 3 // Both horizontal and vertical grid lines (intersection)
 )
 
-// Grid is a container widget that arranges child widgets in a table-like layout
-// with configurable rows and columns. It provides precise control over widget
-// positioning and supports flexible sizing, spanning, and optional grid lines.
+// Grid is a container widget that arranges child widgets in a table-like
+// layout with configurable rows and columns. It provides precise control over
+// widget positioning and supports flexible sizing, spanning, and optional
+// grid lines.
 //
 // Features:
 //   - Fixed grid dimensions with configurable rows and columns
@@ -43,16 +44,17 @@ const (
 //   - Cell spanning: Widgets can span multiple rows and/or columns
 type Grid struct {
 	Component
-	cells           []*Cell // All cells containing widgets in the grid
+	cells           []*cell // All cells containing widgets in the grid
 	rows, columns   []int   // Size configuration for each row and column (-1 = flexible)
 	widths, heights []int   // Calculated actual sizes for each column and row
 	lines           bool    // Whether to draw grid lines between cells
 	separators      [][]int // Grid line configuration for each cell intersection
 }
 
-// NewGrid creates a new grid container widget with the specified dimensions and configuration.
-// The grid is initialized with flexible sizing for all rows and columns by default,
-// meaning they will share available space equally unless explicitly configured otherwise.
+// NewGrid creates a new grid container widget with the specified dimensions
+// and configuration. The grid is initialized with flexible sizing for all rows
+// and columns by default, meaning they will share available space equally
+// unless explicitly configured otherwise.
 //
 // Parameters:
 //   - id: Unique identifier for the grid widget
@@ -78,7 +80,7 @@ type Grid struct {
 func NewGrid(id string, rows, columns int, lines bool) *Grid {
 	grid := Grid{
 		Component:  Component{id: id},
-		cells:      make([]*Cell, 0, rows*columns),
+		cells:      make([]*cell, 0, rows*columns),
 		rows:       make([]int, rows),
 		columns:    make([]int, columns),
 		widths:     make([]int, columns),
@@ -113,9 +115,10 @@ func (g *Grid) Children() []Widget {
 	return result
 }
 
-// Add places a widget in the grid at the specified position with the given span.
-// The widget will occupy a rectangular area from (x,y) spanning w columns and h rows.
-// If the specified area extends beyond the grid boundaries, it will be clipped.
+// Add places a widget in the grid at the specified position with the given
+// span. The widget will occupy a rectangular area from (x,y) spanning w
+// columns and h rows. If the specified area extends beyond the grid
+// boundaries, it will be clipped.
 //
 // Parameters:
 //   - x: Starting column position (0-based)
@@ -160,13 +163,13 @@ func (g *Grid) Add(x, y, w, h int, content Widget) {
 		h = len(g.rows) - y
 	}
 
-	g.cells = append(g.cells, &Cell{x: x, y: y, w: w, h: h, content: content})
+	g.cells = append(g.cells, &cell{x: x, y: y, w: w, h: h, content: content})
 	content.SetParent(g)
 }
 
-// Columns sets the column sizes for the grid. The number of columns must match the
-// number of columns specified when the grid was created. If the number of columns
-// does not match, an error is logged and the grid remains unchanged.
+// Columns sets the column sizes for the grid. The number of columns must match
+// the number of columns specified when the grid was created. If the number of
+// columns does not match, an error is logged and the grid remains unchanged.
 //
 // Parameters:
 //   - columns: A slice of integers representing the sizes of each column
@@ -229,6 +232,9 @@ func (g *Grid) Layout() {
 	// At this moment, we do not take row spans and column spans into account.
 	for _, cell := range g.cells {
 		pw, ph := cell.content.Hint()
+		style := cell.content.Style()
+		pw += style.Horizontal()
+		ph += style.Vertical()
 		if cell.w == 1 && pw > aw[cell.x] {
 			aw[cell.x] = pw
 		}
@@ -251,8 +257,10 @@ func (g *Grid) Layout() {
 			lc = i             // Track last fractional column for remainder handling
 		} else if g.columns[i] == 0 {
 			g.widths[i] = aw[i]
+			iw -= aw[i]
 		} else {
 			g.widths[i] = g.columns[i] // Set fixed width
+			iw -= g.columns[i]
 		}
 	}
 
@@ -269,6 +277,7 @@ func (g *Grid) Layout() {
 				// TODO: Distribute remaining space evenly
 			} else {
 				g.widths[i] = -g.columns[i] * fc // Calculate fractional width
+				rw -= g.widths[i]
 			}
 		}
 
@@ -286,7 +295,6 @@ func (g *Grid) Layout() {
 				gx[i]++ // Account for border line
 			}
 		}
-		rw -= g.widths[i]
 	}
 
 	// ---- Calculate row sizes and positions ----
@@ -298,9 +306,11 @@ func (g *Grid) Layout() {
 			lr = i          // Track last fractional row for remainder handling
 		} else if g.rows[i] == 0 {
 			g.heights[i] = ah[i]
+			ih -= ah[i]
 		} else {
 			fh -= g.heights[i]
 			g.heights[i] = g.rows[i] // Set fixed height
+			ih -= g.rows[i]
 		}
 	}
 
@@ -317,6 +327,7 @@ func (g *Grid) Layout() {
 				// TODO: Distribute remaining space evenly
 			} else {
 				g.heights[i] = -g.rows[i] * fr // Calculate fractional height
+				rh -= g.heights[i]
 			}
 		}
 
@@ -334,7 +345,6 @@ func (g *Grid) Layout() {
 				gy[i]++ // Account for border line
 			}
 		}
-		rh -= g.heights[i]
 	}
 
 	// ---- Position child widgets and configure grid line separators ----
@@ -411,6 +421,7 @@ func (g *Grid) Render(r *Renderer) {
 	if b == nil {
 		return
 	}
+	r.Set(style.Foreground(), style.Background(), style.Font())
 	_, _, iw, ih := g.Content()
 
 	// draw top and bottom Ts

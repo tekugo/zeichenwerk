@@ -6,13 +6,13 @@ package next
 //
 // The Box widget is useful for grouping related UI elements, providing visual
 // separation, and adding descriptive titles to sections of the interface. It
-// serves as a fundamental building block for creating organized and visually
-// structured layouts.
+// is a very simple container for just a single widget. Its main feature is
+// the addition of a title inside the border area.
 //
 // Layout behavior:
 //   - The child widget is positioned within the box's content area
 //   - Content area excludes the box's borders, margins, and padding
-//   - The box's preferred size is the child with its margin, border and padding
+//   - The preferred size is the child size plus margin, border and padding
 type Box struct {
 	Component
 	Title string // The title text displayed in the box header (optional)
@@ -53,7 +53,7 @@ func (b *Box) Add(widget Widget) {
 // be empty if no child widget has been set.
 //
 // Returns:
-//   - []Widget: A slice containing the child widget, or empty slice if no child is set
+//   - []Widget: A slice containing the child widget, or empty slice
 func (b *Box) Children() []Widget {
 	if b.child == nil {
 		return []Widget{}
@@ -63,13 +63,16 @@ func (b *Box) Children() []Widget {
 
 // Hint returns the box's preferred content size for optimal display.
 // This does not include the box's styling overhead (borders, padding, margins)
-// but that of its child.
+// but that of its child. If a preferred size is set manually using SetHint,
+// that size is returned.
 //
 // Returns:
 //   - int: Preferred width without box styling
 //   - int: Preferred height without box styling
 func (b *Box) Hint() (int, int) {
-	if b.child != nil {
+	if b.hwidth != 0 && b.hheight != 0 {
+		return b.hwidth, b.hheight
+	} else if b.child != nil {
 		w, h := b.child.Hint()
 		style := b.child.Style()
 		w += style.Horizontal()

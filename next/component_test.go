@@ -73,7 +73,7 @@ func TestComponent_Dispatch_On(t *testing.T) {
 	called := false
 	var capturedEvent string
 
-	handler := func(event string, data ...any) bool {
+	handler := func(_ Widget, event string, data ...any) bool {
 		called = true
 		capturedEvent = event
 		return true
