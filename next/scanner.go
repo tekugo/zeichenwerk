@@ -7,25 +7,37 @@ import (
 	"time"
 )
 
-// scannerChars maps style names to the character used for scanner display.
-var scannerChars = map[string]string{
-	"blocks":   "█",
-	"diamonds": "⬥",
+// scannerConfig defines character sets for each scanner style.
+type scannerConfig struct {
+	active   string   // character for active position (index 0)
+	trail    []string // characters for trail positions (index 1,2,...)
+	inactive string   // character for inactive (outside trail)
+}
+
+var scannerConfigs = map[string]scannerConfig{
+	"blocks": {
+		active:   "■",
+		trail:    []string{"■"}, // all trail positions use same block
+		inactive: "⬝",
+	},
+	"diamonds": {
+		active:   "⬥",
+		trail:    []string{"◆", "⬩", "⬪"}, // trail steps 1,2,3
+		inactive: "·",
+	},
 }
 
 // Scanner represents a back-and-forth scanning animation with a fading trail.
 type Scanner struct {
-	Component
+	Animation
 
 	width     int    // display width in characters
 	charStyle string // "blocks" or "diamonds"
 
 	// Animation state
-	pos    int // current position (0 to width-1)
-	dir    int // +1 (forward/right) or -1 (backward/left)
-	hold   int // frames remaining in hold state
-	ticker *time.Ticker
-	stop   chan struct{}
+	pos  int // current position (0 to width-1)
+	dir  int // +1 (forward/right) or -1 (backward/left)
+	hold int // frames remaining in hold state
 }
 
 // NewScanner creates a new Scanner widget with the specified ID, width, and character style.
@@ -44,18 +56,20 @@ func NewScanner(id string, width int, charStyle string) *Scanner {
 	if width < 1 {
 		width = 1
 	}
-	if _, ok := scannerChars[charStyle]; !ok {
+	if _, ok := scannerConfigs[charStyle]; !ok {
 		charStyle = "blocks"
 	}
 
 	s := &Scanner{
-		Component: Component{id: id},
+		Animation: Animation{
+			Component: Component{id: id},
+			stop:      make(chan struct{}),
+		},
 		width:     width,
 		charStyle: charStyle,
 		pos:       0,
 		dir:       1,
 		hold:      10, // initial hold at start
-		stop:      make(chan struct{}),
 	}
 	return s
 }
@@ -68,54 +82,31 @@ func (s *Scanner) Hint() (int, int) {
 
 // Refresh triggers a redraw of the scanner widget.
 func (s *Scanner) Refresh() {
-	Redraw(s)
+	s.Animation.Refresh()
 }
 
 // Start begins the scanner animation with the specified time interval.
-// The animation runs in a separate goroutine. If the scanner is already running,
-// this method does nothing.
 func (s *Scanner) Start(interval time.Duration) {
-	go func() {
-		if s.ticker != nil {
-			return // already running
-		}
-
-		s.ticker = time.NewTicker(interval)
-		defer s.ticker.Stop()
-
-		for {
-			select {
-			case <-s.stop:
-				s.ticker = nil
-				return
-			case <-s.ticker.C:
-				s.tick()
-			}
-		}
-	}()
+	s.Animation.Start(interval)
 }
 
 // Stop gracefully halts the scanner animation.
 func (s *Scanner) Stop() {
-	select {
-	case s.stop <- struct{}{}:
-	default:
-	}
-	s.ticker = nil
+	s.Animation.Stop()
 }
 
 // Running returns whether the scanner animation is currently active.
 func (s *Scanner) Running() bool {
-	return s.ticker != nil
+	return s.Animation.Running()
 }
 
-// tick updates the animation state on each frame.
+// Tick updates the animation state on each frame.
 const (
 	holdStartFrames = 10
 	holdEndFrames   = 5
 )
 
-func (s *Scanner) tick() {
+func (s *Scanner) Tick() {
 	if s.hold > 0 {
 		s.hold--
 		s.Refresh()
@@ -154,45 +145,69 @@ func (s *Scanner) Render(r *Renderer) {
 	bgColor := style.Background()
 	font := style.Font()
 
-	// Character to use for active and trail
-	ch := scannerChars[s.charStyle]
+	// Get character set
+	cfg := scannerConfigs[s.charStyle]
+
+	// Precomputed color factors for trail gradient (6 steps total, index 0..5)
+	colorFactors := []float64{1.0, 0.9, 0.7, 0.5, 0.3, 0.2}
+	inactiveFactor := 0.15
 
 	// Draw the scanner width, left-aligned within content area
 	for i := 0; i < s.width; i++ {
 		var fg string
+		var ch string
 
+		// Compute directional distance: positive if position is behind active in movement direction
+		dist := 0
 		if i == s.pos {
-			// Active position: full brightness
-			fg = baseColor
+			dist = 0
 		} else if (s.dir == 1 && i < s.pos) || (s.dir == -1 && i > s.pos) {
-			// Position is behind the active scanner (in the trail)
-			dist := s.pos - i
+			// Behind active: calculate absolute distance
+			dist = s.pos - i
 			if dist < 0 {
 				dist = -dist
 			}
-			// Compute fade factor based on distance (1.0 at active, down to 0.2 at far end)
-			maxDist := s.width - 1
-			if maxDist == 0 {
-				maxDist = 1
-			}
-			factor := 1.0 - float64(dist)/float64(maxDist)
-			if factor < 0.2 {
-				factor = 0.2
-			}
-			fg = dimColor(baseColor, factor)
 		} else {
-			// Empty space (ahead of active direction)
-			fg = baseColor
+			// Ahead of active or outside trail -> inactive
+			dist = -1
 		}
 
-		// Determine character to draw: block for active/trail, space otherwise
-		drawCh := " "
-		if i == s.pos || ((s.dir == 1 && i < s.pos) || (s.dir == -1 && i > s.pos)) {
-			drawCh = ch
+		switch {
+		case dist == 0:
+			// Active position
+			fg = baseColor
+			ch = cfg.active
+		case dist > 0 && dist <= len(colorFactors):
+			// Trail position: pick color based on distance index
+			idx := dist
+			if idx > len(colorFactors)-1 {
+				idx = len(colorFactors) - 1
+			}
+			factor := colorFactors[idx]
+			fg = dimColor(baseColor, factor)
+			// Choose character
+			if s.charStyle == "diamonds" {
+				// For diamonds, use trail characters array; index into trail (dist-1) but clamp to array length-1
+				trailIdx := dist - 1
+				if trailIdx >= len(cfg.trail) {
+					trailIdx = len(cfg.trail) - 1
+				}
+				if trailIdx < 0 {
+					trailIdx = 0
+				}
+				ch = cfg.trail[trailIdx]
+			} else {
+				// blocks: use same active character for all trail positions
+				ch = cfg.active
+			}
+		default:
+			// Inactive positions (outside trail)
+			fg = dimColor(baseColor, inactiveFactor)
+			ch = cfg.inactive
 		}
 
 		r.Set(fg, bgColor, font)
-		r.Put(x+i, y, drawCh)
+		r.Put(x+i, y, ch)
 	}
 }
 

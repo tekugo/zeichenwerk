@@ -44,7 +44,14 @@ func NewBox(id, title string) *Box {
 // Parameters:
 //   - widget: The widget to be contained within this box
 func (b *Box) Add(widget Widget) {
+	if widget == nil {
+		return
+	}
+	if b.child != nil {
+		b.child.SetParent(nil) // clear old parent reference
+	}
 	b.child = widget
+	b.child.SetParent(b)
 }
 
 // Children returns a slice containing the single child widget of this box.

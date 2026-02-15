@@ -110,7 +110,6 @@ func (b *Builder) Add(widget Widget) *Builder {
 		case *Switcher:
 			top.Add(widget)
 		}
-		widget.SetParent(top)
 	}
 	b.Apply(widget)
 	b.current = widget
@@ -206,6 +205,13 @@ func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	return b
 }
 
+// Editor creates a new editor widget for multi-line text editing.
+func (b *Builder) Editor(id string) *Builder {
+	editor := NewEditor(id)
+	b.Add(editor)
+	return b
+}
+
 // Flex creates a new flex container widget for arranging child widgets.
 //
 // Parameters:
@@ -238,13 +244,6 @@ func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	return b
 }
 
-// Editor creates a new editor widget for multi-line text editing.
-func (b *Builder) Editor(id string) *Builder {
-	editor := NewEditor(id)
-	b.Add(editor)
-	return b
-}
-
 // Input creates a new input widget for entering text.
 //
 // Parameters:
@@ -252,6 +251,17 @@ func (b *Builder) Editor(id string) *Builder {
 func (b *Builder) Input(id string, params ...string) *Builder {
 	input := NewInput(id, params...)
 	b.Add(input)
+	return b
+}
+
+// List creates a new list widget for displaying selectable items.
+//
+// Parameters:
+//   - id: unique identifier for the list widget
+//   - values: slice of strings to display as list items
+func (b *Builder) List(id string, values ...string) *Builder {
+	list := NewList(id, values)
+	b.Add(list)
 	return b
 }
 
@@ -265,17 +275,6 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
 	scanner := NewScanner(id, width, charStyle)
 	b.Add(scanner)
-	return b
-}
-
-// List creates a new list widget for displaying selectable items.
-//
-// Parameters:
-//   - id: unique identifier for the list widget
-//   - values: slice of strings to display as list items
-func (b *Builder) List(id string, values ...string) *Builder {
-	list := NewList(id, values)
-	b.Add(list)
 	return b
 }
 

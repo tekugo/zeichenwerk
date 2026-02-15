@@ -53,7 +53,10 @@ func NewFlex(id string, horizontal bool, alignment string, spacing int) *Flex {
 // Parameters:
 //   - widget: The widget to add as a child of this flex container
 func (f *Flex) Add(widget Widget) {
-	f.children = append(f.children, widget)
+	if widget != nil {
+		widget.SetParent(f)
+		f.children = append(f.children, widget)
+	}
 }
 
 // Children returns a slice of all child widgets in this flex container.

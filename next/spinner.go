@@ -31,11 +31,9 @@ var Spinners = map[string]string{
 // a sequence of Unicode strings to create visual motion effects. Spinners
 // are commonly used to indicate background processing or loading states.
 type Spinner struct {
-	Component
-	sequence []string      // Sequence of Unicode strings to cycle through
-	index    int           // Current position in the runes array
-	ticker   *time.Ticker  // Timer for controlling animation speed
-	stop     chan struct{} // Channel for signaling animation stop
+	Animation
+	sequence []string // Sequence of Unicode strings to cycle through
+	index    int      // Current position in the runes array
 }
 
 // NewSpinner creates a new spinner widget with the specified character sequence.
@@ -52,9 +50,11 @@ type Spinner struct {
 // in the sequence. An empty runes slice will cause runtime panics.
 func NewSpinner(id string, sequence string) *Spinner {
 	spinner := &Spinner{
-		Component: Component{id: id},
-		sequence:  strings.Split(sequence, " "),
-		stop:      make(chan struct{}),
+		Animation: Animation{
+			Component: Component{id: id},
+			stop:      make(chan struct{}),
+		},
+		sequence: strings.Split(sequence, " "),
 	}
 	return spinner
 }
@@ -80,63 +80,34 @@ func (s *Spinner) Hint() (int, int) {
 // This method is called automatically during animation cycles
 // but can be called manually if needed.
 func (s *Spinner) Refresh() {
-	Redraw(s)
+	s.Animation.Refresh()
 }
 
 // Start begins the spinner animation with the specified time interval.
-// The animation runs in a separate goroutine to avoid blocking the main thread.
-// Each tick advances to the next character in the sequence and triggers a redraw.
-//
-// Note: The spinner must be stopped before starting again. Multiple concurrent
-// animations on the same spinner are not supported and will cause a panic.
 func (s *Spinner) Start(interval time.Duration) {
-	// Starting the spinner will block, so we start it as a separate go routine
-	go func() {
-		if s.ticker != nil {
-			panic("ticker for spinner already started")
-		}
-
-		s.ticker = time.NewTicker(interval)
-		defer s.ticker.Stop()
-
-		for {
-			select {
-			case <-s.stop:
-				s.Log(s, "debug", "Spinner stopped")
-				s.ticker = nil
-				return
-			case <-s.ticker.C:
-				s.index++
-				if s.index >= len(s.sequence) {
-					s.index = 0
-				}
-				s.Refresh()
-			}
-		}
-	}()
-}
-
-// Current returns the currently displayed string from the animation sequence.
-// This method is called by the renderer to get the character to display.
-func (s *Spinner) Current() string {
-	return s.sequence[s.index]
+	s.Animation.Start(interval)
 }
 
 // Stop gracefully halts the spinner animation and cleans up resources.
 // The method is thread-safe and can be called multiple times without issues.
 // After stopping, the spinner can be restarted with Start().
 func (s *Spinner) Stop() {
-	select {
-	case s.stop <- struct{}{}:
-	default:
-	}
-	s.ticker = nil
+	s.Animation.Stop()
 }
 
 // Running returns whether the spinner animation is currently active.
 // This is useful for checking spinner state before starting or stopping.
 func (s *Spinner) Running() bool {
-	return s.ticker != nil
+	return s.Animation.Running()
+}
+
+// Tick updates the animation state on each frame.
+func (s *Spinner) Tick() {
+	s.index++
+	if s.index >= len(s.sequence) {
+		s.index = 0
+	}
+	s.Refresh()
 }
 
 // SetSequence updates the character sequence used for animation.
@@ -148,6 +119,12 @@ func (s *Spinner) SetSequence(sequence string) {
 	if s.Running() {
 		s.Refresh() // Update display immediately if running
 	}
+}
+
+// Current returns the currently displayed string from the animation sequence.
+// This method is called by the renderer to get the character to display.
+func (s *Spinner) Current() string {
+	return s.sequence[s.index]
 }
 
 // Render draws the spinner widget.

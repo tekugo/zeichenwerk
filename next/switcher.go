@@ -36,6 +36,10 @@ func NewSwitcher(id string) *Switcher {
 //   - label: Name of the pane
 //   - widget: Widget to be added as the pane content
 func (s *Switcher) Add(widget Widget) {
+	if widget == nil {
+		return
+	}
+	widget.SetParent(s)
 	s.panes = append(s.panes, widget)
 	x, y, w, h := s.Content()
 	widget.SetBounds(x, y, w, h)
