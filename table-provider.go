@@ -50,12 +50,13 @@ type ArrayTableProvider struct {
 //   - *ArrayTableProvider: Configured provider ready for use with Table widget
 //
 // Example:
-//   headers := []string{"Name", "Age", "City"}
-//   data := [][]string{
-//       {"John Doe", "25", "New York"},
-//       {"Jane Smith", "30", "Los Angeles"},
-//   }
-//   provider := NewArrayTableProvider(headers, data)
+//
+//	headers := []string{"Name", "Age", "City"}
+//	data := [][]string{
+//	    {"John Doe", "25", "New York"},
+//	    {"Jane Smith", "30", "Los Angeles"},
+//	}
+//	provider := NewArrayTableProvider(headers, data)
 //
 // Note: The function assumes all data rows have the same number of columns
 // as the headers slice. Mismatched row lengths may cause runtime panics.

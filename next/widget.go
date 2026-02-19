@@ -8,19 +8,23 @@ package next
 // All widgets share common functionality through BaseWidget, which provides
 // default implementations for most interface methods.
 type Widget interface {
-	// Bounds returns the widget's position and size as absolute screen coordinates.
+	// Bounds returns the widget's position and size as absolute screen
+	// coordinates.
+	//
 	// Returns (x, y, width, height).
 	Bounds() (int, int, int, int)
 
 	// Content returns the widget's content area as absolute screen coordinates.
-	// The content area is the inner area of the widget where the widget's content
-	// is rendered, excluding margin, border and padding.
+	// The content area is the inner area of the widget where the widget's
+	// content is rendered, excluding margin, border and padding.
+	//
 	// Returns (x, y, width, height).
 	Content() (int, int, int, int)
 
 	// Cursor returns the widget's cursor position as relative coordinates to the
 	// upper left corner of the widget's content area. If the cursor should not be
 	// displayed, returns (0, 0, "").
+	//
 	// Returns (x, y, cursor-style).
 	Cursor() (int, int, string)
 
@@ -40,6 +44,8 @@ type Widget interface {
 	//   - Fixed size (positive value)
 	//   - Fractional size (negative value)
 	//   - Automatic/available space (zero)
+	//
+	// Returns (content width, content height)
 	Hint() (int, int)
 
 	// ID returns the widget's unique identifier. The ID is used for widget lookup,
@@ -50,7 +56,7 @@ type Widget interface {
 	// Info returns a human-readable description of the widget and its current state.
 	Info() string
 
-	// Log los a debug message to the application's debug log.
+	// Log logs a debug message to the application's debug log.
 	//
 	// Parameters:
 	//   - widget: The widget that is logging the message.

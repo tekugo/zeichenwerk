@@ -1,10 +1,12 @@
 package next
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"runtime/debug"
-	"time"
+	"strings"
 
 	"github.com/gdamore/tcell/v3"
 )
@@ -79,9 +81,11 @@ type UI struct {
 	// Layer management
 	layers []Container // Stack of widget layers (base layer + popups/modals) for proper z-order rendering
 
-	// Debug infrastructure
-	log    *Log  // Log messages
-	logger *Text // Debug log widget for runtime messages with auto-scrolling capability
+	// Logging infrastructure
+	tableLog   *TableLog
+	debugLog   *Text
+	logger     *slog.Logger
+	logHandler *UILogHandler
 
 	// Performance counters
 	redraws  int // Counter for individual widget redraws (debugging and performance monitoring)
@@ -90,6 +94,22 @@ type UI struct {
 	// Rendering system
 	renderer *Renderer    // Renderer instance responsible for drawing widgets to the terminal
 	screen   tcell.Screen // The terminal screen interface for low-level cell manipulation and event polling
+}
+
+// parseLevel converts a string level name to slog.Level.
+func parseLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
 
 // ---- Constructor function -------------------------------------------------
@@ -113,7 +133,7 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		renderer:  &Renderer{theme: theme},
 		layers:    []Container{root},
 		debug:     debug,
-		log:       NewLog(2000),
+		tableLog:  NewTableLog(2000),
 		dirty:     true, // Initial draw needed
 		quit:      make(chan struct{}),
 		events:    make(chan tcell.Event, 10),
@@ -121,13 +141,23 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		refresh:   make(chan struct{}, 1),
 	}
 
-	// Connect debug log
-	logger := Find(ui, "debug-log")
-	if logger != nil {
-		if text, ok := logger.(*Text); ok {
-			ui.logger = text
-			ui.Log(ui, "debug", "==== Debug log started! ====")
-			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
+	// Connect debug log widget and initialize structured logging
+	loggerWidget := Find(ui, "debug-log")
+	if loggerWidget != nil {
+		if text, ok := loggerWidget.(*Text); ok {
+			ui.debugLog = text
+			// Initialize structured logging with slog
+			level := slog.LevelDebug
+			ui.logHandler = &UILogHandler{
+				tableLog: ui.tableLog,
+				text:     text,
+				level:    level,
+				console:  false,
+			}
+			ui.logger = slog.New(ui.logHandler)
+			// Log start message via slog
+			ui.logger.Debug("==== Debug log started! =====", "source", "ui", "widgetType", "UI")
+			// Note: screen size not yet known; will be logged after initialization
 		}
 	}
 
@@ -212,6 +242,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		if ui.width != w || ui.height != h {
 			ui.width, ui.height = w, h
 			ui.Layout()
+			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
 			ui.Refresh()
 			ui.screen.Sync()
 		}
@@ -466,20 +497,43 @@ func (ui *UI) ShowCursor() {
 	}
 }
 
-// Log adds a debug message to the application's log buffer.
-// The log maintains only the most recent 100 messages to prevent
-// unlimited memory growth. Messages are displayed in debug mode
-// and can be useful for troubleshooting widget behavior and events.
+// Log adds a structured log entry using the application's slog logger.
+// The log is routed to both the debug Text widget (human-readable) and the
+// TableLog (for tabular display). The level is given as a string (e.g., "debug",
+// "info", "warn", "error"). Additional key-value pairs can be provided via params.
 //
-// Parameters:
-//   - source: Source widget
-//   - level: Log level
-//   - message: The debug message to add to the log
-func (ui *UI) Log(source Widget, level, message string, params ...any) {
-	ui.log.Add(source.ID(), level, message, params...)
-	if ui.logger != nil {
-		ui.logger.Add(fmt.Sprintf("[%s] %-6s (%-16s) %-10s ", time.Now().Format("15:04:05.000"), level, source.ID(), WidgetType(source)) + fmt.Sprintf(message, params...))
+// This method maintains backward compatibility with existing component logging.
+func (ui *UI) Log(source Widget, levelStr, message string, params ...any) {
+	if ui.logger == nil {
+		// Logger not initialized; ignore.
+		return
 	}
+	level := parseLevel(levelStr)
+	args := []any{
+		slog.String("source", source.ID()),
+		slog.String("widgetType", WidgetType(source)),
+	}
+	// Append params as attributes (key, value pairs)
+	for i := 0; i < len(params); i += 2 {
+		if i+1 < len(params) {
+			key := fmt.Sprintf("%v", params[i])
+			val := params[i+1]
+			args = append(args, slog.Any(key, val))
+		}
+	}
+	ui.logger.Log(context.Background(), level, message, args...)
+}
+
+// SetLogLevel changes the minimum log level at runtime.
+func (ui *UI) SetLogLevel(level slog.Level) {
+	if ui.logHandler != nil {
+		ui.logHandler.level = level
+	}
+}
+
+// Logs returns the TableLog containing structured log entries.
+func (ui *UI) Logs() *TableLog {
+	return ui.tableLog
 }
 
 // ---- Popup and Layer Handling ---------------------------------------------

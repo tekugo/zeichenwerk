@@ -82,7 +82,7 @@ func TestThemeApply(t *testing.T) {
 // TestThemeBorder tests the Border method
 func TestThemeBorder(t *testing.T) {
 	theme := NewMapTheme()
-	
+
 	// Test empty borders initially
 	border := theme.Border("thin")
 	assert.Equal(t, BorderStyle{}, border)
@@ -122,8 +122,8 @@ func TestThemeColor(t *testing.T) {
 
 	// Set some color variables
 	colors := map[string]string{
-		"$primary":   "#007ACC",
-		"$secondary": "#FF6B35",
+		"$primary":    "#007ACC",
+		"$secondary":  "#FF6B35",
 		"$background": "#1E1E1E",
 	}
 	theme.SetColors(colors)
@@ -294,8 +294,8 @@ func TestThemeSetRunes(t *testing.T) {
 
 	// Set runes
 	runes := map[string]rune{
-		"star":   '★',
-		"heart":  '♥',
+		"star":    '★',
+		"heart":   '♥',
 		"diamond": '♦',
 	}
 	theme.SetRunes(runes)
@@ -431,29 +431,29 @@ func (m *ThemeMockWidget) SetStyle(key string, style *Style) {
 }
 
 // Minimal Widget interface implementation for testing
-func (m *ThemeMockWidget) Bounds() (int, int, int, int) { return 0, 0, 0, 0 }
-func (m *ThemeMockWidget) Content() (int, int, int, int) { return 0, 0, 0, 0 }
-func (m *ThemeMockWidget) Cursor() (int, int) { return -1, -1 }
-func (m *ThemeMockWidget) Focusable() bool { return false }
-func (m *ThemeMockWidget) Focused() bool { return false }
-func (m *ThemeMockWidget) Handle(tcell.Event) bool { return false }
-func (m *ThemeMockWidget) Hint() (int, int) { return 0, 0 }
-func (m *ThemeMockWidget) Hovered() bool { return false }
-func (m *ThemeMockWidget) ID() string { return "mock" }
-func (m *ThemeMockWidget) Info() string { return "mock widget" }
-func (m *ThemeMockWidget) Log(Widget, string, string, ...any) {}
+func (m *ThemeMockWidget) Bounds() (int, int, int, int)                 { return 0, 0, 0, 0 }
+func (m *ThemeMockWidget) Content() (int, int, int, int)                { return 0, 0, 0, 0 }
+func (m *ThemeMockWidget) Cursor() (int, int)                           { return -1, -1 }
+func (m *ThemeMockWidget) Focusable() bool                              { return false }
+func (m *ThemeMockWidget) Focused() bool                                { return false }
+func (m *ThemeMockWidget) Handle(tcell.Event) bool                      { return false }
+func (m *ThemeMockWidget) Hint() (int, int)                             { return 0, 0 }
+func (m *ThemeMockWidget) Hovered() bool                                { return false }
+func (m *ThemeMockWidget) ID() string                                   { return "mock" }
+func (m *ThemeMockWidget) Info() string                                 { return "mock widget" }
+func (m *ThemeMockWidget) Log(Widget, string, string, ...any)           {}
 func (m *ThemeMockWidget) On(string, func(Widget, string, ...any) bool) {}
-func (m *ThemeMockWidget) Parent() Widget { return nil }
-func (m *ThemeMockWidget) Position() (int, int) { return 0, 0 }
-func (m *ThemeMockWidget) Refresh() {}
-func (m *ThemeMockWidget) SetBounds(int, int, int, int) {}
-func (m *ThemeMockWidget) SetFocused(bool) {}
-func (m *ThemeMockWidget) SetHint(int, int) {}
-func (m *ThemeMockWidget) SetHovered(bool) {}
-func (m *ThemeMockWidget) SetParent(Container) {}
-func (m *ThemeMockWidget) SetPosition(int, int) {}
-func (m *ThemeMockWidget) SetSize(int, int) {}
-func (m *ThemeMockWidget) Size() (int, int) { return 0, 0 }
-func (m *ThemeMockWidget) State() string { return "" }
-func (m *ThemeMockWidget) Style(...string) *Style { return &DefaultStyle }
-func (m *ThemeMockWidget) Styles() []string { return []string{} }
+func (m *ThemeMockWidget) Parent() Widget                               { return nil }
+func (m *ThemeMockWidget) Position() (int, int)                         { return 0, 0 }
+func (m *ThemeMockWidget) Refresh()                                     {}
+func (m *ThemeMockWidget) SetBounds(int, int, int, int)                 {}
+func (m *ThemeMockWidget) SetFocused(bool)                              {}
+func (m *ThemeMockWidget) SetHint(int, int)                             {}
+func (m *ThemeMockWidget) SetHovered(bool)                              {}
+func (m *ThemeMockWidget) SetParent(Container)                          {}
+func (m *ThemeMockWidget) SetPosition(int, int)                         {}
+func (m *ThemeMockWidget) SetSize(int, int)                             {}
+func (m *ThemeMockWidget) Size() (int, int)                             { return 0, 0 }
+func (m *ThemeMockWidget) State() string                                { return "" }
+func (m *ThemeMockWidget) Style(...string) *Style                       { return &DefaultStyle }
+func (m *ThemeMockWidget) Styles() []string                             { return []string{} }

@@ -22,20 +22,20 @@ import (
 //
 // This regex is used internally by the Component to parse style selectors
 // and extract part and state information for theme application.
-var stylePartRegExp, _ = regexp.Compile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
+var stylePartRegExp = regexp.MustCompile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 
 // Component provides a default implementation of the Widget interface.
-// It serves as a foundation for creating custom widgets by providing
-// common functionality such as bounds management, parent-child relationships,
-// event handling and style handling. Most concrete widget implementations
-// should embed Component to inherit this basic functionality.
+// It serves as a foundation for creating custom widgets by providing common
+// functionality such as bounds management, parent-child relationships, event
+// handling and style handling. Most concrete widget implementations should
+// embed Component to inherit this basic functionality.
 //
 // Also do not forget to add it to the builder for easy building and styling.
 type Component struct {
 	id                  string               // widget identification datum
 	parent              Container            // reference to the parent container
 	x, y, width, height int                  // screen area of the widget (outer bounds)
-	hwidth, hheight     int                  // preferred content width and height
+	hwidth, hheight     int                  // preferred content width and height (hint)
 	states              map[string]bool      // map of internal boolean states like visible
 	styles              map[string]*Style    // visual styling information
 	handlers            map[string][]Handler // event handlers
@@ -58,15 +58,17 @@ func (c *Component) Content() (int, int, int, int) {
 	if style == nil {
 		return c.x, c.y, c.width, c.height
 	} else {
-		return c.x + style.Left(), c.y + style.Top(), c.width - style.Horizontal(), c.height - style.Vertical()
+		return c.x + style.Left(),
+			c.y + style.Top(),
+			c.width - style.Horizontal(),
+			c.height - style.Vertical()
 	}
 }
 
 // Cursor returns the current cursor position as (x, y) coordinates and style.
-// The base implementation returns (0, 0, "") indicating that no cursor
-// is displayed by default. Widgets that support text input or cursor
-// navigation should override this method to return the actual cursor
-// position and style.
+// The base implementation returns (0, 0, "") indicating that no cursor is
+// displayed by default. Widgets that support text input or cursor navigation
+// should override this method to return the actual cursor position and style.
 //
 // The returned position is relative to the content area of the widget,
 // so 0,0 is the top-left corner of the content area.
@@ -114,18 +116,16 @@ func (c *Component) Flag(state string) bool {
 }
 
 // Hint returns the widget's preferred content size of the widget.
-// The preferred size is just an attribute of the widget and can be set
-// using SetHint(w, h). The preferred size is the size of the content area
-// and must not include margin, border or padding. Some containers support
-// negative for with or height for fractional sizing.
+// The preferred size is just an attribute of the widget and can be set using
+// SetHint(w, h). The preferred size is the size of the content area and must
+// not include margin, border or padding. Some containers support negative for
+// with or height for fractional sizing.
 //
 // By default, the preferred size is 0, 0, but if it is not set to a
 // negative value, containers might calculate their preferred size and
 // return the calculated values.
 //
-// Returns:
-//   - int: preferred width, might be negative for fractional sizes
-//   - int: preferred height, might be negative for fractional sizes
+// Returns (content width, content height)
 func (c *Component) Hint() (int, int) {
 	return c.hwidth, c.hheight
 }
@@ -212,13 +212,10 @@ func (c *Component) Refresh() {
 // margin, border and padding. It also considers the state of the widget for
 // rendering and style resolution.
 //
-// If the widget is hidden, rendering is skipped. Styles are considered in
-// the following order:
-//   - Disabled
-//   - Focused
-//   - Hovered
-//   - Default
-//   - None
+// If the widget is hidden, rendering is skipped. The widget's state is
+// determined by State() with priority: disabled > pressed > focused > hovered.
+// The style for the state (e.g., ":focused") is looked up via Style() with
+// fallback order: exact selector, then part, then state, then default.
 //
 // Parameters:
 //   - r: The renderer to use for rendering the widget
@@ -239,9 +236,7 @@ func (c *Component) Render(r *Renderer) {
 	// Clear the area covered by the widget
 	if style.Background() != "" {
 		margin := style.Margin()
-		if margin == nil {
-			panic("margin is nil")
-		}
+		// Margin() never returns nil; if unset, returns NoInsets (all zeros)
 		r.Fill(c.x+margin.Left, c.y+margin.Top, c.width-margin.Left-margin.Right, c.height-margin.Top-margin.Bottom, " ")
 	}
 
@@ -352,14 +347,23 @@ func (c *Component) SetStyle(selector string, style *Style) {
 //   - ":focus": style when widget has keyboard focus
 //   - ":hover": style when mouse is over the widget
 //   - ":disabled": style when widget is disabled
+//   - "part": style for a specific part of the widget
+//   - "part:state": style for a specific part in a specific state
+//
+// The fallback order for a selector "part:state" is:
+//   - exact match "part:state"
+//   - part match "part"
+//   - state match ":state"
+//   - default ""
 //
 // Parameters:
 //   - params: The style selector to retrieve (e.g., "part", ":state", "part:state")
 //
 // Returns:
-//   - *Style: The style configuration for the selector, or nil if not found
+//   - *Style: The style configuration for the selector. Never returns nil; falls back to a default.
 func (c *Component) Style(params ...string) *Style {
-	// If no parameter is specified, we get the default style ""
+	// If no parameter is specified, we get the default style "" depending on the
+	// current State()
 	var selector string
 	if len(params) > 0 {
 		selector = params[0]
@@ -370,25 +374,38 @@ func (c *Component) Style(params ...string) *Style {
 		}
 	}
 
-	// If no style is set, we create an empty default one
+	// Ensure styles map exists
 	if c.styles == nil {
 		c.styles = make(map[string]*Style)
-		c.styles[""] = NewStyle("")
 	}
 
-	style, ok := c.styles[selector]
-	if ok {
+	// Try exact match
+	if style, ok := c.styles[selector]; ok {
 		return style
-	} else {
-		parts := stylePartRegExp.FindStringSubmatch(selector)
-		if style, ok = c.styles[":"+parts[2]]; ok {
-			return style
-		} else if style, ok = c.styles["/"+parts[1]]; ok {
-			return style
-		} else {
-			return c.styles[""]
+	}
+
+	// Fallback: if selector is "part:state", try "part" then ":state"
+	parts := stylePartRegExp.FindStringSubmatch(selector)
+	if len(parts) >= 3 {
+		// Try part only (without state)
+		if parts[1] != "" {
+			if style, ok := c.styles[parts[1]]; ok {
+				return style
+			}
+		}
+		// Try state only (with colon)
+		if parts[2] != "" {
+			if style, ok := c.styles[":"+parts[2]]; ok {
+				return style
+			}
 		}
 	}
+
+	// Ensure default style exists and return it
+	if c.styles[""] == nil {
+		c.styles[""] = NewStyle("")
+	}
+	return c.styles[""]
 }
 
 // Styles returns a list of all style selectors currently defined for this widget.
@@ -399,5 +416,8 @@ func (c *Component) Style(params ...string) *Style {
 // Returns:
 //   - []string: A slice of all style selector names defined for this widget
 func (c *Component) Styles() []string {
+	if c.styles == nil {
+		return []string{}
+	}
 	return slices.Collect(maps.Keys(c.styles))
 }

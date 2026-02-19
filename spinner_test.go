@@ -36,7 +36,7 @@ func TestSpinnerCreation(t *testing.T) {
 
 func TestSpinnerPredefinedStyles(t *testing.T) {
 	expectedStyles := []string{"bar", "dots", "dot", "arrow", "circle", "bounce", "braille"}
-	
+
 	for _, style := range expectedStyles {
 		if _, exists := Spinners[style]; !exists {
 			t.Errorf("Expected predefined spinner style '%s' not found", style)
@@ -61,23 +61,23 @@ func TestSpinnerStartStop(t *testing.T) {
 
 	// Test starting
 	spinner.Start(10 * time.Millisecond)
-	
+
 	// Give it a moment to start
 	time.Sleep(5 * time.Millisecond)
-	
+
 	if !spinner.IsRunning() {
 		t.Error("Spinner should be running after Start()")
 	}
 
 	// Let it animate a bit
 	time.Sleep(25 * time.Millisecond)
-	
+
 	// Test stopping
 	spinner.Stop()
-	
+
 	// Give it a moment to stop
 	time.Sleep(5 * time.Millisecond)
-	
+
 	if spinner.IsRunning() {
 		t.Error("Spinner should not be running after Stop()")
 	}
@@ -107,9 +107,9 @@ func TestSpinnerReset(t *testing.T) {
 func TestSpinnerSetRunes(t *testing.T) {
 	originalRunes := []rune("abc")
 	newRunes := []rune("xyz")
-	
+
 	spinner := NewSpinner("test", originalRunes)
-	
+
 	// Verify original
 	if spinner.Rune() != 'a' {
 		t.Error("Expected initial rune 'a'")
@@ -117,12 +117,12 @@ func TestSpinnerSetRunes(t *testing.T) {
 
 	// Change runes
 	spinner.SetRunes(newRunes)
-	
+
 	// Should reset to first character of new sequence
 	if spinner.Rune() != 'x' {
 		t.Error("Expected rune 'x' after SetRunes")
 	}
-	
+
 	if spinner.GetCurrentIndex() != 0 {
 		t.Error("Expected index 0 after SetRunes")
 	}
@@ -130,12 +130,12 @@ func TestSpinnerSetRunes(t *testing.T) {
 
 func TestSpinnerMultipleStops(t *testing.T) {
 	spinner := NewSpinner("test", []rune("abc"))
-	
+
 	// Multiple stops should not panic
 	spinner.Stop()
 	spinner.Stop()
 	spinner.Stop()
-	
+
 	// Should still not be running
 	if spinner.IsRunning() {
 		t.Error("Spinner should not be running after multiple stops")
@@ -145,14 +145,14 @@ func TestSpinnerMultipleStops(t *testing.T) {
 func TestSpinnerAnimation(t *testing.T) {
 	runes := []rune("abc")
 	spinner := NewSpinner("test", runes)
-	
+
 	// Start with fast interval for quick testing
 	spinner.Start(5 * time.Millisecond)
 	defer spinner.Stop()
-	
+
 	// Wait for a few animation cycles
 	time.Sleep(20 * time.Millisecond)
-	
+
 	// The index should have advanced (we can't guarantee exact position due to timing)
 	// but we can verify the rune is valid
 	currentRune := spinner.Rune()
@@ -163,7 +163,7 @@ func TestSpinnerAnimation(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !validRune {
 		t.Errorf("Current rune '%c' is not in the expected sequence", currentRune)
 	}

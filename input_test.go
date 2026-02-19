@@ -873,4 +873,3 @@ func TestInput_Handle_KeyboardEvents(t *testing.T) {
 		}
 	})
 }
-

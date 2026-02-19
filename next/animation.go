@@ -11,6 +11,7 @@ import (
 type Animation struct {
 	Component
 	ticker *time.Ticker
+	fn     func()
 	stop   chan struct{}
 }
 
@@ -20,6 +21,7 @@ type Animation struct {
 func (a *Animation) Start(interval time.Duration) {
 	go func() {
 		if a.ticker != nil {
+			a.Log(a, "error", "Animation already running")
 			return // already running
 		}
 
@@ -61,5 +63,9 @@ func (a *Animation) Refresh() {
 // Tick is called on each animation frame. Subtypes must implement this method
 // to define their specific animation behavior.
 func (a *Animation) Tick() {
-	// To be overridden by subtypes
+	if a.fn != nil {
+		a.fn()
+	} else {
+		a.Log(a, "warn", "No animation method set")
+	}
 }

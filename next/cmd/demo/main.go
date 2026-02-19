@@ -23,14 +23,16 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Checkbox", "Editor", "Scanner", "Grid", "Styled", "Table", "Tabs").
+		List("navigation", "Box", "Checkbox", "Digits", "Editor", "Grid", "Scanner", "Spinner", "Styled", "Table", "Tabs").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
 		With(checkbox).
+		With(digits).
 		With(editor).
-		With(scanner).
 		With(grid).
+		With(scanner).
+		With(spinner).
 		With(styled).
 		With(table).
 		With(tabs).
@@ -46,18 +48,30 @@ func createUI() *UI {
 		End().
 		Build()
 
-	// Start scanner animation
-	if scanner := Find(ui, "scanner-demo"); scanner != nil {
-		if s, ok := scanner.(*Scanner); ok {
-			s.Start(100 * time.Millisecond)
-		}
-	}
-
 	switcher := Find(ui, "switcher").(*Switcher)
 	Find(ui, "navigation").On("activate", func(_ Widget, event string, data ...any) bool {
 		if len(data) == 1 {
 			if selected, ok := data[0].(int); ok {
 				switcher.Select(selected)
+				if selected == 5 {
+					for _, spinner := range FindAll[*Spinner](ui) {
+						spinner.Start(100 * time.Millisecond)
+					}
+				} else if selected == 4 {
+					for _, scanner := range FindAll[*Scanner](ui) {
+						scanner.Start(50 * time.Millisecond)
+					}
+				}
+				if selected != 5 {
+					for _, spinner := range FindAll[*Spinner](ui) {
+						spinner.Stop()
+					}
+				}
+				if selected != 4 {
+					for _, scanner := range FindAll[*Scanner](ui) {
+						scanner.Stop()
+					}
+				}
 				return true
 			}
 		}
@@ -99,14 +113,14 @@ func checkbox(builder *Builder) {
 
 	container := builder.Container()
 	for i := 1; i <= 5; i++ {
-		cbId := fmt.Sprintf("cb%d", i)
-		if cb := Find(container, cbId); cb != nil {
+		cbID := fmt.Sprintf("cb%d", i)
+		if cb := Find(container, cbID); cb != nil {
 			cb.On("change", func(_ Widget, event string, data ...any) bool {
 				checked := data[0].(bool)
 				if statusLabel := Find(container, "checkbox-status"); statusLabel != nil {
 					if label, ok := statusLabel.(*Static); ok {
 						var name string
-						switch cbId {
+						switch cbID {
 						case "cb1":
 							name = "Notifications"
 						case "cb2":
@@ -127,6 +141,16 @@ func checkbox(builder *Builder) {
 	}
 }
 
+func digits(builder *Builder) {
+	builder.Flex("digits-demo", false, "stretch", 1).Padding(1).
+		Static("digits-title", "Digits Widget Demo").Padding(0, 0, 1, 0).
+		Flex("digits-content", true, "center", 1).
+		Digits("digits", "12:34").
+		End().
+		Static("digits-info", "Large ASCII art-style digits using Unicode box-drawing characters.").Padding(1, 0, 0, 0).
+		End()
+}
+
 func editor(builder *Builder) {
 	builder.Editor("editor-demo").Hint(0, -1).Padding(1)
 	if ed := Find(builder.Container(), "editor-demo"); ed != nil {
@@ -136,22 +160,38 @@ func editor(builder *Builder) {
 	}
 }
 
-func scanner(builder *Builder) {
-	builder.Flex("scanner-container", false, "stretch", 1).Padding(1).
-		Static("scanner-title", "Scanner Widget Demo").Padding(0, 0, 1, 0).
-		Static("scanner-info", "Back-and-forth scanning animation with fading trail.").Padding(0, 0, 1, 0).
-		Flex("scanner-row", true, "center", 0).
-		Scanner("scanner-demo", 12, "blocks").
-		End().
-		Static("scanner-note", "Scanner uses a dimmed trail and cycles: forward → hold → backward → hold").Padding(1, 0, 0, 0).
-		End()
-}
-
 func grid(builder *Builder) {
 	builder.Grid("grid-demo", 4, 4, true).Margin(1).Border("", "round").
 		Cell(0, 0, 4, 1).Static("", "First row, spans 4 columns").
 		Cell(0, 1, 1, 3).Static("", "Spans 3 rows").
 		Cell(2, 2, 2, 2).Static("", "2 x 2").
+		End()
+}
+
+func scanner(builder *Builder) {
+	builder.Flex("scanner-container", false, "stretch", 1).Padding(1).
+		Static("scanner-title", "Scanner Widget Demo").Padding(0, 0, 1, 0).
+		Static("scanner-info", "Back-and-forth scanning animation with fading trail.").Padding(0, 0, 1, 0).
+		Flex("scanner-flex", false, "center", 1).
+		Scanner("scanner-blocks", 12, "blocks").
+		Scanner("scanner-circles", 12, "circles").
+		Scanner("scanner-diamonds", 12, "diamonds").
+		End().
+		Static("scanner-note", "Scanner uses a dimmed trail and cycles: forward → hold → backward → hold").Padding(1, 0, 0, 0).
+		End()
+}
+
+func spinner(builder *Builder) {
+	builder.Box("spinner-demo", "Spinner").Border("", "round").Margin(1).Padding(1, 5).
+		Flex("spinner-flex", true, "start", 2).
+		Spinner("spinner", Spinners["bar"]).
+		Spinner("spinner", Spinners["dot"]).
+		Spinner("spinner", Spinners["dots"]).
+		Spinner("spinner", Spinners["arrow"]).
+		Spinner("spinner", Spinners["circle"]).
+		Spinner("spinner", Spinners["bounce"]).
+		Spinner("spinner", Spinners["braille"]).
+		End().
 		End()
 }
 
@@ -187,7 +227,7 @@ func people(n int) [][]string {
 	states := []string{"AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"}
 
 	result := make([][]string, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		first := firstNames[rand.Intn(len(firstNames))]
 		last := lastNames[rand.Intn(len(lastNames))]
 		street := streets[rand.Intn(len(streets))]

@@ -428,4 +428,3 @@ func TestInsetsEdgeCases(t *testing.T) {
 		}
 	})
 }
-

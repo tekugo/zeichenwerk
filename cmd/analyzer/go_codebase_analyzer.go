@@ -223,4 +223,3 @@ func main() {
 	fmt.Printf("Documentation ratio: %.1f%%\n", metrics.DocumentationRatio())
 	fmt.Printf("Test coverage ratio: %.1f%%\n", metrics.TestCoverageRatio())
 }
-

@@ -219,4 +219,3 @@ func testKeyNavigationWithMod(t *testing.T, table *Table, key tcell.Key, mod tce
 		t.Errorf("%s: Expected row %d, got %d", description, expectedRow, table.GetSelectedRow())
 	}
 }
-

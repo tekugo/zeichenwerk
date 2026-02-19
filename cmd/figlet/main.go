@@ -111,7 +111,7 @@ func renderFiglet(fontData string, text string) ([]string, error) {
 				maxw = len(runes)
 			}
 		}
-		
+
 		glyphs[gi] = glyph{lines: lines, width: maxw}
 	}
 
@@ -274,10 +274,10 @@ func computeSmushAmount(canvas [][]rune, canvasWidth int, g *glyph, rules SmushR
 	if canvasWidth == 0 {
 		return 0
 	}
-	
+
 	height := len(canvas)
 	maxSmush := g.width // Start with maximum possible smush
-	
+
 	for row := 0; row < height; row++ {
 		// Find rightmost non-space character in existing canvas
 		linebd := -1
@@ -291,7 +291,7 @@ func computeSmushAmount(canvas [][]rune, canvasWidth int, g *glyph, rules SmushR
 				break
 			}
 		}
-		
+
 		// Find leftmost non-space character in new glyph
 		charbd := g.width // Default to no character found
 		for col := 0; col < g.width; col++ {
@@ -304,25 +304,25 @@ func computeSmushAmount(canvas [][]rune, canvasWidth int, g *glyph, rules SmushR
 				break
 			}
 		}
-		
+
 		// Calculate how much we can smush on this row
 		var amt int
 		if linebd < 0 {
 			// No existing characters on this line
 			amt = charbd + 1
 		} else if charbd >= g.width {
-			// No new characters on this line  
+			// No new characters on this line
 			amt = g.width
 		} else {
 			// Both lines have characters - calculate possible overlap
 			amt = charbd + canvasWidth - 1 - linebd
-			
+
 			// Now check if this overlap is actually valid
 			if amt > 0 {
 				// Get the characters that would be overlapping
 				leftChar := canvas[row][linebd]
 				rightChar := g.lines[row][charbd]
-				
+
 				// Apply the figlet overlap rules
 				if leftChar == ' ' || leftChar == 0 {
 					// Left is space, we can definitely overlap
@@ -339,13 +339,13 @@ func computeSmushAmount(canvas [][]rune, canvasWidth int, g *glyph, rules SmushR
 				// If right is space and left is not, amt stays as calculated
 			}
 		}
-		
+
 		// Take the minimum across all rows
 		if amt < maxSmush {
 			maxSmush = amt
 		}
 	}
-	
+
 	// Clamp to reasonable bounds
 	if maxSmush < 0 {
 		maxSmush = 0
@@ -353,7 +353,7 @@ func computeSmushAmount(canvas [][]rune, canvasWidth int, g *glyph, rules SmushR
 	if maxSmush > g.width {
 		maxSmush = g.width
 	}
-	
+
 	return maxSmush
 }
 
@@ -362,30 +362,30 @@ func canSmush(left, right rune, rules SmushRules, hardblank rune) bool {
 	if left == ' ' || right == ' ' {
 		return true
 	}
-	
+
 	// Check hardblank rules
 	if left == hardblank || right == hardblank {
 		return rules.HardBlank && left == hardblank && right == hardblank
 	}
-	
+
 	// Apply smushing rules
 	if rules.Equal && left == right {
 		return true
 	}
-	
+
 	if rules.Underscore {
-		if left == '_' && (right == '|' || right == '/' || right == '\\' || 
+		if left == '_' && (right == '|' || right == '/' || right == '\\' ||
 			right == '[' || right == ']' || right == '{' || right == '}' ||
 			right == '(' || right == ')' || right == '<' || right == '>') {
 			return true
 		}
-		if right == '_' && (left == '|' || left == '/' || left == '\\' || 
+		if right == '_' && (left == '|' || left == '/' || left == '\\' ||
 			left == '[' || left == ']' || left == '{' || left == '}' ||
 			left == '(' || left == ')' || left == '<' || left == '>') {
 			return true
 		}
 	}
-	
+
 	if rules.OppositePair {
 		if (left == '[' && right == ']') || (left == ']' && right == '[') ||
 			(left == '{' && right == '}') || (left == '}' && right == '{') ||
@@ -393,25 +393,25 @@ func canSmush(left, right rune, rules SmushRules, hardblank rune) bool {
 			return true
 		}
 	}
-	
+
 	if rules.BigX {
 		if (left == '/' && right == '\\') || (left == '>' && right == '<') {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 func appendWithSmush(canvas [][]rune, canvasWidth int, g *glyph, rules SmushRules, hardblank rune) ([][]rune, int) {
 	height := len(canvas)
-	
+
 	// Calculate the correct smush amount
 	smushAmount := computeSmushAmount(canvas, canvasWidth, g, rules, hardblank)
-	
+
 	// The new width is the original width plus glyph width minus smush overlap
 	newWidth := canvasWidth + g.width - smushAmount
-	
+
 	// Build new canvas
 	newCanvas := make([][]rune, height)
 	for r := 0; r < height; r++ {
@@ -424,10 +424,10 @@ func appendWithSmush(canvas [][]rune, canvasWidth int, g *glyph, rules SmushRule
 			}
 			row = append(row, pad...)
 		}
-		
+
 		// Create new row
 		newRow := make([]rune, newWidth)
-		
+
 		// Copy original canvas content
 		for i := 0; i < canvasWidth; i++ {
 			if i < len(row) {
@@ -436,7 +436,7 @@ func appendWithSmush(canvas [][]rune, canvasWidth int, g *glyph, rules SmushRule
 				newRow[i] = ' '
 			}
 		}
-		
+
 		// Add glyph content with proper smushing
 		for i := 0; i < g.width; i++ {
 			pos := canvasWidth - smushAmount + i
@@ -445,7 +445,7 @@ func appendWithSmush(canvas [][]rune, canvasWidth int, g *glyph, rules SmushRule
 				if r < len(g.lines) && i < len(g.lines[r]) {
 					glyphChar = g.lines[r][i]
 				}
-				
+
 				if pos < canvasWidth {
 					// This is an overlap position - need to smush
 					canvasChar := newRow[pos]
@@ -468,10 +468,10 @@ func appendWithSmush(canvas [][]rune, canvasWidth int, g *glyph, rules SmushRule
 				}
 			}
 		}
-		
+
 		newCanvas[r] = newRow
 	}
-	
+
 	return newCanvas, newWidth
 }
 
@@ -532,7 +532,7 @@ func min(a, b int) int {
 // ---------------- Example main ----------------
 func main() {
 	tests := []string{"Hello, World!", "Somewhere", "Autobahn", "Just do it!"}
-	
+
 	for _, test := range tests {
 		out, err := RenderFigletFromFile("standard.flf", test)
 		if err != nil {

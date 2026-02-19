@@ -115,9 +115,10 @@ func (t *Tabs) Emit(event string, data ...any) {
 //   - height: Preferred height in characters (always 2)
 //
 // Example:
-//   For tabs ["Home", "Settings"] (4 + 8 = 12 chars):
-//   Width = 12 + (2 * 2) + 2 = 18 characters
-//   Height = 2 characters
+//
+//	For tabs ["Home", "Settings"] (4 + 8 = 12 chars):
+//	Width = 12 + (2 * 2) + 2 = 18 characters
+//	Height = 2 characters
 func (t *Tabs) Hint() (int, int) {
 	width := 0
 	for _, tab := range t.Tabs {
@@ -344,13 +345,13 @@ func (t *Tabs) SetSelected(index int) bool {
 	if index < 0 || index >= len(t.Tabs) {
 		return false
 	}
-	
+
 	oldSelected := t.Selected
 	oldIndex := t.Index
-	
+
 	t.Selected = index
 	t.Index = index
-	
+
 	// Emit events if anything changed
 	if t.Index != oldIndex {
 		t.Emit("change", t.Index)
@@ -358,7 +359,7 @@ func (t *Tabs) SetSelected(index int) bool {
 	if t.Selected != oldSelected {
 		t.Emit("activate", t.Selected)
 	}
-	
+
 	t.Refresh()
 	return true
 }
@@ -417,11 +418,11 @@ func (t *Tabs) Clear() {
 	hadTabs := len(t.Tabs) > 0
 	oldSelected := t.Selected
 	oldIndex := t.Index
-	
+
 	t.Tabs = t.Tabs[:0] // Clear slice but keep capacity
 	t.Selected = 0
 	t.Index = 0
-	
+
 	if hadTabs {
 		if t.Index != oldIndex {
 			t.Emit("change", t.Index)
@@ -448,13 +449,13 @@ func (t *Tabs) Remove(index int) bool {
 	if index < 0 || index >= len(t.Tabs) {
 		return false
 	}
-	
+
 	oldSelected := t.Selected
 	oldIndex := t.Index
-	
+
 	// Remove the tab
 	t.Tabs = append(t.Tabs[:index], t.Tabs[index+1:]...)
-	
+
 	// Adjust indices if necessary
 	if len(t.Tabs) == 0 {
 		t.Selected = 0
@@ -472,7 +473,7 @@ func (t *Tabs) Remove(index int) bool {
 				t.Selected = 0
 			}
 		}
-		
+
 		// Adjust highlighted index
 		if t.Index > index {
 			t.Index--
@@ -485,7 +486,7 @@ func (t *Tabs) Remove(index int) bool {
 				t.Index = 0
 			}
 		}
-		
+
 		// Ensure indices are within bounds
 		if t.Selected >= len(t.Tabs) {
 			t.Selected = len(t.Tabs) - 1
@@ -494,7 +495,7 @@ func (t *Tabs) Remove(index int) bool {
 			t.Index = len(t.Tabs) - 1
 		}
 	}
-	
+
 	// Emit events if indices changed
 	if t.Index != oldIndex {
 		t.Emit("change", t.Index)
@@ -502,7 +503,7 @@ func (t *Tabs) Remove(index int) bool {
 	if t.Selected != oldSelected {
 		t.Emit("activate", t.Selected)
 	}
-	
+
 	t.Refresh()
 	return true
 }

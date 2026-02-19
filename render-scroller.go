@@ -94,7 +94,7 @@ func (r *Renderer) renderScroller(scroller *Scroller) {
 	_, _, cw, ch := scroller.child.Bounds()
 
 	// ---- Scrollbar Necessity Calculation ----
-	
+
 	// Calculate available width (iw) considering vertical scrollbar space
 	// Start with full width, reduce by 1 if vertical scrollbar is needed
 	iw := w
@@ -112,7 +112,7 @@ func (r *Renderer) renderScroller(scroller *Scroller) {
 	}
 
 	// ---- Scrollbar Rendering ----
-	
+
 	// Render vertical scrollbar if width was reduced (indicates necessity)
 	if iw < w {
 		// Position scrollbar at rightmost edge of content area
@@ -128,33 +128,33 @@ func (r *Renderer) renderScroller(scroller *Scroller) {
 	}
 
 	// ---- Content Viewport Setup and Rendering ----
-	
+
 	// Establish clipping boundaries for content rendering
 	// This prevents content from drawing outside the scroller area
 	r.clip(scroller)
-	
+
 	// Configure viewport translation for scrolling functionality
 	if viewport, ok := r.screen.(*Viewport); ok {
 		// Set translation offsets to shift content position within viewport
 		// Negative scroller offsets create positive content displacement
-		viewport.tx = x - scroller.tx  // Horizontal content offset
-		viewport.ty = y - scroller.ty  // Vertical content offset
+		viewport.tx = x - scroller.tx // Horizontal content offset
+		viewport.ty = y - scroller.ty // Vertical content offset
 		// Set effective viewport dimensions (excluding scrollbar space)
-		viewport.width = iw   // Content width after vertical scrollbar allocation
-		viewport.height = ih  // Content height after horizontal scrollbar allocation
+		viewport.width = iw  // Content width after vertical scrollbar allocation
+		viewport.height = ih // Content height after horizontal scrollbar allocation
 	} else {
 		// Viewport translation failed: log error but continue rendering
 		// This provides fallback behavior if viewport system is unavailable
 		scroller.Log(scroller, "error", "Cannot translate viewport %T", r.screen)
 	}
-	
+
 	// Debug logging for scroll position and viewport configuration
 	scroller.Log(scroller, "debug", "renderScroller x=%d, y=%d, tx=%d, ty=%d", x, y, scroller.tx, scroller.ty)
-	
+
 	// Render the child content within the configured viewport
 	// Content will be clipped and translated according to scroll position
 	r.render(scroller.child)
-	
+
 	// Restore original viewport state after content rendering
 	r.unclip()
 }

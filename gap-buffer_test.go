@@ -66,29 +66,29 @@ func TestNewGapBufferFromString(t *testing.T) {
 			if gb == nil {
 				t.Fatal("NewGapBufferFromString returned nil")
 			}
-			
+
 			// Check total capacity
 			expectedTotalCap := len([]rune(tt.text)) + tt.wantGapCap
 			if len(gb.buffer) != expectedTotalCap {
 				t.Errorf("NewGapBufferFromString() total capacity = %d, want %d", len(gb.buffer), expectedTotalCap)
 			}
-			
+
 			// Check gap position (should be at end of text)
 			expectedStart := len([]rune(tt.text))
 			if gb.start != expectedStart {
 				t.Errorf("NewGapBufferFromString() start = %d, want %d", gb.start, expectedStart)
 			}
-			
+
 			// Check gap end
 			if gb.end != expectedTotalCap {
 				t.Errorf("NewGapBufferFromString() end = %d, want %d", gb.end, expectedTotalCap)
 			}
-			
+
 			// Check length matches text length
 			if gb.Length() != len([]rune(tt.text)) {
 				t.Errorf("NewGapBufferFromString() Length() = %d, want %d", gb.Length(), len([]rune(tt.text)))
 			}
-			
+
 			// Check content matches input text
 			if gb.String() != tt.text {
 				t.Errorf("NewGapBufferFromString() String() = %q, want %q", gb.String(), tt.text)
@@ -101,27 +101,27 @@ func TestNewGapBufferFromString(t *testing.T) {
 func TestNewGapBufferFromStringOperations(t *testing.T) {
 	// Test basic operations after creation from string
 	gb := NewGapBufferFromString("hello", 5)
-	
+
 	// Test insertion at end (gap position)
 	gb.Insert('!')
 	if gb.String() != "hello!" {
 		t.Errorf("After inserting at end, got %q, want %q", gb.String(), "hello!")
 	}
-	
+
 	// Test insertion at beginning
 	gb.Move(0)
 	gb.Insert('H')
 	if gb.String() != "Hhello!" {
 		t.Errorf("After inserting at beginning, got %q, want %q", gb.String(), "Hhello!")
 	}
-	
+
 	// Test deletion
 	gb.Move(0)
 	gb.Delete()
 	if gb.String() != "hello!" {
 		t.Errorf("After deleting first character, got %q, want %q", gb.String(), "hello!")
 	}
-	
+
 	// Test find operation
 	matches := gb.Find("ll")
 	expected := []int{2}
@@ -143,16 +143,16 @@ func TestNewGapBufferFromStringWithComplexText(t *testing.T) {
 		{"repeated patterns", "abababab"},
 		{"palindrome", "racecar"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gb := NewGapBufferFromString(tt.text, 10)
-			
+
 			// Verify initial state
 			if gb.String() != tt.text {
 				t.Errorf("Initial string = %q, want %q", gb.String(), tt.text)
 			}
-			
+
 			// Test cursor movement and operations
 			textLen := len([]rune(tt.text))
 			if textLen > 0 {
@@ -160,7 +160,7 @@ func TestNewGapBufferFromStringWithComplexText(t *testing.T) {
 				midPos := textLen / 2
 				gb.Move(midPos)
 				gb.Insert('X')
-				
+
 				// Verify insertion
 				result := gb.String()
 				runes := []rune(tt.text)
@@ -168,7 +168,7 @@ func TestNewGapBufferFromStringWithComplexText(t *testing.T) {
 				if result != expected {
 					t.Errorf("After insertion at middle, got %q, want %q", result, expected)
 				}
-				
+
 				// Remove the inserted character
 				gb.Move(midPos)
 				gb.Delete()
@@ -231,7 +231,7 @@ func TestInsertWithResize(t *testing.T) {
 	if gb.String() != text {
 		t.Errorf("After inserting %q, String() = %q, want %q", text, gb.String(), text)
 	}
-	
+
 	// Verify buffer has grown
 	if len(gb.buffer) < len(text) {
 		t.Errorf("Buffer capacity %d should be at least %d after resize", len(gb.buffer), len(text))
@@ -241,7 +241,7 @@ func TestInsertWithResize(t *testing.T) {
 // TestDelete tests deletion of characters
 func TestDelete(t *testing.T) {
 	gb := NewGapBuffer(10)
-	
+
 	// Insert some text
 	text := "hello"
 	for _, r := range text {
@@ -252,7 +252,7 @@ func TestDelete(t *testing.T) {
 	gb.Move(0)
 	initialLength := gb.Length()
 	gb.Delete()
-	
+
 	if gb.Length() != initialLength-1 {
 		t.Errorf("After delete, Length() = %d, want %d", gb.Length(), initialLength-1)
 	}
@@ -279,7 +279,7 @@ func TestDelete(t *testing.T) {
 // TestMove tests cursor movement
 func TestMove(t *testing.T) {
 	gb := NewGapBuffer(10)
-	
+
 	// Insert some text
 	text := "abcdef"
 	for _, r := range text {
@@ -290,17 +290,17 @@ func TestMove(t *testing.T) {
 	positions := []int{0, 1, 3, 5, 6}
 	for _, pos := range positions {
 		gb.Move(pos)
-		
+
 		// Insert a marker to verify position
 		marker := 'X'
 		gb.Insert(marker)
-		
+
 		// Check that marker is at expected position
 		result := gb.String()
 		if pos >= len(result) || result[pos] != byte(marker) {
 			t.Errorf("After moving to %d and inserting %c, result = %q, marker not at expected position", pos, marker, result)
 		}
-		
+
 		// Remove the marker for next test
 		gb.Move(pos)
 		gb.Delete()
@@ -396,7 +396,7 @@ func TestString(t *testing.T) {
 func TestRunes(t *testing.T) {
 	gb := NewGapBuffer(10)
 	text := "hello"
-	
+
 	for _, r := range text {
 		gb.Insert(r)
 	}
@@ -406,7 +406,7 @@ func TestRunes(t *testing.T) {
 	for r := range gb.Runes(0) {
 		result = append(result, r)
 	}
-	
+
 	if string(result) != text {
 		t.Errorf("Runes(0) iteration result = %q, want %q", string(result), text)
 	}
@@ -416,7 +416,7 @@ func TestRunes(t *testing.T) {
 	for r := range gb.Runes(2) {
 		result = append(result, r)
 	}
-	
+
 	expected := text[2:]
 	if string(result) != expected {
 		t.Errorf("Runes(2) iteration result = %q, want %q", string(result), expected)
@@ -427,7 +427,7 @@ func TestRunes(t *testing.T) {
 	for r := range gb.Runes(-1) {
 		result = append(result, r)
 	}
-	
+
 	if len(result) != 0 {
 		t.Errorf("Runes(-1) should return empty iteration, got %d runes", len(result))
 	}
@@ -436,7 +436,7 @@ func TestRunes(t *testing.T) {
 	for r := range gb.Runes(gb.Length()) {
 		result = append(result, r)
 	}
-	
+
 	if len(result) != 0 {
 		t.Errorf("Runes(Length()) should return empty iteration, got %d runes", len(result))
 	}
@@ -446,7 +446,7 @@ func TestRunes(t *testing.T) {
 func TestRunesWithGapMovement(t *testing.T) {
 	gb := NewGapBuffer(10)
 	text := "abcdef"
-	
+
 	for _, r := range text {
 		gb.Insert(r)
 	}
@@ -455,12 +455,12 @@ func TestRunesWithGapMovement(t *testing.T) {
 	positions := []int{0, 1, 3, len(text)}
 	for _, pos := range positions {
 		gb.Move(pos)
-		
+
 		var result []rune
 		for r := range gb.Runes(0) {
 			result = append(result, r)
 		}
-		
+
 		if string(result) != text {
 			t.Errorf("After moving gap to %d, Runes(0) = %q, want %q", pos, string(result), text)
 		}
@@ -471,7 +471,7 @@ func TestRunesWithGapMovement(t *testing.T) {
 func TestFind(t *testing.T) {
 	gb := NewGapBuffer(20)
 	text := "hello world hello"
-	
+
 	for _, r := range text {
 		gb.Insert(r)
 	}
@@ -511,7 +511,7 @@ func TestFind(t *testing.T) {
 func TestFindWithGapMovement(t *testing.T) {
 	gb := NewGapBuffer(20)
 	text := "abcdefghijk"
-	
+
 	for _, r := range text {
 		gb.Insert(r)
 	}
@@ -524,7 +524,7 @@ func TestFindWithGapMovement(t *testing.T) {
 	for _, pos := range positions {
 		gb.Move(pos)
 		result := gb.Find(pattern)
-		
+
 		if len(result) != len(expected) {
 			t.Errorf("With gap at %d, Find(%q) returned %d matches, want %d", pos, pattern, len(result), len(expected))
 			continue
@@ -541,7 +541,7 @@ func TestFindWithGapMovement(t *testing.T) {
 func TestFindUnicode(t *testing.T) {
 	gb := NewGapBuffer(20)
 	text := "Hällö Wörld Hällö"
-	
+
 	for _, r := range text {
 		gb.Insert(r)
 	}
@@ -591,12 +591,12 @@ func TestComputeLPSArray(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pattern := []rune(tt.pattern)
 			result := computeLPSArray(pattern)
-			
+
 			if len(result) != len(tt.expected) {
 				t.Errorf("computeLPSArray(%q) length = %d, want %d", tt.pattern, len(result), len(tt.expected))
 				return
 			}
-			
+
 			for i, val := range result {
 				if val != tt.expected[i] {
 					t.Errorf("computeLPSArray(%q)[%d] = %d, want %d", tt.pattern, i, val, tt.expected[i])
@@ -616,7 +616,7 @@ func TestComplexOperations(t *testing.T) {
 	gb.Insert('l')
 	gb.Insert('l')
 	gb.Insert('o')
-	
+
 	if gb.String() != "hello" {
 		t.Errorf("After building 'hello', got %q", gb.String())
 	}
@@ -654,20 +654,20 @@ func TestComplexOperations(t *testing.T) {
 func TestEdgeCases(t *testing.T) {
 	// Test with minimal buffer that needs frequent resizing
 	gb := NewGapBuffer(2)
-	
+
 	// Insert many characters to force multiple resizes
 	text := "This is a longer text that will force multiple buffer resizes"
 	for _, r := range text {
 		gb.Insert(r)
 	}
-	
+
 	if gb.String() != text {
 		t.Errorf("After multiple resizes, got %q, want %q", gb.String(), text)
 	}
 
 	// Test operations on empty buffer
 	emptyGB := NewGapBuffer(10)
-	
+
 	// Delete on empty buffer should not crash
 	emptyGB.Delete()
 	if emptyGB.Length() != 0 {
@@ -694,7 +694,7 @@ func TestEdgeCases(t *testing.T) {
 func BenchmarkInsert(b *testing.B) {
 	gb := NewGapBuffer(1000)
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		gb.Insert('a')
 	}
@@ -703,12 +703,12 @@ func BenchmarkInsert(b *testing.B) {
 // BenchmarkMove benchmarks cursor movement
 func BenchmarkMove(b *testing.B) {
 	gb := NewGapBuffer(1000)
-	
+
 	// Fill buffer with some data
 	for i := 0; i < 500; i++ {
 		gb.Insert('a')
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		pos := i % gb.Length()
@@ -719,13 +719,13 @@ func BenchmarkMove(b *testing.B) {
 // BenchmarkFind benchmarks the Find operation
 func BenchmarkFind(b *testing.B) {
 	gb := NewGapBuffer(1000)
-	
+
 	// Create text with multiple occurrences of pattern
 	text := strings.Repeat("hello world ", 100)
 	for _, r := range text {
 		gb.Insert(r)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		gb.Find("hello")
@@ -735,12 +735,12 @@ func BenchmarkFind(b *testing.B) {
 // BenchmarkString benchmarks String conversion
 func BenchmarkString(b *testing.B) {
 	gb := NewGapBuffer(1000)
-	
+
 	// Fill buffer with data
 	for i := 0; i < 500; i++ {
 		gb.Insert('a')
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = gb.String()
@@ -750,7 +750,7 @@ func BenchmarkString(b *testing.B) {
 // BenchmarkNewGapBufferFromString benchmarks creation from string
 func BenchmarkNewGapBufferFromString(b *testing.B) {
 	text := strings.Repeat("hello world ", 100)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = NewGapBufferFromString(text, 100)
@@ -760,7 +760,7 @@ func BenchmarkNewGapBufferFromString(b *testing.B) {
 // BenchmarkNewGapBufferFromStringLarge benchmarks creation from large string
 func BenchmarkNewGapBufferFromStringLarge(b *testing.B) {
 	text := strings.Repeat("This is a longer text with more content for benchmarking purposes. ", 1000)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = NewGapBufferFromString(text, 1000)

@@ -2,7 +2,6 @@ package next
 
 import (
 	"strings"
-	"time"
 )
 
 // Spinners provides a collection of predefined spinner animations as strings.
@@ -56,6 +55,7 @@ func NewSpinner(id string, sequence string) *Spinner {
 		},
 		sequence: strings.Split(sequence, " "),
 	}
+	spinner.fn = spinner.Tick
 	return spinner
 }
 
@@ -76,29 +76,9 @@ func (s *Spinner) Hint() (int, int) {
 	return max, 1
 }
 
-// Refresh triggers a redraw of the spinner widget.
-// This method is called automatically during animation cycles
-// but can be called manually if needed.
+// Refresh and thus redraw the spinner widget.
 func (s *Spinner) Refresh() {
-	s.Animation.Refresh()
-}
-
-// Start begins the spinner animation with the specified time interval.
-func (s *Spinner) Start(interval time.Duration) {
-	s.Animation.Start(interval)
-}
-
-// Stop gracefully halts the spinner animation and cleans up resources.
-// The method is thread-safe and can be called multiple times without issues.
-// After stopping, the spinner can be restarted with Start().
-func (s *Spinner) Stop() {
-	s.Animation.Stop()
-}
-
-// Running returns whether the spinner animation is currently active.
-// This is useful for checking spinner state before starting or stopping.
-func (s *Spinner) Running() bool {
-	return s.Animation.Running()
+	Redraw(s)
 }
 
 // Tick updates the animation state on each frame.

@@ -56,7 +56,7 @@ func TestNewList(t *testing.T) {
 func TestListNavigation(t *testing.T) {
 	t.Run("Down navigation", func(t *testing.T) {
 		list := NewList("test", []string{"Item 1", "Item 2", "Item 3"})
-		
+
 		// Start at index 0
 		if list.Index != 0 {
 			t.Errorf("Initial index = %d, want 0", list.Index)
@@ -198,7 +198,7 @@ func TestListDisabledItems(t *testing.T) {
 	t.Run("Skip disabled items going up", func(t *testing.T) {
 		list := NewList("test", []string{"Item 1", "Item 2", "Item 3", "Item 4"})
 		list.Disabled = []int{1, 2} // Disable items 1 and 2
-		list.Index = 3             // Start at last item
+		list.Index = 3              // Start at last item
 
 		// Should skip to 0
 		list.Up(1)
@@ -312,7 +312,7 @@ func TestListPageNavigation(t *testing.T) {
 		// Mock the Content() method to return a height for page calculation
 		// Since we can't easily mock this, we'll test the Down/Up calls indirectly
 		originalIndex := list.Index
-		
+
 		// PageDown should call Down with the content height
 		list.PageDown()
 		// We can't predict the exact index without knowing the content height,
@@ -335,7 +335,7 @@ func TestListPageNavigation(t *testing.T) {
 func TestListEventEmission(t *testing.T) {
 	t.Run("Select event emission", func(t *testing.T) {
 		list := NewList("test", []string{"Item 1", "Item 2", "Item 3"})
-		
+
 		var emittedEvents []string
 		var emittedData []int
 
@@ -390,7 +390,7 @@ func TestListEventEmission(t *testing.T) {
 
 	t.Run("Activate event emission", func(t *testing.T) {
 		list := NewList("test", []string{"Item 1", "Item 2", "Item 3"})
-		
+
 		var activatedIndex int
 		var activateEventFired bool
 
@@ -407,7 +407,7 @@ func TestListEventEmission(t *testing.T) {
 
 		// Create Enter key event
 		enterEvent := tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)
-		
+
 		// Handle the event (should trigger activate)
 		list.Handle(enterEvent)
 
@@ -425,20 +425,20 @@ func TestListKeyboardEvents(t *testing.T) {
 	list := NewList("test", []string{"Item 1", "Item 2", "Item 3", "Item 4", "Item 5"})
 
 	tests := []struct {
-		name           string
-		key            tcell.Key
-		rune           rune
-		initialIndex   int
-		expectedIndex  int
-		shouldHandle   bool
+		name          string
+		key           tcell.Key
+		rune          rune
+		initialIndex  int
+		expectedIndex int
+		shouldHandle  bool
 	}{
 		{"Down Arrow", tcell.KeyDown, 0, 0, 1, true},
 		{"Up Arrow", tcell.KeyUp, 0, 2, 1, true},
 		{"Home Key", tcell.KeyHome, 0, 2, 0, true},
 		{"End Key", tcell.KeyEnd, 0, 0, 4, true},
-		{"Page Down", tcell.KeyPgDn, 0, 0, -1, true}, // -1 means we don't test exact index due to page size
-		{"Page Up", tcell.KeyPgUp, 0, 4, -1, true},   // -1 means we don't test exact index due to page size
-		{"Enter Key", tcell.KeyEnter, 0, 1, 1, true}, // Should stay at same index but handle event
+		{"Page Down", tcell.KeyPgDn, 0, 0, -1, true},       // -1 means we don't test exact index due to page size
+		{"Page Up", tcell.KeyPgUp, 0, 4, -1, true},         // -1 means we don't test exact index due to page size
+		{"Enter Key", tcell.KeyEnter, 0, 1, 1, true},       // Should stay at same index but handle event
 		{"Random Letter", tcell.KeyRune, 'x', 0, 0, false}, // Should not be handled (no item starts with 'x')
 	}
 
@@ -474,11 +474,11 @@ func TestListKeyboardEvents(t *testing.T) {
 func TestListQuickSearch(t *testing.T) {
 	t.Run("Quick search by first letter", func(t *testing.T) {
 		list := NewList("test", []string{"Apple", "Banana", "Cherry", "Date", "Elderberry"})
-		
+
 		// Search for 'C' - should go to "Cherry" (index 2)
 		cEvent := tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModNone)
 		handled := list.Handle(cEvent)
-		
+
 		if !handled {
 			t.Error("Quick search should handle the event")
 		}
@@ -489,7 +489,7 @@ func TestListQuickSearch(t *testing.T) {
 		// Search for 'E' - should go to "Elderberry" (index 4)
 		eEvent := tcell.NewEventKey(tcell.KeyRune, 'E', tcell.ModNone)
 		handled = list.Handle(eEvent)
-		
+
 		if !handled {
 			t.Error("Quick search should handle the event")
 		}
@@ -501,7 +501,7 @@ func TestListQuickSearch(t *testing.T) {
 		originalIndex := list.Index
 		zEvent := tcell.NewEventKey(tcell.KeyRune, 'Z', tcell.ModNone)
 		handled = list.Handle(zEvent)
-		
+
 		if handled {
 			t.Error("Quick search for non-existent letter should not handle event")
 		}
@@ -512,11 +512,11 @@ func TestListQuickSearch(t *testing.T) {
 
 	t.Run("Quick search case insensitive", func(t *testing.T) {
 		list := NewList("test", []string{"apple", "Banana", "CHERRY"})
-		
+
 		// Search for 'b' - should find "Banana"
 		bEvent := tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModNone)
 		handled := list.Handle(bEvent)
-		
+
 		if !handled {
 			t.Error("Case insensitive search should work")
 		}
@@ -527,7 +527,7 @@ func TestListQuickSearch(t *testing.T) {
 		// Search for 'c' - should find "CHERRY"
 		cEvent := tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone)
 		handled = list.Handle(cEvent)
-		
+
 		if !handled {
 			t.Error("Case insensitive search should work")
 		}
@@ -541,14 +541,14 @@ func TestListQuickSearch(t *testing.T) {
 func TestListConfiguration(t *testing.T) {
 	t.Run("SetItems", func(t *testing.T) {
 		list := NewList("test", []string{"Old 1", "Old 2"})
-		
+
 		newItems := []string{"New 1", "New 2", "New 3"}
 		list.Items = newItems
-		
+
 		if !reflect.DeepEqual(list.Items, newItems) {
 			t.Errorf("SetItems: got %v, want %v", list.Items, newItems)
 		}
-		
+
 		// Index should be reset or maintained appropriately
 		if list.Index >= len(newItems) {
 			t.Errorf("Index %d should be within bounds of new items (length %d)", list.Index, len(newItems))
@@ -557,10 +557,10 @@ func TestListConfiguration(t *testing.T) {
 
 	t.Run("Disabled items configuration", func(t *testing.T) {
 		list := NewList("test", []string{"Item 1", "Item 2", "Item 3", "Item 4"})
-		
+
 		// Set some items as disabled
 		list.Disabled = []int{1, 3}
-		
+
 		// Verify disabled items are actually disabled in navigation
 		list.Index = 0
 		list.Down(1)
@@ -572,12 +572,12 @@ func TestListConfiguration(t *testing.T) {
 
 	t.Run("Numbers configuration", func(t *testing.T) {
 		list := NewList("test", []string{"Item 1", "Item 2", "Item 3"})
-		
+
 		// Test that Numbers is false by default
 		if list.Numbers {
 			t.Error("List Numbers should be false by default")
 		}
-		
+
 		// Test setting Numbers to true
 		list.Numbers = true
 		if !list.Numbers {
@@ -595,20 +595,20 @@ func TestListEdgeCases(t *testing.T) {
 		// Negative count should be handled gracefully
 		list.Down(-1)
 		// Behavior is implementation-defined, but should not panic
-		
+
 		list.Up(-1)
 		// Behavior is implementation-defined, but should not panic
 	})
 
 	t.Run("Large count navigation", func(t *testing.T) {
 		list := NewList("test", []string{"A", "B", "C"})
-		
+
 		// Large count should go to boundary
 		list.Down(1000)
 		if list.Index != 2 {
 			t.Errorf("Large Down() count: index = %d, want 2", list.Index)
 		}
-		
+
 		list.Up(1000)
 		if list.Index != 0 {
 			t.Errorf("Large Up() count: index = %d, want 0", list.Index)
@@ -617,7 +617,7 @@ func TestListEdgeCases(t *testing.T) {
 
 	t.Run("Invalid initial index", func(t *testing.T) {
 		list := NewList("test", []string{"Item 1", "Item 2", "Item 3"})
-		
+
 		// Set invalid negative index
 		list.Index = -1
 		list.Down(1)
@@ -625,7 +625,7 @@ func TestListEdgeCases(t *testing.T) {
 		if list.Index != 0 {
 			t.Errorf("Down from invalid index -1: index = %d, want 0", list.Index)
 		}
-		
+
 		// Set invalid high index
 		list.Index = 100
 		list.Up(1)
@@ -636,4 +636,3 @@ func TestListEdgeCases(t *testing.T) {
 		}
 	})
 }
-

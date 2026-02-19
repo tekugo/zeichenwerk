@@ -147,6 +147,8 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focused")
 	case *Static:
 		b.theme.Apply(widget, b.selector("static", widget.ID()))
+	case *Digits:
+		b.theme.Apply(widget, b.selector("digits", widget.ID()))
 	case *Spinner:
 		b.theme.Apply(widget, b.selector("spinner", widget.ID()))
 	case *Styled:
@@ -202,6 +204,13 @@ func (b *Builder) Button(id, text string) *Builder {
 func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	checkbox := NewCheckbox(id, text, checked)
 	b.Add(checkbox)
+	return b
+}
+
+// Digits creates a new digits widget with the specified id and text.
+func (b *Builder) Digits(id, text string) *Builder {
+	d := NewDigits(id, text)
+	b.Add(d)
 	return b
 }
 
@@ -262,6 +271,13 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 func (b *Builder) List(id string, values ...string) *Builder {
 	list := NewList(id, values)
 	b.Add(list)
+	return b
+}
+
+// Spinner creates a new spinner widget for animated spinners.
+func (b *Builder) Spinner(id string, sequence string) *Builder {
+	spinner := NewSpinner(id, sequence)
+	b.Add(spinner)
 	return b
 }
 

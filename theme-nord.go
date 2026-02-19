@@ -58,4 +58,3 @@ func NordTheme() Theme {
 
 	return t
 }
-

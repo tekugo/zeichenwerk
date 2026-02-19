@@ -121,4 +121,3 @@ func GruvboxLightTheme() Theme {
 
 	return t
 }
-

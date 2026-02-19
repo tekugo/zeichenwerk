@@ -1,7 +1,6 @@
 package next
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
@@ -125,6 +124,5 @@ func (t *TcellScreen) Set(foreground, background, font string) {
 //   - tcell.Style: The style at the position.
 func (t *TcellScreen) Style(x, y int) tcell.Style {
 	_, style, _ := t.screen.Get(x+t.x, y+t.y)
-	fmt.Printf("Style at %d,%d: %v\n", x+t.x, y+t.y, style)
 	return style
 }

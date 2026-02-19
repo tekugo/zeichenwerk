@@ -4,8 +4,8 @@ package zeichenwerk
 // control rendering to their respective render methods.
 //
 // The rendering process:
-//   1. Renders all field labels at their calculated positions
-//   2. Renders all form control widgets (inputs, checkboxes, etc.)
+//  1. Renders all field labels at their calculated positions
+//  2. Renders all form control widgets (inputs, checkboxes, etc.)
 //
 // Label positioning is determined by the FormGroup's layout calculations,
 // with labels only rendered if they have valid coordinates (x >= 0, y >= 0).

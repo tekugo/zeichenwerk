@@ -171,8 +171,8 @@ func TestStyleWithFont(t *testing.T) {
 func TestStyleHorizontal(t *testing.T) {
 	// Test with no border
 	style := NewStyle("test").
-		WithMargin(1, 2, 3, 4).  // left=4, right=2
-		WithPadding(5, 6, 7, 8)  // left=8, right=6
+		WithMargin(1, 2, 3, 4). // left=4, right=2
+		WithPadding(5, 6, 7, 8) // left=8, right=6
 	expected := 4 + 2 + 8 + 6 // margin + padding, no border
 	assert.Equal(t, expected, style.Horizontal())
 
@@ -200,8 +200,8 @@ func TestStyleHorizontal(t *testing.T) {
 func TestStyleVertical(t *testing.T) {
 	// Test with no border
 	style := NewStyle("test").
-		WithMargin(1, 2, 3, 4).  // top=1, bottom=3
-		WithPadding(5, 6, 7, 8)  // top=5, bottom=7
+		WithMargin(1, 2, 3, 4). // top=1, bottom=3
+		WithPadding(5, 6, 7, 8) // top=5, bottom=7
 	expected := 1 + 3 + 5 + 7 // margin + padding, no border
 	assert.Equal(t, expected, style.Vertical())
 
