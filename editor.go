@@ -1,185 +1,131 @@
-package zeichenwerk
+package next
 
 import (
+	"strconv"
 	"strings"
-	"unicode"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 )
 
 // Editor is a multi-line text editor widget that provides comprehensive text editing
 // capabilities with efficient gap buffer-based line storage. It supports all standard
 // text editing operations including cursor movement, text insertion/deletion, line
 // operations, and scrolling for large documents.
-//
-// Core Features:
-//   - Multi-line text editing with efficient gap buffer storage per line
-//   - Full cursor navigation (character, word, line, page, document boundaries)
-//   - Comprehensive text manipulation (insert, delete, cut, copy, paste)
-//   - Line operations (insert, delete, split, join, indent/unindent)
-//   - Intelligent scrolling with viewport management for large documents
-//   - Selection support for text operations and visual feedback
-//   - Undo/redo system for operation history and error recovery
-//   - Search and replace functionality with regex support
-//   - Syntax highlighting support framework (extensible)
-//   - Configurable tab handling (spaces vs tabs, tab width)
-//   - Line number display and goto line functionality
-//   - Auto-indentation and smart editing features
-//
-// Architecture:
-//   - Each line is stored as an independent GapBuffer for efficient editing
-//   - Cursor position tracking with both logical and visual coordinates
-//   - Viewport management for smooth scrolling and large document handling
-//   - Event-driven architecture for responsive user interaction
-//   - Modular design allowing for extension and customization
-//
-// Performance:
-//   - O(1) character insertions and deletions at cursor position
-//   - Efficient line management with minimal memory allocation
-//   - Smooth scrolling with intelligent viewport adjustment
-//   - Lazy rendering for optimal performance with large documents
-//
-// The Editor widget is designed for professional text editing applications,
-// supporting both simple text input and complex document editing scenarios.
 type Editor struct {
-	BaseWidget
-	content          []*GapBuffer // Editor line contents (one GapBuffer per line)
-	line             int          // Current cursor line position (0-based)
-	column           int          // Current cursor column position (0-based)
-	longest          int          // Length of longest line for horizontal scrolling
-	offsetX, offsetY int          // Display viewport offset (horizontal, vertical)
-	tab              int          // Width of tab characters (default: 4)
-	spaces           bool         // Whether to insert spaces instead of tabs
-	numbers          int          // line number width (0 for none)
-	indent           bool         // Whether to auto-indent new lines
-	disabled         bool         // Whether editor is disabled (read-only)
+	Component
+	content  []*GapBuffer // Editor line contents (one GapBuffer per line)
+	line     int          // Current cursor line position (0-based)
+	column   int          // Current cursor column position (0-based)
+	longest  int          // Longest line visual width for horizontal scrolling
+	offsetX  int          // Horizontal scroll offset
+	offsetY  int          // Vertical scroll offset
+	tab      int          // Tab width
+	spaces   bool         // Insert spaces instead of tabs
+	numbers  int          // Line numbers width (0 = none)
+	indent   bool         // Auto-indent
+	disabled bool         // Read-only flag
 }
 
 // NewEditor creates a new multi-line text editor widget with the specified ID.
-// The editor is initialized with default configuration suitable for general-purpose
-// text editing with modern editor features and sensible defaults.
-//
-// Parameters:
-//   - id: Unique identifier for the editor widget
-//
-// Returns:
-//   - *Editor: A new editor widget instance ready for text editing
-//
-// Default Configuration:
-//   - Empty content (single empty line ready for input)
-//   - Cursor positioned at top-left (line 0, column 0)
-//   - No viewport offset (showing beginning of document)
-//   - Tab width of 4 characters (standard programming default)
-//   - Tab insertion using actual tab characters (not spaces)
-//   - Line numbers disabled (can be enabled via ShowLineNumbers())
-//   - Auto-indentation enabled for better code editing experience
-//   - Full editing mode enabled (not read-only)
-//   - Focusable widget for keyboard input handling
-//
-// Post-Creation Configuration:
-//   - Set content: editor.SetContent(lines) or editor.LoadText(text)
-//   - Enable line numbers: editor.ShowLineNumbers(true)
-//   - Configure tabs: editor.SetTabWidth(8) or editor.UseSpaces(true)
-//   - Set read-only: editor.SetReadOnly(true)
-//   - Configure auto-indent: editor.SetAutoIndent(false)
 func NewEditor(id string) *Editor {
-	return &Editor{
-		BaseWidget: BaseWidget{id: id, focusable: true},
-		content:    []*GapBuffer{NewGapBuffer(64)}, // Start with one empty line
-		line:       0,
-		column:     0,
-		longest:    0,
-		offsetX:    0,
-		offsetY:    0,
-		tab:        4,
-		spaces:     false,
-		numbers:    0,
-		indent:     true,
-		disabled:   false,
+	e := &Editor{
+		Component: Component{id: id, hheight: 10}, // default preferred height
+		content:   []*GapBuffer{NewGapBuffer(64)},
+		line:      0,
+		column:    0,
+		longest:   0,
+		offsetX:   0,
+		offsetY:   0,
+		tab:       4,
+		spaces:    false,
+		numbers:   0,
+		indent:    true,
+		disabled:  false,
 	}
+	e.SetFlag("focusable", true)
+	OnKey(e, e.handleKey)
+	return e
 }
 
+// Cursor returns the current cursor position relative to the content area.
+// The position accounts for line numbers and scrolling.
+func (e *Editor) Cursor() (int, int, string) {
+	// Get content area dimensions
+	_, _, cw, ch := e.Content()
+	if cw <= 0 || ch <= 0 {
+		return -1, -1, ""
+	}
+
+	// Calculate visual column (tabs expanded)
+	visualCol := e.calculateVisualColumn()
+
+	// Account for line numbers
+	leftMargin := 0
+	if e.numbers > 0 {
+		leftMargin = e.numbers + 1 // line numbers + separator
+	}
+
+	cx := leftMargin + (visualCol - e.offsetX)
+	cy := e.line - e.offsetY
+
+	// Determine visible text area dimensions (similar to render)
+	usableW := cw - leftMargin
+	needV := len(e.content) > ch
+	usableW -= b2i(needV)
+	needH := e.longest > usableW
+	usableH := ch - b2i(needH)
+
+	if cx < 0 || cx >= usableW || cy < 0 || cy >= usableH {
+		return -1, -1, ""
+	}
+
+	return cx, cy, "|"
+}
+
+// Refresh queues a redraw for the editor.
 func (e *Editor) Refresh() {
 	Redraw(e)
 }
 
-// ---- Content Management ---------------------------------------------------
-
 // SetContent replaces all editor content with the provided lines.
-// Each line becomes a separate GapBuffer for efficient editing operations.
-// The cursor is positioned at the beginning of the document after loading.
-//
-// Parameters:
-//   - lines: Array of strings, each representing a line in the document
-//
-// Behavior:
-//   - Completely replaces existing content
-//   - Creates new GapBuffer for each line with optimized capacity
-//   - Resets cursor to top-left position (0, 0)
-//   - Resets viewport to show beginning of document
-//   - Recalculates longest line for horizontal scrolling
-//   - Triggers change event and display refresh
 func (e *Editor) SetContent(lines []string) {
 	e.content = make([]*GapBuffer, len(lines))
 	for i, line := range lines {
-		// Create GapBuffer with capacity based on line length plus some buffer
-		e.content[i] = NewGapBufferFromString(line, 4)
+		e.content[i] = NewGapBufferFromString(line, 32)
 	}
-
-	// Ensure at least one line exists
 	if len(e.content) == 0 {
 		e.content = []*GapBuffer{NewGapBuffer(64)}
 	}
-
 	e.line = 0
 	e.column = 0
 	e.offsetX = 0
 	e.offsetY = 0
 	e.updateLongestLine()
-	e.Emit("change")
+	e.Dispatch("change")
 	e.Refresh()
 }
 
-// Load loads text content into the editor by splitting on newlines.
-// This is a convenience method for loading text from strings or files.
-//
-// Parameters:
-//   - text: Text content with lines separated by newline characters
+// Load sets the editor content from a single string (lines separated by \n).
 func (e *Editor) Load(text string) {
 	lines := strings.Split(text, "\n")
 	e.SetContent(lines)
 }
 
-// Lines returns all editor content as an array of strings.
-// Each line is extracted from its GapBuffer and returned as a string.
-//
-// Returns:
-//   - []string: Array of lines representing the complete document content
+// Lines returns the editor content as a slice of strings.
 func (e *Editor) Lines() []string {
 	lines := make([]string, len(e.content))
-	for i, buffer := range e.content {
-		lines[i] = buffer.String()
+	for i, buf := range e.content {
+		lines[i] = buf.String()
 	}
 	return lines
 }
 
-// Text returns the complete editor content as a single string with newlines.
-// This is useful for saving content to files or passing to other systems.
-//
-// Returns:
-//   - string: Complete document content with lines joined by newlines
+// Text returns the editor content as a single string with newlines.
 func (e *Editor) Text() string {
 	return strings.Join(e.Lines(), "\n")
 }
 
-// ---- Configuration ----
-
-// SetTabWidth configures the width of tab characters for display and navigation.
-// This affects how tab characters are rendered and how cursor movement behaves
-// when encountering tabs.
-//
-// Parameters:
-//   - width: Number of character positions for each tab (typically 2, 4, or 8)
+// SetTabWidth configures tab width.
 func (e *Editor) SetTabWidth(width int) {
 	if width > 0 {
 		e.tab = width
@@ -187,144 +133,44 @@ func (e *Editor) SetTabWidth(width int) {
 	e.Refresh()
 }
 
-// UseSpaces configures whether to insert spaces instead of tab characters.
-// When enabled, pressing Tab will insert the appropriate number of spaces
-// to reach the next tab stop instead of inserting a tab character.
-//
-// Parameters:
-//   - useSpaces: true to insert spaces, false to insert tab characters
+// UseSpaces configures whether to insert spaces instead of tabs.
 func (e *Editor) UseSpaces(useSpaces bool) {
 	e.spaces = useSpaces
 }
 
-// ShowLineNumbers configures whether line numbers should be displayed.
-// When enabled, line numbers are shown in the left margin of the editor.
-//
-// Parameters:
-//   - show: true to display line numbers, false to hide them
+// ShowLineNumbers enables or disables line numbers.
 func (e *Editor) ShowLineNumbers(show bool) {
-	e.numbers = 3
+	if show {
+		e.numbers = 3 // default width
+	} else {
+		e.numbers = 0
+	}
 	e.Refresh()
 }
 
-// SetAutoIndent configures automatic indentation for new lines.
-// When enabled, new lines automatically inherit the indentation level
-// of the previous line.
-//
-// Parameters:
-//   - autoIndent: true to enable auto-indentation, false to disable
-func (e *Editor) SetAutoIndent(autoIndent bool) {
-	e.indent = autoIndent
+// SetAutoIndent configures auto-indentation.
+func (e *Editor) SetAutoIndent(auto bool) {
+	e.indent = auto
 }
 
-// SetReadOnly configures the editor's read-only mode.
-// In read-only mode, navigation is allowed but text modification is prevented.
-//
-// Parameters:
-//   - readOnly: true for read-only mode, false for full editing
-func (e *Editor) SetReadOnly(readOnly bool) {
-	e.disabled = readOnly
-}
-
-// ---- Cursor Management ----
-
-// Cursor returns the current cursor position relative to the widget's content area.
-// This method is called by the UI system to position the terminal cursor.
-// The position accounts for line numbers, scrolling, and tab expansion.
-//
-// Returns:
-//   - int: X coordinate relative to content area (-1 if cursor not visible)
-//   - int: Y coordinate relative to content area (-1 if cursor not visible)
-func (e *Editor) Cursor() (int, int) {
-	// Get the content area size
-	cw, ch := e.Size()
-
-	// Calculate visual cursor column (accounting for tabs)
-	cursorX := e.calculateVisualColumn() - e.offsetX
-
-	// Adjust for scrollbars and line numbers
-	if e.numbers > 0 {
-		cw = cw - e.numbers - 1 // -1 for separator
-		cursorX = cursorX + e.numbers + 1
-	}
-
-	// Reserve space for scrollbars
-	if len(e.content) > ch {
-		cw--
-	}
-	if e.longest > cw {
-		ch--
-	}
-
-	// Check if cursor line is visible in viewport
-	cursorY := e.line - e.offsetY
-	if cursorY < 0 || cursorY >= ch {
-		// Cursor is outside visible area vertically
-		return -1, -1
-	}
-
-	// Check if cursor column is visible in viewport
-	if cursorX < 0 || cursorX >= cw {
-		// Cursor is outside visible area horizontally
-		return -1, -1
-	}
-
-	return cursorX, cursorY
-}
-
-// RefreshCursor refreshes just the cursor position without redrawing.
-// This is an optimization to avoid redrawing when only the cursor postion
-// changes.
-func (e *Editor) RefreshCursor() {
-	ui := FindUI(e)
-	if ui != nil {
-		ui.ShowCursor()
-	}
-}
-
-// MoveTo moves the cursor to the specified line and column position.
-// Coordinates are automatically constrained to valid document boundaries.
-//
-// Parameters:
-//   - line: Target line number (0-based)
-//   - column: Target column position (0-based)
-func (e *Editor) MoveTo(line, column int) {
-	// Constrain line to valid range
-	if line < 0 {
-		line = 0
-	} else if line >= len(e.content) {
-		line = len(e.content) - 1
-	}
-
-	// Constrain column to valid range for the target line
-	lineLength := e.content[line].Length()
-	if column < 0 {
-		column = 0
-	} else if column > lineLength {
-		column = lineLength
-	}
-
-	refresh := e.line != line
-	e.line = line
-	e.column = column
-	e.adjustViewport()
-	if refresh {
-		e.Refresh()
+// SetReadOnly configures read-only mode.
+func (e *Editor) SetReadOnly(ro bool) {
+	e.disabled = ro
+	if ro {
+		e.SetFlag("disabled", true)
 	} else {
-		e.RefreshCursor()
+		e.SetFlag("disabled", false)
 	}
 }
 
-// ---- Movement Operations ----
+// ---- Movement -------------------------------------------------------------
 
-// Left moves cursor one position left, handling line boundaries.
 func (e *Editor) Left() {
 	if e.column > 0 {
 		e.column--
 		e.adjustViewport()
-		e.RefreshCursor()
+		e.Refresh()
 	} else if e.line > 0 {
-		// Move to end of previous line
 		e.line--
 		e.column = e.content[e.line].Length()
 		e.adjustViewport()
@@ -332,15 +178,13 @@ func (e *Editor) Left() {
 	}
 }
 
-// Right moves cursor one position right, handling line boundaries.
 func (e *Editor) Right() {
-	lineLength := e.content[e.line].Length()
-	if e.column < lineLength {
+	lineLen := e.content[e.line].Length()
+	if e.column < lineLen {
 		e.column++
 		e.adjustViewport()
-		e.RefreshCursor()
+		e.Refresh()
 	} else if e.line < len(e.content)-1 {
-		// Move to beginning of next line
 		e.line++
 		e.column = 0
 		e.adjustViewport()
@@ -348,86 +192,93 @@ func (e *Editor) Right() {
 	}
 }
 
-// Up moves cursor one position up, maintaining column position when possible.
 func (e *Editor) Up() {
 	if e.line > 0 {
 		e.line--
-		// Adjust column to fit within new line
-		lineLength := e.content[e.line].Length()
-		if e.column > lineLength {
-			e.column = lineLength
+		lineLen := e.content[e.line].Length()
+		if e.column > lineLen {
+			e.column = lineLen
 		}
 		e.adjustViewport()
 		e.Refresh()
 	}
 }
 
-// Down moves cursor one position down, maintaining column position when possible.
 func (e *Editor) Down() {
 	if e.line < len(e.content)-1 {
 		e.line++
-		// Adjust column to fit within new line
-		lineLength := e.content[e.line].Length()
-		if e.column > lineLength {
-			e.column = lineLength
+		lineLen := e.content[e.line].Length()
+		if e.column > lineLen {
+			e.column = lineLen
 		}
 		e.adjustViewport()
 		e.Refresh()
 	}
 }
 
-// Home moves cursor to the beginning of the current line.
 func (e *Editor) Home() {
 	e.column = 0
 	e.adjustViewport()
-	e.RefreshCursor()
+	e.Refresh()
 }
 
-// End moves cursor to the end of the current line.
 func (e *Editor) End() {
 	e.column = e.content[e.line].Length()
 	e.adjustViewport()
-	e.RefreshCursor()
+	e.Refresh()
 }
 
-// PageUp moves cursor up by one page (viewport height).
 func (e *Editor) PageUp() {
-	_, h := e.Size()
-	targetLine := max(e.line-h, 0)
-	e.MoveTo(targetLine, e.column)
+	_, _, _, h := e.Content()
+	target := max(e.line-h, 0)
+	e.MoveTo(target, e.column)
 	e.Refresh()
 }
 
-// PageDown moves cursor down by one page (viewport height).
 func (e *Editor) PageDown() {
-	_, h := e.Size()
-	targetLine := min(e.line+h, len(e.content)-1)
-	e.MoveTo(targetLine, e.column)
+	_, _, _, h := e.Content()
+	target := min(e.line+h, len(e.content)-1)
+	e.MoveTo(target, e.column)
 	e.Refresh()
 }
 
-// DocumentHome moves cursor to the beginning of the document.
 func (e *Editor) DocumentHome() {
 	e.MoveTo(0, 0)
+}
+
+func (e *Editor) DocumentEnd() {
+	lastLine := len(e.content) - 1
+	lastCol := e.content[lastLine].Length()
+	e.MoveTo(lastLine, lastCol)
+}
+
+// MoveTo moves the cursor to the specified line and column.
+func (e *Editor) MoveTo(line, column int) {
+	if line < 0 {
+		line = 0
+	} else if line >= len(e.content) {
+		line = len(e.content) - 1
+	}
+	lineLen := e.content[line].Length()
+	if column < 0 {
+		column = 0
+	} else if column > lineLen {
+		column = lineLen
+	}
+	e.line = line
+	e.column = column
+	e.adjustViewport()
 	e.Refresh()
 }
 
-// DocumentEnd moves cursor to the end of the document.
-func (e *Editor) DocumentEnd() {
-	lastLine := len(e.content) - 1
-	lastColumn := e.content[lastLine].Length()
-	e.MoveTo(lastLine, lastColumn)
-}
+// ---- Editing --------------------------------------------------------------
 
-// ---- Editing Operations ----
-
-// Insert inserts a character at the current cursor position.
 func (e *Editor) Insert(ch rune) {
 	if e.disabled {
 		return
 	}
 
-	// Handle tab insertion
+	// Handle tab character
 	if ch == '\t' {
 		if e.spaces {
 			e.insertTabAsSpaces()
@@ -444,11 +295,10 @@ func (e *Editor) Insert(ch rune) {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Emit("change")
+	e.Dispatch("change")
 	e.Refresh()
 }
 
-// Delete removes the character before the cursor (backspace).
 func (e *Editor) Delete() {
 	if e.disabled {
 		return
@@ -460,97 +310,90 @@ func (e *Editor) Delete() {
 		e.column--
 	} else if e.line > 0 {
 		// Join with previous line
-		prevLine := e.line - 1
-		e.column = e.content[prevLine].Length()
+		prev := e.line - 1
+		e.column = e.content[prev].Length()
 
-		// Append current line to previous line
-		currentLineText := e.content[e.line].String()
-		for _, ch := range currentLineText {
-			e.content[prevLine].Move(e.content[prevLine].Length())
-			e.content[prevLine].Insert(ch)
+		// Append current line to previous
+		currentText := e.content[e.line].String()
+		for _, r := range currentText {
+			e.content[prev].Move(e.content[prev].Length())
+			e.content[prev].Insert(r)
 		}
 
 		// Remove current line
 		e.content = append(e.content[:e.line], e.content[e.line+1:]...)
-		e.line = prevLine
+		e.line = prev
 	}
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Emit("change")
+	e.Dispatch("change")
 	e.Refresh()
 }
 
-// DeleteForward removes the character at the cursor position.
 func (e *Editor) DeleteForward() {
 	if e.disabled {
 		return
 	}
 
-	lineLength := e.content[e.line].Length()
-	if e.column < lineLength {
+	lineLen := e.content[e.line].Length()
+	if e.column < lineLen {
 		e.content[e.line].Move(e.column)
 		e.content[e.line].Delete()
 	} else if e.line < len(e.content)-1 {
 		// Join with next line
-		nextLineText := e.content[e.line+1].String()
-		for _, ch := range nextLineText {
+		nextText := e.content[e.line+1].String()
+		for _, r := range nextText {
 			e.content[e.line].Move(e.content[e.line].Length())
-			e.content[e.line].Insert(ch)
+			e.content[e.line].Insert(r)
 		}
-
-		// Remove next line
 		e.content = append(e.content[:e.line+1], e.content[e.line+2:]...)
 	}
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Emit("change")
+	e.Dispatch("change")
 	e.Refresh()
 }
 
-// Enter creates a new line at the cursor position.
 func (e *Editor) Enter() {
 	if e.disabled {
 		return
 	}
 
-	// Split current line at cursor position
+	// Split current line at cursor
 	currentLine := e.content[e.line]
-
 	// Get text after cursor
 	rightText := ""
 	for r := range currentLine.Runes(e.column) {
 		rightText += string(r)
 	}
 
-	// Remove text after cursor from current line by deleting from the end
-	// Move cursor to the split position and delete everything after it
+	// Truncate current line at cursor
 	currentLine.Move(e.column)
 	for currentLine.Length() > e.column {
 		currentLine.Delete()
 	}
 
-	// Create new line with text after cursor
-	newBuffer := NewGapBufferFromString(rightText, 32)
+	// Create new line with rightText
+	newBuf := NewGapBufferFromString(rightText, 32)
 
 	// Auto-indent if enabled
 	if e.indent {
 		indent := e.getLineIndent(e.line)
-		// Insert indentation at the beginning of the new line
 		for i, ch := range []rune(indent) {
-			newBuffer.Move(i)
-			newBuffer.Insert(ch)
+			newBuf.Move(i)
+			newBuf.Insert(ch)
 		}
 	}
 
-	// Insert new line
-	e.content = append(e.content[:e.line+1], append([]*GapBuffer{newBuffer}, e.content[e.line+1:]...)...)
+	// Insert new line after current
+	e.content = append(e.content[:e.line+1], append([]*GapBuffer{newBuf}, e.content[e.line+1:]...)...)
 	e.line++
 
-	// Position cursor at beginning of new line (after auto-indent)
+	// Position cursor at start of new line
 	if e.indent {
-		indent := e.getLineIndent(e.line - 1) // Get indent from previous line
+		indent := e.getLineIndent(e.line - 1)
 		e.column = len([]rune(indent))
 	} else {
 		e.column = 0
@@ -558,27 +401,28 @@ func (e *Editor) Enter() {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Emit("change")
+	e.Dispatch("change")
 	e.Refresh()
 }
 
-// ---- Helper Methods ----
-
 // insertTabAsSpaces inserts spaces to reach the next tab stop.
 func (e *Editor) insertTabAsSpaces() {
-	spacesToInsert := e.tab - (e.column % e.tab)
-	for range spacesToInsert {
+	spaces := e.tab - (e.column % e.tab)
+	for range spaces {
 		e.content[e.line].Insert(' ')
 		e.column++
 	}
+	e.updateLongestLine()
+	e.adjustViewport()
+	e.Dispatch("change")
+	e.Refresh()
 }
 
-// getLineIndent returns the indentation (leading whitespace) of the specified line.
+// getLineIndent returns leading whitespace of the given line.
 func (e *Editor) getLineIndent(lineNum int) string {
 	if lineNum < 0 || lineNum >= len(e.content) {
 		return ""
 	}
-
 	line := e.content[lineNum].String()
 	indent := ""
 	for _, ch := range line {
@@ -591,152 +435,342 @@ func (e *Editor) getLineIndent(lineNum int) string {
 	return indent
 }
 
-// updateLongestLine recalculates the longest line for horizontal scrolling.
-func (e *Editor) updateLongestLine() {
-	e.longest = 0
-	for _, buffer := range e.content {
-		length := buffer.Length()
-		if length > e.longest {
-			e.longest = length
-		}
-	}
-}
+// ---- Viewport & Layout ----------------------------------------------------
 
-// adjustViewport adjusts the scroll offsets to keep the cursor visible.
+// adjustViewport adjusts scroll offsets to keep the cursor visible.
 func (e *Editor) adjustViewport() {
-	w, h := e.Size()
-
-	// Adjust for line numbers
-	if e.numbers > 0 {
-		w = w - e.numbers - 1
-	}
-
-	if w <= 0 || h <= 0 {
+	_, _, cw, ch := e.Content()
+	if cw <= 0 || ch <= 0 {
 		return
 	}
 
-	// Adjust vertical offset
-	if e.line < e.offsetY {
-		e.offsetY = e.line
-	} else if e.line >= e.offsetY+h {
-		e.offsetY = e.line - h + 1
+	leftMargin := 0
+	if e.numbers > 0 {
+		leftMargin = e.numbers + 1
 	}
+	usableW := cw - leftMargin
+	usableH := ch
 
-	// Calculate visual cursor column for horizontal scrolling
-	visualColumn := e.calculateVisualColumn()
+	// Determine if vertical scrollbar will be used (we need to reserve space)
+	needV := len(e.content) > usableH
+	usableW -= b2i(needV)
 
-	// Adjust horizontal offset based on visual column
-	if visualColumn < e.offsetX {
-		e.offsetX = visualColumn
-	} else if visualColumn >= e.offsetX+w {
-		e.offsetX = visualColumn - w + 1
+	// Determine horizontal scrollbar
+	needH := e.longest > usableW
+	usableH -= b2i(needH)
+
+	// Horizontal scrolling
+	visualCol := e.calculateVisualColumn()
+	if visualCol < e.offsetX {
+		e.offsetX = visualCol
+	} else if visualCol >= e.offsetX+usableW {
+		e.offsetX = visualCol - usableW + 1
 	}
-
-	// Ensure offsets don't go negative
 	if e.offsetX < 0 {
 		e.offsetX = 0
+	}
+	// Limit offsetX to not scroll past end
+	maxOffsetX := max(e.longest-usableW, 0)
+	if e.offsetX > maxOffsetX {
+		e.offsetX = maxOffsetX
+	}
+
+	// Vertical scrolling
+	if e.line < e.offsetY {
+		e.offsetY = e.line
+	} else if e.line >= e.offsetY+usableH {
+		e.offsetY = e.line - usableH + 1
 	}
 	if e.offsetY < 0 {
 		e.offsetY = 0
 	}
+	// Limit offsetY
+	maxOffsetY := max(len(e.content)-usableH, 0)
+	if e.offsetY > maxOffsetY {
+		e.offsetY = maxOffsetY
+	}
 }
 
-// calculateVisualColumn calculates the visual column position of the cursor,
-// accounting for tab expansion.
+// calculateVisualColumn returns the visual column index of the cursor, expanding tabs.
 func (e *Editor) calculateVisualColumn() int {
 	if e.line >= len(e.content) {
 		return 0
 	}
-
-	lineContent := e.content[e.line].String()
-	lineRunes := []rune(lineContent)
-
-	// Ensure cursor column is within line bounds
-	cursorCol := min(e.column, len(lineRunes))
-
-	// Calculate visual position accounting for tabs
-	visualCol := 0
-	for i := range cursorCol {
-		if lineRunes[i] == '\t' {
-			// Move to next tab stop
-			visualCol = ((visualCol / e.tab) + 1) * e.tab
+	line := e.content[e.line].String()
+	col := 0
+	for i := 0; i < e.column && i < len(line); i++ {
+		if line[i] == '\t' {
+			col = ((col / e.tab) + 1) * e.tab
 		} else {
-			visualCol++
+			col++
+		}
+	}
+	return col
+}
+
+// updateLongestLine recalculates the longest line's visual width.
+func (e *Editor) updateLongestLine() {
+	e.longest = 0
+	for _, buf := range e.content {
+		line := buf.String()
+		width := visualWidth(line, e.tab)
+		if width > e.longest {
+			e.longest = width
+		}
+	}
+}
+
+// ---- Rendering ------------------------------------------------------------
+
+func (e *Editor) Render(r *Renderer) {
+	// Base rendering (background, border, etc.)
+	e.Component.Render(r)
+
+	x, y, w, h := e.Content()
+	if w <= 0 || h <= 0 {
+		return
+	}
+
+	// Margins and scrollbars
+	leftMargin := 0
+	if e.numbers > 0 {
+		leftMargin = e.numbers + 1
+	}
+	usableW := w - leftMargin
+	usableH := h
+
+	// Determine scrollbars
+	needV := len(e.content) > usableH
+	needH := e.longest > usableW
+
+	// Adjust usable dimensions for scrollbars
+	if needV {
+		usableW--
+	}
+	if needH {
+		usableH--
+	}
+
+	// Render line numbers
+	if e.numbers > 0 {
+		e.renderLineNumbers(r, x, y, e.numbers, usableH)
+		// Draw separator
+		sepStyle := e.Style("separator")
+		if sepStyle == nil {
+			r.Set("white", "black", "")
+		} else {
+			r.Set(sepStyle.Foreground(), sepStyle.Background(), sepStyle.Font())
+		}
+		for i := 0; i < usableH; i++ {
+			r.Put(x+e.numbers, y+i, "│")
 		}
 	}
 
-	return visualCol
+	// Render text content
+	textX := x + leftMargin
+	textY := y
+	for i := 0; i < usableH; i++ {
+		lineIdx := e.offsetY + i
+		if lineIdx >= len(e.content) {
+			// Clear remaining lines
+			r.Fill(textX, textY+i, usableW, 1, " ")
+			continue
+		}
+		line := e.content[lineIdx].String()
+		visible := e.getVisibleLineContent(line, e.offsetX, usableW, e.tab)
+		// Choose style: current line highlighted if focused
+		if e.Flag("focused") && lineIdx == e.line {
+			style := e.Style("current-line")
+			if style != nil {
+				r.Set(style.Foreground(), style.Background(), style.Font())
+			} else {
+				r.Set(e.Style().Foreground(), e.Style().Background(), e.Style().Font())
+			}
+		} else {
+			style := e.Style()
+			r.Set(style.Foreground(), style.Background(), style.Font())
+		}
+		r.Text(textX, textY+i, visible, usableW)
+	}
+
+	// Render scrollbars
+	if needV {
+		// Vertical scrollbar at the far right of the widget (x + w - 1)
+		r.ScrollbarV(x+w-1, y, usableH, e.offsetY, len(e.content))
+	}
+	if needH {
+		// Horizontal scrollbar at the bottom of the widget (y + h - 1)
+		r.ScrollbarH(x, y+h-1, w, e.offsetX, e.longest)
+	}
 }
 
-// Emit overrides BaseWidget.Emit to pass the correct widget type.
-func (e *Editor) Emit(event string, data ...any) bool {
-	if e.handlers == nil {
+// renderLineNumbers draws line numbers in the left margin.
+func (e *Editor) renderLineNumbers(r *Renderer, x, y, width, height int) {
+	// Style for line numbers
+	styleNum := e.Style("line-numbers")
+	if styleNum != nil {
+		r.Set(styleNum.Foreground(), styleNum.Background(), styleNum.Font())
+	} else {
+		r.Set("gray", "", "")
+	}
+	for i := 0; i < height; i++ {
+		lineIdx := e.offsetY + i
+		if lineIdx >= len(e.content) {
+			// Empty area: fill with spaces
+			r.Fill(x, y+i, width, 1, " ")
+			continue
+		}
+		// 1-based line number
+		num := lineIdx + 1
+		numStr := strconv.Itoa(num)
+		// Right-align within width
+		padding := width - len(numStr)
+		if padding > 0 {
+			r.Text(x, y+i, strings.Repeat(" ", padding)+numStr, width)
+		} else {
+			r.Text(x, y+i, numStr, width)
+		}
+		// Highlight current line number
+		if lineIdx == e.line {
+			curStyle := e.Style("current-line-number")
+			if curStyle != nil {
+				r.Set(curStyle.Foreground(), curStyle.Background(), curStyle.Font())
+				r.Text(x, y+i, strings.Repeat(" ", padding)+numStr, width)
+				// Restore line number style
+				if styleNum != nil {
+					r.Set(styleNum.Foreground(), styleNum.Background(), styleNum.Font())
+				} else {
+					r.Set("gray", "", "")
+				}
+			}
+		}
+	}
+}
+
+// getVisibleLineContent returns the portion of the line that is visible within the given width,
+// taking into account horizontal scrolling and tab expansion.
+func (e *Editor) getVisibleLineContent(line string, offsetX, maxWidth, tabWidth int) string {
+	if line == "" || maxWidth <= 0 {
+		return ""
+	}
+	// Expand tabs to spaces
+	expanded := expandTabs(line, tabWidth)
+	// Apply horizontal offset
+	runes := []rune(expanded)
+	start := offsetX
+	if start >= len(runes) {
+		return ""
+	}
+	end := min(start+maxWidth, len(runes))
+	return string(runes[start:end])
+}
+
+// expandTabs converts tabs to spaces according to tabWidth.
+func expandTabs(s string, tabWidth int) string {
+	if !strings.Contains(s, "\t") {
+		return s
+	}
+	var b strings.Builder
+	col := 0
+	for _, ch := range s {
+		if ch == '\t' {
+			spaces := tabWidth - (col % tabWidth)
+			for i := 0; i < spaces; i++ {
+				b.WriteRune(' ')
+				col++
+			}
+		} else {
+			b.WriteRune(ch)
+			col++
+		}
+	}
+	return b.String()
+}
+
+// visualWidth computes the visual column width of a string after tab expansion.
+func visualWidth(s string, tabWidth int) int {
+	width := 0
+	col := 0
+	for _, ch := range s {
+		if ch == '\t' {
+			width = ((col / tabWidth) + 1) * tabWidth
+			col = width
+		} else {
+			width++
+			col++
+		}
+	}
+	return width
+}
+
+// b2i converts bool to int (1 for true, 0 for false).
+func b2i(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// ---- Event Handling -------------------------------------------------------
+
+func (e *Editor) handleKey(_ Widget, evt *tcell.EventKey) bool {
+	if e.disabled && evt.Key() != tcell.KeyLeft && evt.Key() != tcell.KeyRight &&
+		evt.Key() != tcell.KeyUp && evt.Key() != tcell.KeyDown &&
+		evt.Key() != tcell.KeyHome && evt.Key() != tcell.KeyEnd &&
+		evt.Key() != tcell.KeyPgUp && evt.Key() != tcell.KeyPgDn {
 		return false
 	}
-	handler, found := e.handlers[event]
-	if found {
-		return handler(e, event, data...)
-	}
-	return false
-}
 
-// Handle processes keyboard events for the editor widget.
-func (e *Editor) Handle(evt tcell.Event) bool {
-	switch event := evt.(type) {
-	case *tcell.EventKey:
-		switch event.Key() {
-		case tcell.KeyLeft:
-			e.Left()
-			return true
-		case tcell.KeyRight:
-			e.Right()
-			return true
-		case tcell.KeyUp:
-			e.Up()
-			return true
-		case tcell.KeyDown:
-			e.Down()
-			return true
-		case tcell.KeyHome:
-			e.Home()
-			return true
-		case tcell.KeyEnd:
-			e.End()
-			return true
-		case tcell.KeyPgUp:
-			e.PageUp()
-			return true
-		case tcell.KeyPgDn:
-			e.PageDown()
-			return true
-		case tcell.KeyCtrlA:
-			e.DocumentHome()
-			return true
-		case tcell.KeyCtrlE:
-			e.DocumentEnd()
-			return true
-		case tcell.KeyBackspace, tcell.KeyBackspace2:
-			e.Delete()
-			return true
-		case tcell.KeyDelete:
-			e.DeleteForward()
-			return true
-		case tcell.KeyEnter:
-			e.Enter()
-			return true
-		case tcell.KeyTab:
-			e.Insert('\t')
-			return true
-		case tcell.KeyRune:
-			ch := event.Rune()
-			if unicode.IsPrint(ch) {
-				e.Insert(ch)
-				return true
-			}
-		default:
-			return e.Emit("key", event)
+	switch evt.Key() {
+	case tcell.KeyLeft:
+		e.Left()
+		return true
+	case tcell.KeyRight:
+		e.Right()
+		return true
+	case tcell.KeyUp:
+		e.Up()
+		return true
+	case tcell.KeyDown:
+		e.Down()
+		return true
+	case tcell.KeyHome:
+		e.Home()
+		return true
+	case tcell.KeyEnd:
+		e.End()
+		return true
+	case tcell.KeyPgUp:
+		e.PageUp()
+		return true
+	case tcell.KeyPgDn:
+		e.PageDown()
+		return true
+	case tcell.KeyCtrlA:
+		e.DocumentHome()
+		return true
+	case tcell.KeyCtrlE:
+		e.DocumentEnd()
+		return true
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
+		e.Delete()
+		return true
+	case tcell.KeyDelete:
+		e.DeleteForward()
+		return true
+	case tcell.KeyEnter:
+		e.Enter()
+		return true
+	case tcell.KeyTab:
+		e.Insert('\t')
+		return true
+	case tcell.KeyRune:
+		chStr := evt.Str()
+		if chStr != "" {
+			e.Insert([]rune(chStr)[0])
 		}
+		return true
+	default:
+		return false
 	}
-
-	return false
 }

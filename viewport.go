@@ -1,136 +1,165 @@
-package zeichenwerk
+package next
 
-import "github.com/gdamore/tcell/v2"
+import "github.com/gdamore/tcell/v3"
 
-// Viewport represents a clipped rendering area within a larger screen or surface.
-// It acts as a bounded window that restricts drawing operations to a specific
-// rectangular region, providing clipping functionality for widgets and layouts.
-//
-// Features:
-//   - Bounded rendering area with automatic clipping
-//   - Coordinate translation and bounds checking
-//   - Screen content access within the viewport bounds
-//   - Protection against drawing outside the designated area
-//
-// Viewports are commonly used for:
-//   - Implementing scrollable content areas
-//   - Creating bounded drawing regions for widgets
-//   - Clipping content to prevent overflow
-//   - Implementing windowed or paned interfaces
-//
-// The viewport enforces strict bounds checking and will panic if attempts
-// are made to draw outside the designated clipping area.
 type Viewport struct {
-	screen              Screen // The underlying screen or surface to draw on
-	x, y, width, height int    // The viewport's position and dimensions (clipping bounds)
-	tx, ty              int    // Translation offset for coordinate mapping
+	Component
+	Title  string // Optional title text to display in the border
+	child  Widget // The single child widget contained within this viewport
+	tx, ty int    // Current horizontal and vertical scroll offsets
 }
 
-// NewViewport creates a new viewport with the specified bounds on the given screen.
-// The viewport will clip all drawing operations to the specified rectangular area,
-// preventing content from being rendered outside the designated bounds.
-//
-// Parameters:
-//   - screen: The underlying screen or surface to draw on
-//   - x: The x-coordinate of the viewport's top-left corner
-//   - y: The y-coordinate of the viewport's top-left corner
-//   - w: The width of the viewport in characters/cells
-//   - h: The height of the viewport in characters/cells
-//
-// Returns:
-//   - *Viewport: A new viewport instance with the specified bounds
-//
-// Example usage:
-//
-//	viewport := NewViewport(screen, 10, 5, 80, 24)  // 80x24 area at (10,5)
-func NewViewport(screen Screen, x, y, w, h int) *Viewport {
-	return &Viewport{screen: screen, x: x, y: y, width: w, height: h}
-}
-
-// GetContent retrieves the content at the specified coordinates from the underlying screen.
-// This method provides read access to screen content without bounds checking,
-// allowing inspection of content anywhere on the underlying screen surface.
-//
-// Parameters:
-//   - x: The x-coordinate to read from
-//   - y: The y-coordinate to read from
-//
-// Returns:
-//   - rune: The primary character at the specified position
-//   - []rune: Any combining characters at the position
-//   - tcell.Style: The style information for the character
-//   - int: The character width (for multi-cell characters)
-func (v *Viewport) GetContent(x, y int) (rune, []rune, tcell.Style, int) {
-	return v.screen.GetContent(x+v.tx, y+v.ty)
-}
-
-// SetContent sets the content at the specified coordinates with strict bounds checking.
-// This method enforces the viewport's clipping bounds and will panic if an attempt
-// is made to draw outside the designated viewport area.
-//
-// The bounds checking ensures that:
-//   - x must be >= viewport.x and < viewport.x + viewport.width
-//   - y must be >= viewport.y and <= viewport.y + viewport.height
-//
-// Parameters:
-//   - x: The x-coordinate to write to (must be within viewport bounds)
-//   - y: The y-coordinate to write to (must be within viewport bounds)
-//   - primary: The primary character to set
-//   - combining: Any combining characters to apply
-//   - style: The style information for the character
-//
-// Panics:
-//   - If the coordinates are outside the viewport's clipping area
-func (v *Viewport) SetContent(x, y int, primary rune, combining []rune, style tcell.Style) {
-	if x+v.tx >= v.x && x+v.tx < v.x+v.width && y+v.ty >= v.y && y+v.ty < v.y+v.height {
-		v.screen.SetContent(x+v.tx, y+v.ty, primary, combining, style)
+func NewViewport(id, title string) *Viewport {
+	viewport := &Viewport{
+		Component: Component{id: id},
+		Title:     title,
 	}
+	viewport.SetFlag("focusable", true)
+	OnKey(viewport, viewport.handleKey)
+	return viewport
 }
 
-// Bounds returns the viewport's position and dimensions.
-// This provides access to the clipping area boundaries for bounds checking
-// or coordinate calculations.
-//
-// Returns:
-//   - int: x-coordinate of the viewport's top-left corner
-//   - int: y-coordinate of the viewport's top-left corner
-//   - int: width of the viewport in characters/cells
-//   - int: height of the viewport in characters/cells
-func (v *Viewport) Bounds() (int, int, int, int) {
-	return v.x, v.y, v.width, v.height
+func (v *Viewport) Add(widget Widget) {
+	if v.child != nil {
+		v.child.SetParent(nil)
+	}
+	v.child = widget
+	widget.SetParent(v)
 }
 
-// Contains checks if the specified coordinates are within the viewport's bounds.
-// This is useful for validating coordinates before attempting to draw content.
-//
-// Parameters:
-//   - x: The x-coordinate to check
-//   - y: The y-coordinate to check
-//
-// Returns:
-//   - bool: true if the coordinates are within bounds, false otherwise
-func (v *Viewport) Contains(x, y int) bool {
-	return x+v.tx >= v.x && x+v.tx < v.x+v.width && y+v.ty >= v.y && y+v.ty <= v.y+v.height
+func (v *Viewport) Children() []Widget {
+	if v.child == nil {
+		return []Widget{}
+	}
+	return []Widget{v.child}
 }
 
-// Translate sets the coordinate translation offset for the viewport.
-// This allows for coordinate mapping between different coordinate systems,
-// useful for implementing scrolling or panning functionality.
-//
-// Parameters:
-//   - tx: The x-axis translation offset
-//   - ty: The y-axis translation offset
-func (v *Viewport) Translate(tx, ty int) {
-	v.tx = tx
-	v.ty = ty
+func (v *Viewport) Layout() {
+	if v.child != nil {
+		cx, cy, _, _ := v.Content()
+		pw, ph := v.child.Hint()
+		v.child.SetBounds(cx-v.tx, cy-v.ty, pw, ph)
+	}
+	Layout(v)
 }
 
-// Translation returns the current coordinate translation offset.
-// This can be used to retrieve the current scrolling or panning position.
-//
-// Returns:
-//   - int: The x-axis translation offset
-//   - int: The y-axis translation offset
-func (v *Viewport) Translation() (int, int) {
-	return v.tx, v.ty
+func (v *Viewport) handleKey(_ Widget, event *tcell.EventKey) bool {
+	if v.child == nil {
+		return false
+	}
+
+	cw, ch, _, _ := v.Content() // Content area size
+	pw, ph := v.child.Hint()    // Child widget preferred size
+
+	// Calculate maximum scroll offsets
+	maxTx := max(pw-cw, 0)
+	maxTy := max(ph-ch, 0)
+
+	switch event.Key() {
+	case tcell.KeyUp:
+		// Scroll up by one line
+		if v.ty > 0 {
+			v.ty--
+			v.Layout()
+			v.Refresh()
+			return true
+		}
+
+	case tcell.KeyDown:
+		// Scroll down by one line
+		if v.ty < maxTy {
+			v.ty++
+			v.Layout()
+			v.Refresh()
+			return true
+		}
+
+	case tcell.KeyLeft:
+		// Scroll left by one character
+		if v.tx > 0 {
+			v.tx--
+			v.Layout()
+			v.Refresh()
+			return true
+		}
+
+	case tcell.KeyRight:
+		// Scroll right by one character
+		if v.tx < maxTx {
+			v.tx++
+			v.Layout()
+			v.Refresh()
+			return true
+		}
+
+	case tcell.KeyHome:
+		// Reset to top-left corner
+		if v.tx > 0 || v.ty > 0 {
+			v.tx = 0
+			v.ty = 0
+			v.Layout()
+			v.Refresh()
+			return true
+		}
+
+	case tcell.KeyEnd:
+		// Move to bottom-right corner
+		if v.tx < maxTx || v.ty < maxTy {
+			v.tx = maxTx
+			v.ty = maxTy
+			v.Layout()
+			v.Refresh()
+			return true
+		}
+	}
+
+	return false
+}
+
+func (v *Viewport) Refresh() {
+	Redraw(v)
+}
+
+func (v *Viewport) Render(r *Renderer) {
+	// Render styling and border
+	v.Component.Render(r)
+
+	// Get the viewport's content area coordinates and dimensions
+	x, y, w, h := v.Content()
+
+	// Get the child widget's total bounds to determine content size
+	_, _, cw, ch := v.child.Bounds()
+
+	// ---- Scrollbar Necessity Calculation ----
+
+	// Calculate available width (iw) considering vertical scrollbar space
+	// Start with full width, reduce by 1 if vertical scrollbar is needed
+	iw := w
+	if ch > h {
+		iw--
+	}
+
+	// Calculate available height (ih) considering horizontal scrollbar space
+	// Use adjusted width (iw) to account for vertical scrollbar space
+	ih := h
+	if cw > iw {
+		ih--
+	}
+
+	// Render vertical scrollbar if width was reduced (indicates necessity)
+	if iw < w {
+		r.ScrollbarV(x+w-1, y, ih, v.ty, ch)
+	}
+
+	// Render horizontal scrollbar if height was reduced (indicates necessity)
+	if ih < h {
+		r.ScrollbarH(x, y+h-1, iw, v.tx, cw)
+	}
+
+	r.Clip(x, y, iw, ih)
+	r.Translate(-v.tx, -v.ty)
+	v.child.SetBounds(-v.tx, -v.ty, cw, ch)
+	v.child.Render(r)
+	r.Clip(0, 0, 0, 0)
+	r.Translate(0, 0)
 }

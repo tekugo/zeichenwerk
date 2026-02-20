@@ -1,4 +1,4 @@
-package zeichenwerk
+package next
 
 import (
 	"testing"
@@ -53,11 +53,11 @@ func TestNewInsets(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := NewInsets(tt.values...)
-			if *got != tt.want {
-				t.Errorf("NewInsets(%v) = %+v, want %+v", tt.values, got, tt.want)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := NewInsets(tc.values...)
+			if *got != tc.want {
+				t.Errorf("NewInsets(%v) = %+v, want %+v", tc.values, got, tc.want)
 			}
 		})
 	}
@@ -112,12 +112,12 @@ func TestInsetsSet(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			insets := Insets{}
-			insets.Set(tt.values...)
-			if insets != tt.want {
-				t.Errorf("Set(%v) = %+v, want %+v", tt.values, insets, tt.want)
+			insets.Set(tc.values...)
+			if insets != tc.want {
+				t.Errorf("Set(%v) = %+v, want %+v", tc.values, insets, tc.want)
 			}
 		})
 	}
@@ -183,11 +183,11 @@ func TestInsetsInfo(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.insets.Info()
-			if got != tt.want {
-				t.Errorf("Info() = %q, want %q", got, tt.want)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.insets.Info()
+			if got != tc.want {
+				t.Errorf("Info() = %q, want %q", got, tc.want)
 			}
 		})
 	}
@@ -227,11 +227,11 @@ func TestInsetsHorizontal(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.insets.Horizontal()
-			if got != tt.want {
-				t.Errorf("Horizontal() = %d, want %d", got, tt.want)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.insets.Horizontal()
+			if got != tc.want {
+				t.Errorf("Horizontal() = %d, want %d", got, tc.want)
 			}
 		})
 	}

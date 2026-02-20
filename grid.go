@@ -1,12 +1,6 @@
-package zeichenwerk
+package next
 
-import (
-	"fmt"
-
-	"github.com/gdamore/tcell/v2"
-)
-
-// Cell represents a single cell within a grid container that holds a widget
+// cell represents a single cell within a grid container that holds a widget
 // and defines its position and span within the grid layout.
 //
 // A cell specifies:
@@ -16,7 +10,7 @@ import (
 //
 // Cells can span multiple rows and/or columns, allowing for complex
 // grid layouts with widgets of varying sizes.
-type Cell struct {
+type cell struct {
 	x, y    int    // Starting column (x) and row (y) position in the grid (0-based)
 	w, h    int    // Column span (w) and row span (h) - number of cells to occupy
 	content Widget // The widget contained within this grid cell
@@ -31,9 +25,10 @@ const (
 	GridB = 3 // Both horizontal and vertical grid lines (intersection)
 )
 
-// Grid is a container widget that arranges child widgets in a table-like layout
-// with configurable rows and columns. It provides precise control over widget
-// positioning and supports flexible sizing, spanning, and optional grid lines.
+// Grid is a container widget that arranges child widgets in a table-like
+// layout with configurable rows and columns. It provides precise control over
+// widget positioning and supports flexible sizing, spanning, and optional
+// grid lines.
 //
 // Features:
 //   - Fixed grid dimensions with configurable rows and columns
@@ -48,17 +43,18 @@ const (
 //   - Grid lines: Optional visual separators between cells
 //   - Cell spanning: Widgets can span multiple rows and/or columns
 type Grid struct {
-	BaseWidget
-	cells           []*Cell // All cells containing widgets in the grid
+	Component
+	cells           []*cell // All cells containing widgets in the grid
 	rows, columns   []int   // Size configuration for each row and column (-1 = flexible)
 	widths, heights []int   // Calculated actual sizes for each column and row
 	lines           bool    // Whether to draw grid lines between cells
 	separators      [][]int // Grid line configuration for each cell intersection
 }
 
-// NewGrid creates a new grid container widget with the specified dimensions and configuration.
-// The grid is initialized with flexible sizing for all rows and columns by default,
-// meaning they will share available space equally unless explicitly configured otherwise.
+// NewGrid creates a new grid container widget with the specified dimensions
+// and configuration. The grid is initialized with flexible sizing for all rows
+// and columns by default, meaning they will share available space equally
+// unless explicitly configured otherwise.
 //
 // Parameters:
 //   - id: Unique identifier for the grid widget
@@ -83,8 +79,8 @@ type Grid struct {
 //	layout := NewGrid("layout", 2, 4, false)
 func NewGrid(id string, rows, columns int, lines bool) *Grid {
 	grid := Grid{
-		BaseWidget: BaseWidget{id: id},
-		cells:      make([]*Cell, 0, rows*columns),
+		Component:  Component{id: id},
+		cells:      make([]*cell, 0, rows*columns),
 		rows:       make([]int, rows),
 		columns:    make([]int, columns),
 		widths:     make([]int, columns),
@@ -111,7 +107,7 @@ func NewGrid(id string, rows, columns int, lines bool) *Grid {
 //
 // Returns:
 //   - []Widget: A slice containing all child widgets in the grid
-func (g *Grid) Children(_ bool) []Widget {
+func (g *Grid) Children() []Widget {
 	result := make([]Widget, len(g.cells))
 	for i, cell := range g.cells {
 		result[i] = cell.content
@@ -119,9 +115,10 @@ func (g *Grid) Children(_ bool) []Widget {
 	return result
 }
 
-// Add places a widget in the grid at the specified position with the given span.
-// The widget will occupy a rectangular area from (x,y) spanning w columns and h rows.
-// If the specified area extends beyond the grid boundaries, it will be clipped.
+// Add places a widget in the grid at the specified position with the given
+// span. The widget will occupy a rectangular area from (x,y) spanning w
+// columns and h rows. If the specified area extends beyond the grid
+// boundaries, it will be clipped.
 //
 // Parameters:
 //   - x: Starting column position (0-based)
@@ -166,76 +163,16 @@ func (g *Grid) Add(x, y, w, h int, content Widget) {
 		h = len(g.rows) - y
 	}
 
-	g.cells = append(g.cells, &Cell{x: x, y: y, w: w, h: h, content: content})
+	g.cells = append(g.cells, &cell{x: x, y: y, w: w, h: h, content: content})
 	content.SetParent(g)
 }
 
-// Cursor returns the cursor position for the grid widget.
-// Grid containers don't typically display a cursor, so this always returns (-1, -1)
-// to indicate that no cursor should be shown. Individual child widgets may
-// have their own cursor positions.
-//
-// Returns:
-//   - int: x-coordinate (always -1)
-//   - int: y-coordinate (always -1)
-func (g *Grid) Cursor() (int, int) {
-	return -1, -1
-}
-
-// Find searches for a widget with the specified ID within this grid container
-// and all of its descendant widgets. Uses the standard container search algorithm
-// to recursively traverse the widget hierarchy.
+// Columns sets the column sizes for the grid. The number of columns must match
+// the number of columns specified when the grid was created. If the number of
+// columns does not match, an error is logged and the grid remains unchanged.
 //
 // Parameters:
-//   - id: The unique identifier of the widget to find
-//   - visible: Only look for visible children
-//
-// Returns:
-//   - Widget: The widget with the matching ID, or nil if not found
-func (g *Grid) Find(id string, visible bool) Widget {
-	return Find(g, id, visible)
-}
-
-// FindAt searches for the widget located at the specified coordinates within
-// this grid container and its child widgets. Uses the standard container
-// coordinate-based search algorithm to find the most specific widget at the position.
-//
-// Parameters:
-//   - x: The x-coordinate to search at
-//   - y: The y-coordinate to search at
-//
-// Returns:
-//   - Widget: The widget at the specified coordinates, or nil if not found
-func (g *Grid) FindAt(x, y int) Widget {
-	return FindAt(g, x, y)
-}
-
-// Handle processes events for the grid container.
-// The base implementation doesn't handle any events directly, as grid containers
-// typically delegate event handling to their child widgets. The grid itself
-// is primarily a layout container and doesn't respond to user input.
-//
-// Parameters:
-//   - event: The tcell.Event to process
-//
-// Returns:
-//   - bool: Always returns false as grid containers don't handle events directly
-func (g *Grid) Handle(event tcell.Event) bool {
-	return false
-}
-
-// Info returns a human-readable description of the grid's current state.
-// This includes position, dimensions, and grid configuration information.
-// Primarily used for debugging and development purposes.
-//
-// Returns:
-//   - string: Formatted string with grid information including dimensions and cell count
-func (g *Grid) Info() string {
-	x, y, w, h := g.Bounds()
-	return fmt.Sprintf("@%d.%d %d:%d grid %dx%d (%d cells)",
-		x, y, w, h, len(g.rows), len(g.columns), len(g.cells))
-}
-
+//   - columns: A slice of integers representing the sizes of each column
 func (g *Grid) Columns(columns ...int) {
 	if len(columns) == len(g.columns) {
 		g.columns = columns
@@ -276,7 +213,7 @@ func (g *Grid) Rows(rows ...int) {
 //   - Recursive layout of child containers
 func (g *Grid) Layout() {
 	style := g.Style()                // Grid style for margins, padding, borders
-	iw, ih := g.Size()                // Available content size
+	_, _, iw, ih := g.Content()       // Available content size
 	cf, rf := 0, 0                    // Total column and row fractions
 	lc, lr := 0, 0                    // Last fractional column/row indices
 	gx := make([]int, len(g.columns)) // Calculated x positions for each column
@@ -295,6 +232,9 @@ func (g *Grid) Layout() {
 	// At this moment, we do not take row spans and column spans into account.
 	for _, cell := range g.cells {
 		pw, ph := cell.content.Hint()
+		style := cell.content.Style()
+		pw += style.Horizontal()
+		ph += style.Vertical()
 		if cell.w == 1 && pw > aw[cell.x] {
 			aw[cell.x] = pw
 		}
@@ -317,8 +257,10 @@ func (g *Grid) Layout() {
 			lc = i             // Track last fractional column for remainder handling
 		} else if g.columns[i] == 0 {
 			g.widths[i] = aw[i]
+			iw -= aw[i]
 		} else {
 			g.widths[i] = g.columns[i] // Set fixed width
+			iw -= g.columns[i]
 		}
 	}
 
@@ -335,6 +277,7 @@ func (g *Grid) Layout() {
 				// TODO: Distribute remaining space evenly
 			} else {
 				g.widths[i] = -g.columns[i] * fc // Calculate fractional width
+				rw -= g.widths[i]
 			}
 		}
 
@@ -352,7 +295,6 @@ func (g *Grid) Layout() {
 				gx[i]++ // Account for border line
 			}
 		}
-		rw -= g.widths[i]
 	}
 
 	// ---- Calculate row sizes and positions ----
@@ -364,9 +306,11 @@ func (g *Grid) Layout() {
 			lr = i          // Track last fractional row for remainder handling
 		} else if g.rows[i] == 0 {
 			g.heights[i] = ah[i]
+			ih -= ah[i]
 		} else {
 			fh -= g.heights[i]
 			g.heights[i] = g.rows[i] // Set fixed height
+			ih -= g.rows[i]
 		}
 	}
 
@@ -383,6 +327,7 @@ func (g *Grid) Layout() {
 				// TODO: Distribute remaining space evenly
 			} else {
 				g.heights[i] = -g.rows[i] * fr // Calculate fractional height
+				rh -= g.heights[i]
 			}
 		}
 
@@ -400,7 +345,6 @@ func (g *Grid) Layout() {
 				gy[i]++ // Account for border line
 			}
 		}
-		rh -= g.heights[i]
 	}
 
 	// ---- Position child widgets and configure grid line separators ----
@@ -449,6 +393,109 @@ func (g *Grid) Layout() {
 		// Recursively layout child containers or refresh leaf widgets
 		if inner, ok := cell.content.(Container); ok {
 			inner.Layout()
+		}
+	}
+}
+
+func (g *Grid) Render(r *Renderer) {
+	// Use the rendering of the component first
+	g.Component.Render(r)
+
+	// Render the children
+	for _, cell := range g.cells {
+		cell.content.Render(r)
+	}
+
+	// If no grid lines should be rendered, we are done
+	if !g.lines {
+		return
+	}
+
+	// Render the grid lines
+	style := g.Style()
+	border := style.Border()
+	if border == "" || border == "none" {
+		return
+	}
+	b := r.theme.Border(border)
+	if b == nil {
+		return
+	}
+	r.Set(style.Foreground(), style.Background(), style.Font())
+	_, _, iw, ih := g.Content()
+
+	// draw top and bottom Ts
+	cx := g.x + style.Margin().Left + style.Padding().Left
+	by := g.y + style.Margin().Top + style.Padding().Top + style.Padding().Bottom + 1 + ih
+	for i := range len(g.columns) - 1 {
+		cx += g.widths[i] + 1
+		if g.separators[0][i]&GridV > 0 {
+			r.screen.Put(cx, g.y+style.Margin().Top, b.TopT)
+			r.Repeat(cx, g.y+style.Margin().Top+1, 0, 1, style.Padding().Top, b.InnerV)
+		}
+		if g.separators[len(g.rows)-1][i]&GridV > 0 {
+			r.screen.Put(cx, by, b.BottomT)
+			r.Repeat(cx, by-1, 0, -1, style.Padding().Bottom, b.InnerV)
+		}
+	}
+
+	// draw left and right Ts
+	cy := g.y + style.Margin().Top + style.Padding().Top
+	rx := g.x + style.Margin().Left + style.Padding().Left + style.Padding().Right + 1 + iw
+	for i := range len(g.rows) - 1 {
+		cy += g.heights[i] + 1
+		if g.separators[i][0]&GridH > 0 {
+			r.screen.Put(g.x+style.Margin().Left, cy, b.LeftT)
+			r.Repeat(g.x+style.Margin().Left+1, cy, 1, 0, style.Padding().Left, b.InnerH)
+		}
+		if g.separators[i][len(g.columns)-1]&GridH > 0 {
+			r.screen.Put(rx, cy, b.RightT)
+			r.Repeat(rx-1, cy, -1, 0, style.Padding().Right, b.InnerH)
+		}
+	}
+
+	// draw inner grid lines
+	cy = g.y + style.Margin().Top + style.Padding().Top
+	for row := range len(g.rows) {
+		cx = g.x + style.Margin().Left + style.Padding().Left + g.widths[0] + 1
+		cy += g.heights[row] + 1
+		for c := range len(g.columns) {
+			connector := 0
+			if row < len(g.rows)-1 && g.separators[row][c]&GridH > 0 {
+				r.Repeat(cx-1, cy, -1, 0, g.widths[c], b.InnerH)
+				connector |= 8
+			}
+			if c < len(g.columns)-1 && g.separators[row][c]&GridV > 0 {
+				r.Repeat(cx, cy-1, 0, -1, g.heights[row], b.InnerV)
+				connector |= 1
+			}
+			if row < len(g.rows)-1 && c < len(g.columns)-1 {
+				if g.separators[row+1][c]&GridV > 0 {
+					connector |= 4
+				}
+				if g.separators[row][c+1]&GridH > 0 {
+					connector |= 2
+				}
+				switch connector {
+				case 5:
+					r.screen.Put(cx, cy, b.InnerV)
+				case 7:
+					r.screen.Put(cx, cy, b.InnerLeftT)
+				case 10:
+					r.screen.Put(cx, cy, b.InnerH)
+				case 11:
+					r.screen.Put(cx, cy, b.InnerBottomT)
+				case 13:
+					r.screen.Put(cx, cy, b.InnerRightT)
+				case 14:
+					r.screen.Put(cx, cy, b.InnerTopT)
+				case 15:
+					r.screen.Put(cx, cy, b.InnerX)
+				}
+			}
+			if c < len(g.columns)-1 {
+				cx += g.widths[c+1] + 1
+			}
 		}
 	}
 }

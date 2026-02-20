@@ -1,4 +1,4 @@
-package zeichenwerk
+package next
 
 import (
 	"maps"
@@ -67,171 +67,12 @@ var (
 //
 // More specific styles override less specific ones, allowing for
 // hierarchical theming with sensible defaults and targeted overrides.
-type Theme interface {
-	// Add adds a the given style to the theme.
-	// The selector is taken from the style and the style is fixed, when
-	// added to the theme.
-	//
-	// Parameters:
-	//   - style: The style to add to the theme
-	Add(*Style)
-
-	// Apply applies theme styles to a widget for multiple states/parts.
-	// This is a convenience method that applies the base style and any
-	// additional part-specific styles (e.g., focus, hover) to the widget.
-	//
-	// The method resolves the base selector and each state combination,
-	// applying them to the widget's style map for efficient runtime lookup.
-	//
-	// Parameters:
-	//   - Widget: The widget to apply styles to
-	//   - string: The base selector for the widget (e.g., "button.primary")
-	//   - ...string: Additional states to apply (e.g., "focus", "hover")
-	//
-	// Example:
-	//   theme.Apply(button, "button.primary", "focus", "hover")
-	//   // Applies: "button.primary", "button.primary:focus", "button.primary:hover"
-	Apply(Widget, string, ...string)
-
-	// Border retrieves a border style by name from the theme's border registry.
-	// Border styles define the visual appearance of widget borders including
-	// line styles, corner characters, and drawing mode.
-	//
-	// Parameters:
-	//   - string: The name of the border style to retrieve
-	//
-	// Returns:
-	//   - BorderStyle: The border style configuration
-	Border(string) BorderStyle
-
-	// Color resolves a color name or variable to its actual color value.
-	// Supports both direct color names and theme variables (prefixed with $).
-	// Theme variables allow for consistent color schemes across the application.
-	//
-	// Parameters:
-	//   - string: Color name or variable (e.g., "red", "$primary", "#FF0000")
-	//
-	// Returns:
-	//   - string: The resolved color value
-	Color(string) string
-
-	// Colors returns the complete map of color variables defined in the theme.
-	// This provides access to the theme's color palette for inspection or
-	// dynamic color management.
-	//
-	// Returns:
-	//   - map[string]string: Map of color variable names to their values
-	Colors() map[string]string
-
-	// Flag retrieves a boolean configuration flag from the theme.
-	// Flags control various behavioral aspects of the theme system
-	// and widget rendering.
-	//
-	// Parameters:
-	//   - string: The name of the flag to retrieve
-	//
-	// Returns:
-	//   - bool: The flag value (false if not set)
-	Flag(string) bool
-
-	// Get retrieves the resolved style for the specified selector.
-	// This method implements the core style resolution algorithm,
-	// applying cascading rules and specificity to produce the final style.
-	//
-	// Parameters:
-	//   - string: The CSS-like selector to resolve
-	//
-	// Returns:
-	//   - Style: The resolved style (never nil, returns default as fallback)
-	Get(string) *Style
-
-	// Rune retrieves a special Unicode character by name from the theme.
-	// These characters are used for drawing borders, arrows, bullets,
-	// and other decorative elements in the UI.
-	//
-	// Parameters:
-	//   - string: The name of the Unicode character to retrieve
-	//
-	// Returns:
-	//   - rune: The Unicode character
-	Rune(string) rune
-
-	// SetBorders updates the theme's border style registry with the provided map.
-	// This replaces the existing border definitions with the new set.
-	//
-	// Parameters:
-	//   - map[string]BorderStyle: Map of border names to their style definitions
-	SetBorders(map[string]BorderStyle)
-
-	// SetColors updates the theme's color variable registry with the provided map.
-	// This replaces the existing color definitions with the new set.
-	//
-	// Parameters:
-	//   - map[string]string: Map of color variable names to their values
-	SetColors(map[string]string)
-
-	// SetFlags updates the theme's flag registry with the provided map.
-	// This replaces the existing flag definitions with the new set.
-	//
-	// Parameters:
-	//   - map[string]bool: Map of flag names to their boolean values
-	SetFlags(map[string]bool)
-
-	// SetRunes updates the theme's Unicode character registry with the provided map.
-	// This replaces the existing character definitions with the new set.
-	//
-	// Parameters:
-	//   - map[string]rune: Map of character names to their Unicode values
-	SetRunes(map[string]rune)
-
-	// SetStyles updates the theme's style registry with the provided map.
-	// This replaces the existing style definitions with the new set.
-	//
-	// Parameters:
-	//   - map[string]*Style: Map of selectors to their style definitions
-	SetStyles(...*Style)
-
-	// Styles returns the complete map of selectors to styles defined in the theme.
-	// This provides access to all style definitions for inspection or
-	// dynamic style management.
-	//
-	// Returns:
-	//   - map[string]*Style: Map of selectors to their style definitions
-	Styles() []*Style
-}
-
-// MapTheme is a concrete implementation of the Theme interface that stores
-// styles and theme resources in maps using string keys for efficient lookup.
-// It provides the complete CSS-like selector hierarchy with cascading resolution
-// for maintaining consistent styling across the application.
-//
-// # Architecture
-//
-// MapTheme organizes theme resources into separate registries:
-//   - styles: Core styling rules indexed by CSS-like selectors
-//   - colors: Named color variables for consistent color schemes
-//   - borders: Border style definitions for drawing widget frames
-//   - runes: Special Unicode characters for decorative elements
-//   - flags: Boolean configuration options for theme behavior
-//
-// # Performance Characteristics
-//
-// The map-based storage provides:
-//   - O(1) direct style lookup for exact selector matches
-//   - Efficient memory usage through shared style instances
-//   - Fast theme switching by replacing map contents
-//   - Minimal overhead for style resolution cascading
-//
-// # Thread Safety
-//
-// MapTheme is not thread-safe. Applications that modify themes from
-// multiple goroutines must provide external synchronization.
-type MapTheme struct {
-	borders map[string]BorderStyle // Registry of border styles indexed by name
-	colors  map[string]string      // Registry of color variables (e.g., "$primary" -> "#007ACC")
-	flags   map[string]bool        // Registry of boolean configuration flags
-	runes   map[string]rune        // Registry of special Unicode characters for UI elements
-	styles  map[string]*Style      // Registry of style definitions indexed by CSS-like selectors
+type Theme struct {
+	borders map[string]*Border // Registry of border styles indexed by name
+	colors  map[string]string  // Registry of color variables (e.g., "$primary" -> "#007ACC")
+	flags   map[string]bool    // Registry of boolean configuration flags
+	strings map[string]string  // Registry of special Unicode characters for UI elements
+	styles  map[string]*Style  // Registry of style definitions indexed by CSS-like selectors
 }
 
 // NewMapTheme creates a new MapTheme instance with empty initialized registries.
@@ -260,12 +101,12 @@ type MapTheme struct {
 //
 // Returns:
 //   - *MapTheme: A new MapTheme instance with empty registries ready for configuration
-func NewMapTheme() *MapTheme {
-	return &MapTheme{
-		borders: make(map[string]BorderStyle),
+func NewTheme() *Theme {
+	return &Theme{
+		borders: make(map[string]*Border),
 		colors:  make(map[string]string),
 		flags:   make(map[string]bool),
-		runes:   make(map[string]rune),
+		strings: make(map[string]string),
 		styles:  make(map[string]*Style),
 	}
 }
@@ -273,21 +114,21 @@ func NewMapTheme() *MapTheme {
 // Add adds a style to the theme.
 // The style is automatically assigned a parent based on the style selector.
 // THrough this mechanism, inheritance/cascading is implemented.
-func (m *MapTheme) Add(style *Style) {
+func (t *Theme) Add(style *Style) {
 	parts := split(style.selector)
 	key, priority := selector(0, parts)
 
 	var parent *Style
 	for priority > 0 {
 		key, priority = selector(priority, parts)
-		parent = m.styles[key]
+		parent = t.styles[key]
 		if parent != nil {
 			style.WithParent(parent)
 			break
 		}
 	}
 
-	m.styles[style.selector] = style
+	t.styles[style.selector] = style
 	style.Fix()
 }
 
@@ -297,7 +138,7 @@ func (m *MapTheme) Add(style *Style) {
 //   - widget: The widget to apply the styles to
 //   - selector: Style selector
 //   - states: Additional states to assign styles to
-func (m *MapTheme) Apply(widget Widget, selector string, states ...string) {
+func (t *Theme) Apply(widget Widget, selector string, states ...string) {
 	parts := split(selector)
 	part := ""
 	if parts[2] != "" {
@@ -307,17 +148,17 @@ func (m *MapTheme) Apply(widget Widget, selector string, states ...string) {
 	}
 
 	if part != "" {
-		style := m.Get(selector)
+		style := t.Get(selector)
 		widget.SetStyle(part, style)
 		for _, state := range states {
-			style := m.Get(selector + ":" + state)
+			style := t.Get(selector + ":" + state)
 			widget.SetStyle(part+":"+state, style)
 		}
 	} else {
-		style := m.Get(selector)
+		style := t.Get(selector)
 		widget.SetStyle("", style)
 		for _, state := range states {
-			style := m.Get(selector + ":" + state)
+			style := t.Get(selector + ":" + state)
 			widget.SetStyle(":"+state, style)
 		}
 	}
@@ -325,8 +166,8 @@ func (m *MapTheme) Apply(widget Widget, selector string, states ...string) {
 
 // Border retrieves a border style by name from the theme's border registry.
 // Returns the zero value BorderStyle if the border name is not found.
-func (m *MapTheme) Border(border string) BorderStyle {
-	return m.borders[border]
+func (t *Theme) Border(border string) *Border {
+	return t.borders[border]
 }
 
 // Color resolves a color name or variable to its actual color value.
@@ -350,9 +191,9 @@ func (m *MapTheme) Border(border string) BorderStyle {
 //
 // Returns:
 //   - string: The resolved color value
-func (m *MapTheme) Color(color string) string {
+func (t *Theme) Color(color string) string {
 	if strings.HasPrefix(color, "$") {
-		if name, ok := m.colors[color]; ok {
+		if name, ok := t.colors[color]; ok {
 			return name
 		}
 	}
@@ -361,28 +202,28 @@ func (m *MapTheme) Color(color string) string {
 
 // Colors returns a direct reference to the theme's color variable registry.
 // This allows for inspection and iteration over all defined color variables.
-func (m *MapTheme) Colors() map[string]string {
-	return m.colors
+func (t *Theme) Colors() map[string]string {
+	return t.colors
 }
 
 // Flag retrieves a boolean configuration flag from the theme's flag registry.
 // Returns false if the flag name is not found.
-func (m *MapTheme) Flag(flag string) bool {
-	return m.flags[flag]
+func (t *Theme) Flag(flag string) bool {
+	return t.flags[flag]
 }
 
 // Get returns a style which maps the given selector the best.
 //
 // Parameters:
 //   - s: Style selector
-func (m *MapTheme) Get(s string) *Style {
+func (t *Theme) Get(s string) *Style {
 	parts := split(s)
 	key := s
 	prio := 0
 
 	for prio >= 0 {
 		key, prio = selector(prio, parts)
-		style := m.styles[key]
+		style := t.styles[key]
 		if style != nil {
 			return style
 		}
@@ -401,8 +242,8 @@ func (m *MapTheme) Get(s string) *Style {
 //   - "bullet", "checkbox", "radio"
 //   - "spinner1", "spinner2", etc.
 //   - Border drawing characters for custom borders
-func (m *MapTheme) Rune(name string) rune {
-	return m.runes[name]
+func (t *Theme) String(name string) string {
+	return t.strings[name]
 }
 
 // SetBorders replaces the theme's border style registry with the provided map.
@@ -410,8 +251,8 @@ func (m *MapTheme) Rune(name string) rune {
 //
 // Parameters:
 //   - borders: Map of border names to their BorderStyle definitions
-func (m *MapTheme) SetBorders(borders map[string]BorderStyle) {
-	m.borders = borders
+func (t *Theme) SetBorders(borders map[string]*Border) {
+	t.borders = borders
 }
 
 // SetColors replaces the theme's color variable registry with the provided map.
@@ -426,8 +267,8 @@ func (m *MapTheme) SetBorders(borders map[string]BorderStyle) {
 //
 // Parameters:
 //   - colors: Map of color variable names to their color values
-func (m *MapTheme) SetColors(colors map[string]string) {
-	m.colors = colors
+func (t *Theme) SetColors(colors map[string]string) {
+	t.colors = colors
 }
 
 // SetFlags replaces the theme's flag registry with the provided map.
@@ -435,8 +276,8 @@ func (m *MapTheme) SetColors(colors map[string]string) {
 //
 // Parameters:
 //   - flags: Map of flag names to their boolean values
-func (m *MapTheme) SetFlags(flags map[string]bool) {
-	m.flags = flags
+func (t *Theme) SetFlags(flags map[string]bool) {
+	t.flags = flags
 }
 
 // SetRunes replaces the theme's Unicode character registry with the provided map.
@@ -444,8 +285,8 @@ func (m *MapTheme) SetFlags(flags map[string]bool) {
 //
 // Parameters:
 //   - runes: Map of character names to their Unicode values
-func (m *MapTheme) SetRunes(runes map[string]rune) {
-	m.runes = runes
+func (t *Theme) SetStrings(strings map[string]string) {
+	t.strings = strings
 }
 
 // SetStyles replaces the theme's style registry with the provided map.
@@ -454,16 +295,16 @@ func (m *MapTheme) SetRunes(runes map[string]rune) {
 //
 // Parameters:
 //   - styles: Map of CSS-like selectors to their Style definitions
-func (m *MapTheme) SetStyles(styles ...*Style) {
+func (t *Theme) SetStyles(styles ...*Style) {
 	for _, style := range styles {
-		m.Add(style)
+		t.Add(style)
 	}
 }
 
 // Styles returns a direct reference to the theme's style registry.
 // This allows for inspection and iteration over all defined styles.
-func (m *MapTheme) Styles() []*Style {
-	return slices.Collect(maps.Values(m.styles))
+func (t *Theme) Styles() []*Style {
+	return slices.Collect(maps.Values(t.styles))
 }
 
 // split parses a CSS-like selector string into its component parts using

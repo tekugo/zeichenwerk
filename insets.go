@@ -1,4 +1,4 @@
-package zeichenwerk
+package next
 
 import "fmt"
 
@@ -9,12 +9,6 @@ var NoInsets = &Insets{}
 // It follows the CSS box model convention where values are specified in clockwise order:
 // Top, Right, Bottom, Left.
 //
-// Insets are commonly used for:
-//   - Widget padding (inner spacing)
-//   - Widget margins (outer spacing)
-//   - Border spacing and layout calculations
-//   - Content area calculations within styled widgets
-//
 // The struct provides CSS-style shorthand methods for convenient configuration
 // and utility methods for common layout calculations.
 type Insets struct {
@@ -22,8 +16,6 @@ type Insets struct {
 }
 
 // NewInsets creates a new Insets instance using CSS-style shorthand notation.
-// This is a convenience constructor that uses the same value interpretation
-// as the Set() method.
 //
 // Parameters:
 //   - values: Variable number of integer values for inset configuration

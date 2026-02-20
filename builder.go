@@ -1,9 +1,7 @@
-package zeichenwerk
+package next
 
 import (
 	"fmt"
-	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -11,8 +9,14 @@ import (
 // It maintains a stack of containers and applies styling through themes.
 // The builder pattern allows for method chaining to create complex UI
 // layouts in an easy and descriptive way.
+//
+// The widget manipulation methods take variable arguments for optional
+// selector and value. The selector is a CSS-like selector string (e.g.,
+// ":focus", ":hover") and the value is the value to apply to the widget.
+// If only one argument is provided, it is assumed to be the value and the
+// selector is empty (for default).
 type Builder struct {
-	theme      Theme            // Current theme for styling widgets
+	theme      *Theme           // Current theme for styling widgets
 	stack      Stack[Container] // Stack of container widgets for nesting
 	current    Widget           // Currently active widget being configured
 	tabs       *Tabs            // Last tabs widget to add new tabs
@@ -22,7 +26,7 @@ type Builder struct {
 
 // NewBuilder creates a new Builder instance with the specified theme.
 // Returns a pointer to the newly created Builder.
-func NewBuilder(theme Theme) *Builder {
+func NewBuilder(theme *Theme) *Builder {
 	return &Builder{theme: theme}
 }
 
@@ -48,8 +52,6 @@ func (b *Builder) selector(t, id string) string {
 // Build finalizes the UI construction and returns a complete UI instance.
 // It creates a new UI with the current theme and root container from the
 // stack.
-//
-// Returns the constructed UI ready for rendering and interaction.
 func (b *Builder) Build() *UI {
 	ui, _ := NewUI(b.theme, b.stack.Peek(), true)
 	return ui
@@ -65,7 +67,7 @@ func (b *Builder) Container() Container {
 // Find searches the complete widget tree from the top of the stack, so also
 // adjacent widgets will be found.
 func (b *Builder) Find(id string) Widget {
-	return Find(b.stack[0], id, false)
+	return Find(b.stack[0], id)
 }
 
 // Run builds and runs the UI in one go.
@@ -92,28 +94,24 @@ func (b *Builder) With(fn func(*Builder)) *Builder {
 // Add adds a widget to the current container and sets it as the current
 // widget. If there's a container on the stack, the widget is added to it.
 // The widget's parent is set to the container for proper hierarchy handling.
+//
+// This method is normally not called from the outside, because for most
+// widgets specific builder methods exist, e.g. List or Static.
 func (b *Builder) Add(widget Widget) *Builder {
 	if len(b.stack) > 0 {
 		top := b.stack.Peek()
 		switch top := top.(type) {
 		case *Box:
 			top.Add(widget)
-		case *Dialog:
-			top.Add(widget)
 		case *Flex:
-			top.Add(widget)
-		case *Form:
 			top.Add(widget)
 		case *Grid:
 			top.Add(b.x, b.y, b.w, b.h, widget)
-		case *Scroller:
-			top.Add(widget)
 		case *Switcher:
-			top.Add(widget.ID(), widget)
-		case *ThemeSwitch:
+			top.Add(widget)
+		case *Viewport:
 			top.Add(widget)
 		}
-		widget.SetParent(top)
 	}
 	b.Apply(widget)
 	b.current = widget
@@ -130,71 +128,71 @@ func (b *Builder) Add(widget Widget) *Builder {
 func (b *Builder) Apply(widget Widget) {
 	switch widget := widget.(type) {
 	case *Box:
-		b.theme.Apply(widget, b.selector("box", widget.ID()), "title")
+		b.theme.Apply(widget, b.selector("box", widget.ID()))
+		b.theme.Apply(widget, b.selector("box/shadow", widget.ID()))
 	case *Button:
-		b.theme.Apply(widget, b.selector("button", widget.ID()), "disabled", "focus", "hover", "pressed")
+		b.theme.Apply(widget, b.selector("button", widget.ID()), "disabled", "focused")
 	case *Checkbox:
-		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focus", "hover")
+		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focused", "hovered")
+	case *Component:
+		b.theme.Apply(widget, b.selector("component", widget.ID()))
 	case *Custom:
 		b.theme.Apply(widget, b.selector("custom", widget.ID()))
-	case *Dialog:
-		b.theme.Apply(widget, b.selector("dialog", widget.ID()), "focus")
-		b.theme.Apply(widget, b.selector("dialog/title", widget.ID()), "focus")
-	case *Digits:
-		b.theme.Apply(widget, b.selector("digits", widget.ID()))
-	case *Editor:
-		b.theme.Apply(widget, b.selector("editor", widget.ID()))
-		b.theme.Apply(widget, b.selector("editor/current-line", widget.ID()))
-		b.theme.Apply(widget, b.selector("editor/current-line-number", widget.ID()))
-		b.theme.Apply(widget, b.selector("editor/line-numbers", widget.ID()))
-		b.theme.Apply(widget, b.selector("editor/separator", widget.ID()))
 	case *Flex:
 		b.theme.Apply(widget, b.selector("flex", widget.ID()))
-		b.theme.Apply(widget, b.selector("flex/shadow", widget.ID()))
-	case *Form:
-		b.theme.Apply(widget, b.selector("form", widget.ID()))
-	case *FormGroup:
-		b.theme.Apply(widget, b.selector("form-group", widget.ID()))
 	case *Grid:
 		b.theme.Apply(widget, b.selector("grid", widget.ID()))
-	case *Hidden:
-		b.theme.Apply(widget, b.selector("hidden", widget.ID()))
+	case *Scanner:
+		b.theme.Apply(widget, b.selector("scanner", widget.ID()))
+	case *Editor:
+		b.theme.Apply(widget, b.selector("editor", widget.ID()))
 	case *Input:
-		b.theme.Apply(widget, b.selector("input", widget.ID()), "focus")
-	case *Label:
-		b.theme.Apply(widget, b.selector("label", widget.ID()))
+		b.theme.Apply(widget, b.selector("input", widget.ID()), "disabled", "focused")
 	case *List:
-		b.theme.Apply(widget, b.selector("list", widget.ID()), "disabled", "focus")
-		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focus")
-	case *ProgressBar:
-		b.theme.Apply(widget, b.selector("progress-bar", widget.ID()))
-		b.theme.Apply(widget, b.selector("progress-bar/bar", widget.ID()))
-	case *Scroller:
-		b.theme.Apply(widget, b.selector("scroller", widget.ID()), "focus")
-	case *Separator:
-		b.theme.Apply(widget, b.selector("separator", widget.ID()))
+		b.theme.Apply(widget, b.selector("list", widget.ID()), "disabled", "focused")
+		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focused")
+	case *Rule:
+		b.theme.Apply(widget, b.selector("rule", widget.ID()))
+	case *Static:
+		b.theme.Apply(widget, b.selector("static", widget.ID()))
+	case *Digits:
+		b.theme.Apply(widget, b.selector("digits", widget.ID()))
 	case *Spinner:
 		b.theme.Apply(widget, b.selector("spinner", widget.ID()))
+	case *Styled:
+		b.theme.Apply(widget, b.selector("styled", widget.ID()))
 	case *Switcher:
 		b.theme.Apply(widget, b.selector("switcher", widget.ID()))
 	case *Table:
-		b.theme.Apply(widget, b.selector("table", widget.ID()), "focus")
-		b.theme.Apply(widget, b.selector("table/grid", widget.ID()), "focus")
-		b.theme.Apply(widget, b.selector("table/header", widget.ID()), "focus")
-		b.theme.Apply(widget, b.selector("table/highlight", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("table", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("table/grid", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("table/header", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("table/highlight", widget.ID()), "focused")
 	case *Tabs:
-		b.theme.Apply(widget, b.selector("tabs", widget.ID()), "focus")
-		b.theme.Apply(widget, b.selector("tabs/line", widget.ID()), "focus")
-		b.theme.Apply(widget, b.selector("tabs/highlight", widget.ID()), "focus")
-		b.theme.Apply(widget, b.selector("tabs/highlight-line", widget.ID()), "focus")
+		b.theme.Apply(widget, b.selector("tabs", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("tabs/line", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("tabs/highlight", widget.ID()), "focused")
+		b.theme.Apply(widget, b.selector("tabs/highlight-line", widget.ID()), "focused")
 	case *Text:
 		b.theme.Apply(widget, b.selector("text", widget.ID()))
-	case *ThemeSwitch:
-		b.theme.Apply(widget, b.selector("theme-switch", widget.ID()))
+	case *Viewport:
+		b.theme.Apply(widget, b.selector("viewport", widget.ID()))
 	default:
 		panic(fmt.Errorf("no style for widget type %T", widget))
 	}
 }
+
+// End finalizes the current container and pops it from the stack.
+// This should be called after adding all children to a container except
+// the root container.
+func (b *Builder) End() *Builder {
+	if len(b.stack) > 1 {
+		b.current = b.stack.Pop()
+	}
+	return b
+}
+
+// ---- Widgets --------------------------------------------------------------
 
 // Box creates a new box widget with the specified id and display title.
 // The box is automatically styled with theme styles for the border and
@@ -206,48 +204,27 @@ func (b *Builder) Box(id, title string) *Builder {
 }
 
 // Button creates a new button widget with the specified id and display text.
-// The button is automatically styled with theme styles for various states
-// (disabled, focus, hover, pressed). The button's size hint is set to the
-// text length.
-func (b *Builder) Button(id string, text string) *Builder {
+func (b *Builder) Button(id, text string) *Builder {
 	button := NewButton(id, text)
 	b.Add(button)
-	button.SetHint(len(text), 1)
 	return b
 }
 
-// Checkbox creates a new checkbox widget with the specified id, label text,
-// and initial state.
-// The checkbox is automatically styled with theme styles for various states
-// (disabled, focus, hover). The checkbox's size hint is set based on the
-// label length.
-func (b *Builder) Checkbox(id string, text string, checked bool) *Builder {
+// Checkbox creates a new checkbox widget with the specified id and display text.
+func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	checkbox := NewCheckbox(id, text, checked)
 	b.Add(checkbox)
-	// Size hint: 4 characters for "[x] " plus text length
-	checkbox.SetHint(4+len([]rune(text)), 1)
 	return b
 }
 
-// Dialog creates a new dialog container with the given id and title.
-// A dialog is not normally created as port of the initial UI creation, but
-// afterwards. Use UI.Builder() to get a builder for the dialog at runtime.
-func (b *Builder) Dialog(id, title string) *Builder {
-	dialog := NewDialog(id, title)
-	b.Add(dialog)
-	return b
-}
-
-// Digits creates a big digit display label.
+// Digits creates a new digits widget with the specified id and text.
 func (b *Builder) Digits(id, text string) *Builder {
-	digits := NewDigits(id, text)
-	b.Add(digits)
-	digits.SetHint(len(text)*4, 3)
+	d := NewDigits(id, text)
+	b.Add(d)
 	return b
 }
 
-// Editor creates a multi-line text editor widget with the specified id.
-// The editor will be empty and should be configured separately.
+// Editor creates a new editor widget for multi-line text editing.
 func (b *Builder) Editor(id string) *Builder {
 	editor := NewEditor(id)
 	b.Add(editor)
@@ -258,45 +235,12 @@ func (b *Builder) Editor(id string) *Builder {
 //
 // Parameters:
 //   - id: unique identifier for the flex container
-//   - orientation: layout direction ("horizontal" or "vertical")
+//   - horizontal: whether the flex container is horizontal
 //   - alignment: how children are aligned ("start", "center", "end", "stretch")
 //   - spacing: cells between child widgets (columns or rows)
-func (b *Builder) Flex(id string, orientation, alignment string, spacing int) *Builder {
-	flex := NewFlex(id, orientation, alignment, spacing)
+func (b *Builder) Flex(id string, horizontal bool, alignment string, spacing int) *Builder {
+	flex := NewFlex(id, horizontal, alignment, spacing)
 	b.Add(flex)
-	return b
-}
-
-// Form creates a new form widget that manages data binding between Go structs
-// and form controls. The form automatically generates appropriate controls
-// based on struct field types and tags.
-//
-// Parameters:
-//   - id: Unique identifier for the form widget
-//   - title: Display title for the form container
-//   - value: Pointer to struct containing form data - must be a pointer for updates to work
-//
-// The struct should use tags to control form generation:
-//   - `label:"Display Name"` - Custom label (default: field name)
-//   - `width:"20"` - Control width in characters
-//   - `control:"input|checkbox|password"` - Control type (auto-detected if omitted)
-//   - `group:"groupname"` - Group fields together
-//   - `line:"1"` - Line number within group
-//   - `readOnly:"true"` - Make field read-only
-//
-// Example:
-//
-//	type User struct {
-//	  Name  string `label:"Full Name" width:"30"`
-//	  Email string `label:"Email Address" width:"40"`
-//	  Admin bool   `label:"Administrator"`
-//	}
-//
-//	user := &User{}
-//	builder.Form("user-form", "User Registration", user)
-func (b *Builder) Form(id, title string, value any) *Builder {
-	form := NewForm(id, title, value)
-	b.Add(form)
 	return b
 }
 
@@ -311,192 +255,28 @@ func (b *Builder) Form(id, title string, value any) *Builder {
 //
 // Use Cell() to specify where subsequent widgets should be placed.
 // Initially all rows and columns are initialized to use fractional sizes
-// at one fraction each (i.e. -1).
+// at one fraction each (i.e. -1). Sizes can be adjusted using the Rows
+// and Columns method.
 func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
 	grid := NewGrid(id, rows, columns, lines)
 	b.Add(grid)
 	return b
 }
 
-// Group creates a form group that organizes related form fields with
-// consistent labeling and layout. This method automatically generates form
-// controls based on struct fields that match the specified group.
-//
-// Parameters:
-//   - id: Unique identifier for the form group
-//   - title: Display title for the group (shown in border if styled)
-//   - name: Group name to match against struct field `group` tags (empty string matches untagged fields)
-//   - placement: Label placement ("horizontal" or "vertical")
-//   - spacing: Vertical spacing between field lines (typically 1)
-//
-// The method searches for the nearest parent Form widget and automatically
-// generates controls for struct fields that have a matching `group` tag value.
-//
-// Struct tag example:
-//
-//	type User struct {
-//	  Name  string `group:"basic" label:"Full Name" width:"30"`
-//	  Email string `group:"basic" label:"Email" width:"40"`
-//	  Phone string `group:"contact" label:"Phone" width:"20"`
-//	}
-//
-// Example:
-//
-//	builder.Form("user-form", "User", &user).
-//	  Group("basic-group", "Basic Information", "basic", "horizontal", 1).
-//	  End().
-//	  Group("contact-group", "Contact Details", "contact", "vertical", 1).
-//	  End()
-func (b *Builder) Group(id, title, name, placement string, spacing int) *Builder {
-	group := NewFormGroup(id, title, placement)
-	group.Spacing = 1
-	b.Add(group)
-
-	// Find the nearest form
-	var current Widget = b.stack.Peek()
-	for current != nil {
-		if form, ok := current.(*Form); ok {
-			b.buildGroup(form, group, name, form.Data)
-			break
-		}
-		current = current.Parent()
-	}
-
+// HRule creates a horizontal rule.
+func (b *Builder) HRule(style string) *Builder {
+	rule := NewHRule(style)
+	b.Add(rule)
 	return b
 }
 
-// buildGroup processes struct fields and creates form controls for fields
-// matching the specified group. This is an internal helper method called
-// by Group() to generate form controls automatically.
-//
-// Parameters:
-//   - form: The parent form widget for data binding
-//   - group: The form group to add controls to
-//   - name: Group name to filter fields (empty matches untagged fields)
-//   - data: Pointer to struct containing the data
-//
-// Supported struct tags:
-//   - `group:"name"` - Assigns field to named group
-//   - `label:"text"` - Custom label (default: field name, "-" to hide)
-//   - `control:"type"` - Control type (input, checkbox, password)
-//   - `width:"20"` - Control width in characters (default: 10)
-//   - `line:"1"` - Specific line number (default: auto-increment)
-//   - `readOnly:"true"` - Make control read-only
-func (b *Builder) buildGroup(form *Form, group *FormGroup, name string, data any) {
-	line := 0
-	v := reflect.ValueOf(data)
-	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-		panic("expecting pointer to struct")
-	}
-
-	v = v.Elem()
-	t := v.Type()
-
-	for i := range v.NumField() {
-		sf := t.Field(i)
-		fv := v.Field(i)
-		g := sf.Tag.Get("group")
-		if name != "" && name != g {
-			continue
-		}
-		label := sf.Tag.Get("label")
-		if label == "-" {
-			continue
-		} else if label == "" {
-			label = sf.Name
-		}
-		control := sf.Tag.Get("control")
-		width, err := strconv.Atoi(sf.Tag.Get("width"))
-		if err != nil {
-			width = 10
-		}
-		l, err := strconv.Atoi(sf.Tag.Get("line"))
-		if err == nil {
-			line = l
-		}
-
-		widget := b.buildFormControl(control, sf.Name, fv)
-		widget.SetHint(width, 1)
-		widget.SetParent(b.stack.Peek())
-		widget.On("change", form.Update(fv))
-		group.Add(line, label, widget)
-
-		line++
-	}
-}
-
-// buildFormControl creates an appropriate form control widget based on the
-// field type and control tag. This is an internal helper method that handles
-// the automatic selection and configuration of controls.
-//
-// Parameters:
-//   - control: Explicit control type from struct tag ("input", "checkbox", "password")
-//   - id: Widget ID (typically the struct field name)
-//   - v: reflect.Value of the struct field
-//
-// Returns:
-//   - Widget: Configured form control widget
-//
-// Control type selection:
-//   - If control tag is specified, uses that type
-//   - If no control tag: bool fields become checkboxes, others become inputs
-//   - Supported types: "input", "checkbox", "password"
-func (b *Builder) buildFormControl(control, id string, v reflect.Value) Widget {
-	if control == "" {
-		switch v.Kind() {
-		case reflect.Bool:
-			control = "checkbox"
-		default:
-			control = "input"
-		}
-	}
-
-	switch control {
-	case "checkbox":
-		checkbox := NewCheckbox(id, id, v.Bool())
-		b.Apply(checkbox)
-		checkbox.Checked = v.Bool()
-		return checkbox
-	default:
-		input := NewInput(id)
-		b.Apply(input)
-		input.Text = v.String()
-		return input
-	}
-}
-
-// Input creates a new text input widget for user text entry.
+// Input creates a new input widget for entering text.
 //
 // Parameters:
 //   - id: unique identifier for the input widget
-//   - label: label text (currently unused in implementation)
-//   - width: preferred width in characters
-//
-// The input is styled with focus states and sized according to the width
-// parameter.
-func (b *Builder) Input(id string, label string, width int) *Builder {
-	input := NewInput(id)
+func (b *Builder) Input(id string, params ...string) *Builder {
+	input := NewInput(id, params...)
 	b.Add(input)
-	input.SetHint(width, 1)
-	return b
-}
-
-// Label creates a new text label widget for displaying static text.
-//
-// Parameters:
-//   - id: unique identifier for the label widget
-//   - text: text content to display
-//   - width: preferred width in characters (0 = auto-size to text length)
-//
-// If width is 0, the label is sized to fit the text content exactly.
-func (b *Builder) Label(id string, text string, width int) *Builder {
-	label := NewLabel(id, text)
-	b.Add(label)
-	if width == 0 {
-		label.SetHint(len([]rune(text)), 1)
-	} else {
-		label.SetHint(width, 1)
-	}
 	return b
 }
 
@@ -505,78 +285,51 @@ func (b *Builder) Label(id string, text string, width int) *Builder {
 // Parameters:
 //   - id: unique identifier for the list widget
 //   - values: slice of strings to display as list items
-//
-// The list is styled with states for disabled, focus, and highlight.
-// Users can navigate and select items using keyboard input.
-func (b *Builder) List(id string, values []string) *Builder {
+func (b *Builder) List(id string, values ...string) *Builder {
 	list := NewList(id, values)
 	b.Add(list)
 	return b
 }
 
-// ProgressBar creates a new progress bar widget for showing completion status.
-//
-// Parameters:
-//   - id: unique identifier for the progress bar widget
-//   - value: current progress value
-//   - min: minimum value of the range
-//   - max: maximum value of the range
-//
-// The progress bar visually represents the value as a percentage of the
-// min-max range.
-func (b *Builder) ProgressBar(id string, value, min, max int) *Builder {
-	bar := NewProgressBar(id)
-	b.Add(bar)
-	bar.SetRange(min, max)
-	bar.SetValue(value)
-	bar.SetHint(20, 1)
-	return b
-}
-
-// Scroller creates a new scroll pane for displaying the child in a viewport.
-//
-// Parameters:
-//   - id: unique identifier for the scroller widget
-//   - title: optional scroll pane title rendered in its border
-//
-// The Scroller allows to display children larger than the available content
-// area and if it is larger, scroll bars are shown.
-func (b *Builder) Scroller(id, title string) *Builder {
-	scroller := NewScroller(id, title)
-	b.Add(scroller)
-	return b
-}
-
-// Separator creates a new separator for displaying a horizontal or vertical line.
-//
-// Parameters:
-//   - id: unique identifier for the separator widget
-//   - border: border style
-//   - width: separator width, should be 1 for vertical separators
-//   - height: separator height, should be 1 for horizontal separators
-//
-// The separator is just a visual element with no interaction possibility.
-func (b *Builder) Separator(id, border string, width, height int) *Builder {
-	separator := NewSeparator(id, border)
-	b.Add(separator)
-	separator.SetHint(width, height)
-	return b
-}
-
-// Spacer creates a hidden widget, which just takes up space in the container.
-// It takes no parameters and no ID, because it does nothing and should do
-// nothing.
-func (b *Builder) Spacer() *Builder {
-	spacer := NewHidden("")
-	b.Add(spacer)
-	spacer.SetHint(-1, -1)
-	return b
-}
-
-// Spinner creates a new spinner widget.
-func (b *Builder) Spinner(id string, runes []rune) *Builder {
-	spinner := NewSpinner(id, runes)
+// Spinner creates a new spinner widget for animated spinners.
+func (b *Builder) Spinner(id string, sequence string) *Builder {
+	spinner := NewSpinner(id, sequence)
 	b.Add(spinner)
+	return b
+}
+
+// Scanner creates a new scanner widget for displaying a back-and-forth
+// scanning animation with a fading trail.
+//
+// Parameters:
+//   - id: unique identifier for the scanner widget
+//   - width: display width in characters (e.g., 8)
+//   - charStyle: character set style, either "blocks" or "diamonds"
+func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
+	scanner := NewScanner(id, width, charStyle)
+	b.Add(scanner)
+	return b
+}
+
+func (b *Builder) Spacer() *Builder {
+	spacer := NewComponent("spacer")
+	b.Add(spacer)
+	return b
+}
+
+// Static creates a new static widget with the specified id and text.
+// The static widget is styled with theme styles for the text.
+func (b *Builder) Static(id, text string) *Builder {
+	static := NewStatic(id, text)
+	b.Add(static)
+	return b
+}
+
+// Styled creates a new styled text widget with the specified id and text.
+// The styled widget is styled with theme styles for the text.
+func (b *Builder) Styled(id string, text string) *Builder {
+	styled := NewStyled(id, text)
+	b.Add(styled)
 	return b
 }
 
@@ -588,7 +341,7 @@ func (b *Builder) Switcher(id string, connect bool) *Builder {
 	switcher := NewSwitcher(id)
 	b.Add(switcher)
 	if connect && b.tabs != nil {
-		b.tabs.On("activate", func(widget Widget, _ string, params ...any) bool {
+		b.tabs.On("activate", func(_ Widget, _ string, params ...any) bool {
 			if len(params) > 0 {
 				if selected, ok := params[0].(int); ok {
 					switcher.Select(selected)
@@ -600,13 +353,6 @@ func (b *Builder) Switcher(id string, connect bool) *Builder {
 	return b
 }
 
-// Table creates a table widget with the passed data provider.
-func (b *Builder) Table(id string, provider TableProvider) *Builder {
-	table := NewTable(id, provider)
-	b.Add(table)
-	return b
-}
-
 // Tab adds a new tab for a switcher, if a Tabs was added before.
 func (b *Builder) Tab(name string) *Builder {
 	if b.tabs != nil {
@@ -615,44 +361,43 @@ func (b *Builder) Tab(name string) *Builder {
 	return b
 }
 
-// Tabs creates a tabl selection widget.
-//
-// The last Tabs widget is stored by the builder and new tabs can be added
-// by subsequent tab calls, which can be placed inside the switcher.
-func (b *Builder) Tabs(id string, tabs ...string) *Builder {
-	t := NewTabs(id)
-	for _, tab := range tabs {
-		t.Add(tab)
-	}
-	b.Add(t)
-	b.tabs = t
+// Table creates a table widget with the passed data provider.
+func (b *Builder) Table(id string, provider TableProvider) *Builder {
+	table := NewTable(id, provider)
+	b.Add(table)
 	return b
 }
 
-// Text creates a new text widget for displaying multi-line text content.
-//
-// Parameters:
-//   - id: unique identifier for the text widget
-//   - content: slice of strings, each representing a line of text
-//   - follow: whether to automatically scroll to show new content (like tail -f)
-//   - max: maximum number of lines to retain (0 = unlimited)
-//
-// The text widget supports scrolling and can be used for logs or large text display.
+// Tabs creates a new tabs widget with the specified id and names.
+func (b *Builder) Tabs(id string, names ...string) *Builder {
+	tabs := NewTabs(id)
+	for _, name := range names {
+		tabs.Add(name)
+	}
+	b.Add(tabs)
+	b.tabs = tabs
+	return b
+}
+
+// Text creates a new text widget with the specified id and text.
+// The text widget is styled with theme styles for the text.
 func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
 	text := NewText(id, content, follow, max)
 	b.Add(text)
 	return b
 }
 
-// ThemeSwitch creates a new theme switcher widget, for temporarily changing
-// the theme.
-//
-// Parameters:
-//   - id: unique identifier for the theme switch
-//   - theme: new theme
-func (b *Builder) ThemeSwitch(id string, theme Theme) *Builder {
-	ts := NewThemeSwitch(id, theme)
-	b.Add(ts)
+// Viewport adds a scrollable viewport
+func (b *Builder) Viewport(id, title string) *Builder {
+	viewport := NewViewport(id, title)
+	b.Add(viewport)
+	return b
+}
+
+// VRule adds a vertical rule.
+func (b *Builder) VRule(style string) *Builder {
+	rule := NewVRule(style)
+	b.Add(rule)
 	return b
 }
 
@@ -660,12 +405,6 @@ func (b *Builder) ThemeSwitch(id string, theme Theme) *Builder {
 
 // Background sets the background color for the current widget.
 // A selector for the part/state can be specified.
-//
-// Parameters:
-//   - selector: optional CSS-like selector string (e.g., ":focus", ":hover")
-//   - color: color name or hex code for the background
-//
-// This allows different background colors for different widget states.
 func (b *Builder) Background(params ...string) *Builder {
 	selector := ""
 	if len(params) == 2 {
@@ -746,15 +485,15 @@ func (b *Builder) Class(class string) *Builder {
 	return b
 }
 
-// End finalizes the current container and pops it from the stack.
-// This should be called after adding all children to a container.
-// The current widget is refreshed and the container becomes the new current
-// widget. If only one container remains on the stack, it stays as the root
-// container.
-func (b *Builder) End() *Builder {
-	if len(b.stack) > 1 {
-		b.current = b.stack.Pop()
-	}
+// Columns sets the column sizes for the current grid container.
+func (b *Builder) Columns(columns ...int) *Builder {
+	b.current.(*Grid).Columns(columns...)
+	return b
+}
+
+// Rows sets the row sizes for the current grid container.
+func (b *Builder) Rows(rows ...int) *Builder {
+	b.current.(*Grid).Rows(rows...)
 	return b
 }
 
@@ -791,7 +530,14 @@ func (b *Builder) Foreground(params ...string) *Builder {
 	return b
 }
 
+// Flag sets the flag for the current widget.
+func (b *Builder) Flag(flag string, value bool) *Builder {
+	b.current.SetFlag(flag, value)
+	return b
+}
+
 // Hint sets the preferred size hint for the current widget.
+//
 // Parameters:
 //   - width: preferred width in characters
 //   - height: preferred height in lines
@@ -842,7 +588,8 @@ func (b *Builder) Padding(a ...int) *Builder {
 //
 // This is typically used for widgets that are not in containers.
 func (b *Builder) Position(x, y int) *Builder {
-	b.current.SetPosition(x, y)
+	_, _, w, h := b.current.Bounds()
+	b.current.SetBounds(x, y, w, h)
 	return b
 }
 
@@ -854,6 +601,7 @@ func (b *Builder) Position(x, y int) *Builder {
 //
 // This overrides any size hints or automatic sizing.
 func (b *Builder) Size(width, height int) *Builder {
-	b.current.SetSize(width, height)
+	x, y, _, _ := b.current.Bounds()
+	b.current.SetBounds(x, y, width, height)
 	return b
 }

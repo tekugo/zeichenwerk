@@ -29,7 +29,7 @@ zeichenwerk/
 +- cmd/        # Command line tools
 |  +- demo/    # Demo application
 +- doc/        # Documentation
-+- next/       # Ongoing refactoring of main project
++- archive/    # Old version (separate Go project, ignore)
 ```
 
 ## Clean Code

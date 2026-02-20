@@ -1,25 +1,22 @@
-package zeichenwerk
+package next
 
 import (
-	"github.com/gdamore/tcell/v2"
+	"unicode/utf8"
+
+	"github.com/gdamore/tcell/v3"
 )
 
-// Button represents a clickable button widget that responds to keyboard and mouse input.
-// It displays text and can trigger actions when activated through various input methods.
+// Button represents a clickable button widget that responds to keyboard and
+// mouse input. It displays text and can trigger actions when activated through
+// various input methods.
 //
 // Features:
 //   - Keyboard activation (Enter key and Space bar)
-//   - Mouse click support with visual feedback
-//   - Focus and hover state management
+//   - Mouse click support with state update (pressed)
 //   - Customizable action handlers
-//   - State-based styling support (normal, focus, hover, pressed, disabled)
-//
-// The button supports multiple activation methods and provides visual feedback
-// for different interaction states to enhance user experience.
 type Button struct {
-	BaseWidget
-	Text  string // The text displayed on the button
-	state string // Current button state (pressed, disabled, etc.)
+	Component
+	text string // The text displayed on the button
 }
 
 // NewButton creates a new button widget with the specified ID and text.
@@ -33,91 +30,23 @@ type Button struct {
 //
 // Returns:
 //   - *Button: A new button widget instance
-//
-// Example usage:
-//
-//	button := NewButton("ok-btn", "OK")
-//	button.On("click", ...)
 func NewButton(id, text string) *Button {
-	return &Button{
-		BaseWidget: BaseWidget{id: id, focusable: true},
-		Text:       text,
-		state:      "",
+	button := &Button{
+		Component: Component{id: id, hwidth: utf8.RuneCountInString(text), hheight: 1},
+		text:      text,
 	}
+	button.SetFlag("focusable", true)
+	OnKey(button, button.handleKey)
+	OnMouse(button, button.handleMouse)
+	return button
 }
 
 // Click programmatically triggers the button's action handler.
-//
-// This method can be called programmatically to simulate a button click
-// or can be used internally when the button is activated through user input.
-// The method also emits a "click" event for any registered event handlers.
 func (b *Button) Click() {
-	b.Emit("click")
+	b.Dispatch("click")
 }
 
-// Emit triggers an event handler for the specified event type.
-// This method is part of the button's event system and allows the button
-// to notify registered event handlers when specific events occur.
-//
-// The method looks up the event handler for the given event type and
-// executes it with the button instance, event name, and any additional data.
-// If no handler is registered for the event type, the method returns false.
-//
-// Parameters:
-//   - event: The name of the event to emit (e.g., "click", "focus", "hover")
-//   - data: Optional additional data to pass to the event handler
-//
-// Returns:
-//   - bool: true if a handler was found and executed, false otherwise
-//
-// Example usage:
-//
-//	button.On("click", func(widget Widget, event string, data ...any) bool {
-//		fmt.Println("Button was clicked!")
-//		return true
-//	})
-//	button.Emit("click") // Triggers the registered handler
-func (b *Button) Emit(event string, data ...any) bool {
-	if b.handlers == nil {
-		return false
-	}
-	handler, found := b.handlers[event]
-	if found {
-		return handler(b, event, data...)
-	}
-	return false
-}
-
-// Handle processes keyboard and mouse events for the button widget.
-// The button responds to various input methods and provides appropriate
-// visual feedback and action triggering.
-//
-// Supported events:
-//   - Keyboard: Enter key and Space bar trigger the button action
-//   - Mouse: Left click with press/release cycle and bounds checking
-//   - State management: Handles pressed, hover, and disabled states
-//
-// Parameters:
-//   - event: The tcell.Event to process (keyboard or mouse)
-//
-// Returns:
-//   - bool: true if the event was handled, false otherwise
-func (b *Button) Handle(event tcell.Event) bool {
-	if b.state == "disabled" {
-		return false
-	}
-
-	switch event := event.(type) {
-	case *tcell.EventKey:
-		return b.handleKeyEvent(event)
-	case *tcell.EventMouse:
-		return b.handleMouseEvent(event)
-	}
-
-	return false
-}
-
-// handleKeyEvent processes keyboard input for the button widget.
+// handleKey processes keyboard input for the button widget.
 // This method handles the standard button activation keys and provides
 // immediate feedback by triggering the button action.
 //
@@ -130,14 +59,14 @@ func (b *Button) Handle(event tcell.Event) bool {
 //
 // Returns:
 //   - bool: true if the key was handled, false otherwise
-func (b *Button) handleKeyEvent(event *tcell.EventKey) bool {
+func (b *Button) handleKey(_ Widget, event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyEnter:
 		b.Click()
 		return true
 	case tcell.KeyRune:
 		// Handle space bar activation (standard button behavior)
-		if event.Rune() == ' ' {
+		if event.Str() == " " {
 			b.Click()
 			return true
 		}
@@ -146,7 +75,7 @@ func (b *Button) handleKeyEvent(event *tcell.EventKey) bool {
 	return false
 }
 
-// handleMouseEvent processes mouse input for the button widget.
+// handleMouse processes mouse input for the button widget.
 // This method implements standard button mouse interaction patterns
 // including press/release cycles and bounds checking for proper UX.
 //
@@ -161,7 +90,7 @@ func (b *Button) handleKeyEvent(event *tcell.EventKey) bool {
 //
 // Returns:
 //   - bool: true if the mouse event was handled, false otherwise
-func (b *Button) handleMouseEvent(event *tcell.EventMouse) bool {
+func (b *Button) handleMouse(_ Widget, event *tcell.EventMouse) bool {
 	x, y := event.Position()
 	bx, by, bw, bh := b.Bounds()
 
@@ -169,86 +98,26 @@ func (b *Button) handleMouseEvent(event *tcell.EventMouse) bool {
 	if x >= bx && x < bx+bw && y >= by && y < by+bh {
 		switch event.Buttons() {
 		case tcell.Button1: // Left mouse button
-			if b.state != "pressed" {
-				b.state = "pressed"
-			}
+			b.SetFlag("pressed", true)
 			return true
 		case tcell.ButtonNone: // Mouse release
-			if b.state == "pressed" {
-				b.state = ""
+			if b.Flag("pressed") {
+				b.SetFlag("pressed", false)
 				b.Click() // Trigger click on release
 				return true
 			}
 		}
-	} else if b.state == "pressed" {
+	} else if b.Flag("pressed") {
 		// Mouse moved outside button while pressed
-		b.state = ""
+		b.SetFlag("pressed", false)
 	}
 
 	return false
 }
 
-// Info returns a human-readable description of the button's current state.
-// This includes the button's position, dimensions, text content, and current state.
-// This method is primarily used for debugging and development purposes.
-//
-// Returns:
-//   - string: Formatted string with button information
-func (b *Button) Info() string {
-	return "button [" + b.BaseWidget.Info() + "]"
-}
-
-// SetEnabled sets the enabled/disabled state of the button.
-// When disabled, the button will not respond to user input and will
-// display using the "disabled" style. When enabled, the button returns
-// to normal interactive behavior.
-//
-// Parameters:
-//   - enabled: true to enable the button, false to disable it
-func (b *Button) SetEnabled(enabled bool) {
-	if enabled {
-		if b.state == "disabled" {
-			b.state = ""
-		}
-	} else {
-		b.state = "disabled"
-	}
-}
-
-// IsEnabled returns whether the button is currently enabled.
-// A disabled button will not respond to user input and displays
-// using the "disabled" visual style.
-//
-// Returns:
-//   - bool: true if the button is enabled, false if disabled
-func (b *Button) IsEnabled() bool {
-	return b.state != "disabled"
-}
-
-// State returns the current state of the button for styling purposes.
-// The state determines which visual style should be applied to the button
-// and follows a priority order for multiple simultaneous states.
-//
-// State priority (highest to lowest):
-//  1. "focus" - when the button has keyboard focus
-//  2. "hover" - when the mouse is over the button
-//  3. Internal state - "pressed", "disabled", or "" (default)
-//
-// Available states:
-//   - "": default/normal state
-//   - "focus": button has keyboard focus
-//   - "hover": mouse cursor is over the button
-//   - "pressed": button is currently being pressed
-//   - "disabled": button is disabled and non-interactive
-//
-// Returns:
-//   - string: The current button state identifier for styling
-func (b *Button) State() string {
-	if b.focused {
-		return "focus"
-	} else if b.hovered {
-		return "hover"
-	} else {
-		return b.state
-	}
+// Render implements the Widget interface for rendering the button.
+func (b *Button) Render(r *Renderer) {
+	b.Component.Render(r)
+	x, y, w, _ := b.Content()
+	r.Text(x, y, b.text, w)
 }
