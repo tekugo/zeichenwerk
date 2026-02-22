@@ -57,23 +57,22 @@ func createUI() *UI {
 		if len(data) == 1 {
 			if selected, ok := data[0].(int); ok {
 				switcher.Select(selected)
-				if selected == 7 {
-					for _, spinner := range FindAll[*Spinner](ui) {
-						spinner.Start(100 * time.Millisecond)
-					}
-				} else if selected == 6 {
+				if selected == 5 {
 					for _, scanner := range FindAll[*Scanner](ui) {
 						scanner.Start(50 * time.Millisecond)
 					}
-				}
-				if selected != 7 {
-					for _, spinner := range FindAll[*Spinner](ui) {
-						spinner.Stop()
-					}
-				}
-				if selected != 6 {
+				} else {
 					for _, scanner := range FindAll[*Scanner](ui) {
 						scanner.Stop()
+					}
+				}
+				if selected == 6 {
+					for _, spinner := range FindAll[*Spinner](ui) {
+						spinner.Start(100 * time.Millisecond)
+					}
+				} else {
+					for _, spinner := range FindAll[*Spinner](ui) {
+						spinner.Stop()
 					}
 				}
 				return true

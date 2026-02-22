@@ -332,7 +332,7 @@ func (ui *UI) Draw() {
 //   - widget: Widget to redraw
 func (ui *UI) DrawWidget(widget Widget) {
 	// Refresh, if there is more than one layer
-	if len(ui.layers) > 0 {
+	if len(ui.layers) > 1 {
 		ui.dirty = true
 		ui.Draw()
 		return
