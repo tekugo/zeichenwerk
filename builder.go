@@ -151,6 +151,9 @@ func (b *Builder) Apply(widget Widget) {
 	case *List:
 		b.theme.Apply(widget, b.selector("list", widget.ID()), "disabled", "focused")
 		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focused")
+	case *Progress:
+		b.theme.Apply(widget, b.selector("progress", widget.ID()), "disabled")
+		b.theme.Apply(widget, b.selector("progress/bar", widget.ID()), "disabled")
 	case *Rule:
 		b.theme.Apply(widget, b.selector("rule", widget.ID()))
 	case *Static:
@@ -288,6 +291,15 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 func (b *Builder) List(id string, values ...string) *Builder {
 	list := NewList(id, values)
 	b.Add(list)
+	return b
+}
+
+// Progress creates a new progress widget for displaying progress indicators.
+// The progress is initially indeterminate (total=0). Use SetTotal and SetValue
+// to configure it after retrieval via Find.
+func (b *Builder) Progress(id string, horizontal bool) *Builder {
+	p := NewProgress(id, horizontal)
+	b.Add(p)
 	return b
 }
 

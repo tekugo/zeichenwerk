@@ -25,7 +25,7 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Checkbox", "Digits", "Editor", "Grid", "Scanner", "Spinner", "Styled", "Table", "Tabs", "Viewport").
+		List("navigation", "Box", "Checkbox", "Digits", "Editor", "Grid", "Progress", "Scanner", "Spinner", "Styled", "Table", "Tabs", "Viewport").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -33,6 +33,7 @@ func createUI() *UI {
 		With(digits).
 		With(editor).
 		With(grid).
+		With(progress).
 		With(scanner).
 		With(spinner).
 		With(styled).
@@ -57,7 +58,17 @@ func createUI() *UI {
 		if len(data) == 1 {
 			if selected, ok := data[0].(int); ok {
 				switcher.Select(selected)
+				// Progress (index 5) - stop scanner/spinner
 				if selected == 5 {
+					for _, scanner := range FindAll[*Scanner](ui) {
+						scanner.Stop()
+					}
+					for _, spinner := range FindAll[*Spinner](ui) {
+						spinner.Stop()
+					}
+				}
+				// Scanner (index 6)
+				if selected == 6 {
 					for _, scanner := range FindAll[*Scanner](ui) {
 						scanner.Start(50 * time.Millisecond)
 					}
@@ -66,7 +77,8 @@ func createUI() *UI {
 						scanner.Stop()
 					}
 				}
-				if selected == 6 {
+				// Spinner (index 7)
+				if selected == 7 {
 					for _, spinner := range FindAll[*Spinner](ui) {
 						spinner.Start(100 * time.Millisecond)
 					}
@@ -156,6 +168,43 @@ func digits(builder *Builder) {
 		Digits("digits", "12:34").
 		End().
 		Static("digits-info", "Large ASCII art-style digits using Unicode box-drawing characters.").Padding(1, 0, 0, 0).
+		End()
+}
+
+// Progress demo
+func progress(builder *Builder) {
+	builder.Flex("progress-demo", false, "stretch", 1).Padding(1).
+		Static("progress-title", "Progress Widget Demo").Padding(0, 0, 1, 0).
+		Flex("progress-content", false, "stretch", 1)
+	// Indeterminate progress
+	pIndet := NewProgress("progress-indet", true)
+	builder.Add(pIndet)
+	builder.Spacer().Size(0, 1)
+	// Determinate: 25%
+	p25 := NewProgress("progress-25", true)
+	p25.SetTotal(100)
+	p25.SetValue(25)
+	builder.Add(p25)
+	builder.Spacer().Size(0, 1)
+	// 50%
+	p50 := NewProgress("progress-50", true)
+	p50.SetTotal(100)
+	p50.SetValue(50)
+	builder.Add(p50)
+	builder.Spacer().Size(0, 1)
+	// 75%
+	p75 := NewProgress("progress-75", true)
+	p75.SetTotal(100)
+	p75.SetValue(75)
+	builder.Add(p75)
+	builder.Spacer().Size(0, 1)
+	// 100%
+	p100 := NewProgress("progress-full", true)
+	p100.SetTotal(100)
+	p100.SetValue(100)
+	builder.Add(p100)
+	builder.End().
+		Static("progress-info", "Progress bars support determinate (with total>0) and indeterminate (total=0) modes. Use SetTotal/SetValue to control.").Padding(1, 0, 0, 0).
 		End()
 }
 

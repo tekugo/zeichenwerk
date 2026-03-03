@@ -60,5 +60,26 @@ func TokyoNightTheme() *Theme {
 		NewStyle("viewport"),
 	)
 
+	t.SetStrings(map[string]string{
+		// Horizontal orientation
+		"progress.h.prefix":        "",
+		"progress.h.suffix":        "",
+		"progress.h.start.filled":  "█",
+		"progress.h.start.empty":   "░",
+		"progress.h.middle.filled": "█",
+		"progress.h.middle.empty":  "░",
+		"progress.h.end.filled":    "█",
+		"progress.h.end.empty":     "░",
+		// Vertical orientation
+		"progress.v.prefix":        "",
+		"progress.v.suffix":        "",
+		"progress.v.start.filled":  "█",
+		"progress.v.start.empty":   "░",
+		"progress.v.middle.filled": "█",
+		"progress.v.middle.empty":  "░",
+		"progress.v.end.filled":    "█",
+		"progress.v.end.empty":     "░",
+	})
+
 	return t
 }

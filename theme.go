@@ -102,13 +102,33 @@ type Theme struct {
 // Returns:
 //   - *MapTheme: A new MapTheme instance with empty registries ready for configuration
 func NewTheme() *Theme {
-	return &Theme{
+	theme := &Theme{
 		borders: make(map[string]*Border),
 		colors:  make(map[string]string),
 		flags:   make(map[string]bool),
 		strings: make(map[string]string),
 		styles:  make(map[string]*Style),
 	}
+	// Default progress bar strings (ASCII)
+	theme.SetStrings(map[string]string{
+		"progress.h.prefix":        "",
+		"progress.h.suffix":        "",
+		"progress.h.start.filled":  "#",
+		"progress.h.start.empty":   ".",
+		"progress.h.middle.filled": "#",
+		"progress.h.middle.empty":  ".",
+		"progress.h.end.filled":    "#",
+		"progress.h.end.empty":     ".",
+		"progress.v.prefix":        "",
+		"progress.v.suffix":        "",
+		"progress.v.start.filled":  "#",
+		"progress.v.start.empty":   ".",
+		"progress.v.middle.filled": "#",
+		"progress.v.middle.empty":  ".",
+		"progress.v.end.filled":    "#",
+		"progress.v.end.empty":     ".",
+	})
+	return theme
 }
 
 // Add adds a style to the theme.
