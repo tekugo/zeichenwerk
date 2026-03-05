@@ -64,12 +64,12 @@ func TokyoNightTheme() *Theme {
 		// Horizontal orientation
 		"progress.h.prefix":        "",
 		"progress.h.suffix":        "",
-		"progress.h.start.filled":  "█",
-		"progress.h.start.empty":   "░",
-		"progress.h.middle.filled": "█",
-		"progress.h.middle.empty":  "░",
-		"progress.h.end.filled":    "█",
-		"progress.h.end.empty":     "░",
+		"progress.h.start.filled":  "\uEE03",
+		"progress.h.start.empty":   "\uEE00",
+		"progress.h.middle.filled": "\uEE04",
+		"progress.h.middle.empty":  "\uEE01",
+		"progress.h.end.filled":    "\uEE05",
+		"progress.h.end.empty":     "\uEE02",
 		// Vertical orientation
 		"progress.v.prefix":        "",
 		"progress.v.suffix":        "",

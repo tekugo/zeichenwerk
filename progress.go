@@ -2,7 +2,7 @@ package next
 
 import (
 	"fmt"
-	"strings"
+	"unicode/utf8"
 )
 
 // Progress represents a visual progress indicator widget that displays the completion
@@ -175,9 +175,9 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 		endEmpty = "."
 	}
 
-	// Compute available track width accounting for prefix/suffix
-	prefixWidth := len(prefix)
-	suffixWidth := len(suffix)
+	// Compute available track width accounting for prefix/suffix (in cells)
+	prefixWidth := utf8.RuneCountInString(prefix)
+	suffixWidth := utf8.RuneCountInString(suffix)
 	trackW := w - prefixWidth - suffixWidth
 	if trackW < 0 {
 		trackW = 0
@@ -197,7 +197,6 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 	if p.total > 0 {
 		fill = (p.value * trackW) / p.total
 	}
-	empty := trackW - fill
 
 	// Render prefix (left side) using base style
 	curX := x
@@ -210,35 +209,6 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 		curX += prefixWidth
 	}
 
-	// Build the full track string (all trackW cells)
-	var track strings.Builder
-	track.Grow(trackW)
-	for i := 0; i < trackW; i++ {
-		isFilled := i < fill
-		var ch string
-		switch {
-		case i == 0:
-			if isFilled {
-				ch = startFilled
-			} else {
-				ch = startEmpty
-			}
-		case i == trackW-1:
-			if isFilled {
-				ch = endFilled
-			} else {
-				ch = endEmpty
-			}
-		default:
-			if isFilled {
-				ch = middleFilled
-			} else {
-				ch = middleEmpty
-			}
-		}
-		track.WriteString(ch)
-	}
-
 	// Get bar style for filled portion, fallback to base
 	barStyle := p.Style("bar")
 	if barStyle == nil || barStyle == &DefaultStyle {
@@ -248,23 +218,38 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 	barBg := r.theme.Color(barStyle.Background())
 	barFont := barStyle.Font()
 
-	// Render track in two runs: filled then empty, for proper coloring
-	trackStr := track.String()
-
-	// Filled run (left part)
-	if fill > 0 {
+	// Render track cells directly with Put for proper Unicode width handling
+	// Filled portion first
+	cell := 0
+	for ; cell < fill; cell++ {
+		var ch string
+		switch {
+		case cell == 0:
+			ch = startFilled
+		case cell == trackW-1:
+			ch = endFilled
+		default:
+			ch = middleFilled
+		}
 		r.Set(barFg, barBg, barFont)
-		r.Text(curX, y, trackStr, fill)
-		curX += fill
+		r.Put(curX, y, ch)
+		curX += utf8.RuneCountInString(ch)
 	}
 
-	// Empty run (right part)
-	if empty > 0 {
-		baseFg := r.theme.Color(baseStyle.Foreground())
-		baseBg := r.theme.Color(baseStyle.Background())
-		baseFont := baseStyle.Font()
-		r.Set(baseFg, baseBg, baseFont)
-		r.Text(curX, y, trackStr, empty)
+	// Empty portion
+	for ; cell < trackW; cell++ {
+		var ch string
+		switch {
+		case cell == 0:
+			ch = startEmpty
+		case cell == trackW-1:
+			ch = endEmpty
+		default:
+			ch = middleEmpty
+		}
+		r.Set(r.theme.Color(baseStyle.Foreground()), r.theme.Color(baseStyle.Background()), baseStyle.Font())
+		r.Put(curX, y, ch)
+		curX += utf8.RuneCountInString(ch)
 	}
 
 	// Render suffix (right side)
