@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // Screen represents an abstraction over terminal screen operations for rendering.
 type Screen interface {
@@ -34,7 +34,7 @@ type Screen interface {
 	//   - x, y: The position of the rune to get (relative to the clipping region).
 	//
 	// Returns:
-	//   - string: The character at the position, or 0 if out of bounds.
+	//   - string: The character at the position, or empty string if out of bounds.
 	//
 	// Note: This method only returns the primary rune. Styling information
 	// or combining characters are not returned.
@@ -62,5 +62,13 @@ type Screen interface {
 	// This state persists until Set is called again.
 	Set(fg, bg, font string)
 
+	// Translate the coordinate system by the specified offsets.
+	//
+	// This shifts the origin of the coordinate system for subsequent drawing operations.
+	// For example, after Translate(10, 5), a Put at (0, 0) will actually render at (10, 5).
+	//
+	// Parameters:
+	//   - x: Horizontal offset to add to x-coordinates.
+	//   - y: Vertical offset to add to y-coordinates.
 	Translate(x, y int)
 }

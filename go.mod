@@ -1,4 +1,4 @@
-module github.com/tekugo/zeichenwerk/next
+module github.com/tekugo/zeichenwerk
 
 go 1.25.5
 

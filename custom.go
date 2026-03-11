@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // Custom component is basically just a stub component, which gets a custom
 // render function. They still have all the basic component functionality,

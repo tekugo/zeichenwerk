@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 type Renderer struct {
 	screen Screen

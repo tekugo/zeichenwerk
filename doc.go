@@ -35,4 +35,4 @@
 // implements the Widget interface, which is implemented completely by the
 // Component type. Creating new UI widgets is easy if the Component type
 // is embedded. For simple UI widgets look at the Static or Button widgets.
-package next
+package zeichenwerk

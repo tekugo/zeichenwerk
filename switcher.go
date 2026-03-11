@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // Switcher represents a container widget that displays one pane at a time
 // from a collection of named panes. It acts like a tabbed interface without

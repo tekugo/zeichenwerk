@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 import (
 	"iter"
@@ -332,9 +332,7 @@ func (s *Styled) renderP(r *Renderer, block Block, x, y, w, h int) int {
 }
 
 func (s *Styled) renderList(r *Renderer, block Block) {
-
 }
 
 func (s *Styled) renderCode(r *Renderer, block Block) {
-
 }

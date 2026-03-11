@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 import (
 	"strings"
@@ -11,13 +11,15 @@ import (
 // It provides a clipped and translated view into the terminal screen, allowing
 // for windowed rendering of components.
 type TcellScreen struct {
-	screen              tcell.Screen // underlying tcell screen instance
-	style               tcell.Style  // current style state for drawing
-	x, y, width, height int          // clipping region and translation offset
-	tx, ty              int          // Coordinate translation
+	screen tcell.Screen // underlying tcell screen instance
+	style  tcell.Style  // current style state for drawing
+	x, y   int          // clipping region top-left (absolute screen coordinates)
+	width  int          // clipping region width (0 means unlimited)
+	height int          // clipping region height (0 means unlimited)
+	tx, ty int          // coordinate translation offsets (applied after clipping origin)
 }
 
-// MewTcellScreen creates a new TcellScreen instance.
+// NewTcellScreen creates a new TcellScreen instance.
 //
 // Parameters:
 //   - screen: The underlying tcell screen instance to use.
@@ -59,14 +61,13 @@ func (t *TcellScreen) Flush() {
 //   - x, y: Position relative to the top-left of the current clipping region.
 //
 // Returns:
-//   - string: The character at the position (might include combining characters).
+//   - string: The character at the position.
 func (t *TcellScreen) Get(x, y int) string {
 	ch, _, _ := t.screen.Get(x+t.x+t.tx, y+t.y+t.ty)
 	return ch
 }
 
 // Put places a character at the specified position relative to the clipping origin.
-// drawing is clipped to the current region dimensions.
 //
 // Parameters:
 //   - x, y: Position relative to the top-left of the current clipping region.
@@ -124,10 +125,18 @@ func (t *TcellScreen) Set(foreground, background, font string) {
 // Returns:
 //   - tcell.Style: The style at the position.
 func (t *TcellScreen) Style(x, y int) tcell.Style {
-	_, style, _ := t.screen.Get(x+t.x, y+t.y)
+	_, style, _ := t.screen.Get(x+t.x+t.tx, y+t.y+t.ty)
 	return style
 }
 
+// Translate updates the coordinate translation offsets.
+//
+// This shifts the origin for subsequent Put and Get operations by the specified amounts.
+// The translation is applied after the clipping region offset.
+//
+// Parameters:
+//   - x: Horizontal translation offset.
+//   - y: Vertical translation offset.
 func (t *TcellScreen) Translate(x, y int) {
 	t.tx = x
 	t.ty = y

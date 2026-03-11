@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // Rule is a horizontal or vertical line as a visual divider for content.
 type Rule struct {

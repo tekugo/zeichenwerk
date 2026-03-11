@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 import "github.com/gdamore/tcell/v3"
 

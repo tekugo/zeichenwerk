@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // cell represents a single cell within a grid container that holds a widget
 // and defines its position and span within the grid layout.

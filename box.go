@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // Box represents a container widget that wraps a single child widget with an
 // optional margin, border, title and padding. The box automatically handles

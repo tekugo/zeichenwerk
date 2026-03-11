@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // TableColumn defines the structure and properties of a table column.
 // Each column has a header, width, and optional sorting/filtering capabilities.

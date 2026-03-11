@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // GapBuffer implements a gap buffer data structure, which is an efficient way
 // to store and manipulate text data with frequent insertions and deletions at

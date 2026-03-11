@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 func TokyoNightTheme() *Theme {
 	t := NewTheme()

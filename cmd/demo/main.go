@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/tekugo/zeichenwerk/next"
+	. "github.com/tekugo/zeichenwerk"
 )
 
 // main function
@@ -25,10 +25,11 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Checkbox", "Digits", "Editor", "Grid", "Progress", "Scanner", "Spinner", "Styled", "Table", "Tabs", "Viewport").
+		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Grid", "Progress", "Scanner", "Spinner", "Styled", "Table", "Tabs", "Viewport").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
+		With(canvas).
 		With(checkbox).
 		With(digits).
 		With(editor).
@@ -58,8 +59,8 @@ func createUI() *UI {
 		if len(data) == 1 {
 			if selected, ok := data[0].(int); ok {
 				switcher.Select(selected)
-				// Progress (index 5) - stop scanner/spinner
-				if selected == 5 {
+				// Progress (index 6) - stop scanner/spinner
+				if selected == 6 {
 					for _, scanner := range FindAll[*Scanner](ui) {
 						scanner.Stop()
 					}
@@ -67,8 +68,8 @@ func createUI() *UI {
 						spinner.Stop()
 					}
 				}
-				// Scanner (index 6)
-				if selected == 6 {
+				// Scanner (index 7)
+				if selected == 7 {
 					for _, scanner := range FindAll[*Scanner](ui) {
 						scanner.Start(50 * time.Millisecond)
 					}
@@ -77,8 +78,8 @@ func createUI() *UI {
 						scanner.Stop()
 					}
 				}
-				// Spinner (index 7)
-				if selected == 7 {
+				// Spinner (index 8)
+				if selected == 8 {
 					for _, spinner := range FindAll[*Spinner](ui) {
 						spinner.Start(100 * time.Millisecond)
 					}
@@ -114,6 +115,64 @@ func box(builder *Builder) {
 		End().
 		HRule("double").
 		Static("box-info", "Boxes are containers that can hold a single child widget with optional borders and titles.").Padding(1, 0, 0, 0).
+		End()
+}
+
+// Canvas demo
+func canvas(builder *Builder) {
+	// Create a 40x20 canvas with a simple pattern
+	c := NewCanvas("demo-canvas", 40, 20)
+
+	// Set styles for normal and insert modes
+	normalStyle := NewStyle("").WithColors("white", "black").WithCursor("block")
+	insertStyle := NewStyle("").WithColors("cyan", "black").WithCursor("bar")
+
+	c.SetStyle("", normalStyle)
+	c.SetStyle(":insert", insertStyle)
+
+	// Fill with empty cells
+	c.Fill("", normalStyle)
+
+	// Draw a border on the edges
+	borderStyle := NewStyle("").WithColors("yellow", "black")
+	c.SetCell(0, 0, "+", borderStyle)
+	c.SetCell(39, 0, "+", borderStyle)
+	c.SetCell(0, 19, "+", borderStyle)
+	c.SetCell(39, 19, "+", borderStyle)
+	// Horizontal lines
+	for x := 1; x < 39; x++ {
+		c.SetCell(x, 0, "-", borderStyle)
+		c.SetCell(x, 19, "-", borderStyle)
+	}
+	// Vertical lines
+	for y := 1; y < 19; y++ {
+		c.SetCell(0, y, "|", borderStyle)
+		c.SetCell(39, y, "|", borderStyle)
+	}
+
+	// Add some instruction text
+	titleStyle := NewStyle("").WithColors("green", "black")
+	c.SetCell(2, 2, "Canvas Widget Demo", titleStyle)
+
+	infoStyle := NewStyle("").WithColors("gray", "black")
+	info := "NORMAL mode: hjkl/arrows move, 'i' or 'a' enters INSERT mode, ESC returns"
+	for i, ch := range info {
+		if i < 38 {
+			c.SetCell(2+i, 4, string(ch), infoStyle)
+		}
+	}
+
+	info2 := "INSERT mode: type to insert chars, arrows still move, ESC returns"
+	for i, ch := range info2 {
+		if i < 38 {
+			c.SetCell(2+i, 5, string(ch), infoStyle)
+		}
+	}
+
+	// Add it to the builder
+	builder.Flex("canvas-demo", false, "stretch", 1).Padding(1).
+		Static("canvas-title", "Canvas Widget (press 'i' to start editing)").Padding(0, 0, 1, 0).
+		Add(c).
 		End()
 }
 

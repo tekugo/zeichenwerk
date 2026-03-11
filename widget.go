@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // Widget represents a UI component that can be rendered and interact with
 // user input. All UI elements in the TUI framework must implement this

@@ -1,11 +1,11 @@
-package next
+package zeichenwerk
 
 func AddUnicodeBorders(theme *Theme) {
 	theme.SetBorders(map[string]*Border{
 		// "thin" - Standard single-line borders (┌─┐│└─┘)
 		// Most commonly used style, provides clear boundaries without visual heaviness.
 		// Ideal for general-purpose widgets, forms, and content containers.
-		"thin": &Border{
+		"thin": {
 			Top:          "\u2500", // ─ (horizontal line)
 			Right:        "\u2502", // │ (vertical line)
 			Bottom:       "\u2500", // ─ (horizontal line)
@@ -30,7 +30,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// "double" - Double-line borders (╔═╗║╚═╝)
 		// Creates strong visual emphasis and clear hierarchy separation.
 		// Best for important dialogs, primary containers, or emphasized sections.
-		"double": &Border{
+		"double": {
 			Top:          "\u2550", // ═ (double horizontal)
 			Right:        "\u2551", // ║ (double vertical)
 			Bottom:       "\u2550", // ═ (double horizontal)
@@ -56,7 +56,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// Combines strong visual emphasis of double borders with subtle inner organization.
 		// Perfect for important containers that need internal structure, like data tables
 		// in dialogs, primary dashboard widgets, or featured content sections with subdivisions.
-		"double-thin": &Border{
+		"double-thin": {
 			Top:          "\u2550", // ═ (double horizontal)
 			Right:        "\u2551", // ║ (double vertical)
 			Bottom:       "\u2550", // ═ (double horizontal)
@@ -81,7 +81,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// "round" - Rounded corners with thin lines (╭─╮│╰─╯)
 		// Provides a modern, friendly appearance with softer visual impact.
 		// Ideal for user-friendly interfaces, welcome screens, or casual applications.
-		"round": &Border{
+		"round": {
 			Top:          "\u2500", // ─ (horizontal line)
 			Right:        "\u2502", // │ (vertical line)
 			Bottom:       "\u2500", // ─ (horizontal line)
@@ -106,7 +106,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// "thick" - Bold single-line borders (┏━┓┃┗━┛)
 		// Creates strong visual weight and clear boundaries.
 		// Suitable for alerts, warnings, or primary action areas requiring attention.
-		"thick": &Border{
+		"thick": {
 			Top:          "\u2501", // ━ (thick horizontal)
 			Right:        "\u2503", // ┃ (thick vertical)
 			Bottom:       "\u2501", // ━ (thick horizontal)
@@ -131,7 +131,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// "thick-thin" - Mixed weight borders (thick outer, thin inner)
 		// Combines strong outer boundaries with subtle inner grid lines.
 		// Perfect for complex layouts like tables or dashboards with hierarchical data.
-		"thick-thin": &Border{
+		"thick-thin": {
 			Top:          "\u2501", // ━ (thick horizontal)
 			Right:        "\u2503", // ┃ (thick vertical)
 			Bottom:       "\u2501", // ━ (thick horizontal)
@@ -156,7 +156,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// "thick-slashed" - Thick borders with dashed inner lines
 		// Provides strong outer definition with subtle, non-intrusive inner divisions.
 		// Useful for data tables where inner grid should be present but not dominant.
-		"thick-slashed": &Border{
+		"thick-slashed": {
 			Top:          "\u2501", // ━ (thick horizontal)
 			Right:        "\u2503", // ┃ (thick vertical)
 			Bottom:       "\u2501", // ━ (thick horizontal)
@@ -181,7 +181,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// "lines" - Minimalist horizontal lines only
 		// Provides subtle content separation without visual clutter.
 		// Ideal for clean, minimal interfaces or content that needs gentle organization.
-		"lines": &Border{
+		"lines": {
 			Top:          "\u2594", // ▔ (upper block)
 			Right:        " ",      //   (space - no right border)
 			Bottom:       "\u2581", // ▁ (lower block)
@@ -206,7 +206,7 @@ func AddUnicodeBorders(theme *Theme) {
 		// "lines2" - Minimalist horizontal lines only
 		// Provides subtle content separation without visual clutter.
 		// Ideal for clean, minimal interfaces or content that needs gentle organization.
-		"lines2": &Border{
+		"lines2": {
 			Top:          "\u2581",
 			Right:        " ",
 			Bottom:       "\u2594",

@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 import (
 	"fmt"
@@ -132,6 +132,8 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("box/shadow", widget.ID()))
 	case *Button:
 		b.theme.Apply(widget, b.selector("button", widget.ID()), "disabled", "focused")
+	case *Canvas:
+		b.theme.Apply(widget, b.selector("canvas", widget.ID()), "disabled", "focused")
 	case *Checkbox:
 		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focused", "hovered")
 	case *Component:

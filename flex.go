@@ -1,4 +1,4 @@
-package next
+package zeichenwerk
 
 // Flex is a container widget that arranges child widgets in a linear layout,
 // either horizontally or vertically. It provides flexible sizing and alignment
