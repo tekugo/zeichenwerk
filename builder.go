@@ -2,6 +2,8 @@ package zeichenwerk
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -103,6 +105,8 @@ func (b *Builder) Add(widget Widget) *Builder {
 		switch top := top.(type) {
 		case *Box:
 			top.Add(widget)
+		case *Form:
+			top.Add(widget)
 		case *Flex:
 			top.Add(widget)
 		case *Grid:
@@ -148,6 +152,10 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("scanner", widget.ID()))
 	case *Editor:
 		b.theme.Apply(widget, b.selector("editor", widget.ID()))
+	case *Form:
+		b.theme.Apply(widget, b.selector("form", widget.ID()))
+	case *FormGroup:
+		b.theme.Apply(widget, b.selector("formgroup", widget.ID()))
 	case *Input:
 		b.theme.Apply(widget, b.selector("input", widget.ID()), "disabled", "focused")
 	case *List:
@@ -247,6 +255,101 @@ func (b *Builder) Flex(id string, horizontal bool, alignment string, spacing int
 	flex := NewFlex(id, horizontal, alignment, spacing)
 	b.Add(flex)
 	return b
+}
+
+// Form creates a new form widget with the specified id, title, and bound data.
+// The form is added to the current container and styled with the theme.
+func (b *Builder) Form(id, title string, data any) *Builder {
+	form := NewForm(id, title, data)
+	b.Add(form)
+	return b
+}
+
+// Group creates a new form group within the nearest parent form. It automatically
+// generates form controls for struct fields tagged with the given group name.
+//
+// Parameters:
+//   - id: Unique identifier for the form group
+//   - title: Title displayed for the group
+//   - name: The struct tag value `group:"..."` to match fields
+//   - horizontal: true for horizontal placement, otherwise vertical
+//   - spacing: vertical spacing between lines
+func (b *Builder) Group(id, title, name string, horizontal bool, spacing int) *Builder {
+	group := NewFormGroup(id, title, horizontal, spacing)
+	b.Add(group)
+
+	// If the parent of this group is a Form, auto-generate controls
+	if parent, ok := group.Parent().(*Form); ok {
+		b.buildGroup(parent, group, name)
+	}
+	return b
+}
+
+func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
+	line := 0
+	v := reflect.ValueOf(form.data)
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
+		panic("expecting pointer to struct")
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	for i := range v.NumField() {
+		sf := t.Field(i)
+		fv := v.Field(i)
+		g := sf.Tag.Get("group")
+		if name != "" && name != g {
+			continue
+		}
+		label := sf.Tag.Get("label")
+		if label == "-" {
+			continue
+		} else if label == "" {
+			label = sf.Name
+		}
+		control := sf.Tag.Get("control")
+		width, err := strconv.Atoi(sf.Tag.Get("width"))
+		if err != nil {
+			width = 10
+		}
+		l, err := strconv.Atoi(sf.Tag.Get("line"))
+		if err == nil {
+			line = l
+		}
+
+		widget := b.buildFormControl(control, sf.Name, fv)
+		widget.SetHint(width, 1)
+		widget.SetParent(b.stack.Peek())
+		widget.On("change", form.Update(fv))
+		group.Add(line, label, widget)
+
+		line++
+	}
+}
+
+func (b *Builder) buildFormControl(control, id string, v reflect.Value) Widget {
+	if control == "" {
+		switch v.Kind() {
+		case reflect.Bool:
+			control = "checkbox"
+		default:
+			control = "input"
+		}
+	}
+
+	switch control {
+	case "checkbox":
+		checkbox := NewCheckbox(id, id, v.Bool())
+		b.Apply(checkbox)
+		checkbox.SetFlag("checked", v.Bool())
+		return checkbox
+	default:
+		input := NewInput(id)
+		b.Apply(input)
+		input.SetText(v.String())
+		return input
+	}
 }
 
 // Grid creates a new grid container widget for arranging widgets in a table

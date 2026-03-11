@@ -43,7 +43,7 @@ func NewButton(id, text string) *Button {
 
 // Click programmatically triggers the button's action handler.
 func (b *Button) Click() {
-	b.Dispatch("click")
+	b.Dispatch(b, "click")
 }
 
 // handleKey processes keyboard input for the button widget.

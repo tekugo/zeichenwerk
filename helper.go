@@ -140,7 +140,7 @@ func Update(container Container, id string, value any) {
 			w.SetItems(items)
 			// Select first item if available
 			if len(items) > 0 {
-				w.Dispatch("select", 0)
+				w.Dispatch(w, "select", 0)
 			}
 		}
 	case *Text:

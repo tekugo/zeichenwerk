@@ -32,9 +32,10 @@ type Widget interface {
 	// represents a user input event, such as a key press or mouse click.
 	//
 	// Parameters:
+	//   - widget: Target widget
 	//   - event: The type of event to dispatch.
 	//   - data: Optional data associated with the event.
-	Dispatch(event string, data ...any) bool
+	Dispatch(widget Widget, event string, data ...any) bool
 
 	// Flag returns a widget's state flag.
 	Flag(string) bool

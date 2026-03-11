@@ -267,7 +267,7 @@ func (ui *UI) dispatch(target Widget, event string, data ...any) bool {
 	current := target
 	handled := false
 	for current != nil && !handled && current != ui {
-		handled = current.Dispatch(event, data...)
+		handled = current.Dispatch(current, event, data...)
 		current = current.Parent()
 	}
 	return handled

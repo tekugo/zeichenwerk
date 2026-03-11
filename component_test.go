@@ -80,7 +80,7 @@ func TestComponent_Dispatch_On(t *testing.T) {
 	}
 
 	c.On("click", handler)
-	c.Dispatch("click")
+	c.Dispatch(c, "click")
 
 	if !called {
 		t.Error("Dispatch('click') did not trigger the handler")

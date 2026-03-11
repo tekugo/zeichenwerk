@@ -220,7 +220,7 @@ func (t *Table) handleKey(_ Widget, event *tcell.EventKey) bool {
 		// Enter: Emit 'activate' event with current row data
 		if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
 			rowData := t.getCurrentRowData()
-			t.Dispatch("activate", t.row, rowData)
+			t.Dispatch(t, "activate", t.row, rowData)
 		}
 		return true
 	case tcell.KeyRune:
@@ -228,7 +228,7 @@ func (t *Table) handleKey(_ Widget, event *tcell.EventKey) bool {
 			// Space: Emit 'select' event with current row data
 			if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
 				rowData := t.getCurrentRowData()
-				t.Dispatch("select", t.row, rowData)
+				t.Dispatch(t, "select", t.row, rowData)
 			}
 			return true
 		}

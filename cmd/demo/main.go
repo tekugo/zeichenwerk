@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -25,7 +26,7 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Grid", "Progress", "Scanner", "Spinner", "Styled", "Table", "Tabs", "Viewport").
+		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Spinner", "Styled", "Table", "Tabs", "Viewport").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -33,6 +34,7 @@ func createUI() *UI {
 		With(checkbox).
 		With(digits).
 		With(editor).
+		With(form).
 		With(grid).
 		With(progress).
 		With(scanner).
@@ -53,45 +55,14 @@ func createUI() *UI {
 		End().
 		Build()
 
-	// Start and stop the scanner and spinner
 	switcher := Find(ui, "switcher").(*Switcher)
 	Find(ui, "navigation").On("activate", func(_ Widget, event string, data ...any) bool {
 		if len(data) == 1 {
 			if selected, ok := data[0].(int); ok {
 				switcher.Select(selected)
-				// Progress (index 6) - stop scanner/spinner
-				if selected == 6 {
-					for _, scanner := range FindAll[*Scanner](ui) {
-						scanner.Stop()
-					}
-					for _, spinner := range FindAll[*Spinner](ui) {
-						spinner.Stop()
-					}
-				}
-				// Scanner (index 7)
-				if selected == 7 {
-					for _, scanner := range FindAll[*Scanner](ui) {
-						scanner.Start(50 * time.Millisecond)
-					}
-				} else {
-					for _, scanner := range FindAll[*Scanner](ui) {
-						scanner.Stop()
-					}
-				}
-				// Spinner (index 8)
-				if selected == 8 {
-					for _, spinner := range FindAll[*Spinner](ui) {
-						spinner.Start(100 * time.Millisecond)
-					}
-				} else {
-					for _, spinner := range FindAll[*Spinner](ui) {
-						spinner.Stop()
-					}
-				}
-				return true
 			}
 		}
-		return false
+		return true
 	})
 
 	return ui
@@ -298,6 +269,23 @@ func scanner(builder *Builder) {
 		End().
 		Static("scanner-note", "Scanner uses a dimmed trail and cycles: forward → hold → backward → hold").Padding(1, 0, 0, 0).
 		End()
+
+	container := builder.Find("scanner-container").(Container)
+	container.On("show", func(_ Widget, event string, data ...any) bool {
+		container.Log(container, "debug", "Scanner panel shown")
+		for _, scanner := range FindAll[*Scanner](container) {
+			scanner.Start(50 * time.Millisecond)
+		}
+		return true
+	})
+
+	container.On("hide", func(_ Widget, _ string, _ ...any) bool {
+		container.Log(container, "debug", "Scanner panel hidden")
+		for _, scanner := range FindAll[*Scanner](container) {
+			scanner.Stop()
+		}
+		return true
+	})
 }
 
 // Spinner demo
@@ -313,6 +301,21 @@ func spinner(builder *Builder) {
 		Spinner("spinner", Spinners["braille"]).
 		End().
 		End()
+
+	container := builder.Find("spinner-demo").(Container)
+	container.On("show", func(_ Widget, event string, data ...any) bool {
+		for _, spinner := range FindAll[*Spinner](container) {
+			spinner.Start(100 * time.Millisecond)
+		}
+		return true
+	})
+
+	container.On("hide", func(_ Widget, _ string, _ ...any) bool {
+		for _, spinner := range FindAll[*Spinner](container) {
+			spinner.Stop()
+		}
+		return true
+	})
 }
 
 // Styled text demo
@@ -359,6 +362,55 @@ func custom() Widget {
 	result.SetStyle("", NewStyle().WithColors("green", "black").WithMargin(0).WithPadding(0))
 	result.SetHint(200, 100)
 	return result
+}
+
+func form(builder *Builder) {
+	data := struct {
+		Database string `width:"40"`
+		Username string `width:"20"`
+		Password string `width:"20" line:"1"`
+	}{
+		Database: "sqlite:mem",
+		Username: "admin",
+		Password: "secret",
+	}
+
+	user := struct {
+		ID         string `readOnly:"true"`
+		Login      string `label:"Login Name:" width:"40"`
+		Name       string `width:"40"`
+		Department string `width:"40"`
+		Email      string `label:"E-Mail-Address" width:"40"`
+		Phone      string `label:"Phone Number" width:"40"`
+		Mobile     string `label:"Mobile Phone" width:"40"`
+		Password   string `control:"password" width:"40"`
+		Temporary  bool   `label:"Temporary"`
+		Pending    bool   `label:"Pending"`
+		Active     bool   `label:"Active"`
+		Fixed      bool   `label:"Fixed" readOnly:"true"`
+	}{}
+
+	builder.Flex("form-demo", false, "start", 1).Margin(2).Border("", "round").Padding(2).
+		Form("form", "Connect", &data).
+		Group("form-group", "", "", false, 1).Border("", "round").
+		End().
+		End().
+		Form("form2", "User", &user).
+		Group("form-group-2", "user", "", true, 1).Border("", "round").
+		End().
+		End().
+		Flex("form-buttons", true, "start", 1).Margin(1).
+		Button("save-button", "Save").
+		Static("info-label", "Info").
+		End().
+		End()
+
+	builder.Find("save-button").On("click", func(widget Widget, _ string, _ ...any) bool {
+		Update(FindUI(widget), "info-label", "Click "+time.Now().String())
+		text, _ := json.Marshal(user)
+		widget.Log(widget, "debug", string(text))
+		return true
+	})
 }
 
 // Table demo data generation

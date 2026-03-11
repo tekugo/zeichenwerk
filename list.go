@@ -158,7 +158,7 @@ func (l *List) Move(count int) {
 	if newIndex != l.index {
 		l.index = newIndex
 		l.adjust()
-		l.Dispatch("select", l.index)
+		l.Dispatch(l, "select", l.index)
 		l.Refresh()
 	}
 }
@@ -172,7 +172,7 @@ func (l *List) First() {
 		if !slices.Contains(l.disabled, i) {
 			l.index = i
 			l.adjust()
-			l.Dispatch("select", l.index)
+			l.Dispatch(l, "select", l.index)
 			break
 		}
 	}
@@ -188,7 +188,7 @@ func (l *List) Last() {
 		if !slices.Contains(l.disabled, i) {
 			l.index = i
 			l.adjust()
-			l.Dispatch("select", l.index)
+			l.Dispatch(l, "select", l.index)
 			break
 		}
 	}
@@ -251,7 +251,7 @@ func (l *List) handleKey(_ Widget, event *tcell.EventKey) bool {
 		l.PageDown()
 		return true
 	case tcell.KeyEnter:
-		l.Dispatch("activate", l.index)
+		l.Dispatch(l, "activate", l.index)
 		return true
 	case tcell.KeyRune:
 		// Quick search by first letter

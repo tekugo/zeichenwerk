@@ -90,7 +90,7 @@ func (c *Component) Cursor() (int, int, string) {
 // Parameters:
 //   - event: The type of event to dispatch.
 //   - data: Optional data associated with the event.
-func (c *Component) Dispatch(event string, data ...any) bool {
+func (c *Component) Dispatch(widget Widget, event string, data ...any) bool {
 	if c.handlers == nil {
 		return false
 	}
@@ -98,7 +98,7 @@ func (c *Component) Dispatch(event string, data ...any) bool {
 	handlers, ok := c.handlers[event]
 	if ok {
 		for _, handler := range handlers {
-			handled = handler(c, event, data...)
+			handled = handler(widget, event, data...)
 			if handled {
 				return true
 			}

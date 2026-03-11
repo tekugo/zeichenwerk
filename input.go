@@ -124,7 +124,7 @@ func (i *Input) SetText(text string) {
 	}
 	i.adjust()
 
-	i.Dispatch("change", i.text)
+	i.Dispatch(i, "change", i.text)
 }
 
 // ---- Movement -------------------------------------------------------------
@@ -209,7 +209,7 @@ func (i *Input) Insert(ch string) {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch("change", i.text)
+	i.Dispatch(i, "change", i.text)
 }
 
 // Delete removes the character immediately before the cursor position (backspace operation).
@@ -236,7 +236,7 @@ func (i *Input) Delete() {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch("change", i.text)
+	i.Dispatch(i, "change", i.text)
 }
 
 // DeleteForward removes the character at the current cursor position (delete operation).
@@ -262,7 +262,7 @@ func (i *Input) DeleteForward() {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch("change", i.text)
+	i.Dispatch(i, "change", i.text)
 }
 
 // Clear removes all text from the input and resets the cursor to the beginning.
@@ -288,7 +288,7 @@ func (i *Input) Clear() {
 	i.offset = 0
 	i.Refresh()
 
-	i.Dispatch("change", i.text)
+	i.Dispatch(i, "change", i.text)
 }
 
 // ---- Internal methods -----------------------------------------------------
@@ -404,7 +404,7 @@ func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 		if !i.Flag("readonly") {
 			i.text = i.text[:i.pos]
 			i.adjust()
-			i.Dispatch("change", i.text)
+			i.Dispatch(i, "change", i.text)
 		}
 		i.Refresh()
 		return true
@@ -415,11 +415,11 @@ func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 			i.pos = 0
 			i.adjust()
 			i.Refresh()
-			i.Dispatch("change", i.text)
+			i.Dispatch(i, "change", i.text)
 			return true
 		}
 	case tcell.KeyEnter:
-		i.Dispatch("enter", i.text)
+		i.Dispatch(i, "enter", i.text)
 		return true
 	case tcell.KeyRune:
 		ch := evt.Str()

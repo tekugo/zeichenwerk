@@ -101,7 +101,7 @@ func (e *Editor) SetContent(lines []string) {
 	e.offsetX = 0
 	e.offsetY = 0
 	e.updateLongestLine()
-	e.Dispatch("change")
+	e.Dispatch(e, "change")
 	e.Refresh()
 }
 
@@ -295,7 +295,7 @@ func (e *Editor) Insert(ch rune) {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch("change")
+	e.Dispatch(e, "change")
 	e.Refresh()
 }
 
@@ -327,7 +327,7 @@ func (e *Editor) Delete() {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch("change")
+	e.Dispatch(e, "change")
 	e.Refresh()
 }
 
@@ -352,7 +352,7 @@ func (e *Editor) DeleteForward() {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch("change")
+	e.Dispatch(e, "change")
 	e.Refresh()
 }
 
@@ -401,7 +401,7 @@ func (e *Editor) Enter() {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch("change")
+	e.Dispatch(e, "change")
 	e.Refresh()
 }
 
@@ -414,7 +414,7 @@ func (e *Editor) insertTabAsSpaces() {
 	}
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch("change")
+	e.Dispatch(e, "change")
 	e.Refresh()
 }
 

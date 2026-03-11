@@ -86,8 +86,12 @@ func (s *Switcher) Refresh() {
 func (s *Switcher) Select(index any) {
 	switch pane := index.(type) {
 	case int:
+		s.Log(s, "debug", "Hiding", "index", s.selected, "ID", s.panes[s.selected].ID())
 		s.panes[s.selected].SetFlag("hidden", true)
+		s.panes[s.selected].Dispatch(s.panes[s.selected], "hide")
+		s.Log(s, "debug", "Showing", "index", pane, "ID", s.panes[pane].ID())
 		s.panes[pane].SetFlag("hidden", false)
+		s.panes[pane].Dispatch(s.panes[pane], "show")
 		s.selected = pane
 	case string:
 		index := -1
@@ -101,7 +105,9 @@ func (s *Switcher) Select(index any) {
 		// If the pane was found, select it
 		if index >= 0 {
 			s.panes[s.selected].SetFlag("hidden", true)
+			s.panes[s.selected].Dispatch(s.panes[s.selected], "hide")
 			s.panes[index].SetFlag("hidden", false)
+			s.panes[index].Dispatch(s.panes[index], "show")
 			s.selected = index
 		}
 	}

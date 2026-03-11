@@ -109,7 +109,7 @@ func (t *Tabs) handleKey(_ Widget, event *tcell.EventKey) bool {
 
 	case tcell.KeyEnter:
 		t.selected = t.index
-		t.Dispatch("activate", t.selected)
+		t.Dispatch(t, "activate", t.selected)
 		t.Refresh()
 
 	default:
@@ -119,7 +119,7 @@ func (t *Tabs) handleKey(_ Widget, event *tcell.EventKey) bool {
 	// Only refresh and emit event if the tab actually changed
 	if t.index != oldIndex {
 		t.Refresh()
-		t.Dispatch("change", t.index)
+		t.Dispatch(t, "change", t.index)
 		return true
 	}
 
@@ -185,10 +185,10 @@ func (t *Tabs) Select(index int) bool {
 
 	// Emit events if anything changed
 	if t.index != oldIndex {
-		t.Dispatch("change", t.index)
+		t.Dispatch(t, "change", t.index)
 	}
 	if t.selected != oldSelected {
-		t.Dispatch("activate", t.selected)
+		t.Dispatch(t, "activate", t.selected)
 	}
 
 	t.Refresh()

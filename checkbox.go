@@ -37,6 +37,7 @@ func NewCheckbox(id, text string, checked bool) *Checkbox {
 	checkbox.SetHint(len(text)+4, 1)
 	checkbox.SetFlag("focusable", true)
 	checkbox.SetFlag("checked", checked)
+	checkbox.SetFlag("readonly", false)
 	OnKey(checkbox, checkbox.handleKey)
 	OnMouse(checkbox, checkbox.handleMouse)
 	return checkbox
@@ -51,8 +52,11 @@ func (c *Checkbox) Refresh() {
 // This method triggers the "change" event with the new state as data.
 // The checkbox will be refreshed to reflect the visual state change.
 func (c *Checkbox) Toggle() {
+	if c.Flag("readonly") {
+		return
+	}
 	c.SetFlag("checked", !c.Flag("checked"))
-	c.Dispatch("change", c.Flag("checked"))
+	c.Dispatch(c, "change", c.Flag("checked"))
 	c.Refresh()
 }
 
@@ -63,6 +67,9 @@ func (c *Checkbox) Toggle() {
 //   - Space: Toggles the checkbox state (standard checkbox behavior)
 //   - Enter: Toggles the checkbox state
 func (c *Checkbox) handleKey(_ Widget, event *tcell.EventKey) bool {
+	if c.Flag("readonly") {
+		return false
+	}
 	switch event.Key() {
 	case tcell.KeyEnter:
 		c.Toggle()
@@ -84,6 +91,9 @@ func (c *Checkbox) handleKey(_ Widget, event *tcell.EventKey) bool {
 //   - Left button click: Toggles checkbox state
 //   - Bounds checking: Only responds to clicks within checkbox area
 func (c *Checkbox) handleMouse(_ Widget, event *tcell.EventMouse) bool {
+	if c.Flag("readonly") {
+		return false
+	}
 	x, y := event.Position()
 	bx, by, bw, bh := c.Bounds()
 
