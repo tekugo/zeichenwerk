@@ -190,9 +190,9 @@ func (ui *UI) Handle(event tcell.Event) bool {
 
 		// Handle global app events, if the keyboard event was propagated
 		switch event.Key() {
-		case tcell.KeyTab:
+		case tcell.KeyTab, tcell.KeyRight, tcell.KeyDown:
 			ui.SetFocus("next")
-		case tcell.KeyBacktab:
+		case tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyUp:
 			ui.SetFocus("previous")
 		case tcell.KeyEscape:
 			if len(ui.layers) > 1 {
