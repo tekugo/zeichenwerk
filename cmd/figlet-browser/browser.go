@@ -22,7 +22,7 @@ func main() {
 
 func createFontBrowserUI() *UI {
 	return NewBuilder(TokyoNightTheme()).
-		Flex("main", "vertical", "stretch", 0).
+		Flex("main", false, "stretch", 0).
 		With(header).
 		With(content).
 		With(footer).
@@ -32,22 +32,22 @@ func createFontBrowserUI() *UI {
 
 func header(builder *Builder) {
 	builder.Class("header").
-		Flex("header", "horizontal", "start", 0).Padding(0, 1).Hint(0, 1).
-		Label("title", "FIGlet Font Browser", 30).Hint(30, 1).
-		Label("", "Browse and preview figlet fonts", 0).Hint(-1, 1).
+		Flex("header", true, "start", 0).Padding(0, 1).Hint(0, 1).
+		Static("title", "FIGlet Font Browser").Hint(30, 1).
+		Static("", "Browse and preview figlet fonts").Hint(-1, 1).
 		Class("").
 		End()
 }
 
 func footer(builder *Builder) {
 	builder.Class("footer").
-		Flex("footer", "horizontal", "start", 0).Padding(0, 1).Hint(0, 1).
-		Class("shortcut").Label("1", "Esc", 0).
-		Class("footer").Label("2", "Quit \u2502", 0).
-		Class("shortcut").Label("3", "Enter", 0).
-		Class("footer").Label("4", "Preview \u2502", 0).
-		Class("shortcut").Label("5", "Ctrl-Q", 0).
-		Class("footer").Label("6", "Exit Application", 0).
+		Flex("footer", true, "start", 0).Padding(0, 1).Hint(0, 1).
+		Class("shortcut").Static("1", "Esc").
+		Class("footer").Static("2", "Quit \u2502").
+		Class("shortcut").Static("3", "Enter").
+		Class("footer").Static("4", "Preview \u2502").
+		Class("shortcut").Static("5", "Ctrl-Q").
+		Class("footer").Static("6", "Exit Application").
 		Class("").
 		Spacer().
 		End()
@@ -59,11 +59,11 @@ func content(builder *Builder) {
 
 	builder.Grid("grid", 1, 2, true).Hint(0, -1).
 		Cell(0, 0, 1, 1).
-		List("fonts", fontFiles).Border("", "round").Border(":focus", "double").
+		List("fonts", fontFiles...).Border("", "round").Border(":focus", "double").
 		Cell(1, 0, 1, 1).
-		Flex("preview-area", "vertical", "stretch", 0).
+		Flex("preview-area", false, "stretch", 0).
 		Box("input-box", "Text Input").Border("", "round").Padding(1).
-		Input("text-input", "Hello World", 40).
+		Input("text-input", "Hello World").
 		End().
 		Box("preview-box-custom", "Our Implementation").Border("", "round").Padding(1).
 		Text("preview-custom", []string{"Enter text above and select a font to see preview"}, true, 100).Hint(-1, 10).
@@ -75,7 +75,7 @@ func content(builder *Builder) {
 		End()
 
 	// Configure grid layout
-	grid := builder.Container().Find("grid", false)
+	grid := builder.Find("grid")
 	if grid, ok := grid.(*Grid); ok {
 		grid.Columns(30, -1) // Font list takes 30 chars, preview takes rest
 	}
@@ -89,7 +89,7 @@ func content(builder *Builder) {
 		defaultText := "Hello World"
 
 		// Set custom implementation preview
-		if previewWidget := builder.Container().Find("preview-custom", false); previewWidget != nil {
+		if previewWidget := builder.Find("preview-custom"); previewWidget != nil {
 			if text, ok := previewWidget.(*Text); ok {
 				customPreview := generateCustomFontPreview(firstFont, defaultText)
 				text.Set(customPreview)
@@ -97,7 +97,7 @@ func content(builder *Builder) {
 		}
 
 		// Set figlet4go reference preview
-		if previewWidget := builder.Container().Find("preview-figlet4go", false); previewWidget != nil {
+		if previewWidget := builder.Find("preview-figlet4go"); previewWidget != nil {
 			if text, ok := previewWidget.(*Text); ok {
 				figlet4goPreview := generateFiglet4goPreview(firstFont, defaultText)
 				text.Set(figlet4goPreview)
@@ -132,7 +132,7 @@ func getFontFiles() []string {
 
 func setupEventHandlers(container Container) {
 	// Find the list widget and set up event handlers directly
-	if fontList := container.Find("fonts", false); fontList != nil {
+	if fontList := Find(container, "fonts"); fontList != nil {
 		if list, ok := fontList.(*List); ok {
 			list.On("activate", func(widget Widget, event string, data ...any) bool {
 				ui := FindUI(widget)
@@ -149,7 +149,7 @@ func setupEventHandlers(container Container) {
 	}
 
 	// Handle text input changes
-	if textInput := container.Find("text-input", false); textInput != nil {
+	if textInput := Find(container, "text-input"); textInput != nil {
 		textInput.On("enter", func(widget Widget, event string, data ...any) bool {
 			ui := FindUI(widget)
 			updatePreview(ui)
@@ -166,10 +166,10 @@ func setupEventHandlers(container Container) {
 
 func updatePreview(ui *UI) {
 	// Get selected font
-	fontList := ui.Find("fonts", true)
+	fontList := Find(ui, "fonts")
 	if fontList == nil {
 		// Try with recursion disabled
-		fontList = ui.Find("fonts", false)
+		fontList = Find(ui, "fonts")
 		if fontList == nil {
 			return
 		}
@@ -180,23 +180,23 @@ func updatePreview(ui *UI) {
 		return
 	}
 
-	selectedIndex := list.Index
-	if selectedIndex < 0 || selectedIndex >= len(list.Items) {
+	selectedIndex := list.Selected()
+	if selectedIndex < 0 || selectedIndex >= len(list.Items()) {
 		// If no selection, use first font
-		if len(list.Items) > 0 {
+		if len(list.Items()) > 0 {
 			selectedIndex = 0
-			list.Index = 0
+			list.Select(0)
 		} else {
 			return
 		}
 	}
 
-	fontName := list.Items[selectedIndex]
+	fontName := list.Items()[selectedIndex]
 
 	// Get input text
-	textInput := ui.Find("text-input", true)
+	textInput := Find(ui, "text-input")
 	if textInput == nil {
-		textInput = ui.Find("text-input", false)
+		textInput = Find(ui, "text-input")
 		if textInput == nil {
 			return
 		}
@@ -207,7 +207,7 @@ func updatePreview(ui *UI) {
 		return
 	}
 
-	inputText := input.Text
+	inputText := input.Text()
 	if inputText == "" {
 		inputText = "Hello World"
 	}
@@ -217,12 +217,12 @@ func updatePreview(ui *UI) {
 	figlet4goPreview := generateFiglet4goPreview(fontName, inputText)
 
 	// Update custom implementation preview
-	if previewWidget := ui.Find("preview-custom", true); previewWidget != nil {
+	if previewWidget := Find(ui, "preview-custom"); previewWidget != nil {
 		if text, ok := previewWidget.(*Text); ok {
 			text.Set(customPreview)
 			text.Refresh()
 		}
-	} else if previewWidget := ui.Find("preview-custom", false); previewWidget != nil {
+	} else if previewWidget := Find(ui, "preview-custom"); previewWidget != nil {
 		if text, ok := previewWidget.(*Text); ok {
 			text.Set(customPreview)
 			text.Refresh()
@@ -230,12 +230,12 @@ func updatePreview(ui *UI) {
 	}
 
 	// Update figlet4go reference preview
-	if previewWidget := ui.Find("preview-figlet4go", true); previewWidget != nil {
+	if previewWidget := Find(ui, "preview-figlet4go"); previewWidget != nil {
 		if text, ok := previewWidget.(*Text); ok {
 			text.Set(figlet4goPreview)
 			text.Refresh()
 		}
-	} else if previewWidget := ui.Find("preview-figlet4go", false); previewWidget != nil {
+	} else if previewWidget := Find(ui, "preview-figlet4go"); previewWidget != nil {
 		if text, ok := previewWidget.(*Text); ok {
 			text.Set(figlet4goPreview)
 			text.Refresh()

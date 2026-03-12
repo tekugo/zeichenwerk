@@ -127,6 +127,11 @@ func (i *Input) SetText(text string) {
 	i.Dispatch(i, "change", i.text)
 }
 
+// Text returns the current text content.
+func (i *Input) Text() string {
+	return i.text
+}
+
 // ---- Movement -------------------------------------------------------------
 
 // Left moves the cursor one position to the left within the text.
