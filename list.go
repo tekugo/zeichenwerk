@@ -86,6 +86,18 @@ func (l *List) SetItems(items []string) {
 	l.Refresh()
 }
 
+// Select selects the item at the specified index.
+func (l *List) Select(index int) {
+	l.index = index
+	l.adjust()
+	l.Refresh()
+}
+
+// Selected returns the selected index
+func (l *List) Selected() int {
+	return l.index
+}
+
 // ---- Widget Methods -------------------------------------------------------
 
 // Refresh triggers a visual update of the List widget by requesting a redraw.

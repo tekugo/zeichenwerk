@@ -105,6 +105,8 @@ func (b *Builder) Add(widget Widget) *Builder {
 		switch top := top.(type) {
 		case *Box:
 			top.Add(widget)
+		case *Dialog:
+			top.Add(widget)
 		case *Form:
 			top.Add(widget)
 		case *Flex:
@@ -133,6 +135,7 @@ func (b *Builder) Apply(widget Widget) {
 	switch widget := widget.(type) {
 	case *Box:
 		b.theme.Apply(widget, b.selector("box", widget.ID()))
+		b.theme.Apply(widget, b.selector("box/title", widget.ID()))
 		b.theme.Apply(widget, b.selector("box/shadow", widget.ID()))
 	case *Button:
 		b.theme.Apply(widget, b.selector("button", widget.ID()), "disabled", "focused")
@@ -144,18 +147,21 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("component", widget.ID()))
 	case *Custom:
 		b.theme.Apply(widget, b.selector("custom", widget.ID()))
-	case *Flex:
-		b.theme.Apply(widget, b.selector("flex", widget.ID()))
-	case *Grid:
-		b.theme.Apply(widget, b.selector("grid", widget.ID()))
-	case *Scanner:
-		b.theme.Apply(widget, b.selector("scanner", widget.ID()))
+	case *Dialog:
+		b.theme.Apply(widget, b.selector("dialog", widget.ID()))
+		b.theme.Apply(widget, b.selector("dialog/title", widget.ID()))
+	case *Digits:
+		b.theme.Apply(widget, b.selector("digits", widget.ID()))
 	case *Editor:
 		b.theme.Apply(widget, b.selector("editor", widget.ID()))
+	case *Flex:
+		b.theme.Apply(widget, b.selector("flex", widget.ID()))
 	case *Form:
 		b.theme.Apply(widget, b.selector("form", widget.ID()))
 	case *FormGroup:
 		b.theme.Apply(widget, b.selector("formgroup", widget.ID()))
+	case *Grid:
+		b.theme.Apply(widget, b.selector("grid", widget.ID()))
 	case *Input:
 		b.theme.Apply(widget, b.selector("input", widget.ID()), "disabled", "focused")
 	case *List:
@@ -166,12 +172,14 @@ func (b *Builder) Apply(widget Widget) {
 		b.theme.Apply(widget, b.selector("progress/bar", widget.ID()), "disabled")
 	case *Rule:
 		b.theme.Apply(widget, b.selector("rule", widget.ID()))
-	case *Static:
-		b.theme.Apply(widget, b.selector("static", widget.ID()))
-	case *Digits:
-		b.theme.Apply(widget, b.selector("digits", widget.ID()))
+	case *Scanner:
+		b.theme.Apply(widget, b.selector("scanner", widget.ID()))
+	case *Select:
+		b.theme.Apply(widget, b.selector("select", widget.ID()), "disabled", "focused")
 	case *Spinner:
 		b.theme.Apply(widget, b.selector("spinner", widget.ID()))
+	case *Static:
+		b.theme.Apply(widget, b.selector("static", widget.ID()))
 	case *Styled:
 		b.theme.Apply(widget, b.selector("styled", widget.ID()))
 	case *Switcher:
@@ -227,6 +235,13 @@ func (b *Builder) Button(id, text string) *Builder {
 func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	checkbox := NewCheckbox(id, text, checked)
 	b.Add(checkbox)
+	return b
+}
+
+// Dialog creates a new dialog with the specified id and title.
+func (b *Builder) Dialog(id, title string) *Builder {
+	d := NewDialog(id, title)
+	b.Add(d)
 	return b
 }
 
@@ -405,6 +420,13 @@ func (b *Builder) List(id string, values ...string) *Builder {
 func (b *Builder) Progress(id string, horizontal bool) *Builder {
 	p := NewProgress(id, horizontal)
 	b.Add(p)
+	return b
+}
+
+// Select creates a select dropdown.
+func (b *Builder) Select(id string, args ...string) *Builder {
+	s := NewSelect(id, args...)
+	b.Add(s)
 	return b
 }
 

@@ -28,7 +28,7 @@ func NewInspector(root Container) *Inspector {
 // BuildUI constructs the Inspector interface.
 func (i *Inspector) BuildUI() {
 	ui := FindUI(i.container)
-	i.ui = NewBuilder(TokyoNightTheme()).
+	i.ui = ui.NewBuilder().
 		Class("inspector").
 		Box("inspector-box", "Inspector").Border("double").
 		Flex("inspector", false, "stretch", 0).

@@ -26,7 +26,7 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Spinner", "Styled", "Table", "Tabs", "Viewport").
+		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Viewport", "Dialog").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -38,6 +38,7 @@ func createUI() *UI {
 		With(grid).
 		With(progress).
 		With(scanner).
+		With(dropdown).
 		With(spinner).
 		With(styled).
 		With(table).
@@ -59,7 +60,26 @@ func createUI() *UI {
 	Find(ui, "navigation").On("activate", func(_ Widget, event string, data ...any) bool {
 		if len(data) == 1 {
 			if selected, ok := data[0].(int); ok {
-				switcher.Select(selected)
+				if selected < len(switcher.Children()) {
+					switcher.Select(selected)
+				} else {
+					switch selected {
+					case 14:
+						dialog := ui.NewBuilder().
+							Dialog("dialog", "Test Dialog").
+							Class("dialog").
+							Flex("dialog-content", false, "end", 1).
+							Static("", "Do you really want to do this?").
+							Flex("dialog-buttons", true, "end", 2).
+							Button("btn-yes", "YES").
+							Button("btn-no", "NO").
+							End().
+							End().
+							Class("").
+							Container()
+						ui.Popup(-1, -1, 0, 0, dialog)
+					}
+				}
 			}
 		}
 		return true
@@ -190,6 +210,20 @@ func checkbox(builder *Builder) {
 	}
 }
 
+func custom() Widget {
+	result := NewCustom("custom", func(widget Widget, r *Renderer) {
+		_, _, width, height := widget.Content()
+		for x := 10; x < width; x += 10 {
+			for y := 10; y < height; y += 10 {
+				r.Put(x, y, "*")
+			}
+		}
+	})
+	result.SetStyle("", NewStyle().WithColors("green", "black").WithMargin(0).WithPadding(0))
+	result.SetHint(200, 100)
+	return result
+}
+
 // Digits demo
 func digits(builder *Builder) {
 	builder.Flex("digits-demo", false, "stretch", 1).Padding(1).
@@ -198,6 +232,83 @@ func digits(builder *Builder) {
 		Digits("digits", "12:34").
 		End().
 		Static("digits-info", "Large ASCII art-style digits using Unicode box-drawing characters.").Padding(1, 0, 0, 0).
+		End()
+}
+
+func dropdown(builder *Builder) {
+	builder.Flex("select-demo", false, "start", 1).Padding(1, 2).
+		Static("select-title", "Select Widget Demo").Padding(0, 0, 1, 0).
+		Static("select-info", "Select is a dropdown selection widget.").Padding(0, 0, 1, 0).
+		Select("s1", "f", "Female", "m", "Male", "d", "Diverse").
+		Static("select-status", "You selected: ").Padding(1, 0, 0, 0).
+		End()
+}
+
+// Editor demo
+func editor(builder *Builder) {
+	builder.Editor("editor-demo").Hint(0, -1).Padding(1)
+	if ed := Find(builder.Container(), "editor-demo"); ed != nil {
+		if editor, ok := ed.(*Editor); ok {
+			editor.Load("This is a sample text.\nYou can edit me!\n\nPress Tab to insert tabs,\nBackspace to delete,\nand arrow keys to navigate.\n\nLine numbers are disabled by default.\nEnable them with ShowLineNumbers(true).")
+		}
+	}
+}
+
+func form(builder *Builder) {
+	data := struct {
+		Database string `width:"40"`
+		Username string `width:"20"`
+		Password string `width:"20" line:"1"`
+	}{
+		Database: "sqlite:mem",
+		Username: "admin",
+		Password: "secret",
+	}
+
+	user := struct {
+		ID         string `readOnly:"true"`
+		Login      string `label:"Login Name:" width:"40"`
+		Name       string `width:"40"`
+		Department string `width:"40"`
+		Email      string `label:"E-Mail-Address" width:"40"`
+		Phone      string `label:"Phone Number" width:"40"`
+		Mobile     string `label:"Mobile Phone" width:"40"`
+		Password   string `control:"password" width:"40"`
+		Temporary  bool   `label:"Temporary"`
+		Pending    bool   `label:"Pending"`
+		Active     bool   `label:"Active"`
+		Fixed      bool   `label:"Fixed" readOnly:"true"`
+	}{}
+
+	builder.Flex("form-demo", false, "start", 1).Margin(2).Border("", "round").Padding(2).
+		Form("form", "Connect", &data).
+		Group("form-group", "", "", false, 1).Border("", "round").
+		End().
+		End().
+		Form("form2", "User", &user).
+		Group("form-group-2", "user", "", true, 1).Border("", "round").
+		End().
+		End().
+		Flex("form-buttons", true, "start", 1).Margin(1).
+		Button("save-button", "Save").
+		Static("info-label", "Info").
+		End().
+		End()
+
+	builder.Find("save-button").On("click", func(widget Widget, _ string, _ ...any) bool {
+		Update(FindUI(widget), "info-label", "Click "+time.Now().String())
+		text, _ := json.Marshal(user)
+		widget.Log(widget, "debug", string(text))
+		return true
+	})
+}
+
+// Grid demo
+func grid(builder *Builder) {
+	builder.Grid("grid-demo", 4, 4, true).Margin(1).Border("", "round").
+		Cell(0, 0, 4, 1).Static("", "First row, spans 4 columns").
+		Cell(0, 1, 1, 3).Static("", "Spans 3 rows").
+		Cell(2, 2, 2, 2).Static("", "2 x 2").
 		End()
 }
 
@@ -235,25 +346,6 @@ func progress(builder *Builder) {
 	builder.Add(p100)
 	builder.End().
 		Static("progress-info", "Progress bars support determinate (with total>0) and indeterminate (total=0) modes. Use SetTotal/SetValue to control.").Padding(1, 0, 0, 0).
-		End()
-}
-
-// Editor demo
-func editor(builder *Builder) {
-	builder.Editor("editor-demo").Hint(0, -1).Padding(1)
-	if ed := Find(builder.Container(), "editor-demo"); ed != nil {
-		if editor, ok := ed.(*Editor); ok {
-			editor.Load("This is a sample text.\nYou can edit me!\n\nPress Tab to insert tabs,\nBackspace to delete,\nand arrow keys to navigate.\n\nLine numbers are disabled by default.\nEnable them with ShowLineNumbers(true).")
-		}
-	}
-}
-
-// Grid demo
-func grid(builder *Builder) {
-	builder.Grid("grid-demo", 4, 4, true).Margin(1).Border("", "round").
-		Cell(0, 0, 4, 1).Static("", "First row, spans 4 columns").
-		Cell(0, 1, 1, 3).Static("", "Spans 3 rows").
-		Cell(2, 2, 2, 2).Static("", "2 x 2").
 		End()
 }
 
@@ -348,69 +440,6 @@ func viewport(builder *Builder) {
 		Add(custom()).
 		End().
 		End()
-}
-
-func custom() Widget {
-	result := NewCustom("custom", func(widget Widget, r *Renderer) {
-		_, _, width, height := widget.Content()
-		for x := 10; x < width; x += 10 {
-			for y := 10; y < height; y += 10 {
-				r.Put(x, y, "*")
-			}
-		}
-	})
-	result.SetStyle("", NewStyle().WithColors("green", "black").WithMargin(0).WithPadding(0))
-	result.SetHint(200, 100)
-	return result
-}
-
-func form(builder *Builder) {
-	data := struct {
-		Database string `width:"40"`
-		Username string `width:"20"`
-		Password string `width:"20" line:"1"`
-	}{
-		Database: "sqlite:mem",
-		Username: "admin",
-		Password: "secret",
-	}
-
-	user := struct {
-		ID         string `readOnly:"true"`
-		Login      string `label:"Login Name:" width:"40"`
-		Name       string `width:"40"`
-		Department string `width:"40"`
-		Email      string `label:"E-Mail-Address" width:"40"`
-		Phone      string `label:"Phone Number" width:"40"`
-		Mobile     string `label:"Mobile Phone" width:"40"`
-		Password   string `control:"password" width:"40"`
-		Temporary  bool   `label:"Temporary"`
-		Pending    bool   `label:"Pending"`
-		Active     bool   `label:"Active"`
-		Fixed      bool   `label:"Fixed" readOnly:"true"`
-	}{}
-
-	builder.Flex("form-demo", false, "start", 1).Margin(2).Border("", "round").Padding(2).
-		Form("form", "Connect", &data).
-		Group("form-group", "", "", false, 1).Border("", "round").
-		End().
-		End().
-		Form("form2", "User", &user).
-		Group("form-group-2", "user", "", true, 1).Border("", "round").
-		End().
-		End().
-		Flex("form-buttons", true, "start", 1).Margin(1).
-		Button("save-button", "Save").
-		Static("info-label", "Info").
-		End().
-		End()
-
-	builder.Find("save-button").On("click", func(widget Widget, _ string, _ ...any) bool {
-		Update(FindUI(widget), "info-label", "Click "+time.Now().String())
-		text, _ := json.Marshal(user)
-		widget.Log(widget, "debug", string(text))
-		return true
-	})
 }
 
 // Table demo data generation

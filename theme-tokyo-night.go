@@ -28,10 +28,15 @@ func TokyoNightTheme() *Theme {
 		NewStyle("button").WithColors("$bg0", "$blue").WithBorder("lines").WithPadding(0, 2),
 		NewStyle("button:focused").WithColors("$fg0", "$blue"),
 		NewStyle("button:hovered").WithColors("$red", "$blue"),
+		NewStyle("button.dialog").WithBorder("none"),
+		NewStyle("button.dialog:focused").WithBorder("none"),
+		NewStyle("button.dialog:hovered").WithBorder("none"),
 		NewStyle("checkbox").WithColors("$fg1", "$bg0"),
 		NewStyle("checkbox:disabled").WithColors("$gray", "$bg0"),
 		NewStyle("checkbox:focused").WithColors("$fg0", "$bg0"),
 		NewStyle("checkbox:hovered").WithColors("$aqua", "$bg0"),
+		NewStyle("dialog").WithColors("$fg0", "$bg2").WithBorder("round").WithPadding(1, 2),
+		NewStyle("dialog/title").WithColors("$bg1", "$blue").WithBorder("none").WithMargin(0).WithPadding(0, 1),
 		NewStyle("custom"),
 		NewStyle("flex"),
 		NewStyle("form"),
@@ -46,6 +51,8 @@ func TokyoNightTheme() *Theme {
 		NewStyle("rule"),
 		NewStyle("scanner").WithColors("$cyan", "$bg0"),
 		NewStyle("static").WithColors("$fg0", "$bg1").WithMargin(0).WithPadding(0),
+		NewStyle("select").WithColors("$fg0", "$bg2").WithPadding(0, 1),
+		NewStyle("select:focused").WithColors("$bg0", "$blue"),
 		NewStyle("styled").WithColors("$fg0", "$bg1"),
 		NewStyle("switcher"),
 		NewStyle("table").WithColors("", "").WithBorder("thin $fg1"),
@@ -65,6 +72,7 @@ func TokyoNightTheme() *Theme {
 	)
 
 	t.SetStrings(map[string]string{
+		// ---- Progress bar ----
 		// Horizontal orientation
 		"progress.h.prefix":        "",
 		"progress.h.suffix":        "",
@@ -83,6 +91,9 @@ func TokyoNightTheme() *Theme {
 		"progress.v.middle.empty":  "░",
 		"progress.v.end.filled":    "█",
 		"progress.v.end.empty":     "░",
+
+		// ---- Select ----
+		"select.dropdown": " \u25BC",
 	})
 
 	return t

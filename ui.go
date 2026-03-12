@@ -166,6 +166,11 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 	return ui, nil
 }
 
+// Creates a new builder with the current UI theme.
+func (ui *UI) NewBuilder() *Builder {
+	return NewBuilder(ui.renderer.theme)
+}
+
 // ---- Widget methods -------------------------------------------------------
 // Implementation of the Widget interface
 
@@ -566,6 +571,9 @@ func (ui *UI) Logs() *TableLog {
 //   - y < -1: Position relative to bottom edge (e.g., -3 = 1 chars from bottom)
 //   - y >= 0: Absolute position from top edge
 func (ui *UI) Popup(x, y, w, h int, popup Container) {
+	// Set parent first for logging to work immediately
+	popup.SetParent(ui)
+
 	// Auto sizing
 	if w == 0 || h == 0 {
 		pw, ph := popup.Hint()
@@ -594,7 +602,6 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 		y = ui.height - h + y + 2
 	}
 
-	popup.SetParent(ui)
 	popup.SetBounds(x, y, w, h)
 	popup.Layout()
 
