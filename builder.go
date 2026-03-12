@@ -300,6 +300,7 @@ func (b *Builder) Group(id, title, name string, horizontal bool, spacing int) *B
 	return b
 }
 
+// buildGroup builds the form group by adding all fields from the struct
 func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 	line := 0
 	v := reflect.ValueOf(form.data)
@@ -324,6 +325,8 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 			label = sf.Name
 		}
 		control := sf.Tag.Get("control")
+		options := sf.Tag.Get("options")
+		_, readonly := sf.Tag.Lookup("readonly")
 		width, err := strconv.Atoi(sf.Tag.Get("width"))
 		if err != nil {
 			width = 10
@@ -333,7 +336,10 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 			line = l
 		}
 
-		widget := b.buildFormControl(control, sf.Name, fv)
+		widget := b.buildFormControl(control, sf.Name, fv, options)
+		if readonly {
+			widget.SetFlag("readonly", true)
+		}
 		widget.SetHint(width, 1)
 		widget.SetParent(b.stack.Peek())
 		widget.On("change", form.Update(fv))
@@ -343,7 +349,7 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 	}
 }
 
-func (b *Builder) buildFormControl(control, id string, v reflect.Value) Widget {
+func (b *Builder) buildFormControl(control, id string, v reflect.Value, options string) Widget {
 	if control == "" {
 		switch v.Kind() {
 		case reflect.Bool:
@@ -359,6 +365,18 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value) Widget {
 		b.Apply(checkbox)
 		checkbox.SetFlag("checked", v.Bool())
 		return checkbox
+	case "password":
+		input := NewInput(id, "", "", "*")
+		input.SetFlag("masked", true)
+		b.Apply(input)
+		input.SetText(v.String())
+		return input
+	case "select":
+		o := strings.Split(options, ",")
+		s := NewSelect(id, o...)
+		b.Apply(s)
+		s.Select(v.String())
+		return s
 	default:
 		input := NewInput(id)
 		b.Apply(input)

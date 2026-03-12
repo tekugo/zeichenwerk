@@ -67,6 +67,17 @@ func (s *Select) Render(r *Renderer) {
 	r.Text(cx+cw-dw, cy, dropdown, dw)
 }
 
+// Select selects the specified value.
+func (s *Select) Select(value string) {
+	s.index = 0
+	for i, option := range s.options {
+		if option.value == value {
+			s.index = i
+			return
+		}
+	}
+}
+
 // Text returns the display text of the currently selected option.
 func (s *Select) Text() string {
 	return s.options[s.index].text
@@ -113,6 +124,7 @@ func (s *Select) popup() {
 	list.Select(s.index)
 	list.On("activate", func(_ Widget, _ string, _ ...any) bool {
 		s.index = list.Selected()
+		s.Dispatch(s, "change", s.Value())
 		ui.Close()
 		ui.Focus(s)
 		return true

@@ -258,7 +258,7 @@ func form(builder *Builder) {
 	data := struct {
 		Database string `width:"40"`
 		Username string `width:"20"`
-		Password string `width:"20" line:"1"`
+		Password string `control:"password" width:"20" line:"1"`
 	}{
 		Database: "sqlite:mem",
 		Username: "admin",
@@ -266,9 +266,10 @@ func form(builder *Builder) {
 	}
 
 	user := struct {
-		ID         string `readOnly:"true"`
+		ID         string `readonly:"true"`
 		Login      string `label:"Login Name:" width:"40"`
 		Name       string `width:"40"`
+		Sex        string `control:"select" options:",n/a,m,Male,f,Female,d,Diverse"`
 		Department string `width:"40"`
 		Email      string `label:"E-Mail-Address" width:"40"`
 		Phone      string `label:"Phone Number" width:"40"`
@@ -278,7 +279,7 @@ func form(builder *Builder) {
 		Pending    bool   `label:"Pending"`
 		Active     bool   `label:"Active"`
 		Fixed      bool   `label:"Fixed" readOnly:"true"`
-	}{}
+	}{ID: "JD", Name: "John Doe", Sex: "m"}
 
 	builder.Flex("form-demo", false, "start", 1).Margin(2).Border("", "round").Padding(2).
 		Form("form", "Connect", &data).
