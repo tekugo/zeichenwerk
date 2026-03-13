@@ -174,10 +174,14 @@ func (h *UILogHandler) Handle(ctx context.Context, r slog.Record) error {
 	// Add to TableLog with source and level (use constant format)
 	h.tableLog.Add(source, r.Level.String(), "%s", msg)
 
-	// Format for Text widget
+	// Format for console output
 	timeStr := r.Time.Format("15:04:05.000")
 	line := fmt.Sprintf("%s %-5s (%s) %s %s", timeStr, r.Level.String(), source, widgetType, msg)
-	h.text.Add(line)
+
+	// Write to text widget
+	if h.text != nil {
+		h.text.Add(line)
+	}
 
 	// Also write to stderr if console enabled
 	if h.console {

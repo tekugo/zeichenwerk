@@ -57,7 +57,12 @@ func (i *Inspector) BuildUI() {
 		End().
 		End().
 		Tab("Debug Log").
-		Table("inspector-log-table", ui.tableLog).Border("none").Border("grid", "double-thin").Hint(50, 25).
+		Table("inspector-log-table", ui.tableLog).
+		Border("none").
+		Border("grid", "double-thin").Foreground("grid", "$fg0").
+		Border(":focused", "none").
+		Border("grid:focused", "double-thin").
+		Hint(50, 25).
 		End().
 		End().
 		Class("").

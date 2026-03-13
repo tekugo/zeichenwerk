@@ -129,12 +129,6 @@ func Update(container Container, id string, value any) {
 		return
 	}
 	switch w := widget.(type) {
-	case *Static:
-		if str, ok := value.(string); ok {
-			w.SetText(str)
-		} else {
-			w.SetText(fmt.Sprintf("%v", value))
-		}
 	case *List:
 		if items, ok := value.([]string); ok {
 			w.SetItems(items)
@@ -142,6 +136,16 @@ func Update(container Container, id string, value any) {
 			if len(items) > 0 {
 				w.Dispatch(w, "select", 0)
 			}
+		}
+	case *Static:
+		if str, ok := value.(string); ok {
+			w.SetText(str)
+		} else {
+			w.SetText(fmt.Sprintf("%v", value))
+		}
+	case *Table:
+		if provider, ok := value.(TableProvider); ok {
+			w.Set(provider)
 		}
 	case *Text:
 		if lines, ok := value.([]string); ok {

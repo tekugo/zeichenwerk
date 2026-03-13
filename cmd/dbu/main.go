@@ -24,6 +24,7 @@ func main() {
 	ui = createUI()
 	loadTables()
 
+	ui.Log(ui, "debug", "Starting application")
 	ui.Run()
 }
 
@@ -68,21 +69,21 @@ func content(builder *Builder) {
 		Cell(1, 0, 1, 1).
 		Editor("sql").
 		Cell(1, 1, 1, 1).
-		Flex("main", false, "stretch", 0).
-		Tabs("tabs").
-		Switcher("switcher", true).Hint(-1, -1).
-		Tab("Query Result").Table("result", NewArrayTableProvider([]string{}, [][]string{})).
-		Tab("Debug Log").Text("debug-log", []string{}, true, 1000).
-		End().
-		End().
+		Table("result", NewArrayTableProvider([]string{}, [][]string{})).
+		Border("none").
+		Border("grid", "thin").
+		Border(":focused", "none").
+		Border("grid:focused", "none").
 		End()
 
 	OnKey(builder.Find("sql"), func(widget Widget, event *tcell.EventKey) bool {
+		ui.Log(widget, "debug", "Key handler for SQL")
 		switch event.Key() {
 		case tcell.KeyCtrlR:
 			query()
 			return true
 		default:
+			ui.Log(widget, "debug", "Unknown key", "key", event.Key())
 			return false
 		}
 	})
@@ -100,7 +101,7 @@ func query() {
 	}
 
 	rows, err := db.Query(editor.Text())
-	ui.Log(editor, "debug", "Executing query %s", editor.Text())
+	ui.Log(editor, "debug", "Executing query", "sql", editor.Text())
 	if err != nil {
 		panic(err)
 	}
@@ -123,10 +124,8 @@ func fill(rows *sql.Rows) {
 		for i := range len(cols) {
 			line[i] = fmt.Sprintf("%v", row[i])
 		}
-		ui.Log(ui, "debug", "%v", line)
 		data = append(data, line)
 	}
-	ui.Log(ui, "debug", "Result returned %d rows", len(data))
 	Update(ui, "result", NewArrayTableProvider(cols, data))
 	Find(ui, "result").Refresh()
 }
@@ -138,14 +137,13 @@ func loadTables() {
 
 	rows, err := db.Query("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name")
 	if err != nil {
-		ui.Log(ui, "error", "Error loading tables: %v", err)
+		ui.Log(ui, "error", "Error loading tables", "error", err)
 		return
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		rows.Scan(&name)
-		ui.Log(ui, "debug", "Table %s", name)
 		tables = append(tables, name)
 	}
 

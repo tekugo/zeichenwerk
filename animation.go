@@ -28,7 +28,7 @@ func (a *Animation) Start(interval time.Duration) {
 		a.ticker = time.NewTicker(interval)
 		defer a.ticker.Stop()
 
-		for {
+		for a.ticker != nil {
 			select {
 			case <-a.stop:
 				a.ticker = nil

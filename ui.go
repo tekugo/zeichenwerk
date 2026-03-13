@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v3"
 )
@@ -84,7 +85,6 @@ type UI struct {
 
 	// Logging infrastructure
 	tableLog   *TableLog
-	debugLog   *Text
 	logger     *slog.Logger
 	logHandler *UILogHandler
 
@@ -142,23 +142,24 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		refresh:   make(chan struct{}, 1),
 	}
 
+	// Initialize structured logging
+	if debug {
+		level := slog.LevelDebug
+		ui.logHandler = &UILogHandler{
+			tableLog: ui.tableLog,
+			level:    level,
+			console:  false,
+		}
+		ui.logger = slog.New(ui.logHandler)
+		ui.logger.Debug("==== Debug log started! =====", "source", "ui", "widgetType", "UI")
+
+	}
+
 	// Connect debug log widget and initialize structured logging
 	loggerWidget := Find(ui, "debug-log")
 	if loggerWidget != nil {
 		if text, ok := loggerWidget.(*Text); ok {
-			ui.debugLog = text
-			// Initialize structured logging with slog
-			level := slog.LevelDebug
-			ui.logHandler = &UILogHandler{
-				tableLog: ui.tableLog,
-				text:     text,
-				level:    level,
-				console:  false,
-			}
-			ui.logger = slog.New(ui.logHandler)
-			// Log start message via slog
-			ui.logger.Debug("==== Debug log started! =====", "source", "ui", "widgetType", "UI")
-			// Note: screen size not yet known; will be logged after initialization
+			ui.logHandler.text = text
 		}
 	}
 
@@ -207,7 +208,12 @@ func (ui *UI) Handle(event tcell.Event) bool {
 			close(ui.quit)
 		case tcell.KeyCtrlD:
 			ui.Log(ui, "debug", "Opening inspector")
-			ui.Popup(-1, -1, 0, 0, NewInspector(ui).UI())
+			animation := NewGrow(false)
+			animation.Add(NewInspector(ui).UI())
+			hw, hh := animation.Hint()
+			animation.Start(10 * time.Millisecond)
+			ui.Log(ui, "debug", "Inspection hint", "hw", hw, "hh", hh)
+			ui.Popup(-1, -1, 0, 0, animation)
 			ui.Refresh()
 		case tcell.KeyRune:
 			switch event.Str() {

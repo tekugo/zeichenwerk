@@ -120,10 +120,10 @@ func (f *Flex) Hint() (int, int) {
 // the specified orientation, alignment, and spacing configuration.
 func (f *Flex) Layout() {
 	if f.horizontal {
-		f.Log(f, "debug", "Flex horizontal layout %s @%d,%d %dx%d", f.id, f.x, f.y, f.width, f.height)
+		f.Log(f, "debug", "Flex horizontal layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
 		f.layoutHorizontal()
 	} else {
-		f.Log(f, "debug", "Flex vertical layout %s @%d,%d %dx%d", f.id, f.x, f.y, f.width, f.height)
+		f.Log(f, "debug", "Flex vertical layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
 		f.layoutVertical()
 	}
 
@@ -265,7 +265,7 @@ func (f *Flex) layoutVertical() {
 			child.SetBounds(wx, y, ww, hh+style.Vertical())
 		}
 		_, _, _, height := child.Bounds()
-		f.Log(f, "debug", "  %d %s hint=%d height=%d", i, child.ID(), hh, height)
+		f.Log(f, "debug", "Child", "i", i, "ID", child.ID(), "hint", hh, "height", height)
 		y += height + f.spacing
 	}
 }
