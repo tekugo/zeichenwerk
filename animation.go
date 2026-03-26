@@ -1,6 +1,7 @@
 package zeichenwerk
 
 import (
+	"sync"
 	"time"
 )
 
@@ -10,6 +11,7 @@ import (
 // implement the Tick() method to define their specific animation behavior.
 type Animation struct {
 	Component
+	mu     sync.Mutex
 	ticker *time.Ticker
 	fn     func()
 	stop   chan struct{}
@@ -19,19 +21,28 @@ type Animation struct {
 // The animation runs in a separate goroutine. If already running,
 // this method does nothing.
 func (a *Animation) Start(interval time.Duration) {
+	a.mu.Lock()
+	if a.ticker != nil {
+		a.mu.Unlock()
+		a.Log(a, "error", "Animation already running")
+		return
+	}
+	a.ticker = time.NewTicker(interval)
+	a.mu.Unlock()
+
 	go func() {
-		if a.ticker != nil {
-			a.Log(a, "error", "Animation already running")
-			return // already running
-		}
+		defer func() {
+			a.mu.Lock()
+			if a.ticker != nil {
+				a.ticker.Stop()
+				a.ticker = nil
+			}
+			a.mu.Unlock()
+		}()
 
-		a.ticker = time.NewTicker(interval)
-		defer a.ticker.Stop()
-
-		for a.ticker != nil {
+		for {
 			select {
 			case <-a.stop:
-				a.ticker = nil
 				return
 			case <-a.ticker.C:
 				a.Tick()
@@ -46,11 +57,12 @@ func (a *Animation) Stop() {
 	case a.stop <- struct{}{}:
 	default:
 	}
-	a.ticker = nil
 }
 
 // Running returns whether the animation is currently active.
 func (a *Animation) Running() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	return a.ticker != nil
 }
 

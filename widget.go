@@ -38,7 +38,10 @@ type Widget interface {
 	Dispatch(widget Widget, event string, data ...any) bool
 
 	// Flag returns a widget's state flag.
-	Flag(string) bool
+	//
+	// Parameters:
+	//   - name: The name of the state flag.
+	Flag(name string) bool
 
 	// Hint returns the widgets preferred content size for optimal display.
 	// Container may use this as guidance for the content layout. Values can be:
@@ -69,9 +72,9 @@ type Widget interface {
 	// On registers an event handler for widget-specific actions.
 	//
 	// Parameters:
-	//   - event: The type of event to handle.
-	//   - handler: The handler function to register.
-	On(string, Handler)
+	//   - event: The event name to handle (e.g., "click", "focus").
+	//   - handler: The callback function invoked when the event occurs.
+	On(event string, handler Handler)
 
 	// Parent returns the parent container of this widget. Returns nil if the widget
 	// has no parent.
@@ -112,9 +115,9 @@ type Widget interface {
 	// Controls visual appearance such as colors, borders, and text formatting.
 	//
 	// Parameters:
-	//   - string: Style selector (e.g., "", ":focus", "bar", "bar:hover")
-	//   - *Style: The style configuration to apply, or nil to remove
-	SetStyle(string, *Style)
+	//   - selector: Style selector (e.g., "", ":focus", "bar", "bar:hover").
+	//   - style: The style configuration to apply, or nil to remove.
+	SetStyle(selector string, style *Style)
 
 	// State returns the widget state for rendering.
 	State() string

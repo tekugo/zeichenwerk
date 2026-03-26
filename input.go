@@ -7,14 +7,18 @@ import (
 // Input is a single-line text input widget that allows users to enter and edit text.
 // It provides comprehensive text editing functionality including cursor movement,
 // horizontal scrolling for long text, and various input modes with robust Unicode support.
+//
+// Text is stored in a GapBuffer, which provides O(1) insertions and deletions at
+// the current cursor position, with O(n) cost only when the cursor moves to a
+// different position.
 type Input struct {
 	Component
-	text        string // Current text content of the input field
-	pos         int    // Current cursor position within the text (0-based character index)
-	offset      int    // Horizontal scroll offset for displaying long text (characters from start)
-	max         int    // Maximum allowed text length in characters (0 = unlimited)
-	placeholder string // Placeholder text shown when input is empty
-	mask        string // Character used for masking (typically '*', '•', or '●')
+	buf         *GapBuffer // Backing store for text content
+	pos         int        // Current cursor position within the text (0-based character index)
+	offset      int        // Horizontal scroll offset for displaying long text (characters from start)
+	max         int        // Maximum allowed text length in characters (0 = unlimited)
+	placeholder string     // Placeholder text shown when input is empty
+	mask        string     // Character used for masking (typically '*', '•', or '●')
 }
 
 // NewInput creates a new text input widget with the specified ID and default configuration.
@@ -36,7 +40,7 @@ func NewInput(id string, params ...string) *Input {
 
 	input := &Input{
 		Component:   Component{id: id, hheight: 1},
-		text:        text,
+		buf:         NewGapBufferFromString(text, 16),
 		pos:         0,
 		offset:      0,
 		max:         0,
@@ -115,21 +119,22 @@ func (i *Input) SetText(text string) {
 
 	runes := []rune(text)
 	if i.max > 0 && len(runes) > i.max {
-		text = string(runes[:i.max])
+		runes = runes[:i.max]
+		text = string(runes)
 	}
 
-	i.text = text
+	i.buf = NewGapBufferFromString(text, 16)
 	if i.pos > len(runes) {
 		i.pos = len(runes)
 	}
 	i.adjust()
 
-	i.Dispatch(i, "change", i.text)
+	i.Dispatch(i, "change", text)
 }
 
 // Text returns the current text content.
 func (i *Input) Text() string {
-	return i.text
+	return i.buf.String()
 }
 
 // ---- Movement -------------------------------------------------------------
@@ -153,7 +158,7 @@ func (i *Input) Left() {
 //
 // This method is typically called in response to the Right arrow key.
 func (i *Input) Right() {
-	if i.pos < len(i.text) {
+	if i.pos < i.buf.Length() {
 		i.pos++
 		i.adjust()
 	}
@@ -175,7 +180,7 @@ func (i *Input) Start() {
 //
 // This method is typically called in response to the End key or Ctrl+E.
 func (i *Input) End() {
-	i.pos = len(i.text)
+	i.pos = i.buf.Length()
 	i.adjust()
 	i.Refresh()
 }
@@ -201,20 +206,18 @@ func (i *Input) Insert(ch string) {
 		return
 	}
 
-	// Convert the string to runes to avoid unicode problems
-	runes := []rune(i.text)
-	if i.pos < 0 || i.pos > len(runes) || (i.max > 0 && len(runes) >= i.max) {
+	length := i.buf.Length()
+	if i.pos < 0 || i.pos > length || (i.max > 0 && length >= i.max) {
 		return
 	}
 
-	// Insert character at cursor position
-	runes = append(runes[:i.pos], append([]rune{[]rune(ch)[0]}, runes[i.pos:]...)...)
-	i.text = string(runes)
+	i.buf.Move(i.pos)
+	i.buf.Insert([]rune(ch)[0])
 	i.pos++
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, "change", i.text)
+	i.Dispatch(i, "change", i.buf.String())
 }
 
 // Delete removes the character immediately before the cursor position (backspace operation).
@@ -234,14 +237,14 @@ func (i *Input) Delete() {
 		return
 	}
 
-	runes := []rune(i.text)
-	runes = append(runes[:i.pos-1], runes[i.pos:]...)
-	i.text = string(runes)
+	// Move gap to pos-1, then forward-delete the character now immediately after the gap.
+	i.buf.Move(i.pos - 1)
+	i.buf.Delete()
 	i.pos--
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, "change", i.text)
+	i.Dispatch(i, "change", i.buf.String())
 }
 
 // DeleteForward removes the character at the current cursor position (delete operation).
@@ -257,17 +260,16 @@ func (i *Input) Delete() {
 //
 // This method is typically called in response to the Delete key.
 func (i *Input) DeleteForward() {
-	if i.Flag("readonly") || i.pos >= len(i.text) {
+	if i.Flag("readonly") || i.pos >= i.buf.Length() {
 		return
 	}
 
-	runes := []rune(i.text)
-	runes = append(runes[:i.pos], runes[i.pos+1:]...)
-	i.text = string(runes)
+	i.buf.Move(i.pos)
+	i.buf.Delete()
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, "change", i.text)
+	i.Dispatch(i, "change", i.buf.String())
 }
 
 // Clear removes all text from the input and resets the cursor to the beginning.
@@ -288,12 +290,12 @@ func (i *Input) Clear() {
 		return
 	}
 
-	i.text = ""
+	i.buf = NewGapBuffer(16)
 	i.pos = 0
 	i.offset = 0
 	i.Refresh()
 
-	i.Dispatch(i, "change", i.text)
+	i.Dispatch(i, "change", "")
 }
 
 // ---- Internal methods -----------------------------------------------------
@@ -323,7 +325,7 @@ func (i *Input) adjust() {
 	}
 
 	// Ensure offset doesn't exceed text length unnecessarily
-	limit := max(len(i.text)-iw+1, 0)
+	limit := max(i.buf.Length()-iw+1, 0)
 	if i.offset > limit {
 		i.offset = limit
 	}
@@ -341,15 +343,13 @@ func (i *Input) visible() string {
 		return ""
 	}
 
-	display := []rune(i.text)
+	display := []rune(i.buf.String())
 	if i.Flag("masked") {
 		// Replace all characters with mask character for password fields
-		// Handle Unicode characters properly by converting to runes first
-		maskRunes := make([]rune, len(display))
-		for j := range maskRunes {
-			maskRunes[j] = []rune(i.mask)[0]
+		maskRune := []rune(i.mask)[0]
+		for j := range display {
+			display[j] = maskRune
 		}
-		display = maskRunes
 	}
 
 	// Apply horizontal scrolling to show the relevant portion
@@ -407,24 +407,29 @@ func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 	case tcell.KeyCtrlK:
 		// Delete from cursor to end of text
 		if !i.Flag("readonly") {
-			i.text = i.text[:i.pos]
+			count := i.buf.Length() - i.pos
+			i.buf.Move(i.pos)
+			for j := 0; j < count; j++ {
+				i.buf.Delete()
+			}
 			i.adjust()
-			i.Dispatch(i, "change", i.text)
+			i.Dispatch(i, "change", i.buf.String())
 		}
 		i.Refresh()
 		return true
 	case tcell.KeyCtrlU:
 		// Delete from beginning of text to cursor
 		if !i.Flag("readonly") {
-			i.text = i.text[i.pos:]
+			runes := []rune(i.buf.String())
+			i.buf = NewGapBufferFromString(string(runes[i.pos:]), 16)
 			i.pos = 0
 			i.adjust()
 			i.Refresh()
-			i.Dispatch(i, "change", i.text)
+			i.Dispatch(i, "change", i.buf.String())
 			return true
 		}
 	case tcell.KeyEnter:
-		i.Dispatch(i, "enter", i.text)
+		i.Dispatch(i, "enter", i.buf.String())
 		return true
 	case tcell.KeyRune:
 		ch := evt.Str()
@@ -447,7 +452,7 @@ func (i *Input) Render(r *Renderer) {
 	}
 
 	// Determine what text to display
-	if i.text == "" && i.placeholder != "" {
+	if i.buf.Length() == 0 && i.placeholder != "" {
 		// Use a dimmed style for placeholder
 		style := i.Style("placeholder")
 		r.Set(style.Foreground(), style.Background(), style.Font())

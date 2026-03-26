@@ -83,7 +83,7 @@ func Redraw(widget Widget) {
 // WidgetType returns a clean, human-readable string representation of the
 // widget's type.
 func WidgetType(widget Widget) string {
-	return strings.TrimPrefix(fmt.Sprintf("%T", widget), "*next.")
+	return strings.TrimPrefix(fmt.Sprintf("%T", widget), "*zeichenwerk.")
 }
 
 // HandleKeyEvent registers a key event handler for a widget within a container.

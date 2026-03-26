@@ -37,7 +37,7 @@ type Component struct {
 	id                  string               // widget identification datum
 	parent              Container            // reference to the parent container
 	x, y, width, height int                  // screen area of the widget (outer bounds)
-	hwidth, hheight     int                  // preferred content width and height (hint)
+	hwidth, hheight     int                  // preferred content size for Hint() sizing; containers may use negative values for fractional sizing
 	states              map[string]bool      // map of internal boolean states like visible
 	styles              map[string]*Style    // visual styling information
 	handlers            map[string][]Handler // event handlers
@@ -149,8 +149,12 @@ func (c *Component) ID() string {
 }
 
 // Info returns a human-readable description of the widget's current state.
-// The base implementation returns basic information about the widget's
-// type, ID, and bounds. This is primarily used for debugging and development.
+// The returned string includes: widget ID, parent ID (or "<nil>" if no parent),
+// outer bounds (x,y,w,h), and content area bounds (cx,cy,cw,ch). It also reports
+// counts of styles, handlers, and current state flags. This is primarily used for
+// debugging and development purposes. The format is:
+//
+//	id=<id>, p=<parent-id>, bounds=(<x>.<y> <w>/<h>), content=(<cx>.<cy> <cw>/<ch>), styles=<count>, handlers=<count>, states=<map>
 func (c *Component) Info() string {
 	cx, cy, cw, ch := c.Content()
 	parent := "<nil>"
@@ -364,20 +368,20 @@ func (c *Component) SetStyle(selector string, style *Style) {
 //   - default ""
 //
 // Parameters:
-//   - params: The style selector to retrieve (e.g., "part", ":state", "part:state")
+//   - selector: The style selector to retrieve (e.g., "part", ":state", "part:state")
 //
 // Returns:
 //   - *Style: The style configuration for the selector. Never returns nil; falls back to a default.
-func (c *Component) Style(params ...string) *Style {
-	// If no parameter is specified, we get the default style "" depending on the
+func (c *Component) Style(selector ...string) *Style {
+	// If no selector is specified, we get the default style "" depending on the
 	// current State()
-	var selector string
-	if len(params) > 0 {
-		selector = params[0]
+	var actual string
+	if len(selector) > 0 {
+		actual = selector[0]
 	} else {
-		selector = c.State()
-		if selector != "" {
-			selector = ":" + selector
+		actual = c.State()
+		if actual != "" {
+			actual = ":" + actual
 		}
 	}
 
@@ -387,12 +391,12 @@ func (c *Component) Style(params ...string) *Style {
 	}
 
 	// Try exact match
-	if style, ok := c.styles[selector]; ok {
+	if style, ok := c.styles[actual]; ok {
 		return style
 	}
 
 	// Fallback: if selector is "part:state", try "part" then ":state"
-	parts := stylePartRegExp.FindStringSubmatch(selector)
+	parts := stylePartRegExp.FindStringSubmatch(actual)
 	if len(parts) >= 3 {
 		// Try part only (without state)
 		if parts[1] != "" {

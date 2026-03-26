@@ -45,6 +45,11 @@ func NewTable(id string, provider TableProvider) *Table {
 	return table
 }
 
+// Refresh updates the table.
+func (t *Table) Refresh() {
+	Redraw(t)
+}
+
 // Set updates the table's data provider and recalculates the total table width.
 // This method can be used to dynamically change the table's data source.
 // The table width is calculated as the sum of all column widths plus separators.
@@ -56,6 +61,7 @@ func NewTable(id string, provider TableProvider) *Table {
 // whenever the column structure changes.
 func (t *Table) Set(provider TableProvider) {
 	t.provider = provider
+	t.tableWidth = 0
 	columns := provider.Columns()
 	for _, column := range columns {
 		t.tableWidth += column.Width
@@ -81,7 +87,7 @@ func (t *Table) Hint() (int, int) {
 	w := 0
 	h := t.provider.Length()
 	for i, column := range t.provider.Columns() {
-		if i > 1 {
+		if i > 0 {
 			w++
 		}
 		w += column.Width

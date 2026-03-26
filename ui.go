@@ -141,6 +141,7 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		redraw:    make(chan Widget, 10), // Initialize redraw channel with buffer
 		refresh:   make(chan struct{}, 1),
 	}
+	root.SetParent(ui)
 
 	// Initialize structured logging
 	if debug {
@@ -163,7 +164,6 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		}
 	}
 
-	root.SetParent(ui)
 	return ui, nil
 }
 
