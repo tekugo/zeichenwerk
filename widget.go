@@ -8,11 +8,17 @@ package zeichenwerk
 // All widgets share common functionality through BaseWidget, which provides
 // default implementations for most interface methods.
 type Widget interface {
+	// Apply applies the theme's style to this widget.
+	Apply(theme *Theme)
+
 	// Bounds returns the widget's position and size as absolute screen
 	// coordinates.
 	//
 	// Returns (x, y, width, height).
 	Bounds() (int, int, int, int)
+
+	// Class returns the style class of the widget.
+	Class() string
 
 	// Content returns the widget's content area as absolute screen coordinates.
 	// The content area is the inner area of the widget where the widget's

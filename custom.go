@@ -9,11 +9,16 @@ type Custom struct {
 }
 
 // Creates a new custom component.
-func NewCustom(id string, fn func(Widget, *Renderer)) *Custom {
+func NewCustom(id, class string, fn func(Widget, *Renderer)) *Custom {
 	return &Custom{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		renderer:  fn,
 	}
+}
+
+// Apply applies a theme style to the component.
+func (c *Custom) Apply(theme *Theme) {
+	theme.Apply(c, c.Selector("custom"), "disbled", "focused", "hovered")
 }
 
 // Renders the custom component. The rendering is delegated to the renderer

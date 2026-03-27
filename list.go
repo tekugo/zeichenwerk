@@ -48,8 +48,9 @@ type List struct {
 	disabled  []int // Indices of items that cannot be selected or activated
 
 	// ---- Display Options ----
-	numbers   bool // Show line numbers next to each item for reference
-	scrollbar bool // Display scrollbar indicator on the right edge
+	numbers     bool // Show line numbers next to each item for reference
+	scrollbar   bool // Display scrollbar indicator on the right edge
+	quickSearch bool // Enable quick-search by typing the first letter of an item
 }
 
 // NewList creates a new List widget with the specified ID and initial items.
@@ -58,19 +59,27 @@ type List struct {
 //
 // Returns:
 //   - *List: A fully initialized List widget ready for configuration and use
-func NewList(id string, items []string) *List {
+func NewList(id, class string, items []string) *List {
 	list := &List{
-		Component: Component{id: id},
-		items:     items,
-		index:     0,
-		selection: make([]int, 0, 1),
-		offset:    0,
-		numbers:   false,
-		scrollbar: true,
+		Component:   Component{id: id, class: class},
+		items:       items,
+		index:       0,
+		selection:   make([]int, 0, 1),
+		offset:      0,
+		numbers:     false,
+		scrollbar:   true,
+		quickSearch: true,
 	}
 	list.SetFlag("focusable", true)
+	list.SetFlag("search", true)
 	OnKey(list, list.handleKey)
 	return list
+}
+
+// Apply applies a theme's styles to the component.
+func (l *List) Apply(theme *Theme) {
+	theme.Apply(l, l.Selector("list"), "disabled", "focused", "hovered")
+	theme.Apply(l, l.Selector("list/highlight"), "disabled", "focused", "hovered")
 }
 
 // Items returns the list of items displayed in the list.
@@ -266,19 +275,20 @@ func (l *List) handleKey(_ Widget, event *tcell.EventKey) bool {
 		l.Dispatch(l, "activate", l.index)
 		return true
 	case tcell.KeyRune:
-		// Quick search by first letter
-		ch := event.Str()
-		for i, item := range l.items {
-			if !slices.Contains(l.disabled, i) && len(item) > 0 {
-				firstChar := string(item[0])
-				if firstChar == ch {
-					l.index = i
-					return true
+		if l.Flag("search") {
+			// Quick search by first letter
+			ch := event.Str()
+			for i, item := range l.items {
+				if !slices.Contains(l.disabled, i) && len(item) > 0 {
+					firstChar := string(item[0])
+					if firstChar == ch {
+						l.index = i
+						return true
+					}
 				}
 			}
 		}
 	}
-	l.Log(l, "debug", "handleKey false", "event", event.Str())
 	return false
 }
 

@@ -25,6 +25,8 @@ type Progress struct {
 //
 // Parameters:
 //   - id: Unique identifier for the progress widget
+//   - class: Style class
+//   - horizontal: horizontal flag oder false for vertical
 //
 // Returns:
 //   - *Progress: A new progress widget instance
@@ -34,7 +36,7 @@ type Progress struct {
 //	progress := NewProgress("download-progress")
 //	progress.SetTotal(100)   // Set determinate mode
 //	progress.SetValue(50)    // 50% complete
-func NewProgress(id string, horizontal bool) *Progress {
+func NewProgress(id, class string, horizontal bool) *Progress {
 	progress := &Progress{
 		Component:  Component{id: id},
 		value:      0,
@@ -47,6 +49,12 @@ func NewProgress(id string, horizontal bool) *Progress {
 		progress.SetHint(1, 0)
 	}
 	return progress
+}
+
+// Apply applies a theme's styles to the component.
+func (p *Progress) Apply(theme *Theme) {
+	theme.Apply(p, p.Selector("progress"))
+	theme.Apply(p, p.Selector("progress/bar"))
 }
 
 // SetValue sets the current progress value. The value is automatically clamped

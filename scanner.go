@@ -13,14 +13,20 @@ type scannerChar struct {
 	color  string  // Hex colors string, calculated automatically, if fading is > 0
 }
 
-// scannerStyle defines character sets for each scanner style.
-type scannerStyle struct {
+// scannerConfig defines character sets for each scanner style.
+type scannerConfig struct {
 	active   scannerChar   // character and color for the moving scanner
 	inactive scannerChar   // character and color for inactive (outside trail)
 	trail    []scannerChar // character and color for the scanner trail
 }
 
-var scannerConfigs = map[string]scannerStyle{
+// Tick updates the animation state on each frame.
+const (
+	holdStartFrames = 10
+	holdEndFrames   = 5
+)
+
+var scannerConfigs = map[string]scannerConfig{
 	"blocks": {
 		active:   scannerChar{ch: "■", fading: 1},
 		inactive: scannerChar{ch: "⬝", fading: 0.3},
@@ -42,8 +48,8 @@ var scannerConfigs = map[string]scannerStyle{
 type Scanner struct {
 	Animation
 
-	width int          // display width in characters
-	style scannerStyle // Scanner style
+	width  int           // display width in characters
+	config scannerConfig // Scanner configuration/style
 
 	// Animation state
 	pos  int // current position (-len(trail)+1 to width+len(trail))
@@ -56,6 +62,7 @@ type Scanner struct {
 //
 //		 Parameters:
 //	  - id: Unique identifier for the scanner widget
+//	  - class: Style class
 //	  - width: Display width in characters (must be >= 1)
 //	  - style: Character set style, key of scannerConfigs
 //
@@ -63,7 +70,7 @@ type Scanner struct {
 //   - *Scanner: Configured scanner widget ready for use
 //
 // Note: If an invalid charStyle is provided, "blocks" is used as default.
-func NewScanner(id string, width int, style string) *Scanner {
+func NewScanner(id, class string, width int, style string) *Scanner {
 	if width < 1 {
 		width = 1
 	}
@@ -73,17 +80,22 @@ func NewScanner(id string, width int, style string) *Scanner {
 
 	s := &Scanner{
 		Animation: Animation{
-			Component: Component{id: id},
+			Component: Component{id: id, class: class},
 			stop:      make(chan struct{}),
 		},
-		width: width,
-		style: scannerConfigs[style],
-		pos:   0,
-		dir:   1,
-		hold:  10, // initial hold at start
+		width:  width,
+		config: scannerConfigs[style],
+		pos:    0,
+		dir:    1,
+		hold:   10, // initial hold at start
 	}
 	s.fn = s.Tick
 	return s
+}
+
+// Apply applies a theme's styles to the component.
+func (s *Scanner) Apply(theme *Theme) {
+	theme.Apply(s, s.Selector("scanner"))
 }
 
 // Hint returns the preferred size for the scanner widget.
@@ -97,12 +109,6 @@ func (s *Scanner) Refresh() {
 	Redraw(s)
 }
 
-// Tick updates the animation state on each frame.
-const (
-	holdStartFrames = 10
-	holdEndFrames   = 5
-)
-
 func (s *Scanner) Tick() {
 	if s.hold > 0 {
 		s.hold--
@@ -114,11 +120,11 @@ func (s *Scanner) Tick() {
 	s.pos += s.dir
 
 	// Check boundaries
-	if s.pos >= s.width+len(s.style.trail) {
+	if s.pos >= s.width+len(s.config.trail) {
 		s.pos = s.width
 		s.dir = -1
 		s.hold = holdEndFrames
-	} else if s.pos < -len(s.style.trail) {
+	} else if s.pos < -len(s.config.trail) {
 		s.pos = -1
 		s.dir = 1
 		s.hold = holdStartFrames
@@ -143,10 +149,10 @@ func (s *Scanner) Render(r *Renderer) {
 	font := style.Font()
 
 	// Calculate colors for scanner parts based on fading values
-	activeColor := dimColor(baseColor, s.style.active.fading)
-	inactiveColor := dimColor(baseColor, s.style.inactive.fading)
-	trailColors := make([]string, len(s.style.trail))
-	for i, tc := range s.style.trail {
+	activeColor := dimColor(baseColor, s.config.active.fading)
+	inactiveColor := dimColor(baseColor, s.config.inactive.fading)
+	trailColors := make([]string, len(s.config.trail))
+	for i, tc := range s.config.trail {
 		trailColors[i] = dimColor(baseColor, tc.fading)
 	}
 
@@ -162,11 +168,11 @@ func (s *Scanner) Render(r *Renderer) {
 		var fg string
 
 		if col == s.pos {
-			ch = s.style.active.ch
+			ch = s.config.active.ch
 			fg = activeColor
 		} else {
 			found := false
-			for i, tc := range s.style.trail {
+			for i, tc := range s.config.trail {
 				trailPos := s.pos - (i+1)*s.dir
 				if col == trailPos {
 					ch = tc.ch
@@ -176,7 +182,7 @@ func (s *Scanner) Render(r *Renderer) {
 				}
 			}
 			if !found {
-				ch = s.style.inactive.ch
+				ch = s.config.inactive.ch
 				fg = inactiveColor
 			}
 		}

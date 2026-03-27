@@ -160,6 +160,18 @@ func (s *Style) Parent() *Style {
 	return s.parent
 }
 
+// OwnForeground returns the foreground color set directly on this style,
+// without cascading to the parent. Empty string means "not set on this style".
+func (s *Style) OwnForeground() string { return s.foreground }
+
+// OwnBackground returns the background color set directly on this style,
+// without cascading to the parent. Empty string means "not set on this style".
+func (s *Style) OwnBackground() string { return s.background }
+
+// OwnFont returns the font style set directly on this style,
+// without cascading to the parent. Empty string means "not set on this style".
+func (s *Style) OwnFont() string { return s.font }
+
 // Shadow returns the shadow style.
 // If the shadow is not set in this style, it inherits from the parent.
 // Returns an empty string if no shadow is set in the hierarchy.

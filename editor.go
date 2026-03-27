@@ -27,9 +27,9 @@ type Editor struct {
 }
 
 // NewEditor creates a new multi-line text editor widget with the specified ID.
-func NewEditor(id string) *Editor {
+func NewEditor(id, class string) *Editor {
 	e := &Editor{
-		Component: Component{id: id, hheight: 10}, // default preferred height
+		Component: Component{id: id, class: class, hheight: 10}, // default preferred height
 		content:   []*GapBuffer{NewGapBuffer(64)},
 		line:      0,
 		column:    0,
@@ -45,6 +45,15 @@ func NewEditor(id string) *Editor {
 	e.SetFlag("focusable", true)
 	OnKey(e, e.handleKey)
 	return e
+}
+
+// Apply applies a theme style to the component.
+func (e *Editor) Apply(theme *Theme) {
+	theme.Apply(e, e.Selector("editor"))
+	theme.Apply(e, e.Selector("editor/current-line"))
+	theme.Apply(e, e.Selector("editor/current-line-number"))
+	theme.Apply(e, e.Selector("editor/line-numbers"))
+	theme.Apply(e, e.Selector("editor/separator"))
 }
 
 // Cursor returns the current cursor position relative to the content area.

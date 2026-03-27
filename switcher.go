@@ -23,9 +23,9 @@ type Switcher struct {
 //
 // Returns:
 //   - *Switcher: A new switcher widget instance
-func NewSwitcher(id string) *Switcher {
+func NewSwitcher(id, class string) *Switcher {
 	return &Switcher{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		panes:     make([]Widget, 0, 3),
 	}
 }
@@ -46,6 +46,11 @@ func (s *Switcher) Add(widget Widget) {
 
 	// Check if the pane is hidden
 	widget.SetFlag("hidden", s.selected != len(s.panes)-1)
+}
+
+// Apply applies a theme's styles to the component.
+func (s *Switcher) Apply(theme *Theme) {
+	theme.Apply(s, s.Selector("switcher"))
 }
 
 // Children returns the child widgets of the switcher based on visibility preference.

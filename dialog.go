@@ -8,9 +8,9 @@ type Dialog struct {
 	child Widget // Dialog content
 }
 
-func NewDialog(id, title string) *Dialog {
+func NewDialog(id, class, title string) *Dialog {
 	return &Dialog{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		title:     title,
 	}
 }
@@ -24,6 +24,11 @@ func (d *Dialog) Add(widget Widget) {
 	}
 	d.child = widget
 	d.child.SetParent(d)
+}
+
+// Apply applies a theme style to the component.
+func (d *Dialog) Apply(theme *Theme) {
+	theme.Apply(d, d.Selector("custom"))
 }
 
 func (d *Dialog) Children() []Widget {

@@ -17,16 +17,22 @@ type Static struct {
 //
 // Parameters:
 //   - id: Unique identifier for the static widget
+//   - class: Style class
 //   - text: The initial text content to display
 //
 // Returns:
 //   - *Static: A new static widget instance
-func NewStatic(id string, text string) *Static {
+func NewStatic(id, class string, text string) *Static {
 	return &Static{
-		Component: Component{id: id, hwidth: utf8.RuneCountInString(text), hheight: 1},
+		Component: Component{id: id, class: class, hwidth: utf8.RuneCountInString(text), hheight: 1},
 		Text:      text,
 		Alignment: "left", // Set default alignment
 	}
+}
+
+// Apply applies a theme's styles to the component.
+func (s *Static) Apply(theme *Theme) {
+	theme.Apply(s, s.Selector("static"))
 }
 
 // Render renders the static widget to the screen using the Renderer.

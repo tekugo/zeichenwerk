@@ -28,9 +28,9 @@ type Box struct {
 //
 // Returns:
 //   - *Box: A new box widget instance ready to contain a child widget
-func NewBox(id, title string) *Box {
+func NewBox(id, class, title string) *Box {
 	return &Box{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		Title:     title,
 	}
 }
@@ -52,6 +52,11 @@ func (b *Box) Add(widget Widget) {
 	}
 	b.child = widget
 	b.child.SetParent(b)
+}
+
+// Apply applies a theme style to the component.
+func (b *Box) Apply(theme *Theme) {
+	theme.Apply(b, b.Selector("box"))
 }
 
 // Children returns a slice containing the single child widget of this box.

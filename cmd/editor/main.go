@@ -8,16 +8,14 @@ import (
 
 func main() {
 	// Create the editor widget
-	editor := NewEditor("main-editor")
+	editor := NewEditor("main-editor", "")
 
 	// Configure editor settings
 	editor.ShowLineNumbers(true)
 	editor.SetTabWidth(4)
 	editor.UseSpaces(false)
 	editor.SetAutoIndent(true)
-
-	builder := NewBuilder(TokyoNightTheme())
-	builder.Apply(editor)
+	editor.Apply(TokyoNightTheme())
 
 	// Load some sample content
 	sampleText := `// Welcome to the Zeichenwerk Editor!
@@ -58,7 +56,7 @@ func main() {
 	editor.Load(sampleText)
 
 	// Create a container for the editor
-	container := NewBox("editor-container", "Text Editor Demo")
+	container := NewBox("editor-container", "", "Text Editor Demo")
 	container.Add(editor)
 	editor.SetParent(container)
 

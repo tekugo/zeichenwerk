@@ -41,9 +41,9 @@ const (
 //
 // Returns:
 //   - *Canvas: A new canvas instance ready for use
-func NewCanvas(id string, width, height int) *Canvas {
+func NewCanvas(id, class string, width, height int) *Canvas {
 	c := &Canvas{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		cursorX:   0,
 		cursorY:   0,
 		mode:      ModeNormal, // start in normal mode
@@ -65,6 +65,11 @@ func NewCanvas(id string, width, height int) *Canvas {
 	OnKey(c, c.handleKey)
 
 	return c
+}
+
+// Apply applies a theme style to the component.
+func (c *Canvas) Apply(theme *Theme) {
+	theme.Apply(c, c.Selector("canvas"))
 }
 
 // CellAt returns a pointer to the cell at the specified position, or nil if
@@ -306,6 +311,15 @@ func (c *Canvas) Render(r *Renderer) {
 				}
 			}
 		}
+	}
+}
+
+// ClearKeyHandlers removes all registered key event handlers from the canvas.
+// This allows external code to replace the default movement and insertion
+// behaviour entirely by registering a custom handler via OnKey afterwards.
+func (c *Canvas) ClearKeyHandlers() {
+	if c.handlers != nil {
+		delete(c.handlers, "key")
 	}
 }
 

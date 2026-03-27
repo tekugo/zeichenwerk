@@ -112,7 +112,7 @@ func box(builder *Builder) {
 // Canvas demo
 func canvas(builder *Builder) {
 	// Create a 40x20 canvas with a simple pattern
-	c := NewCanvas("demo-canvas", 40, 20)
+	c := NewCanvas("demo-canvas", "", 40, 20)
 
 	// Set styles for normal and insert modes
 	normalStyle := NewStyle("").WithColors("white", "black").WithCursor("block")
@@ -211,7 +211,7 @@ func checkbox(builder *Builder) {
 }
 
 func custom() Widget {
-	result := NewCustom("custom", func(widget Widget, r *Renderer) {
+	result := NewCustom("custom", "", func(widget Widget, r *Renderer) {
 		_, _, width, height := widget.Content()
 		for x := 10; x < width; x += 10 {
 			for y := 10; y < height; y += 10 {
@@ -319,29 +319,29 @@ func progress(builder *Builder) {
 		Static("progress-title", "Progress Widget Demo").Padding(0, 0, 1, 0).
 		Flex("progress-content", false, "stretch", 1)
 	// Indeterminate progress
-	pIndet := NewProgress("progress-indet", true)
+	pIndet := NewProgress("progress-indet", "", true)
 	builder.Add(pIndet)
 	builder.Spacer().Size(0, 1)
 	// Determinate: 25%
-	p25 := NewProgress("progress-25", true)
+	p25 := NewProgress("progress-25", "", true)
 	p25.SetTotal(100)
 	p25.SetValue(25)
 	builder.Add(p25)
 	builder.Spacer().Size(0, 1)
 	// 50%
-	p50 := NewProgress("progress-50", true)
+	p50 := NewProgress("progress-50", "", true)
 	p50.SetTotal(100)
 	p50.SetValue(50)
 	builder.Add(p50)
 	builder.Spacer().Size(0, 1)
 	// 75%
-	p75 := NewProgress("progress-75", true)
+	p75 := NewProgress("progress-75", "", true)
 	p75.SetTotal(100)
 	p75.SetValue(75)
 	builder.Add(p75)
 	builder.Spacer().Size(0, 1)
 	// 100%
-	p100 := NewProgress("progress-full", true)
+	p100 := NewProgress("progress-full", "", true)
 	p100.SetTotal(100)
 	p100.SetValue(100)
 	builder.Add(p100)

@@ -22,9 +22,9 @@ type Select struct {
 // NewSelect creates a new Select widget with the given ID and options.
 // The args parameter should contain alternating value and text strings
 // (value1, text1, value2, text2, ...).
-func NewSelect(id string, args ...string) *Select {
+func NewSelect(id, class string, args ...string) *Select {
 	s := &Select{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		options:   make([]option, 0, len(args)/2),
 	}
 	s.SetFlag("focusable", true)
@@ -33,6 +33,11 @@ func NewSelect(id string, args ...string) *Select {
 	}
 	OnKey(s, s.handleKey)
 	return s
+}
+
+// Apply applies a theme's styles to the component.
+func (s *Select) Apply(theme *Theme) {
+	theme.Apply(s, s.Selector("select"), "disabled", "focused", "hovered")
 }
 
 // Hint returns the preferred size of the Select widget as width and height in characters.

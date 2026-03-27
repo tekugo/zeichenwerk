@@ -25,15 +25,16 @@ type Text struct {
 //
 // Parameters:
 //   - id: Unique identifier for the text widget
+//   - class: Style class
 //   - content: Initial lines of text to display
 //   - follow: Enable auto-follow mode to automatically scroll to newest content
 //   - max: Maximum number of lines to retain (0 for unlimited, >0 for rotation)
 //
 // Returns:
 //   - *Text: A new Text widget instance ready for display
-func NewText(id string, content []string, follow bool, max int) *Text {
+func NewText(id, class string, content []string, follow bool, max int) *Text {
 	text := &Text{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		content:   content,
 		follow:    follow,
 		max:       max,
@@ -43,6 +44,11 @@ func NewText(id string, content []string, follow bool, max int) *Text {
 	text.SetFlag("focusable", true)
 	OnKey(text, text.handleKey)
 	return text
+}
+
+// Apply applies a theme's styles to the component.
+func (t *Text) Apply(theme *Theme) {
+	theme.Apply(t, t.Selector("text"))
 }
 
 // Refresh refreshes the widget.

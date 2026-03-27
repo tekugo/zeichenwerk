@@ -24,9 +24,9 @@ type Form struct {
 //   - id: Unique identifier for the form
 //   - title: Optional title (may be used by Theme or displayed by FormGroup)
 //   - data: Pointer to the struct containing form data
-func NewForm(id, title string, data any) *Form {
+func NewForm(id, class, title string, data any) *Form {
 	f := &Form{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		title:     title,
 		data:      data,
 	}
@@ -46,6 +46,11 @@ func (f *Form) Add(widget Widget) {
 	}
 	f.child = widget
 	f.child.SetParent(f)
+}
+
+// Apply applies a theme's styles to the component.
+func (f *Form) Apply(theme *Theme) {
+	theme.Apply(f, f.Selector("form"))
 }
 
 // Children returns a slice containing the child widget of the form.

@@ -40,6 +40,7 @@ type Spinner struct {
 //
 // Parameters:
 //   - id: Unique identifier for the spinner widget
+//   - class: Style class
 //   - sequence: Sequence of Unicode characters to cycle through for animation
 //
 // Returns:
@@ -47,16 +48,21 @@ type Spinner struct {
 //
 // Note: The spinner is not focusable and starts with the first character
 // in the sequence. An empty runes slice will cause runtime panics.
-func NewSpinner(id string, sequence string) *Spinner {
+func NewSpinner(id, class string, sequence string) *Spinner {
 	spinner := &Spinner{
 		Animation: Animation{
-			Component: Component{id: id},
+			Component: Component{id: id, class: class},
 			stop:      make(chan struct{}),
 		},
 		sequence: strings.Split(sequence, " "),
 	}
 	spinner.fn = spinner.Tick
 	return spinner
+}
+
+// Apply applies a theme's styles to the component.
+func (s *Spinner) Apply(theme *Theme) {
+	theme.Apply(s, s.Selector("spinner"))
 }
 
 // Hint returns the preferred size for the spinner widget.

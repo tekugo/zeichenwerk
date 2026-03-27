@@ -29,9 +29,9 @@ type Checkbox struct {
 //		fmt.Printf("Checkbox is now: %v\n", data[0].(bool))
 //		return true
 //	})
-func NewCheckbox(id, text string, checked bool) *Checkbox {
+func NewCheckbox(id, class, text string, checked bool) *Checkbox {
 	checkbox := &Checkbox{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		text:      text,
 	}
 	checkbox.SetHint(len(text)+4, 1)
@@ -41,6 +41,11 @@ func NewCheckbox(id, text string, checked bool) *Checkbox {
 	OnKey(checkbox, checkbox.handleKey)
 	OnMouse(checkbox, checkbox.handleMouse)
 	return checkbox
+}
+
+// Apply applies a theme style to the component.
+func (c *Checkbox) Apply(theme *Theme) {
+	theme.Apply(c, c.Selector("checkbox"), "checked", "disabled", "focused", "hovered")
 }
 
 // Refresh redraws the widget.

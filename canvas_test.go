@@ -6,7 +6,7 @@ import (
 
 func TestCanvas(t *testing.T) {
 	// Create a small canvas
-	c := NewCanvas("test-canvas", 10, 5)
+	c := NewCanvas("test-canvas", "", 10, 5)
 
 	// Check initial state (not focused - cursor hidden)
 	x, y, cs := c.Cursor()

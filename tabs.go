@@ -20,9 +20,9 @@ type Tabs struct {
 }
 
 // NewTabs creates a new tabs widget with the specified ID.
-func NewTabs(id string) *Tabs {
+func NewTabs(id, class string) *Tabs {
 	tabs := &Tabs{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		tabs:      make([]string, 0),
 		selected:  0,
 		index:     0,
@@ -35,6 +35,14 @@ func NewTabs(id string) *Tabs {
 // Add appends a new tab with the specified title to the tabs widget.
 func (t *Tabs) Add(title string) {
 	t.tabs = append(t.tabs, title)
+}
+
+// Apply applies a theme's styles to the component.
+func (t *Tabs) Apply(theme *Theme) {
+	theme.Apply(t, t.Selector("tabs"), "disabled", "focused")
+	theme.Apply(t, t.Selector("tabs/hightlight"), "disabled", "focused")
+	theme.Apply(t, t.Selector("tabs/line"), "disabled", "focused")
+	theme.Apply(t, t.Selector("tabs/line-highlight"), "disabled", "focused")
 }
 
 // Hint returns the preferred size for the tabs widget.
@@ -230,15 +238,15 @@ func (t *Tabs) Render(r *Renderer) {
 		if highlight == nil {
 			highlight = t.Style("highlight")
 		}
-		line = t.Style("highlight-line:focused")
+		line = t.Style("line-highlight:focused")
 		if line == nil {
-			line = t.Style("highlight-line")
+			line = t.Style("line-highlight")
 		}
 	} else {
 		// Use normal styles when tabs widget doesn't have focus
 		normal = t.Style()
 		highlight = t.Style("highlight")
-		line = t.Style("highlight-line")
+		line = t.Style("line-highlight")
 	}
 
 	cx := x

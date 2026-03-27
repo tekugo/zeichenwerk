@@ -125,9 +125,9 @@ type Digits struct {
 }
 
 // NewDigits creates a digits widget with the given ID and initial text.
-func NewDigits(id, text string) *Digits {
+func NewDigits(id, class, text string) *Digits {
 	d := &Digits{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		Text:      text,
 	}
 	// Compute preferred size: sum of character widths, height = 3
@@ -140,6 +140,11 @@ func NewDigits(id, text string) *Digits {
 	d.hwidth = width
 	d.hheight = 3
 	return d
+}
+
+// Apply applies a theme style to the component.
+func (d *Digits) Apply(theme *Theme) {
+	theme.Apply(d, d.Selector("digits"))
 }
 
 // Render draws the digits widget using the renderer.

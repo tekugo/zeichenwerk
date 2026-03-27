@@ -7,20 +7,25 @@ type Rule struct {
 	style      string
 }
 
-func NewHRule(style string) *Rule {
+func NewHRule(class, style string) *Rule {
 	return &Rule{
-		Component:  Component{id: "hrule", hheight: 1},
+		Component:  Component{id: "hrule", class: class, hheight: 1},
 		horizontal: true,
 		style:      style,
 	}
 }
 
-func NewVRule(style string) *Rule {
+func NewVRule(class, style string) *Rule {
 	return &Rule{
-		Component:  Component{id: "vrule", hwidth: 1},
+		Component:  Component{id: "vrule", class: class, hwidth: 1},
 		horizontal: false,
 		style:      style,
 	}
+}
+
+// Apply applies a theme's styles to the component.
+func (c *Rule) Apply(theme *Theme) {
+	theme.Apply(c, c.Selector("rule"))
 }
 
 // Render the rule

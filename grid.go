@@ -58,6 +58,7 @@ type Grid struct {
 //
 // Parameters:
 //   - id: Unique identifier for the grid widget
+//   - class: Style class
 //   - rows: Number of rows in the grid
 //   - columns: Number of columns in the grid
 //   - lines: Whether to draw grid lines between cells for visual separation
@@ -77,9 +78,9 @@ type Grid struct {
 //
 //	// Create a 2x4 grid without grid lines
 //	layout := NewGrid("layout", 2, 4, false)
-func NewGrid(id string, rows, columns int, lines bool) *Grid {
+func NewGrid(id, class string, rows, columns int, lines bool) *Grid {
 	grid := Grid{
-		Component:  Component{id: id},
+		Component:  Component{id: id, class: class},
 		cells:      make([]*cell, 0, rows*columns),
 		rows:       make([]int, rows),
 		columns:    make([]int, columns),
@@ -99,6 +100,11 @@ func NewGrid(id string, rows, columns int, lines bool) *Grid {
 		grid.columns[i] = -1 // Default to fractional columns (flexible sizing)
 	}
 	return &grid
+}
+
+// Apply applies a theme's styles to the component.
+func (g *Grid) Apply(theme *Theme) {
+	theme.Apply(g, g.Selector("grid"))
 }
 
 // Children returns a slice of all child widgets contained in the grid cells.

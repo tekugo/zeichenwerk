@@ -35,6 +35,7 @@ var stylePartRegExp = regexp.MustCompile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 // Also do not forget to add it to the builder for easy building and styling.
 type Component struct {
 	id                  string               // widget identification datum
+	class               string               // style class for styling
 	parent              Container            // reference to the parent container
 	x, y, width, height int                  // screen area of the widget (outer bounds)
 	hwidth, hheight     int                  // preferred content size for Hint() sizing; containers may use negative values for fractional sizing
@@ -44,8 +45,13 @@ type Component struct {
 }
 
 // Creates a new component.
-func NewComponent(id string) *Component {
-	return &Component{id: id}
+func NewComponent(id, class string) *Component {
+	return &Component{id: id, class: class}
+}
+
+// Apply applies a theme style to the component.
+func (c *Component) Apply(theme *Theme) {
+	theme.Apply(c, c.Selector("component"))
 }
 
 // Bounds returns the widget's outer boundaries as (x, y, width, height).
@@ -54,6 +60,11 @@ func NewComponent(id string) *Component {
 // coordinates.
 func (c *Component) Bounds() (int, int, int, int) {
 	return c.x, c.y, c.width, c.height
+}
+
+// Class returns the style class of the component.
+func (c *Component) Class() string {
+	return c.class
 }
 
 // Content returns the widget's inner content area as (x, y, width, height).
@@ -270,6 +281,21 @@ func (c *Component) Render(r *Renderer) {
 		r.Border(c.x+margin.Left, c.y+margin.Top, c.width-margin.Left-margin.Right, c.height-margin.Top-margin.Bottom, border)
 		r.Set(style.Foreground(), style.Background(), style.Font())
 	}
+}
+
+// Selector constructs a CSS-like selector string for styling widgets.
+// It combines the widget type (t) with optional class and id modifiers.
+// Format: "type.class#id" where class and id are optional.
+// Example: "button.primary#submit" for a button with class "primary" and
+// id "submit".
+func (c *Component) Selector(t string) string {
+	if c.class != "" {
+		t = t + "." + c.class
+	}
+	if c.id != "" {
+		t = t + "#" + c.id
+	}
+	return t
 }
 
 // SetBounds sets the widget's position and size as (x, y, width, height).

@@ -20,7 +20,8 @@ type Table struct {
 // borders enabled. The table is focusable by default to support keyboard navigation.
 //
 // Parameters:
-//   - id: Unique identifier for the table widget
+//   - id: Unique identAifier for the table widget
+//   - class: Style class
 //   - provider: TableProvider implementation that supplies the table data
 //
 // Returns:
@@ -32,9 +33,9 @@ type Table struct {
 //	data := [][]string{{"John", "25", "NYC"}, {"Jane", "30", "LA"}}
 //	provider := NewArrayTableProvider(headers, data)
 //	table := NewTable("my-table", provider)
-func NewTable(id string, provider TableProvider) *Table {
+func NewTable(id, class string, provider TableProvider) *Table {
 	table := &Table{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		grid:      &Border{InnerH: "-", InnerV: "|"},
 		inner:     true,
 		outer:     true,
@@ -43,6 +44,14 @@ func NewTable(id string, provider TableProvider) *Table {
 	table.Set(provider)
 	OnKey(table, table.handleKey)
 	return table
+}
+
+// Apply applies a theme's styles to the component.
+func (t *Table) Apply(theme *Theme) {
+	theme.Apply(t, t.Selector("table"), "disabled", "focused")
+	theme.Apply(t, t.Selector("table/grid"), "disabled", "focused")
+	theme.Apply(t, t.Selector("table/header"), "disabled", "focused")
+	theme.Apply(t, t.Selector("table/highlight"), "disabled", "focused")
 }
 
 // Refresh updates the table.

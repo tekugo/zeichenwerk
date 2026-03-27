@@ -24,7 +24,7 @@ type Input struct {
 // NewInput creates a new text input widget with the specified ID and default configuration.
 // The input is initialized as a focusable widget ready for text entry with sensible
 // defaults for general-purpose text input scenarios.
-func NewInput(id string, params ...string) *Input {
+func NewInput(id, class string, params ...string) *Input {
 	var text, placeholder, mask string
 	if len(params) > 0 {
 		text = params[0]
@@ -39,7 +39,7 @@ func NewInput(id string, params ...string) *Input {
 	}
 
 	input := &Input{
-		Component:   Component{id: id, hheight: 1},
+		Component:   Component{id: id, class: class, hheight: 1},
 		buf:         NewGapBufferFromString(text, 16),
 		pos:         0,
 		offset:      0,
@@ -55,6 +55,11 @@ func NewInput(id string, params ...string) *Input {
 }
 
 // ---- Widget Methods -------------------------------------------------------
+
+// Apply applies a theme's styles to the component.
+func (i *Input) Apply(theme *Theme) {
+	theme.Apply(i, i.Selector("input"), "disabled", "focused", "hovered")
+}
 
 // Cursor returns the current cursor position relative to the visible text
 // area. The cursor position is adjusted for horizontal scrolling, so it

@@ -37,9 +37,9 @@ type Flex struct {
 //
 //	// Create a vertical flex with stretch alignment
 //	vflex := NewFlex("sidebar", false, "stretch", 1)
-func NewFlex(id string, horizontal bool, alignment string, spacing int) *Flex {
+func NewFlex(id, class string, horizontal bool, alignment string, spacing int) *Flex {
 	return &Flex{
-		Component:  Component{id: id},
+		Component:  Component{id: id, class: class},
 		horizontal: horizontal,
 		alignment:  alignment,
 		spacing:    spacing,
@@ -57,6 +57,11 @@ func (f *Flex) Add(widget Widget) {
 		widget.SetParent(f)
 		f.children = append(f.children, widget)
 	}
+}
+
+// Apply applies a theme's styles to the component.
+func (f *Flex) Apply(theme *Theme) {
+	theme.Apply(f, f.Selector("flex"))
 }
 
 // Children returns a slice of all child widgets in this flex container.

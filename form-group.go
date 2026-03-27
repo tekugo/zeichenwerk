@@ -14,9 +14,9 @@ type FormGroup struct {
 	lines      [][]*field
 }
 
-func NewFormGroup(id, title string, horizontal bool, spacing int) *FormGroup {
+func NewFormGroup(id, class, title string, horizontal bool, spacing int) *FormGroup {
 	fg := &FormGroup{
-		Component:  Component{id: id},
+		Component:  Component{id: id, class: class},
 		title:      title,
 		horizontal: horizontal,
 		spacing:    spacing,
@@ -34,6 +34,11 @@ func (fg *FormGroup) Add(line int, label string, widget Widget) {
 	f := &field{label: label, widget: widget}
 	fg.lines[line] = append(fg.lines[line], f)
 	widget.SetParent(fg)
+}
+
+// Apply applies a theme's styles to the component.
+func (fg *FormGroup) Apply(theme *Theme) {
+	theme.Apply(fg, fg.Selector("form-group"))
 }
 
 func (fg *FormGroup) Children() []Widget {

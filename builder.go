@@ -1,7 +1,6 @@
 package zeichenwerk
 
 import (
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -119,88 +118,12 @@ func (b *Builder) Add(widget Widget) *Builder {
 			top.Add(widget)
 		}
 	}
-	b.Apply(widget)
+	widget.Apply(b.theme)
 	b.current = widget
 	if container, ok := widget.(Container); ok {
 		b.stack.Push(container)
 	}
 	return b
-}
-
-// Apply applies the styles of a theme to a widget based on its type and ID.
-// The theme styles are applied automatically when the builder is used,
-// but if widgets are created outside of the builder, they can be styled
-// using this method.
-func (b *Builder) Apply(widget Widget) {
-	switch widget := widget.(type) {
-	case *Box:
-		b.theme.Apply(widget, b.selector("box", widget.ID()))
-		b.theme.Apply(widget, b.selector("box/title", widget.ID()))
-		b.theme.Apply(widget, b.selector("box/shadow", widget.ID()))
-	case *Button:
-		b.theme.Apply(widget, b.selector("button", widget.ID()), "disabled", "focused")
-	case *Canvas:
-		b.theme.Apply(widget, b.selector("canvas", widget.ID()), "disabled", "focused")
-	case *Checkbox:
-		b.theme.Apply(widget, b.selector("checkbox", widget.ID()), "disabled", "focused", "hovered")
-	case *Component:
-		b.theme.Apply(widget, b.selector("component", widget.ID()))
-	case *Custom:
-		b.theme.Apply(widget, b.selector("custom", widget.ID()))
-	case *Dialog:
-		b.theme.Apply(widget, b.selector("dialog", widget.ID()))
-		b.theme.Apply(widget, b.selector("dialog/title", widget.ID()))
-	case *Digits:
-		b.theme.Apply(widget, b.selector("digits", widget.ID()))
-	case *Editor:
-		b.theme.Apply(widget, b.selector("editor", widget.ID()))
-	case *Flex:
-		b.theme.Apply(widget, b.selector("flex", widget.ID()))
-	case *Form:
-		b.theme.Apply(widget, b.selector("form", widget.ID()))
-	case *FormGroup:
-		b.theme.Apply(widget, b.selector("formgroup", widget.ID()))
-	case *Grid:
-		b.theme.Apply(widget, b.selector("grid", widget.ID()))
-	case *Input:
-		b.theme.Apply(widget, b.selector("input", widget.ID()), "disabled", "focused")
-	case *List:
-		b.theme.Apply(widget, b.selector("list", widget.ID()), "disabled", "focused")
-		b.theme.Apply(widget, b.selector("list/highlight", widget.ID()), "focused")
-	case *Progress:
-		b.theme.Apply(widget, b.selector("progress", widget.ID()), "disabled")
-		b.theme.Apply(widget, b.selector("progress/bar", widget.ID()), "disabled")
-	case *Rule:
-		b.theme.Apply(widget, b.selector("rule", widget.ID()))
-	case *Scanner:
-		b.theme.Apply(widget, b.selector("scanner", widget.ID()))
-	case *Select:
-		b.theme.Apply(widget, b.selector("select", widget.ID()), "disabled", "focused")
-	case *Spinner:
-		b.theme.Apply(widget, b.selector("spinner", widget.ID()))
-	case *Static:
-		b.theme.Apply(widget, b.selector("static", widget.ID()))
-	case *Styled:
-		b.theme.Apply(widget, b.selector("styled", widget.ID()))
-	case *Switcher:
-		b.theme.Apply(widget, b.selector("switcher", widget.ID()))
-	case *Table:
-		b.theme.Apply(widget, b.selector("table", widget.ID()), "focused")
-		b.theme.Apply(widget, b.selector("table/grid", widget.ID()), "focused")
-		b.theme.Apply(widget, b.selector("table/header", widget.ID()), "focused")
-		b.theme.Apply(widget, b.selector("table/highlight", widget.ID()), "focused")
-	case *Tabs:
-		b.theme.Apply(widget, b.selector("tabs", widget.ID()), "focused")
-		b.theme.Apply(widget, b.selector("tabs/line", widget.ID()), "focused")
-		b.theme.Apply(widget, b.selector("tabs/highlight", widget.ID()), "focused")
-		b.theme.Apply(widget, b.selector("tabs/highlight-line", widget.ID()), "focused")
-	case *Text:
-		b.theme.Apply(widget, b.selector("text", widget.ID()))
-	case *Viewport:
-		b.theme.Apply(widget, b.selector("viewport", widget.ID()))
-	default:
-		panic(fmt.Errorf("no style for widget type %T", widget))
-	}
 }
 
 // End finalizes the current container and pops it from the stack.
@@ -219,42 +142,42 @@ func (b *Builder) End() *Builder {
 // The box is automatically styled with theme styles for the border and
 // the title.
 func (b *Builder) Box(id, title string) *Builder {
-	box := NewBox(id, title)
+	box := NewBox(id, b.class, title)
 	b.Add(box)
 	return b
 }
 
 // Button creates a new button widget with the specified id and display text.
 func (b *Builder) Button(id, text string) *Builder {
-	button := NewButton(id, text)
+	button := NewButton(id, b.class, text)
 	b.Add(button)
 	return b
 }
 
 // Checkbox creates a new checkbox widget with the specified id and display text.
 func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
-	checkbox := NewCheckbox(id, text, checked)
+	checkbox := NewCheckbox(id, b.class, text, checked)
 	b.Add(checkbox)
 	return b
 }
 
 // Dialog creates a new dialog with the specified id and title.
 func (b *Builder) Dialog(id, title string) *Builder {
-	d := NewDialog(id, title)
+	d := NewDialog(id, b.class, title)
 	b.Add(d)
 	return b
 }
 
 // Digits creates a new digits widget with the specified id and text.
 func (b *Builder) Digits(id, text string) *Builder {
-	d := NewDigits(id, text)
+	d := NewDigits(id, b.class, text)
 	b.Add(d)
 	return b
 }
 
 // Editor creates a new editor widget for multi-line text editing.
 func (b *Builder) Editor(id string) *Builder {
-	editor := NewEditor(id)
+	editor := NewEditor(id, b.class)
 	b.Add(editor)
 	return b
 }
@@ -267,7 +190,7 @@ func (b *Builder) Editor(id string) *Builder {
 //   - alignment: how children are aligned ("start", "center", "end", "stretch")
 //   - spacing: cells between child widgets (columns or rows)
 func (b *Builder) Flex(id string, horizontal bool, alignment string, spacing int) *Builder {
-	flex := NewFlex(id, horizontal, alignment, spacing)
+	flex := NewFlex(id, b.class, horizontal, alignment, spacing)
 	b.Add(flex)
 	return b
 }
@@ -275,7 +198,7 @@ func (b *Builder) Flex(id string, horizontal bool, alignment string, spacing int
 // Form creates a new form widget with the specified id, title, and bound data.
 // The form is added to the current container and styled with the theme.
 func (b *Builder) Form(id, title string, data any) *Builder {
-	form := NewForm(id, title, data)
+	form := NewForm(id, b.class, title, data)
 	b.Add(form)
 	return b
 }
@@ -290,7 +213,7 @@ func (b *Builder) Form(id, title string, data any) *Builder {
 //   - horizontal: true for horizontal placement, otherwise vertical
 //   - spacing: vertical spacing between lines
 func (b *Builder) Group(id, title, name string, horizontal bool, spacing int) *Builder {
-	group := NewFormGroup(id, title, horizontal, spacing)
+	group := NewFormGroup(id, b.class, title, horizontal, spacing)
 	b.Add(group)
 
 	// If the parent of this group is a Form, auto-generate controls
@@ -361,25 +284,25 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 
 	switch control {
 	case "checkbox":
-		checkbox := NewCheckbox(id, id, v.Bool())
-		b.Apply(checkbox)
+		checkbox := NewCheckbox(id, b.class, id, v.Bool())
+		checkbox.Apply(b.theme)
 		checkbox.SetFlag("checked", v.Bool())
 		return checkbox
 	case "password":
-		input := NewInput(id, "", "", "*")
+		input := NewInput(id, b.class, "", "", "*")
 		input.SetFlag("masked", true)
-		b.Apply(input)
+		input.Apply(b.theme)
 		input.SetText(v.String())
 		return input
 	case "select":
 		o := strings.Split(options, ",")
-		s := NewSelect(id, o...)
-		b.Apply(s)
+		s := NewSelect(id, b.class, o...)
+		s.Apply(b.theme)
 		s.Select(v.String())
 		return s
 	default:
-		input := NewInput(id)
-		b.Apply(input)
+		input := NewInput(id, b.class)
+		input.Apply(b.theme)
 		input.SetText(v.String())
 		return input
 	}
@@ -399,14 +322,14 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 // at one fraction each (i.e. -1). Sizes can be adjusted using the Rows
 // and Columns method.
 func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
-	grid := NewGrid(id, rows, columns, lines)
+	grid := NewGrid(id, b.class, rows, columns, lines)
 	b.Add(grid)
 	return b
 }
 
 // HRule creates a horizontal rule.
 func (b *Builder) HRule(style string) *Builder {
-	rule := NewHRule(style)
+	rule := NewHRule(b.class, style)
 	b.Add(rule)
 	return b
 }
@@ -416,7 +339,7 @@ func (b *Builder) HRule(style string) *Builder {
 // Parameters:
 //   - id: unique identifier for the input widget
 func (b *Builder) Input(id string, params ...string) *Builder {
-	input := NewInput(id, params...)
+	input := NewInput(id, b.class, params...)
 	b.Add(input)
 	return b
 }
@@ -427,7 +350,7 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 //   - id: unique identifier for the list widget
 //   - values: slice of strings to display as list items
 func (b *Builder) List(id string, values ...string) *Builder {
-	list := NewList(id, values)
+	list := NewList(id, b.class, values)
 	b.Add(list)
 	return b
 }
@@ -436,21 +359,21 @@ func (b *Builder) List(id string, values ...string) *Builder {
 // The progress is initially indeterminate (total=0). Use SetTotal and SetValue
 // to configure it after retrieval via Find.
 func (b *Builder) Progress(id string, horizontal bool) *Builder {
-	p := NewProgress(id, horizontal)
+	p := NewProgress(id, b.class, horizontal)
 	b.Add(p)
 	return b
 }
 
 // Select creates a select dropdown.
 func (b *Builder) Select(id string, args ...string) *Builder {
-	s := NewSelect(id, args...)
+	s := NewSelect(id, b.class, args...)
 	b.Add(s)
 	return b
 }
 
 // Spinner creates a new spinner widget for animated spinners.
 func (b *Builder) Spinner(id string, sequence string) *Builder {
-	spinner := NewSpinner(id, sequence)
+	spinner := NewSpinner(id, b.class, sequence)
 	b.Add(spinner)
 	return b
 }
@@ -463,13 +386,13 @@ func (b *Builder) Spinner(id string, sequence string) *Builder {
 //   - width: display width in characters (e.g., 8)
 //   - charStyle: character set style, either "blocks" or "diamonds"
 func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
-	scanner := NewScanner(id, width, charStyle)
+	scanner := NewScanner(id, b.class, width, charStyle)
 	b.Add(scanner)
 	return b
 }
 
 func (b *Builder) Spacer() *Builder {
-	spacer := NewComponent("spacer")
+	spacer := NewComponent("spacer", b.class)
 	b.Add(spacer)
 	return b
 }
@@ -477,7 +400,7 @@ func (b *Builder) Spacer() *Builder {
 // Static creates a new static widget with the specified id and text.
 // The static widget is styled with theme styles for the text.
 func (b *Builder) Static(id, text string) *Builder {
-	static := NewStatic(id, text)
+	static := NewStatic(id, b.class, text)
 	b.Add(static)
 	return b
 }
@@ -485,7 +408,7 @@ func (b *Builder) Static(id, text string) *Builder {
 // Styled creates a new styled text widget with the specified id and text.
 // The styled widget is styled with theme styles for the text.
 func (b *Builder) Styled(id string, text string) *Builder {
-	styled := NewStyled(id, text)
+	styled := NewStyled(id, b.class, text)
 	b.Add(styled)
 	return b
 }
@@ -495,7 +418,7 @@ func (b *Builder) Styled(id string, text string) *Builder {
 // tab switching. If so, every pane should be accompanied by a Tab() call
 // with the tab title.
 func (b *Builder) Switcher(id string, connect bool) *Builder {
-	switcher := NewSwitcher(id)
+	switcher := NewSwitcher(id, b.class)
 	b.Add(switcher)
 	if connect && b.tabs != nil {
 		b.tabs.On("activate", func(_ Widget, _ string, params ...any) bool {
@@ -520,14 +443,14 @@ func (b *Builder) Tab(name string) *Builder {
 
 // Table creates a table widget with the passed data provider.
 func (b *Builder) Table(id string, provider TableProvider) *Builder {
-	table := NewTable(id, provider)
+	table := NewTable(id, b.class, provider)
 	b.Add(table)
 	return b
 }
 
 // Tabs creates a new tabs widget with the specified id and names.
 func (b *Builder) Tabs(id string, names ...string) *Builder {
-	tabs := NewTabs(id)
+	tabs := NewTabs(id, b.class)
 	for _, name := range names {
 		tabs.Add(name)
 	}
@@ -539,21 +462,21 @@ func (b *Builder) Tabs(id string, names ...string) *Builder {
 // Text creates a new text widget with the specified id and text.
 // The text widget is styled with theme styles for the text.
 func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
-	text := NewText(id, content, follow, max)
+	text := NewText(id, b.class, content, follow, max)
 	b.Add(text)
 	return b
 }
 
 // Viewport adds a scrollable viewport
 func (b *Builder) Viewport(id, title string) *Builder {
-	viewport := NewViewport(id, title)
+	viewport := NewViewport(id, b.class, title)
 	b.Add(viewport)
 	return b
 }
 
 // VRule adds a vertical rule.
 func (b *Builder) VRule(style string) *Builder {
-	rule := NewVRule(style)
+	rule := NewVRule(b.class, style)
 	b.Add(rule)
 	return b
 }

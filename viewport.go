@@ -9,9 +9,9 @@ type Viewport struct {
 	tx, ty int    // Current horizontal and vertical scroll offsets
 }
 
-func NewViewport(id, title string) *Viewport {
+func NewViewport(id, class, title string) *Viewport {
 	viewport := &Viewport{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		Title:     title,
 	}
 	viewport.SetFlag("focusable", true)
@@ -25,6 +25,11 @@ func (v *Viewport) Add(widget Widget) {
 	}
 	v.child = widget
 	widget.SetParent(v)
+}
+
+// Apply applies a theme's styles to the component.
+func (v *Viewport) Apply(theme *Theme) {
+	theme.Apply(v, v.Selector("viewport"))
 }
 
 func (v *Viewport) Children() []Widget {

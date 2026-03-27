@@ -9,10 +9,11 @@ type Grow struct {
 	finished   bool
 }
 
-func NewGrow(horizontal bool) *Grow {
+func NewGrow(id, class string, horizontal bool) *Grow {
 	grow := &Grow{
 		Animation: Animation{
-			stop: make(chan struct{}),
+			Component: Component{id: id, class: class},
+			stop:      make(chan struct{}),
 		},
 		horizontal: horizontal,
 		step:       1,
@@ -29,6 +30,11 @@ func (g *Grow) Add(widget Widget) {
 		widget.SetParent(g)
 	}
 	g.child = widget
+}
+
+// Apply applies a theme's styles to the component.
+func (g *Grow) Apply(theme *Theme) {
+	theme.Apply(g, g.Selector("grow"))
 }
 
 func (g *Grow) Children() []Widget {

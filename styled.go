@@ -270,13 +270,18 @@ type Styled struct {
 	offsetY int
 }
 
-func NewStyled(id, text string) *Styled {
+func NewStyled(id, class, text string) *Styled {
 	styled := &Styled{
-		Component: Component{id: id},
+		Component: Component{id: id, class: class},
 		text:      text,
 	}
 	styled.Parse()
 	return styled
+}
+
+// Apply applies a theme's styles to the component.
+func (s *Styled) Apply(theme *Theme) {
+	theme.Apply(s, s.Selector("styled"))
 }
 
 func (s *Styled) Refresh() {

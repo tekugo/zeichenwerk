@@ -30,15 +30,20 @@ type Button struct {
 //
 // Returns:
 //   - *Button: A new button widget instance
-func NewButton(id, text string) *Button {
+func NewButton(id, class, text string) *Button {
 	button := &Button{
-		Component: Component{id: id, hwidth: utf8.RuneCountInString(text), hheight: 1},
+		Component: Component{id: id, class: class, hwidth: utf8.RuneCountInString(text), hheight: 1},
 		text:      text,
 	}
 	button.SetFlag("focusable", true)
 	OnKey(button, button.handleKey)
 	OnMouse(button, button.handleMouse)
 	return button
+}
+
+// Apply applies a theme style to the component.
+func (b *Button) Apply(theme *Theme) {
+	theme.Apply(b, b.Selector("button"), "disabled", "focused", "hovered", "pressed")
 }
 
 // Click programmatically triggers the button's action handler.

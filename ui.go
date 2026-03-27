@@ -208,7 +208,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 			close(ui.quit)
 		case tcell.KeyCtrlD:
 			ui.Log(ui, "debug", "Opening inspector")
-			animation := NewGrow(false)
+			animation := NewGrow("inspector-grow", "", false)
 			animation.Add(NewInspector(ui).UI())
 			hw, hh := animation.Hint()
 			animation.Start(10 * time.Millisecond)
@@ -628,6 +628,12 @@ func (ui *UI) Close() {
 	ui.Refresh()
 }
 
+// Quit signals the application to exit cleanly by closing the quit channel.
+// This is the programmatic equivalent of pressing Ctrl+C or Ctrl+Q.
+func (ui *UI) Quit() {
+	close(ui.quit)
+}
+
 // ---- Run Loop -------------------------------------------------------------
 
 // Run starts the main application event loop and blocks until the application
@@ -716,9 +722,8 @@ func (ui *UI) SetTheme(theme *Theme) {
 	ui.renderer.theme = theme
 
 	// Re-apply theme styles to all widgets
-	builder := NewBuilder(theme)
 	Traverse(ui, func(widget Widget) bool {
-		builder.Apply(widget)
+		widget.Apply(theme)
 		return true
 	})
 
