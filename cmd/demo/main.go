@@ -64,7 +64,7 @@ func createUI() *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 14:
+					case 15:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -112,7 +112,7 @@ func box(builder *Builder) {
 // Canvas demo
 func canvas(builder *Builder) {
 	// Create a 40x20 canvas with a simple pattern
-	c := NewCanvas("demo-canvas", "", 40, 20)
+	c := NewCanvas("demo-canvas", "", 1, 40, 20)
 
 	// Set styles for normal and insert modes
 	normalStyle := NewStyle("").WithColors("white", "black").WithCursor("block")

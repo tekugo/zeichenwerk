@@ -11,10 +11,13 @@ import (
 // different modes.
 type Canvas struct {
 	Component
-	cells   [][]Cell // 2D buffer of character cells
-	cursorX int      // cursor column (0-based, relative to content)
-	cursorY int      // cursor row (0-based, relative to content)
-	mode    string   // current mode: "normal", "insert"
+	mode    string     // current mode
+	cells   [][][]Cell // 2D buffer of pages and their character cells
+	page    int        // Current page
+	cursorX int        // cursor column (0-based, relative to content)
+	cursorY int        // cursor row (0-based, relative to content)
+	visualX int        // visual mode starting column
+	visualY int        // visual mode starting row
 }
 
 // Cell represents a single character cell in the canvas buffer.
@@ -25,8 +28,12 @@ type Cell struct {
 
 // Canvas modes
 const (
-	ModeNormal = "NORMAL"
-	ModeInsert = "INSERT"
+	ModeNormal  = "NORMAL"
+	ModeCommand = "COMMAND"
+	ModeDraw    = "DRAW"
+	ModeInsert  = "INSERT"
+	ModePresent = "PRESENT"
+	ModeVisual  = "VISUAL"
 )
 
 // NewCanvas creates a new Canvas widget with the specified ID and dimensions.
@@ -41,18 +48,22 @@ const (
 //
 // Returns:
 //   - *Canvas: A new canvas instance ready for use
-func NewCanvas(id, class string, width, height int) *Canvas {
+func NewCanvas(id, class string, pages, width, height int) *Canvas {
 	c := &Canvas{
 		Component: Component{id: id, class: class},
+		page:      0,
 		cursorX:   0,
 		cursorY:   0,
 		mode:      ModeNormal, // start in normal mode
 	}
 
 	// Initialize the cell buffer
-	c.cells = make([][]Cell, height)
-	for y := range height {
-		c.cells[y] = make([]Cell, width)
+	c.cells = make([][][]Cell, pages)
+	for i := range pages {
+		c.cells[i] = make([][]Cell, height)
+		for y := range height {
+			c.cells[i][y] = make([]Cell, width)
+		}
 	}
 
 	// Set the content hint to match the canvas dimensions
@@ -75,25 +86,11 @@ func (c *Canvas) Apply(theme *Theme) {
 // CellAt returns a pointer to the cell at the specified position, or nil if
 // the coordinates are out of bounds. The coordinates are relative to the
 // canvas buffer (0,0 is top-left).
-func (c *Canvas) CellAt(x, y int) *Cell {
-	if y < 0 || y >= len(c.cells) || x < 0 || x >= len(c.cells[y]) {
+func (c *Canvas) Cell(x, y int) *Cell {
+	if c.page >= len(c.cells) || y < 0 || y >= len(c.cells[c.page]) || x < 0 || x >= len(c.cells[c.page][y]) {
 		return nil
 	}
-	return &c.cells[y][x]
-}
-
-// SetCell updates the character and style at the given position. If the
-// coordinates are out of bounds, the operation is ignored. A nil style
-// uses the default style. The widget is automatically refreshed.
-func (c *Canvas) SetCell(x, y int, ch string, style *Style) {
-	if y < 0 || y >= len(c.cells) || x < 0 || x >= len(c.cells[y]) {
-		return
-	}
-	if style == nil {
-		style = NewStyle("")
-	}
-	c.cells[y][x] = Cell{ch: ch, style: style}
-	c.Refresh()
+	return &c.cells[c.page][y][x]
 }
 
 // Clear removes all content from the canvas by resetting every cell to an
@@ -101,27 +98,12 @@ func (c *Canvas) SetCell(x, y int, ch string, style *Style) {
 // and the widget is refreshed.
 func (c *Canvas) Clear() {
 	defaultStyle := NewStyle("")
-	for y := range c.cells {
-		for x := range c.cells[y] {
-			c.cells[y][x] = Cell{ch: "", style: defaultStyle}
+	for y := range c.cells[c.page] {
+		for x := range c.cells[c.page][y] {
+			c.cells[c.page][y][x] = Cell{ch: "", style: defaultStyle}
 		}
 	}
 	c.cursorX, c.cursorY = 0, 0
-	c.Refresh()
-}
-
-// Fill sets every cell in the canvas to the specified character and style.
-// If style is nil, the default style is used. This provides a fast way to
-// clear or uniformly populate the canvas.
-func (c *Canvas) Fill(ch string, style *Style) {
-	if style == nil {
-		style = NewStyle("")
-	}
-	for y := range c.cells {
-		for x := range c.cells[y] {
-			c.cells[y][x] = Cell{ch: ch, style: style}
-		}
-	}
 	c.Refresh()
 }
 
@@ -139,11 +121,139 @@ func (c *Canvas) Cursor() (int, int, string) {
 		// Default cursor style based on mode
 		if c.mode == ModeInsert {
 			cursor = "bar"
+		} else if c.mode == ModePresent {
+			cursor = "none"
 		} else {
 			cursor = "block"
 		}
 	}
 	return c.cursorX, c.cursorY, cursor
+}
+
+// Fill sets every cell in the canvas to the specified character and style.
+// If style is nil, the default style is used. This provides a fast way to
+// clear or uniformly populate the canvas.
+func (c *Canvas) Fill(ch string, style *Style) {
+	if style == nil {
+		style = NewStyle("")
+	}
+	for y := range c.cells[c.page] {
+		for x := range c.cells[c.page][y] {
+			c.cells[c.page][y][x] = Cell{ch: ch, style: style}
+		}
+	}
+	c.Refresh()
+}
+
+// Mode returns the current mode of the canvas ("normal" or "insert").
+func (c *Canvas) Mode() string {
+	return c.mode
+}
+
+// Refresh redraws the canvas widget
+func (c *Canvas) Refresh() {
+	Redraw(c)
+}
+
+// Resize changes the pages and cell buffers to the new size.
+// The cursor and current page are clamped to the new bounds.
+func (c *Canvas) Resize(pages, rows, columns int) {
+	// Grow or shrink the page slice.
+	if len(c.cells) < pages {
+		extra := make([][][]Cell, pages-len(c.cells))
+		for i := range extra {
+			extra[i] = make([][]Cell, rows)
+			for y := range extra[i] {
+				extra[i][y] = make([]Cell, columns)
+			}
+		}
+		c.cells = append(c.cells, extra...)
+	} else if len(c.cells) > pages {
+		c.cells = c.cells[:pages]
+	}
+
+	// Grow or shrink each existing page's row count.
+	for i, page := range c.cells {
+		if len(page) < rows {
+			extra := make([][]Cell, rows-len(page))
+			for y := range extra {
+				extra[y] = make([]Cell, columns)
+			}
+			c.cells[i] = append(c.cells[i], extra...)
+		} else if len(page) > rows {
+			c.cells[i] = c.cells[i][:rows]
+		}
+	}
+
+	// Grow or shrink each row's column count.
+	for i, page := range c.cells {
+		for j, row := range page {
+			if len(row) < columns {
+				c.cells[i][j] = append(c.cells[i][j], make([]Cell, columns-len(row))...)
+			} else if len(row) > columns {
+				c.cells[i][j] = c.cells[i][j][:columns]
+			}
+		}
+	}
+
+	// Clamp page and cursor to the new bounds.
+	if c.page >= pages {
+		c.page = pages - 1
+	}
+	if rows > 0 && c.cursorY >= rows {
+		c.cursorY = rows - 1
+	}
+	if columns > 0 && c.cursorX >= columns {
+		c.cursorX = columns - 1
+	}
+}
+
+// SetCell updates the character and style at the given position. If the
+// coordinates are out of bounds, the operation is ignored. A nil style
+// uses the default style. The widget is automatically refreshed.
+func (c *Canvas) SetCell(x, y int, ch string, style *Style) {
+	if c.page >= len(c.cells) || y < 0 || y >= len(c.cells[c.page]) || x < 0 || x >= len(c.cells[c.page][y]) {
+		return
+	}
+	if style == nil {
+		style = NewStyle("")
+	}
+	c.cells[c.page][y][x] = Cell{ch: ch, style: style}
+	c.Dispatch(c, "change")
+	c.Refresh()
+}
+
+// SetCursor moves the cursor to the specified position without triggering
+// a refresh. Useful for programmatic cursor positioning.
+func (c *Canvas) SetCursor(x, y int) {
+	c.cursorX = x
+	c.cursorY = y
+	c.Dispatch(c, "move", x, y)
+}
+
+// SetMode sets the canvas mode. Valid modes are ModeNormal and ModeInsert.
+// The widget is refreshed after the mode change to update the cursor style.
+func (c *Canvas) SetMode(mode string) {
+	c.mode = mode
+	c.Refresh()
+	c.Dispatch(c, "mode", c.mode)
+}
+
+// SetPage sets the current page
+func (c *Canvas) SetPage(page int) {
+	if page >= 0 && page < len(c.cells) {
+		c.page = page
+	}
+}
+
+// Size returns the logical dimensions of the canvas buffer in character cells.
+// This differs from Content() which returns the positioned area including
+// margins, padding, and borders. Size returns the actual buffer dimensions.
+func (c *Canvas) Size() (width, height int) {
+	if len(c.cells) == 0 {
+		return 0, 0
+	}
+	return len(c.cells[0][0]), len(c.cells[0])
 }
 
 // handleKey processes keyboard events based on the current mode. In normal
@@ -182,7 +292,7 @@ func (c *Canvas) handleNormalMode(evt *tcell.EventKey) bool {
 		c.Refresh()
 		return true
 	case tcell.KeyEnd:
-		c.cursorX = len(c.cells[0]) - 1
+		c.cursorX = len(c.cells[c.page][0]) - 1
 		c.Refresh()
 		return true
 	case tcell.KeyEsc:
@@ -233,7 +343,7 @@ func (c *Canvas) handleInsertMode(evt *tcell.EventKey) bool {
 		c.Refresh()
 		return true
 	case tcell.KeyEnd:
-		c.cursorX = len(c.cells[0]) - 1
+		c.cursorX = len(c.cells[c.page][0]) - 1
 		c.Refresh()
 		return true
 	case tcell.KeyRune:
@@ -256,17 +366,18 @@ func (c *Canvas) move(dx, dy int) {
 
 	if newX < 0 {
 		newX = 0
-	} else if newX >= len(c.cells[0]) {
-		newX = len(c.cells[0]) - 1
+	} else if newX >= len(c.cells[c.page][0]) {
+		newX = len(c.cells[c.page][0]) - 1
 	}
 
 	if newY < 0 {
 		newY = 0
-	} else if newY >= len(c.cells) {
-		newY = len(c.cells) - 1
+	} else if newY >= len(c.cells[c.page]) {
+		newY = len(c.cells[c.page]) - 1
 	}
 
 	c.cursorX, c.cursorY = newX, newY
+	c.Dispatch(c, "move", newX, newY)
 	c.Refresh()
 }
 
@@ -275,7 +386,7 @@ func (c *Canvas) move(dx, dy int) {
 // widget's default style. After insertion, the cursor advances right
 // when possible.
 func (c *Canvas) insertCharacter(ch string) {
-	cell := c.CellAt(c.cursorX, c.cursorY)
+	cell := c.Cell(c.cursorX, c.cursorY)
 	style := c.Style()
 	if cell != nil && cell.style != nil {
 		style = cell.style
@@ -295,7 +406,7 @@ func (c *Canvas) Render(r *Renderer) {
 
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			cell := c.CellAt(x, y)
+			cell := c.Cell(x, y)
 			if cell != nil && cell.ch != "" {
 				style := cell.style
 				if style == nil {
@@ -312,42 +423,4 @@ func (c *Canvas) Render(r *Renderer) {
 			}
 		}
 	}
-}
-
-// ClearKeyHandlers removes all registered key event handlers from the canvas.
-// This allows external code to replace the default movement and insertion
-// behaviour entirely by registering a custom handler via OnKey afterwards.
-func (c *Canvas) ClearKeyHandlers() {
-	if c.handlers != nil {
-		delete(c.handlers, "key")
-	}
-}
-
-// Size returns the logical dimensions of the canvas buffer in character cells.
-// This differs from Content() which returns the positioned area including
-// margins, padding, and borders. Size returns the actual buffer dimensions.
-func (c *Canvas) Size() (width, height int) {
-	if len(c.cells) == 0 {
-		return 0, 0
-	}
-	return len(c.cells[0]), len(c.cells)
-}
-
-// SetCursor moves the cursor to the specified position without triggering
-// a refresh. Useful for programmatic cursor positioning.
-func (c *Canvas) SetCursor(x, y int) {
-	c.cursorX = x
-	c.cursorY = y
-}
-
-// Mode returns the current mode of the canvas ("normal" or "insert").
-func (c *Canvas) Mode() string {
-	return c.mode
-}
-
-// SetMode sets the canvas mode. Valid modes are ModeNormal and ModeInsert.
-// The widget is refreshed after the mode change to update the cursor style.
-func (c *Canvas) SetMode(mode string) {
-	c.mode = mode
-	c.Refresh()
 }

@@ -6,7 +6,7 @@ import (
 
 func TestCanvas(t *testing.T) {
 	// Create a small canvas
-	c := NewCanvas("test-canvas", "", 10, 5)
+	c := NewCanvas("test-canvas", "", 1, 10, 5)
 
 	// Check initial state (not focused - cursor hidden)
 	x, y, cs := c.Cursor()
@@ -33,7 +33,7 @@ func TestCanvas(t *testing.T) {
 	// Set a cell
 	style := NewStyle("").WithColors("white", "blue")
 	c.SetCell(5, 2, "A", style)
-	cell := c.CellAt(5, 2)
+	cell := c.Cell(5, 2)
 	if cell == nil || cell.ch != "A" {
 		t.Error("Failed to set cell at (5,2)")
 	}
@@ -54,14 +54,14 @@ func TestCanvas(t *testing.T) {
 
 	// Clear canvas
 	c.Clear()
-	cell = c.CellAt(5, 2)
+	cell = c.Cell(5, 2)
 	if cell.ch != "" {
 		t.Error("Clear did not remove cell content")
 	}
 
 	// Fill canvas
 	c.Fill("#", NewStyle(""))
-	cell = c.CellAt(0, 0)
+	cell = c.Cell(0, 0)
 	if cell.ch != "#" {
 		t.Error("Fill did not populate cells")
 	}

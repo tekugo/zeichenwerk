@@ -42,6 +42,16 @@ func (s *Static) Render(r *Renderer) {
 	r.Text(cx, cy, s.Text, cw)
 }
 
+// SetAlignment sets the text alignment for the label.
+// This controls how the text is positioned within the label's content area.
+//
+// Parameters:
+//   - align: The alignment mode ("left", "center", "right")
+func (s *Static) SetAlignment(align string) {
+	s.Alignment = align
+	s.Refresh()
+}
+
 // SetText updates the static's text content and triggers a refresh.
 // This is a convenience method for dynamically updating the static's
 // displayed text, commonly used for status updates or dynamic content.
@@ -50,15 +60,5 @@ func (s *Static) Render(r *Renderer) {
 //   - text: The new text content to display
 func (s *Static) SetText(text string) {
 	s.Text = text
-	s.Refresh()
-}
-
-// SetAlignment sets the text alignment for the label.
-// This controls how the text is positioned within the label's content area.
-//
-// Parameters:
-//   - align: The alignment mode ("left", "center", "right")
-func (s *Static) SetAlignment(align string) {
-	s.Alignment = align
 	s.Refresh()
 }

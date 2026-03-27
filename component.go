@@ -195,7 +195,8 @@ func (c *Component) Log(source Widget, level, msg string, params ...any) {
 // On registers an event handler for widget-specific events.
 // This event handler is called, whenever the widget emits the specific event.
 // Multiple handlers can be registered for the same event and they are called
-// in the order of registration.
+// in *reverse* order of registration. So new handlers can consume or override
+// events for pre-registered handlers.
 //
 // Parameters:
 //   - event: The event to listen for
@@ -204,7 +205,7 @@ func (c *Component) On(event string, handler Handler) {
 	if c.handlers == nil {
 		c.handlers = make(map[string][]Handler)
 	}
-	c.handlers[event] = append(c.handlers[event], handler)
+	c.handlers[event] = append([]Handler{handler}, c.handlers[event]...)
 }
 
 // Parent returns the parent container of this widget.
