@@ -72,6 +72,57 @@ func OnMouse(widget Widget, handler func(Widget, *tcell.EventMouse) bool) {
 	})
 }
 
+// OnActivate registers an activate event handler for the given widget.
+// The handler receives the index of the activated item.
+func OnActivate(widget Widget, handler func(Widget, int) bool) {
+	if widget == nil {
+		return
+	}
+	widget.On("activate", func(widget Widget, event string, data ...any) bool {
+		if len(data) < 1 {
+			return false
+		}
+		if index, ok := data[0].(int); ok {
+			return handler(widget, index)
+		}
+		return false
+	})
+}
+
+// OnChange registers a change event handler for the given widget.
+// The handler receives the new value as a string.
+func OnChange(widget Widget, handler func(Widget, string) bool) {
+	if widget == nil {
+		return
+	}
+	widget.On("change", func(widget Widget, event string, data ...any) bool {
+		if len(data) < 1 {
+			return false
+		}
+		if value, ok := data[0].(string); ok {
+			return handler(widget, value)
+		}
+		return false
+	})
+}
+
+// OnSelect registers a select event handler for the given widget.
+// The handler receives the index of the selected item.
+func OnSelect(widget Widget, handler func(Widget, int) bool) {
+	if widget == nil {
+		return
+	}
+	widget.On("select", func(widget Widget, event string, data ...any) bool {
+		if len(data) < 1 {
+			return false
+		}
+		if index, ok := data[0].(int); ok {
+			return handler(widget, index)
+		}
+		return false
+	})
+}
+
 // Redraw queues a single widget for redraw.
 func Redraw(widget Widget) {
 	ui := FindUI(widget)

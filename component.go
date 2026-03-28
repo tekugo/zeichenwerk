@@ -97,11 +97,14 @@ func (c *Component) Cursor() (int, int, string) {
 // Dispatch dispatches an event to the widget. The event is a string that
 // represents the type of event, such as a key press or mouse click.
 // It iterates over all registered handlers for the event and calls them.
+// The source widget is passed as a parameter, so that this method does not
+// need to be overwritten to pass the correct widget type.
 //
 // Parameters:
+//   - source: Source widget
 //   - event: The type of event to dispatch.
 //   - data: Optional data associated with the event.
-func (c *Component) Dispatch(widget Widget, event string, data ...any) bool {
+func (c *Component) Dispatch(source Widget, event string, data ...any) bool {
 	if c.handlers == nil {
 		return false
 	}
@@ -109,7 +112,7 @@ func (c *Component) Dispatch(widget Widget, event string, data ...any) bool {
 	handlers, ok := c.handlers[event]
 	if ok {
 		for _, handler := range handlers {
-			handled = handler(widget, event, data...)
+			handled = handler(source, event, data...)
 			if handled {
 				return true
 			}

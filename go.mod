@@ -1,13 +1,13 @@
 module github.com/tekugo/zeichenwerk
 
-go 1.25.5
+go 1.26.1
 
 require (
 	github.com/gdamore/tcell/v3 v3.1.0
-	github.com/mattn/go-sqlite3 v1.14.34
+	github.com/mattn/go-sqlite3 v1.14.37
 	github.com/mbndr/figlet4go v0.0.0-20190224160619-d6cef5b186ea
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/tools v0.43.0
+	golang.org/x/tools v0.39.0
 )
 
 require (

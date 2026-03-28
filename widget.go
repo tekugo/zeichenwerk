@@ -5,7 +5,7 @@ package zeichenwerk
 // interface to participate in the rendering pipeline, event handling system,
 // and layout management.
 //
-// All widgets share common functionality through BaseWidget, which provides
+// All widgets share common functionality through Component, which provides
 // default implementations for most interface methods.
 type Widget interface {
 	// Apply applies the theme's style to this widget.
@@ -16,9 +16,6 @@ type Widget interface {
 	//
 	// Returns (x, y, width, height).
 	Bounds() (int, int, int, int)
-
-	// Class returns the style class of the widget.
-	Class() string
 
 	// Content returns the widget's content area as absolute screen coordinates.
 	// The content area is the inner area of the widget where the widget's
@@ -38,10 +35,10 @@ type Widget interface {
 	// represents a user input event, such as a key press or mouse click.
 	//
 	// Parameters:
-	//   - widget: Target widget
+	//   - source: Source widget
 	//   - event: The type of event to dispatch.
 	//   - data: Optional data associated with the event.
-	Dispatch(widget Widget, event string, data ...any) bool
+	Dispatch(source Widget, event string, data ...any) bool
 
 	// Flag returns a widget's state flag.
 	//
