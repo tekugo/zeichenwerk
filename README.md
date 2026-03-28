@@ -1,8 +1,8 @@
-# zeichenwerk/next
+# zeichenwerk
 
 ![Version](https://img.shields.io/badge/version-2.0-blue)
-![Go](https://img.shields.io/github/go-mod/go-module/github.com/tekugo/zeichenwerk/next)
-![License](https://img.shields.io/github/license/tekugo/zeichenwerk/next)
+![Go](https://img.shields.io/github/go-mod/go-module/github.com/tekugo/zeichenwerk)
+![License](https://img.shields.io/github/license/tekugo/zeichenwerk)
 
 Zeichenwerk (German for "character works") is a modern, idiomatic Go library
 for building terminal user interfaces. This refactored version features a
@@ -43,20 +43,38 @@ go get github.com/tekugo/zeichenwerk
 - **Flex**: Linear layout (horizontal/vertical) with alignment and spacing
 - **Grid**: Table-like layout with spanning and grid lines
 - **Box**: Single-child container with borders and title
-- **Switcher**: Stack of widgets with selection
+- **Form**: Data-binding container for Go structs
+- **FormGroup**: Labeled field layout for form controls
+- **Switcher**: Stack of widgets with one visible at a time
+- **Tabs**: Tabbed interface with switchable panels
+- **Viewport**: Scrollable content area
 
-### Input & Display
+### Input
 
 - **Button**: Clickable button with keyboard/mouse support
 - **Checkbox**: Toggle with checked/unchecked states
 - **Input**: Single-line text entry with editing
+- **Select**: Option selector
+- **Editor**: Multi-line text editor with gap-buffer storage
+
+### Display
+
 - **List**: Scrollable list with navigation and selection
 - **Table**: Data tables with custom providers
-- **Tabs**: Tabbed interface
 - **Text**: Multi-line text with scrolling
 - **Styled**: Rich text with markup (bold, italic, underline)
 - **Static**: Simple labeled text display
 - **Spinner**: Animated loading indicator
+- **Progress**: Progress bar (determinate and indeterminate)
+- **Digits**: Large-format ASCII art number/character display
+- **Canvas**: Low-level drawing surface for custom components
+- **Rule**: Horizontal or vertical visual divider
+- **Grow**: Animated expanding container
+
+### Overlay
+
+- **Dialog**: Modal overlay with configurable content
+- **Inspector**: Debug interface for exploring widget hierarchies
 
 ## Features
 
@@ -126,8 +144,8 @@ go run ./cmd/demo
 
 ## Development Status
 
-**Stable** - This is a production-ready refactoring of the original zeichenwerk
-library. All core features are implemented and tested.
+**Active development** - Core features are implemented. Widget-level test coverage
+and some layout edge cases are still being worked on.
 
 ## License
 

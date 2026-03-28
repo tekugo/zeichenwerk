@@ -1,342 +1,346 @@
-# Zeichenwerk – Code Review
+# Zeichenwerk — Project Review
 
-**Date:** 2026-03-26
-**Last updated:** 2026-03-26
-**Scope:** Full codebase review — bugs, design issues, performance, and improvement suggestions.
-
----
-
-## Summary
-
-Zeichenwerk is a well-structured Go TUI framework with a clean Widget/Container interface hierarchy, a CSS-like theming system, and a fluent builder API. The overall architecture is sound, but several concrete bugs and design issues exist that should be addressed before wider use.
+**Date:** 2026-03-28
+**Scope:** Design, interface, usability, extensibility, documentation, tests
 
 ---
 
-## 1. Bugs and Correctness Errors
+## Executive Summary
 
-### ✅ 1.1 Unicode Bug in `Input` — `len(i.text)` vs. rune count
-
-**Fixed.** The `Input` widget was rewritten to use `GapBuffer` as its backing store (see 2.2). All boundary checks now use `buf.Length()`, which operates on rune counts. The `unicode/utf8` import was removed.
-
----
-
-### ✅ 1.2 Off-by-one in `Table.Hint()` — separator count
-
-**Fixed.** `table.go:90`: condition is now `if i > 0`, counting separators between every pair of adjacent columns.
+Zeichenwerk is a well-architected, idiomatic Go TUI library with solid foundations. The core
+abstractions (Widget interface, Component base, Builder, Theme) are clean and coherent. The
+data-structure layer (GapBuffer, Stack) is particularly strong. The main areas requiring
+attention are: test coverage for UI widgets, a few interface usability rough edges, two
+open layout TODOs in Grid, and a CGo dependency leaking into the library module.
 
 ---
 
-### ✅ 1.3 `Table.Set()` accumulates `tableWidth` on repeated calls
+## 1. Architecture & Design
 
-**Fixed.** `table.go:64`: `t.tableWidth = 0` is now the first statement in `Set()`.
+### Strengths
 
----
+- **Layered architecture** is clear: data structures → styling → rendering → widgets →
+  containers → UI/event loop. Each layer has a single responsibility.
+- **Composition over inheritance** is consistently applied. Widgets embed `Component`
+  rather than extending a class hierarchy, which keeps the Go idiomatic.
+- **CSS-like theme system** with specificity-ordered resolution
+  (`type → class → state → id → combined`) is expressive and familiar to web developers.
+- **Builder pattern** provides a fluent, readable declarative API that mirrors the visual
+  hierarchy of the resulting layout.
+- **Screen interface** decouples the rendering pipeline from tcell, enabling testing and
+  future backend swaps.
 
-### ✅ 1.4 Data race in `Animation`
+### Issues
 
-**Fixed.** `animation.go`: A `sync.Mutex` field (`mu`) was added to `Animation`. The running check and `ticker` assignment now happen under the mutex on the caller side (before the goroutine is launched), eliminating the TOCTOU race where two concurrent `Start()` calls could both pass the nil check. `ticker.Stop()` and the nil assignment on teardown are also performed under the mutex inside a deferred function in the goroutine. `Stop()` no longer writes `a.ticker = nil` directly; `Running()` acquires the mutex before reading `ticker`.
+#### 1.1 `Widget` interface is too wide
 
----
-
-### 1.5 `builder.go:Build()` always enables debug mode
-
-**File:** `builder.go:58`
+`Widget` has ~22 methods, including several that are infrastructure concerns
+(`Log`, `Apply`, `SetParent`, `SetBounds`). In Go, small interfaces are preferred.
+Consider splitting into focused interfaces that containers and the event loop use
+internally, while the public API exposes only what application code needs.
 
 ```go
-func (b *Builder) Build() *UI {
-    ui, _ := NewUI(b.theme, b.stack.Peek(), true)  // debug always true
-    return ui
+// Suggestion: smaller public surface
+type Widget interface {
+    ID() string
+    Bounds() (int, int, int, int)
+    On(event string, handler Handler)
+    Dispatch(widget Widget, event string, data ...any) bool
+    Flag(name string) bool
+    SetFlag(name string, value bool)
+    // ...
 }
+// Infrastructure-only (not exported or in a separate interface)
+type renderable interface { Render(r *Renderer) }
+type themeable  interface { Apply(theme *Theme) }
 ```
 
-The `debug: true` flag activates the debug status bar and verbose slog output. Every application built with the builder runs in debug mode with no way to disable it.
+#### 1.2 `Update()` helper is a type-switch anti-pattern
 
-**Fix:** Accept a `debug bool` parameter in `Build()`, or default to `false`.
+`helper.go:Update()` performs a type switch over concrete widget types to call
+`SetItems`, `SetText`, `Set`, etc. This is a smell: it means the polymorphism is
+incomplete. A `SetValue(any)` method on an opt-in interface (or individual typed
+setter helpers) would be more extensible and avoid breaking whenever a new widget
+is added.
 
----
+#### 1.3 Widget flags use untyped magic strings
 
-### ✅ 1.6 `WidgetType()` strips wrong package prefix
-
-**Fixed.** `helper.go:86`: now uses `"*zeichenwerk."` as the trim prefix.
-
----
-
-### 1.7 `Table.column` field is declared but never read
-
-**File:** `table.go:12`
+Flags like `"focusable"`, `"focused"`, `"hidden"`, `"pressed"`, `"checked"`,
+`"masked"`, `"readonly"`, `"hovered"` are raw strings scattered across the codebase.
+A single typo silently produces incorrect behaviour. Define exported constants:
 
 ```go
-row, column int  // column is never used anywhere in table.go
+const (
+    FlagFocusable = "focusable"
+    FlagFocused   = "focused"
+    FlagHidden    = "hidden"
+    // ...
+)
 ```
 
-The `column` field was presumably intended for column-focused navigation (Tab/Shift+Tab keys also call `moveToColumn`/`scrollByColumn`, not `column` tracking). Dead state adds confusion about the widget's data model.
+#### 1.4 `go.mod` specifies a non-existent Go version
 
-**Fix:** Remove the `column` field or implement column-tracking properly.
-
----
-
-### ✅ 1.8 `NewUI()` log widget lookup happens before parent is set
-
-**Fixed.** `ui.go:144`: `root.SetParent(ui)` now occurs before the `Find(ui, "debug-log")` call at line 160.
+`go 1.25.5` does not exist. The latest stable release as of this review is Go 1.24.
+This should be corrected to the actual minimum required version.
 
 ---
 
-## 2. Design Issues
+## 2. Interface & Usability
 
-### 2.1 `Builder.Apply()` panics on unknown widget types
+### Strengths
 
-**File:** `builder.go:202`
+- `NewBuilder(theme).Flex(...).Grid(...).End().Run()` is ergonomic and readable.
+- `With(func(*Builder))` enables composable, reusable UI fragments without breaking the
+  fluent chain.
+- `Find`, `FindAll[T]`, `FindAt`, `Traverse` give flexible tree traversal.
+- `OnKey` and `OnMouse` typed helpers reduce boilerplate over raw `On("key", ...)`.
+
+### Issues
+
+#### 2.1 `Dispatch` first parameter is confusing
+
+`Dispatch(widget Widget, event string, data ...any)` is a method on `Widget`, but
+its first argument is also a `Widget`. From the implementation, this parameter is the
+"source" widget (i.e. where the event originated). The name `widget` conflicts with the
+receiver and the concept is not obvious from the signature alone. Rename to `source` and
+document the distinction clearly:
 
 ```go
-default:
-    panic(fmt.Errorf("no style for widget type %T", widget))
+Dispatch(source Widget, event string, data ...any) bool
 ```
 
-Any custom widget passed to the builder causes a panic. This forces every third-party widget author to fork the builder or avoid the fluent API entirely.
-
-**Suggestion:** Log a warning and apply no style rather than panicking. Alternatively, add an `Styleable` interface that widgets can implement to self-register their styling.
-
----
-
-### ✅ 2.2 `Input` doesn't use `GapBuffer`
-
-**Fixed.** `Input` now uses `*GapBuffer` as its backing store instead of a plain `string`. The `text` field was replaced with `buf *GapBuffer`, initialized via `NewGapBufferFromString`. All editing operations (`Insert`, `Delete`, `DeleteForward`) call `buf.Move(pos)` then the appropriate gap buffer method, giving O(1) insertions and deletions at the cursor. Bulk operations (`CtrlK`, `CtrlU`, `Clear`, `SetText`) rebuild or drain the buffer. The `[]rune` conversions on every keystroke were eliminated.
-
----
-
-### 2.3 `Refresh()` vs `Redraw()` inconsistency
-
-`Widget.Refresh()` chains up the parent hierarchy to `UI.Refresh()`, which triggers a *full screen redraw*. The optimized single-widget path (`UI.Redraw(widget)`) is only reachable via the package-level `Redraw(widget)` helper. The two code paths are easy to confuse:
-
-- `input.Refresh()` → `UI.Refresh()` → full screen
-- `Redraw(input)` → `UI.Redraw(input)` → single widget
-
-The naming suggests `Redraw` is more expensive than `Refresh`, but it's the opposite. Widgets like `Input` and `Table` already override `Refresh()` to call `Redraw(t)` — this pattern should be documented as the idiomatic way to do partial redraws.
-
----
-
-### 2.4 Side effect in `Component.Style()` getter
-
-**File:** `component.go:416`
+#### 2.2 `NewSelect` uses awkward alternating string pairs
 
 ```go
-if c.styles[""] == nil {
-    c.styles[""] = NewStyle("")
-}
-return c.styles[""]
+NewSelect("sel", "", "val1", "Label 1", "val2", "Label 2")
 ```
 
-A getter allocates and stores a new `Style` object as a side effect. This means that *calling `Style()`* modifies the widget's state, which is unexpected. It can also allocate a map entry for every un-styled component encountered during a render pass.
-
-**Suggestion:** Return `&DefaultStyle` (or a package-level empty style) instead of creating and storing a new one.
-
----
-
-### 2.5 `Builder.Spacer()` produces duplicate IDs
-
-**File:** `builder.go:471`
+Odd-length args silently drop the last item. A slice of a small struct is safer and
+more readable:
 
 ```go
-func (b *Builder) Spacer() *Builder {
-    spacer := NewComponent("spacer")
-    ...
-}
+type Option struct { Value, Label string }
+NewSelect("sel", "", Option{"val1", "Label 1"}, Option{"val2", "Label 2"})
 ```
 
-Every spacer gets the same ID `"spacer"`. Since IDs are the primary lookup key (`Find`, theme selectors), multiple spacers in one layout break ID-based operations.
+(The same issue applies to `NewList` if it follows the same convention.)
 
-**Fix:** Use a counter or a UUID-like approach: `fmt.Sprintf("spacer-%d", b.spacerCount)`.
+#### 2.3 `Select` is not a real dropdown
 
----
+The `Select` widget cycles through options in-place with arrow keys; it does not open a
+popup list. This is a significant usability gap — users expect a dropdown to present
+all options at once. The TODO in `select.go:54` acknowledges the width issue, but the
+lack of popup rendering is a deeper design limitation. A layer-based popup (like
+`Dialog`) could be used.
 
-### 2.6 `Theme.Add()` discards `WithParent` return value
+#### 2.4 `OnMouse` registers the wrong event
 
-**File:** `theme.go:146`
+`helper.go:OnMouse` registers for event name `"mouse"`, but `doc/EVENTS.md` states
+the framework dispatches `"hover"` instead of `"mouse"` for mouse movement. This
+makes `OnMouse` a no-op in practice for movement events. Either the helper should
+register `"hover"`, or the framework should be made consistent.
+
+#### 2.5 Event data requires type assertions
+
+All event data flows as `...any`, so handlers must do:
 
 ```go
-style.WithParent(parent)   // return value discarded
+text := data[0].(string)  // panic if wrong type
 ```
 
-`WithParent` is a functional method — on a fixed style it returns a *new* child style. Here the return value is discarded. In practice this currently works only because `style` is not yet fixed when passed to `Add()`, making `Modifiable()` return `self`. But it is fragile: if a fixed style is added, the parent assignment silently has no effect.
-
-**Fix:** `style = style.WithParent(parent)` (use the returned value).
-
----
-
-### 2.7 `NewUI()` always returns `nil` error
-
-**File:** `ui.go:130`
-
-The function signature is `func NewUI(...) (*UI, error)` but the error is always `nil`. Callers must write `ui, _ := NewUI(...)` and silently ignore it. Either return a meaningful error (e.g. from logger setup), or simplify the signature to return just `*UI`.
-
----
-
-### 2.8 Global key bindings conflict with app content
-
-**File:** `ui.go:219-223`
+For the documented events with fixed data types, typed handler wrappers (like `OnKey`)
+would improve safety and IDE discoverability:
 
 ```go
-case tcell.KeyRune:
-    switch event.Str() {
-    case "q", "Q":
-        close(ui.quit)
-    }
+OnChange(widget, func(w Widget, text string) bool)
+OnActivate(widget, func(w Widget, index int) bool)
 ```
 
-When no widget handles the 'q' key (e.g. when focus is on a non-input widget), the application quits. This can be surprising. Additionally, pressing Escape closes the topmost layer, which could accidentally close modal dialogs the user did not intend to dismiss.
+#### 2.6 Stale reference in `widget.go` comment
 
-**Suggestion:** Make the quit key(s) configurable in `NewUI()`, and require explicit opt-in (or at least document this behavior prominently).
-
----
-
-### 2.9 `HandleListEvent` is the only widget-specific event helper
-
-**File:** `helper.go:100`
-
-`HandleListEvent` is a convenience wrapper that exists only for `*List`. No equivalent helpers exist for `*Table`, `*Input`, `*Select`, etc. Either generalize the pattern (e.g., via generic event helpers) or remove it in favour of `.On("event", ...)` directly.
+`widget.go:7` reads: *"All widgets share common functionality through BaseWidget"*.
+The actual type is `Component`. This stale comment will mislead readers searching
+for `BaseWidget`.
 
 ---
 
-## 3. Performance
+## 3. Extensibility
 
-### 3.1 `Renderer.Text()` puts characters one-by-one
+### Strengths
 
-**File:** `renderer.go:226`
+- `TableProvider` interface cleanly decouples data from display.
+- `Screen` interface abstracts tcell, so alternative backends are possible.
+- `Custom` base type provides a starting point for user-defined widgets.
+- Builder's `Add(widget)` escape hatch allows adding arbitrary widgets.
 
-Every call to `Text()` iterates rune-by-rune and calls `Put()` (→ `TcellScreen.Put()` → `tcell.Screen.Put()`) for each character. For wide tables or long text widgets this is the hot path in the render loop. Batching multiple cells before flushing to tcell would reduce the overhead.
+### Issues
 
----
+#### 3.1 CGo dependency in the library module
 
-### 3.2 `GapBuffer.Runes()` spawns a goroutine per iteration
+`go.mod` lists `github.com/mattn/go-sqlite3` as a direct dependency. This is a CGo
+library used only in `cmd/` tools. Embedding it in the library module forces **all**
+library consumers to have a C toolchain. Either move it to its own `cmd/` module, or
+use a pure-Go SQLite driver.
 
-**File:** `gap-buffer.go:172`
+Similarly, `github.com/mbndr/figlet4go` and `golang.org/x/tools` are cmd-only
+dependencies. Consider a `cmd/go.mod` workspace or separate module for the demo tools.
 
-```go
-func (gb *GapBuffer) Runes(start int) <-chan rune {
-    ch := make(chan rune)
-    go func() { ... }()
-    return ch
-}
-```
+#### 3.2 No extension points for focus traversal
 
-Goroutine + channel creation for simple sequential iteration is unnecessarily heavyweight. A closure-based iterator or a direct `[]rune` slice return would be far cheaper for small-to-medium buffers.
+Focus order is determined by the tree traversal order. There is no mechanism for an
+application to customise focus order (e.g. skip a widget, wrap focus to a specific
+widget, or implement roving tabindex). Adding a `FocusOrder()` or `NextFocus()`
+override point would improve extensibility.
 
----
+#### 3.3 `Apply(theme)` is easy to implement incorrectly
 
-### 3.3 Style lookup uses regex on every call
-
-**File:** `component.go:399`
-
-`stylePartRegExp.FindStringSubmatch(actual)` runs a regex on every style lookup, which happens once per widget part per render frame. For UIs with many widgets this is measurable overhead. Since the selector format is simple (`part:state`), a `strings.Cut(actual, ":")` would be sufficient and much faster.
-
----
-
-### 3.4 `Renderer.Fill()` and `Renderer.Colorize()` call `Put()` per cell
-
-**File:** `renderer.go:91, 74`
-
-Both methods loop over every cell individually. For large background fills (e.g. clearing a full-screen dialog), this causes many redundant style applications. Consider bulk-writing via tcell's `Fill` where applicable.
+Each widget must override `Apply` and call `theme.Apply` with the correct selector and
+state names. If a new widget forgets a state (e.g. `"disabled"`) its styling will be
+silently wrong. Consider a registration mechanism or a builder helper so the theme
+system discovers which states each widget supports.
 
 ---
 
-### 3.5 `Input` converts string to rune slice on every operation
+## 4. Documentation
 
-**Partially addressed by 2.2.** `Insert`, `Delete`, `DeleteForward`, and cursor movement no longer perform `[]rune(i.text)` on the hot path. `visible()` and the bulk-delete shortcuts (`CtrlK`, `CtrlU`) still convert via `buf.String()` + `[]rune(...)`, but these are either render-time or infrequent user actions.
+### Strengths
 
----
+- `AGENTS.md` provides clear, normative guidelines (MUST/SHOULD/MAY) for contributors.
+- `doc/EVENTS.md` is comprehensive and includes per-widget event data types.
+- `doc/flags.md` covers all standard flags with descriptions.
+- `doc/reference.md` is a thorough 775-line API reference.
+- Inline comments consistently explain "why" rather than "what", as required.
 
-## 4. Suggestions for Improvement
+### Issues
 
-### 4.1 Package-level documentation
+#### 4.1 README title inconsistency
 
-`doc.go` exists but only contains the package declaration. A proper package comment describing the widget model, the builder pattern, the styling system, and a minimal example would significantly improve discoverability.
+`README.md` heading is `# zeichenwerk/next`. If this has graduated from a "next"
+branch, the title should be updated to simply `# zeichenwerk`.
 
----
+#### 4.2 `AGENTS.md` references deleted `archive/` directory
 
-### 4.2 Thread safety documentation
+The project structure in `AGENTS.md` still lists `+- archive/ # Old version`, but git
+history shows it was deleted. Remove the stale entry.
 
-Several components interact across goroutines (Animation ticks call `Redraw()`, which enqueues into `UI.redraw`). The threading model (what is safe to call from goroutines vs. what must run on the event loop) is not documented. A brief doc comment on `UI.Redraw()` and `UI.Refresh()` explaining goroutine safety would reduce bugs for users.
+#### 4.3 Several widgets not covered in `doc/reference.md`
 
----
+The following widgets have no entry or only passing mention in the reference:
+`Canvas`, `Dialog`, `Digits`, `FormGroup`, `Grow`, `Inspector`, `Rule`, `Spinner`,
+`Switcher`, `Tabs`, `Viewport`. Add sections documenting their constructor,
+key methods, and events.
 
-### 4.3 `Table` should expose total row count and scroll state
+#### 4.4 No usage examples for the Builder
 
-`Table` has `GetScrollOffset()` and `SetScrollOffset()` but doesn't expose the total content size. A `RowCount()` method would allow callers to implement custom paginators or accessibility overlays without needing the provider reference.
+`doc.go` is documented as the home for examples, but contains no `Example*` functions.
+Adding even two or three `Example` functions would appear in `go doc` output and help
+new users onboard faster.
 
----
+#### 4.5 `AGENTS.md` sentinel-error requirement is unmet in library code
 
-### 4.4 Consider making `Container.Layout()` return an error
-
-Layout can fail if a widget receives dimensions of 0 (e.g. a flex child with zero remaining space). Currently negative or zero dimensions are passed silently to children, which may render garbage or panic in edge cases (e.g. `Grow.Hint()` panics if `g.child` is nil).
-
----
-
-### 4.5 `Styles()` method returns non-deterministic order
-
-**File:** `component.go:429`
-
-`slices.Collect(maps.Keys(c.styles))` iterates a map, so the order of returned selectors is random. While this is currently only used for debugging, callers relying on stable output (tests, introspection) will be surprised.
-
----
-
-### 4.6 `Update()` helper is loosely typed
-
-**File:** `helper.go:126`
-
-`Update(container, id, value any)` silently does nothing if the widget type or value type doesn't match. There is no way for the caller to know whether the update succeeded. Return a `bool` or an error to surface failures.
+`AGENTS.md` mandates: *"MUST define sentinel errors for common error cases"*, but the
+library's `.go` files (outside `cmd/`) contain no `var Err... = errors.New(...)`.
+`NewUI` returns an error from tcell but there are no sentinel errors consumers could
+check with `errors.Is`. Define at minimum `ErrScreenInit` or similar.
 
 ---
 
-### 4.7 `Grow.Hint()` panics if child is nil
+## 5. Tests
 
-**File:** `grow.go:43`
+### Strengths
 
-```go
-func (g *Grow) Hint() (int, int) {
-    w, h := g.child.Hint()  // panics if g.child is nil
-```
+- `gap-buffer_test.go` is exemplary: 18+ test functions, table-driven cases, Unicode
+  coverage, panic recovery tests, and 5 benchmarks. This should be the model for all
+  future test files.
+- `stack_test.go` has 20+ tests and benchmarks covering all edge cases.
+- `insets_test.go` and `style_test.go` cover the styling primitives well.
 
-A nil child is a valid intermediate state (e.g. after `SetParent(nil)` is called on the previous child). Guard with `if g.child == nil { return 0, 0 }`.
+### Issues
+
+#### 5.1 No widget-level tests
+
+None of the 20+ widgets (Button, Input, Checkbox, Select, List, Table, Editor, Text,
+Styled, Progress, Spinner, Canvas, etc.) have test files. Widget rendering and event
+handling are the most user-visible parts of the library and are completely untested.
+
+Recommended minimum per widget:
+- `Render` does not panic for empty/zero-size bounds.
+- Key event handlers fire the correct events with correct data.
+- State flags (`focused`, `disabled`, `hidden`) affect rendering correctly.
+
+#### 5.2 No container layout tests
+
+`Flex`, `Grid`, `Box`, `Switcher`, `Viewport`, `Form` have no tests. Layout bugs
+(off-by-one in column widths, incorrect nesting) are the hardest to debug visually.
+
+At minimum, test that:
+- `Layout()` assigns non-overlapping, non-negative bounds to children.
+- Fractional sizing adds up to the available space.
+- The two open Grid TODOs produce correct results once resolved.
+
+#### 5.3 No Builder tests
+
+The Builder is the primary user-facing API. Test that:
+- Constructed widget trees have the expected parent-child relationships.
+- `Find()` locates widgets created with the builder.
+- `Build()` vs `Run()` produce the same UI instance.
+
+#### 5.4 No Theme/style resolution tests
+
+The cascading specificity logic (`type → class → state → id → combined`) is complex
+and has no dedicated test coverage. A unit test that verifies resolution order and
+inheritance would prevent regressions.
+
+#### 5.5 `canvas_test.go` appears minimal
+
+Check that the Canvas tests exercise actual drawing operations and not just
+construction.
 
 ---
 
-### 4.8 `Progress` animation bar characters in `NewTheme()` use ASCII defaults
+## 6. Known Technical Debt
 
-**File:** `theme.go:113-131`
-
-The default progress bar characters (`#` and `.`) are plain ASCII. The rest of the framework uses Unicode box-drawing characters extensively. Consistent Unicode defaults (e.g. `█`, `░`) would look more polished out of the box and align with the scrollbar rendering.
-
----
-
-## 5. Positive Observations
-
-- **Gap buffer with KMP search** is an excellent implementation choice for a text editor widget.
-- **Selector specificity cascade** in `theme.go` is well-thought-out and follows CSS conventions closely.
-- **Layer-based popup system** is simple and handles z-ordering correctly.
-- **Dirty-flag + channel-based rendering** (`redraw` + `refresh` channels) is a clean separation between single-widget and full-screen invalidation.
-- **Generic `FindAll[T]`** is idiomatic Go 1.18+ usage.
-- **The builder pattern** is ergonomic and makes UI construction code very readable.
-- **Comprehensive keyboard navigation** in `Table` and `List` matches professional TUI application expectations.
+| Location | Issue | Severity |
+|---|---|---|
+| `grid.go:283`, `grid.go:333` | `TODO: Distribute remaining space evenly` — last fractional column/row absorbs all rounding error | Medium |
+| `select.go:54` | `TODO: Get real dropdown width?` — width estimate is wrong because renderer is unavailable in `Hint()` | Low |
+| `gap-buffer.go` | `Move()` panic message is in German (`"Cursor außerhalb des gültigen Bereichs"`) — should be English | Low |
+| `helper.go:Update()` | Type-switch dispatch — breaks if new widgets are added without updating the switch | Low |
+| `go.mod` | `go 1.25.5` version does not exist; CGo `go-sqlite3` included at library level | High |
 
 ---
 
-## Priority Summary
+## 7. Prioritised Recommendations
 
-| # | Severity | Location | Issue | Status |
-|---|----------|----------|-------|--------|
-| 1.1 | **High** | `input.go` | Unicode bug in `Input` — byte vs. rune length | ✅ Fixed (via 2.2) |
-| 1.3 | **High** | `table.go:64` | `tableWidth` accumulates on repeated `Set()` calls | ✅ Fixed |
-| 1.4 | **High** | `animation.go` | Data race on `ticker` field | ✅ Fixed |
-| 1.2 | **Medium** | `table.go:90` | Off-by-one separator in `Hint()` | ✅ Fixed |
-| 1.5 | **Medium** | `builder.go:58` | `Build()` always enables debug mode | ❌ Open |
-| 2.1 | **Medium** | `builder.go:202` | `Apply()` panics on unknown widget types | ❌ Open |
-| 2.2 | **Medium** | `input.go` | `Input` doesn't use `GapBuffer` | ✅ Fixed |
-| 2.5 | **Medium** | `builder.go:471` | Duplicate spacer IDs | ❌ Open |
-| 1.6 | **Low** | `helper.go:86` | Wrong package prefix in `WidgetType()` | ✅ Fixed |
-| 1.7 | **Low** | `table.go:12` | Unused `column` field | ❌ Open |
-| 1.8 | **Low** | `ui.go:144` | Parent set after log widget lookup | ✅ Fixed |
-| 2.4 | **Low** | `component.go:416` | Side-effecting `Style()` getter | ❌ Open |
-| 2.6 | **Low** | `theme.go:146` | `WithParent` return value discarded | ❌ Open |
-| 3.2 | **Low** | `gap-buffer.go:172` | Goroutine per iteration in `Runes()` | ❌ Open |
-| 3.3 | **Low** | `component.go:399` | Regex in hot render path | ❌ Open |
-| 4.7 | **Low** | `grow.go:43` | Nil child panic in `Grow.Hint()` | ❌ Open |
+**High priority (correctness / library health):**
+
+1. Fix `go.mod` Go version and move `go-sqlite3`, `figlet4go`, `golang.org/x/tools` to
+   a separate `cmd/` module or workspace to eliminate the CGo requirement for library
+   users.
+2. Resolve the two `grid.go` TODOs for even fractional space distribution.
+3. Fix `OnMouse` to register `"hover"` or align the framework event name with the
+   helper.
+
+**Medium priority (usability):**
+
+4. Define flag name constants to replace magic strings.
+5. Replace alternating-string `NewSelect` / `NewList` constructor with typed
+   `Option{Value, Label}` slices.
+6. Add `Example` functions to `doc.go` and expand `doc/reference.md` to cover all
+   widgets.
+7. Add sentinel errors for `NewUI` and other failure paths.
+
+**Medium priority (test coverage):**
+
+8. Add render/event tests for at least the five most-used widgets: Button, Input,
+   Checkbox, List, Table.
+9. Add layout tests for Flex and Grid covering fractional sizing and nesting.
+10. Add a Theme specificity resolution test.
+
+**Low priority (design / ergonomics):**
+
+11. Narrow the `Widget` interface; move infrastructure methods to internal interfaces.
+12. Add typed event handler helpers (`OnChange`, `OnActivate`, `OnSelect`).
+13. Fix stale `BaseWidget` comment in `widget.go`.
+14. Remove stale `archive/` entry from `AGENTS.md` and update README title.
+15. Translate the German panic message in `gap-buffer.go` to English.
