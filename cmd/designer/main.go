@@ -24,9 +24,9 @@ func NewDesigner() *Designer {
 	designer.canvas = NewCanvas("canvas", "", 1, 80, 25)
 	designer.position = NewStatic("position", "", " position ")
 	designer.command = NewInput("command", "")
-	designer.command.SetFlag("hidden", true)
+	designer.command.SetFlag(FlagHidden, true)
 
-	designer.canvas.On("move", func(widget Widget, event string, data ...any) bool {
+	designer.canvas.On(EvtMove, func(widget Widget, event Event, data ...any) bool {
 		x, y, _ := designer.canvas.Cursor()
 		designer.position.SetText(fmt.Sprintf(" %d:%d %s ", x, y, designer.canvas.Mode()))
 		designer.position.SetHint(len(designer.position.Text), 1)
@@ -44,12 +44,17 @@ func (d *Designer) Children() []Widget {
 	return d.children
 }
 
-func (d *Designer) Layout() {
+func (d *Designer) Add(_ Widget, _ ...any) error {
+	return nil
+}
+
+func (d *Designer) Layout() error {
 	x, y, w, h := d.Content()
 	lw, _ := d.children[1].Hint()
 	d.children[0].SetBounds(x, y, w, h)
 	d.children[1].SetBounds(x+w-lw-1, y+h-1, lw, 1)
 	d.children[2].SetBounds(x, y+h-1, w, 1)
+	return nil
 }
 
 func (d *Designer) Render(r *Renderer) {

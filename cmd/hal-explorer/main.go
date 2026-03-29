@@ -215,7 +215,7 @@ func createUI(explorer *HALExplorer) *UI {
 	}
 	// Hide body editor initially
 	if ed := Find(ui, "body-editor"); ed != nil {
-		ed.SetFlag("hidden", true)
+		ed.SetFlag(FlagHidden, true)
 	}
 
 	explorer.setupEventHandlers(ui)
@@ -305,7 +305,7 @@ func (h *HALExplorer) updateResponseDisplay(ui *UI) {
 func (h *HALExplorer) setupEventHandlers(ui *UI) {
 	sendBtn := Find(ui, "send-btn")
 	if sendBtn != nil {
-		sendBtn.On("click", func(widget Widget, event string, data ...any) bool {
+		sendBtn.On(EvtClick, func(widget Widget, event Event, data ...any) bool {
 			h.handleSendRequest(ui)
 			return true
 		})
@@ -313,14 +313,14 @@ func (h *HALExplorer) setupEventHandlers(ui *UI) {
 
 	showBodyCheckbox := Find(ui, "show-body")
 	if showBodyCheckbox != nil {
-		showBodyCheckbox.On("change", func(widget Widget, event string, data ...any) bool {
+		showBodyCheckbox.On(EvtChange, func(widget Widget, event Event, data ...any) bool {
 			if checked, ok := data[0].(bool); ok {
 				editor := Find(ui, "body-editor")
 				if editor != nil {
 					if checked {
-						editor.SetFlag("hidden", false)
+						editor.SetFlag(FlagHidden, false)
 					} else {
-						editor.SetFlag("hidden", true)
+						editor.SetFlag(FlagHidden, true)
 					}
 					ui.Redraw(editor)
 				}
@@ -331,13 +331,13 @@ func (h *HALExplorer) setupEventHandlers(ui *UI) {
 
 	addHeaderBtn := Find(ui, "add-header-btn")
 	if addHeaderBtn != nil {
-		addHeaderBtn.On("click", func(widget Widget, event string, data ...any) bool {
+		addHeaderBtn.On(EvtClick, func(widget Widget, event Event, data ...any) bool {
 			Update(ui, "status-bar", "Dynamic headers not implemented in demo")
 			return true
 		})
 	}
 
-	ui.On("key", func(widget Widget, event string, data ...any) bool {
+	ui.On(EvtKey, func(widget Widget, event Event, data ...any) bool {
 		if key, ok := data[0].(string); ok {
 			if key == "ctrl s" {
 				h.handleSendRequest(ui)
@@ -354,7 +354,7 @@ func (h *HALExplorer) setupEventHandlers(ui *UI) {
 	tabs := Find(ui, "response-tabs")
 	if tabs != nil {
 		if t, ok := tabs.(*Tabs); ok {
-			t.On("activate", func(widget Widget, event string, data ...any) bool {
+			t.On(EvtActivate, func(widget Widget, event Event, data ...any) bool {
 				if tabIndex, ok := data[0].(int); ok {
 					h.showResponseTab(ui, tabIndex)
 				}
@@ -387,7 +387,7 @@ func (h *HALExplorer) handleSendRequest(ui *UI) {
 	showBody := false
 	if cb := Find(ui, "show-body"); cb != nil {
 		if c, ok := cb.(*Checkbox); ok {
-			showBody = c.Flag("checked")
+			showBody = c.Flag(FlagChecked)
 		}
 	}
 	if showBody {

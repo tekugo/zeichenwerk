@@ -70,7 +70,7 @@ func NewCanvas(id, class string, pages, width, height int) *Canvas {
 	c.SetHint(width, height)
 
 	// Make it focusable by default
-	c.SetFlag("focusable", true)
+	c.SetFlag(FlagFocusable, true)
 
 	// Register key handler for cursor movement and editing
 	OnKey(c, c.handleKey)
@@ -113,7 +113,7 @@ func (c *Canvas) Clear() {
 // on the current mode: block in normal mode, bar in insert mode. This can be
 // overridden via the widget's style configuration.
 func (c *Canvas) Cursor() (int, int, string) {
-	if !c.Flag("focused") {
+	if !c.Flag(FlagFocused) {
 		return -1, -1, ""
 	}
 	cursor := c.Style().Cursor()
@@ -219,7 +219,7 @@ func (c *Canvas) SetCell(x, y int, ch string, style *Style) {
 		style = NewStyle("")
 	}
 	c.cells[c.page][y][x] = Cell{ch: ch, style: style}
-	c.Dispatch(c, "change")
+	c.Dispatch(c, EvtChange)
 	c.Refresh()
 }
 
@@ -228,7 +228,7 @@ func (c *Canvas) SetCell(x, y int, ch string, style *Style) {
 func (c *Canvas) SetCursor(x, y int) {
 	c.cursorX = x
 	c.cursorY = y
-	c.Dispatch(c, "move", x, y)
+	c.Dispatch(c, EvtMove,x, y)
 }
 
 // SetMode sets the canvas mode. Valid modes are ModeNormal and ModeInsert.
@@ -236,7 +236,7 @@ func (c *Canvas) SetCursor(x, y int) {
 func (c *Canvas) SetMode(mode string) {
 	c.mode = mode
 	c.Refresh()
-	c.Dispatch(c, "mode", c.mode)
+	c.Dispatch(c, EvtMode,c.mode)
 }
 
 // SetPage sets the current page
@@ -377,7 +377,7 @@ func (c *Canvas) move(dx, dy int) {
 	}
 
 	c.cursorX, c.cursorY = newX, newY
-	c.Dispatch(c, "move", newX, newY)
+	c.Dispatch(c, EvtMove,newX, newY)
 	c.Refresh()
 }
 

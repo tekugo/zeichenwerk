@@ -41,7 +41,7 @@ func NewText(id, class string, content []string, follow bool, max int) *Text {
 		offsetX:   0,
 		offsetY:   0,
 	}
-	text.SetFlag("focusable", true)
+	text.SetFlag(FlagFocusable, true)
 	OnKey(text, text.handleKey)
 	return text
 }
@@ -83,9 +83,14 @@ func (t *Text) Clear() {
 //
 // Parameters:
 //   - content: New lines of text to replace all existing content
-func (t *Text) Set(content []string) {
+func (t *Text) Set(value any) bool {
+	content, ok := value.([]string)
+	if !ok {
+		return false
+	}
 	t.content = content
 	t.adjust()
+	return true
 }
 
 // adjust updates the scroll position and triggers a display refresh.
@@ -102,7 +107,7 @@ func (t *Text) adjust() {
 	}
 
 	// Check, if we follow and need to update the offsets
-	if t.follow && !t.Flag("focused") {
+	if t.follow && !t.Flag(FlagFocused) {
 		t.offsetX = 0
 		_, _, _, h := t.Content()
 		t.offsetY = max(len(t.content)-h, 0)

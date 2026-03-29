@@ -52,10 +52,13 @@ func NewFlex(id, class string, horizontal bool, alignment string, spacing int) *
 //
 // Parameters:
 //   - widget: The widget to add as a child of this flex container
-func (f *Flex) Add(widget Widget) {
+func (f *Flex) Add(widget Widget, params ...any) error {
 	if widget != nil {
 		widget.SetParent(f)
 		f.children = append(f.children, widget)
+		return nil
+	} else {
+		return ErrChildIsNil
 	}
 }
 
@@ -123,17 +126,17 @@ func (f *Flex) Hint() (int, int) {
 
 // Layout arranges all child widgets within the flex container according to
 // the specified orientation, alignment, and spacing configuration.
-func (f *Flex) Layout() {
+func (f *Flex) Layout() error {
 	if f.horizontal {
-		f.Log(f, "debug", "Flex horizontal layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
+		f.Log(f, Debug,"Flex horizontal layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
 		f.layoutHorizontal()
 	} else {
-		f.Log(f, "debug", "Flex vertical layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
+		f.Log(f, Debug,"Flex vertical layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
 		f.layoutVertical()
 	}
 
 	// Refresh and lay out children
-	Layout(f)
+	return Layout(f)
 }
 
 // layoutHorizontal performs horizontal layout of child widgets.
@@ -270,7 +273,7 @@ func (f *Flex) layoutVertical() {
 			child.SetBounds(wx, y, ww, hh+style.Vertical())
 		}
 		_, _, _, height := child.Bounds()
-		f.Log(f, "debug", "Child", "i", i, "ID", child.ID(), "hint", hh, "height", height)
+		f.Log(f, Debug,"Child", "i", i, "ID", child.ID(), "hint", hh, "height", height)
 		y += height + f.spacing
 	}
 }

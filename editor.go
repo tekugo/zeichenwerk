@@ -42,7 +42,7 @@ func NewEditor(id, class string) *Editor {
 		indent:    true,
 		disabled:  false,
 	}
-	e.SetFlag("focusable", true)
+	e.SetFlag(FlagFocusable, true)
 	OnKey(e, e.handleKey)
 	return e
 }
@@ -110,7 +110,7 @@ func (e *Editor) SetContent(lines []string) {
 	e.offsetX = 0
 	e.offsetY = 0
 	e.updateLongestLine()
-	e.Dispatch(e, "change")
+	e.Dispatch(e, EvtChange)
 	e.Refresh()
 }
 
@@ -166,9 +166,9 @@ func (e *Editor) SetAutoIndent(auto bool) {
 func (e *Editor) SetReadOnly(ro bool) {
 	e.disabled = ro
 	if ro {
-		e.SetFlag("disabled", true)
+		e.SetFlag(FlagDisabled, true)
 	} else {
-		e.SetFlag("disabled", false)
+		e.SetFlag(FlagDisabled, false)
 	}
 }
 
@@ -304,7 +304,7 @@ func (e *Editor) Insert(ch rune) {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch(e, "change")
+	e.Dispatch(e, EvtChange)
 	e.Refresh()
 }
 
@@ -336,7 +336,7 @@ func (e *Editor) Delete() {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch(e, "change")
+	e.Dispatch(e, EvtChange)
 	e.Refresh()
 }
 
@@ -361,7 +361,7 @@ func (e *Editor) DeleteForward() {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch(e, "change")
+	e.Dispatch(e, EvtChange)
 	e.Refresh()
 }
 
@@ -410,7 +410,7 @@ func (e *Editor) Enter() {
 
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch(e, "change")
+	e.Dispatch(e, EvtChange)
 	e.Refresh()
 }
 
@@ -423,7 +423,7 @@ func (e *Editor) insertTabAsSpaces() {
 	}
 	e.updateLongestLine()
 	e.adjustViewport()
-	e.Dispatch(e, "change")
+	e.Dispatch(e, EvtChange)
 	e.Refresh()
 }
 
@@ -588,7 +588,7 @@ func (e *Editor) Render(r *Renderer) {
 		line := e.content[lineIdx].String()
 		visible := e.getVisibleLineContent(line, e.offsetX, usableW, e.tab)
 		// Choose style: current line highlighted if focused
-		if e.Flag("focused") && lineIdx == e.line {
+		if e.Flag(FlagFocused) && lineIdx == e.line {
 			style := e.Style("current-line")
 			if style != nil {
 				r.Set(style.Foreground(), style.Background(), style.Font())

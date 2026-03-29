@@ -6,12 +6,15 @@ package zeichenwerk
 type Container interface {
 	Widget
 
+	// Adds a widget to the container
+	Add(widget Widget, params ...any) error
+
 	// Children returns a slice of all direct child widgets.
 	// All children will be returned, whether they are visible or not.
 	Children() []Widget
 
 	// Layout arranges the child widgets in the container.
-	Layout()
+	Layout() error
 }
 
 // Find searches for a widget by ID within a container hierarchy.
@@ -78,7 +81,7 @@ func FindAt(container Container, x, y int) Widget {
 	}
 
 	for _, child := range container.Children() {
-		visible := !child.Flag("hidden")
+		visible := !child.Flag(FlagHidden)
 		if !visible {
 			continue
 		}
@@ -104,12 +107,16 @@ func FindAt(container Container, x, y int) Widget {
 //
 // Parameters:
 //   - container: The container whose child containers should be laid out
-func Layout(container Container) {
+func Layout(container Container) error {
+	var err error
 	for _, child := range container.Children() {
 		if inner, ok := child.(Container); ok {
-			inner.Layout()
+			if err = inner.Layout(); err != nil {
+				container.Log(inner, Error, "Layout failed", "error", err)
+			}
 		}
 	}
+	return err
 }
 
 // Traverse recursively visits all widgets in the container hierarchy and

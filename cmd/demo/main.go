@@ -57,7 +57,7 @@ func createUI() *UI {
 		Build()
 
 	switcher := Find(ui, "switcher").(*Switcher)
-	Find(ui, "navigation").On("activate", func(_ Widget, event string, data ...any) bool {
+	Find(ui, "navigation").On(EvtActivate, func(_ Widget, event Event, data ...any) bool {
 		if len(data) == 1 {
 			if selected, ok := data[0].(int); ok {
 				if selected < len(switcher.Children()) {
@@ -184,7 +184,7 @@ func checkbox(builder *Builder) {
 	for i := 1; i <= 5; i++ {
 		cbID := fmt.Sprintf("cb%d", i)
 		if cb := Find(container, cbID); cb != nil {
-			cb.On("change", func(_ Widget, event string, data ...any) bool {
+			cb.On(EvtChange, func(_ Widget, event Event, data ...any) bool {
 				checked := data[0].(bool)
 				if statusLabel := Find(container, "checkbox-status"); statusLabel != nil {
 					if label, ok := statusLabel.(*Static); ok {
@@ -296,10 +296,10 @@ func form(builder *Builder) {
 		End().
 		End()
 
-	builder.Find("save-button").On("click", func(widget Widget, _ string, _ ...any) bool {
+	builder.Find("save-button").On(EvtClick, func(widget Widget, _ Event, _ ...any) bool {
 		Update(FindUI(widget), "info-label", "Click "+time.Now().String())
 		text, _ := json.Marshal(user)
-		widget.Log(widget, "debug", string(text))
+		widget.Log(widget, Debug, string(text))
 		return true
 	})
 }
@@ -364,16 +364,16 @@ func scanner(builder *Builder) {
 		End()
 
 	container := builder.Find("scanner-container").(Container)
-	container.On("show", func(_ Widget, event string, data ...any) bool {
-		container.Log(container, "debug", "Scanner panel shown")
+	container.On(EvtShow, func(_ Widget, event Event, data ...any) bool {
+		container.Log(container, Debug, "Scanner panel shown")
 		for _, scanner := range FindAll[*Scanner](container) {
 			scanner.Start(50 * time.Millisecond)
 		}
 		return true
 	})
 
-	container.On("hide", func(_ Widget, _ string, _ ...any) bool {
-		container.Log(container, "debug", "Scanner panel hidden")
+	container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		container.Log(container, Debug, "Scanner panel hidden")
 		for _, scanner := range FindAll[*Scanner](container) {
 			scanner.Stop()
 		}
@@ -396,14 +396,14 @@ func spinner(builder *Builder) {
 		End()
 
 	container := builder.Find("spinner-demo").(Container)
-	container.On("show", func(_ Widget, event string, data ...any) bool {
+	container.On(EvtShow, func(_ Widget, event Event, data ...any) bool {
 		for _, spinner := range FindAll[*Spinner](container) {
 			spinner.Start(100 * time.Millisecond)
 		}
 		return true
 	})
 
-	container.On("hide", func(_ Widget, _ string, _ ...any) bool {
+	container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
 		for _, spinner := range FindAll[*Spinner](container) {
 			spinner.Stop()
 		}

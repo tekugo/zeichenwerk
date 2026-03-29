@@ -7,6 +7,9 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+// flagSearch is an internal flag used to track whether quick-search is enabled.
+const flagSearch Flag = "search"
+
 // List is a scrollable list widget that displays text items with comprehensive
 // interaction capabilities.
 //
@@ -70,8 +73,8 @@ func NewList(id, class string, items []string) *List {
 		scrollbar:   true,
 		quickSearch: true,
 	}
-	list.SetFlag("focusable", true)
-	list.SetFlag("search", true)
+	list.SetFlag(FlagFocusable, true)
+	list.SetFlag(flagSearch, true)
 	OnKey(list, list.handleKey)
 	return list
 }
@@ -93,6 +96,19 @@ func (l *List) SetItems(items []string) {
 	l.index = 0
 	l.offset = 0
 	l.Refresh()
+}
+
+// Set implements Setter. Accepts []string to replace the list items.
+func (l *List) Set(value any) bool {
+	items, ok := value.([]string)
+	if !ok {
+		return false
+	}
+	l.SetItems(items)
+	if len(items) > 0 {
+		l.Dispatch(l, EvtSelect,0)
+	}
+	return true
 }
 
 // Select selects the item at the specified index.
@@ -179,7 +195,7 @@ func (l *List) Move(count int) {
 	if newIndex != l.index {
 		l.index = newIndex
 		l.adjust()
-		l.Dispatch(l, "select", l.index)
+		l.Dispatch(l, EvtSelect,l.index)
 		l.Refresh()
 	}
 }
@@ -193,7 +209,7 @@ func (l *List) First() {
 		if !slices.Contains(l.disabled, i) {
 			l.index = i
 			l.adjust()
-			l.Dispatch(l, "select", l.index)
+			l.Dispatch(l, EvtSelect,l.index)
 			break
 		}
 	}
@@ -209,7 +225,7 @@ func (l *List) Last() {
 		if !slices.Contains(l.disabled, i) {
 			l.index = i
 			l.adjust()
-			l.Dispatch(l, "select", l.index)
+			l.Dispatch(l, EvtSelect,l.index)
 			break
 		}
 	}
@@ -272,10 +288,10 @@ func (l *List) handleKey(_ Widget, event *tcell.EventKey) bool {
 		l.PageDown()
 		return true
 	case tcell.KeyEnter:
-		l.Dispatch(l, "activate", l.index)
+		l.Dispatch(l, EvtActivate, l.index)
 		return true
 	case tcell.KeyRune:
-		if l.Flag("search") {
+		if l.Flag(flagSearch) {
 			// Quick search by first letter
 			ch := event.Str()
 			for i, item := range l.items {
@@ -385,7 +401,7 @@ func (l *List) Render(r *Renderer) {
 			style := l.Style(":disabled")
 			r.Set(style.Foreground(), style.Background(), style.Font())
 		} else if current == l.index {
-			if l.Flag("focused") {
+			if l.Flag(FlagFocused) {
 				style := l.Style("highlight:focused")
 				r.Set(style.Foreground(), style.Background(), style.Font())
 			} else {

@@ -22,7 +22,7 @@ func NewGrow(id, class string, horizontal bool) *Grow {
 	return grow
 }
 
-func (g *Grow) Add(widget Widget) {
+func (g *Grow) Add(widget Widget, params ...any) error {
 	if g.child != nil {
 		g.child.SetParent(nil)
 	}
@@ -30,6 +30,7 @@ func (g *Grow) Add(widget Widget) {
 		widget.SetParent(g)
 	}
 	g.child = widget
+	return nil
 }
 
 // Apply applies a theme's styles to the component.
@@ -53,7 +54,7 @@ func (g *Grow) Hint() (int, int) {
 	return w, h
 }
 
-func (g *Grow) Layout() {
+func (g *Grow) Layout() error {
 	if g.child != nil {
 		cx, cy, cw, ch := g.Bounds()
 		g.child.SetBounds(cx, cy, cw, ch)
@@ -63,7 +64,7 @@ func (g *Grow) Layout() {
 			g.end = g.height
 		}
 	}
-	Layout(g)
+	return Layout(g)
 }
 
 func (g *Grow) Render(r *Renderer) {

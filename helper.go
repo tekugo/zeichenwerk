@@ -42,7 +42,7 @@ func OnKey(widget Widget, handler func(Widget, *tcell.EventKey) bool) {
 		return
 	}
 
-	widget.On("key", func(widget Widget, event string, data ...any) bool {
+	widget.On(EvtKey, func(widget Widget, event Event, data ...any) bool {
 		if len(data) != 1 {
 			return false
 		}
@@ -60,7 +60,7 @@ func OnMouse(widget Widget, handler func(Widget, *tcell.EventMouse) bool) {
 		return
 	}
 
-	widget.On("mouse", func(widget Widget, event string, data ...any) bool {
+	widget.On(EvtMouse, func(widget Widget, event Event, data ...any) bool {
 		if len(data) != 1 {
 			return false
 		}
@@ -78,7 +78,7 @@ func OnActivate(widget Widget, handler func(Widget, int) bool) {
 	if widget == nil {
 		return
 	}
-	widget.On("activate", func(widget Widget, event string, data ...any) bool {
+	widget.On(EvtActivate, func(widget Widget, event Event, data ...any) bool {
 		if len(data) < 1 {
 			return false
 		}
@@ -95,7 +95,7 @@ func OnChange(widget Widget, handler func(Widget, string) bool) {
 	if widget == nil {
 		return
 	}
-	widget.On("change", func(widget Widget, event string, data ...any) bool {
+	widget.On(EvtChange, func(widget Widget, event Event, data ...any) bool {
 		if len(data) < 1 {
 			return false
 		}
@@ -112,7 +112,7 @@ func OnSelect(widget Widget, handler func(Widget, int) bool) {
 	if widget == nil {
 		return
 	}
-	widget.On("select", func(widget Widget, event string, data ...any) bool {
+	widget.On(EvtSelect, func(widget Widget, event Event, data ...any) bool {
 		if len(data) < 1 {
 			return false
 		}
@@ -141,66 +141,47 @@ func WidgetType(widget Widget) string {
 func HandleKeyEvent(container Container, id string, fn func(Widget, *tcell.EventKey) bool) {
 	widget := Find(container, id)
 	if widget == nil {
-		container.Log(container, "error", "Widget %s not found", id)
+		container.Log(container, Error,"Widget %s not found", id)
 		return
 	}
 	OnKey(widget, fn)
 }
 
 // HandleListEvent registers a handler for List-specific events.
-func HandleListEvent(container Container, id, event string, fn func(*List, string, int) bool) {
+func HandleListEvent(container Container, id string, event Event, fn func(*List, Event, int) bool) {
 	widget := Find(container, id)
 	if widget == nil {
-		container.Log(container, "error", "Widget %s not found", id)
+		container.Log(container, Error, "Widget %s not found", id)
 		return
 	}
 	list, ok := widget.(*List)
 	if !ok {
-		container.Log(container, "error", "Widget %s is not a List", id)
+		container.Log(container, Error, "Widget %s is not a List", id)
 		return
 	}
-	widget.On(event, func(widget Widget, event string, data ...any) bool {
+	widget.On(event, func(widget Widget, event Event, data ...any) bool {
 		if len(data) != 1 {
-			container.Log(container, "error", "List event %s expected 1 data parameter, got %d", event, len(data))
+			container.Log(container, Error, "List event %s expected 1 data parameter, got %d", event, len(data))
 			return false
 		}
 		index, ok := data[0].(int)
 		if !ok {
-			container.Log(container, "error", "List event %s data should be int, got %T", event, data[0])
+			container.Log(container, Error, "List event %s data should be int, got %T", event, data[0])
 			return false
 		}
 		return fn(list, event, index)
 	})
 }
 
-// Update updates widget content based on type.
+// Update updates the content of the widget identified by id within container.
+// The widget must implement the Setter interface; if it does not, the call
+// is silently ignored.
 func Update(container Container, id string, value any) {
 	widget := Find(container, id)
 	if widget == nil {
 		return
 	}
-	switch w := widget.(type) {
-	case *List:
-		if items, ok := value.([]string); ok {
-			w.SetItems(items)
-			// Select first item if available
-			if len(items) > 0 {
-				w.Dispatch(w, "select", 0)
-			}
-		}
-	case *Static:
-		if str, ok := value.(string); ok {
-			w.SetText(str)
-		} else {
-			w.SetText(fmt.Sprintf("%v", value))
-		}
-	case *Table:
-		if provider, ok := value.(TableProvider); ok {
-			w.Set(provider)
-		}
-	case *Text:
-		if lines, ok := value.([]string); ok {
-			w.Set(lines)
-		}
+	if s, ok := widget.(Setter); ok {
+		s.Set(value)
 	}
 }

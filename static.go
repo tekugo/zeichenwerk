@@ -1,6 +1,9 @@
 package zeichenwerk
 
-import "unicode/utf8"
+import (
+	"fmt"
+	"unicode/utf8"
+)
 
 // Static represents a text display widget that shows static content.
 // It is a non-interactive widget primarily used for displaying information, captions,
@@ -61,4 +64,15 @@ func (s *Static) SetAlignment(align string) {
 func (s *Static) SetText(text string) {
 	s.Text = text
 	s.Refresh()
+}
+
+// Set implements Setter. Accepts a string value; any other type is formatted
+// with fmt.Sprintf("%v", value).
+func (s *Static) Set(value any) bool {
+	if str, ok := value.(string); ok {
+		s.SetText(str)
+	} else {
+		s.SetText(fmt.Sprintf("%v", value))
+	}
+	return true
 }

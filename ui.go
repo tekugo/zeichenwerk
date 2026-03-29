@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v3"
@@ -97,16 +96,16 @@ type UI struct {
 	screen   tcell.Screen // The terminal screen interface for low-level cell manipulation and event polling
 }
 
-// parseLevel converts a string level name to slog.Level.
-func parseLevel(s string) slog.Level {
-	switch strings.ToLower(s) {
-	case "debug":
+// parseLevel converts a Level to slog.Level.
+func parseLevel(l Level) slog.Level {
+	switch l {
+	case Debug:
 		return slog.LevelDebug
-	case "info":
+	case Info:
 		return slog.LevelInfo
-	case "warn":
+	case Warning:
 		return slog.LevelWarn
-	case "error":
+	case Error, Fatal:
 		return slog.LevelError
 	default:
 		return slog.LevelInfo
@@ -190,7 +189,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		// First try to handle the event with the focused widget.
 		// If the event is handled by the focused widget or one of its parents
 		// we do not process the event any further.
-		if ui.dispatch(ui.focus, "key", event) {
+		if ui.dispatch(ui.focus, EvtKey, event) {
 			break
 		}
 
@@ -207,12 +206,12 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
 			close(ui.quit)
 		case tcell.KeyCtrlD:
-			ui.Log(ui, "debug", "Opening inspector")
+			ui.Log(ui, Debug,"Opening inspector")
 			animation := NewGrow("inspector-grow", "", false)
 			animation.Add(NewInspector(ui).UI())
 			hw, hh := animation.Hint()
 			animation.Start(10 * time.Millisecond)
-			ui.Log(ui, "debug", "Inspection hint", "hw", hw, "hh", hh)
+			ui.Log(ui, Debug,"Inspection hint", "hw", hw, "hh", hh)
 			ui.Popup(-1, -1, 0, 0, animation)
 			ui.Refresh()
 		case tcell.KeyRune:
@@ -228,33 +227,34 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		at := FindAt(ui.layers[len(ui.layers)-1], mx, my)
 		if at != ui.hover {
 			if ui.hover != nil {
-				ui.hover.SetFlag("hovered", false)
+				ui.hover.SetFlag(FlagHovered, false)
 				ui.Redraw(ui.hover)
 			}
 			if at != nil {
 				ui.hover = at
-				at.SetFlag("hovered", true)
+				at.SetFlag(FlagHovered, true)
 				ui.Redraw(at)
 			}
 		} else {
 			switch event.Buttons() {
 			case tcell.Button1:
-				if at.Flag("focusable") && at != ui.focus {
+				if at.Flag(FlagFocusable) && at != ui.focus {
 					ui.Focus(at)
 				}
 			}
 		}
-		ui.dispatch(ui.hover, "hover", event)
+		ui.dispatch(ui.hover, EvtHover, event)
+		ui.dispatch(at, EvtMouse, event)
 
 	case *tcell.EventPaste:
-		ui.dispatch(ui.focus, "paste", event)
+		ui.dispatch(ui.focus, EvtPaste, event)
 
 	case *tcell.EventResize:
 		w, h := ui.screen.Size()
 		if ui.width != w || ui.height != h {
 			ui.width, ui.height = w, h
 			ui.Layout()
-			ui.Log(ui, "debug", "Screen size: %d:%d", ui.width, ui.height)
+			ui.Log(ui, Debug,"Screen size: %d:%d", ui.width, ui.height)
 			ui.Refresh()
 			ui.screen.Sync()
 		}
@@ -274,7 +274,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 //
 // Returns:
 //   - bool: true if any widget in the chain handled the event, false otherwise
-func (ui *UI) dispatch(target Widget, event string, data ...any) bool {
+func (ui *UI) dispatch(target Widget, event Event, data ...any) bool {
 	current := target
 	handled := false
 	for current != nil && !handled && current != ui {
@@ -297,11 +297,16 @@ func (ui *UI) Children() []Widget {
 	return result
 }
 
+// Add is a no-op for UI; widgets are added via the builder or layer stack.
+func (ui *UI) Add(_ Widget, _ ...any) error {
+	return nil
+}
+
 // Layout recalculates and applies the layout for all widget layers in the UI.
 // This method is called automatically when the screen is resized or when
 // the UI structure changes. It ensures that all widgets are properly
 // positioned and sized according to their layout constraints.
-func (ui *UI) Layout() {
+func (ui *UI) Layout() error {
 	// Set the bounds of the root widget to the screen bounds.
 	// In debug mode, the bottom line is reserved for debug information
 	if ui.debug {
@@ -311,7 +316,7 @@ func (ui *UI) Layout() {
 	}
 
 	// Lay out the root widget.
-	ui.layers[0].Layout()
+	return ui.layers[0].Layout()
 }
 
 // ---- Drawing Methods -------------------------------------------------------
@@ -410,10 +415,10 @@ func (ui *UI) ShowDebug() {
 //   - widget: The widget to receive focus, or nil to clear focus
 func (ui *UI) Focus(widget Widget) {
 	if ui.focus != nil && ui.focus != widget {
-		ui.focus.SetFlag("focused", false)
+		ui.focus.SetFlag(FlagFocused, false)
 	}
 	if widget != nil {
-		widget.SetFlag("focused", true)
+		widget.SetFlag(FlagFocused, true)
 	}
 	ui.focus = widget
 	ui.Refresh()
@@ -436,10 +441,10 @@ func (ui *UI) SetFocus(which string) {
 	var first, previous, next, last Widget
 	found := false
 	Traverse(ui.layers[len(ui.layers)-1], func(widget Widget) bool {
-		if widget.Flag("hidden") {
+		if widget.Flag(FlagHidden) {
 			return false
 		}
-		if !widget.Flag("focusable") {
+		if !widget.Flag(FlagFocusable) {
 			return true
 		}
 		if first == nil {
@@ -455,7 +460,7 @@ func (ui *UI) SetFocus(which string) {
 		last = widget
 		return true
 	})
-	ui.Log(ui, "debug", "SetFocus", "which", which, "layer", ui.layers[len(ui.layers)-1].ID(), "first", ID(first), "previous", ID(previous), "next", ID(next), "last", ID(last))
+	ui.Log(ui, Debug,"SetFocus", "which", which, "layer", ui.layers[len(ui.layers)-1].ID(), "first", ID(first), "previous", ID(previous), "next", ID(next), "last", ID(last))
 	switch which {
 	case "last":
 		ui.Focus(last)
@@ -523,12 +528,12 @@ func (ui *UI) ShowCursor() {
 // "info", "warn", "error"). Additional key-value pairs can be provided via params.
 //
 // This method maintains backward compatibility with existing component logging.
-func (ui *UI) Log(source Widget, levelStr, message string, params ...any) {
+func (ui *UI) Log(source Widget, level Level, message string, params ...any) {
 	if ui.logger == nil {
 		// Logger not initialized; ignore.
 		return
 	}
-	level := parseLevel(levelStr)
+	slogLevel := parseLevel(level)
 	args := []any{
 		slog.String("source", source.ID()),
 		slog.String("widgetType", WidgetType(source)),
@@ -541,7 +546,7 @@ func (ui *UI) Log(source Widget, levelStr, message string, params ...any) {
 			args = append(args, slog.Any(key, val))
 		}
 	}
-	ui.logger.Log(context.Background(), level, message, args...)
+	ui.logger.Log(context.Background(), slogLevel, message, args...)
 }
 
 // SetLogLevel changes the minimum log level at runtime.

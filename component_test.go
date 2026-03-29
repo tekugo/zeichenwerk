@@ -53,17 +53,17 @@ func TestComponent_ID(t *testing.T) {
 func TestComponent_Flag(t *testing.T) {
 	c := &Component{}
 
-	if c.Flag("hidden") {
+	if c.Flag(FlagHidden) {
 		t.Errorf("Flag('hidden') should be false initially")
 	}
 
-	c.SetFlag("hidden", true)
-	if !c.Flag("hidden") {
+	c.SetFlag(FlagHidden, true)
+	if !c.Flag(FlagHidden) {
 		t.Errorf("Flag('hidden') should be true after SetFlag")
 	}
 
-	c.SetFlag("hidden", false)
-	if c.Flag("hidden") {
+	c.SetFlag(FlagHidden, false)
+	if c.Flag(FlagHidden) {
 		t.Errorf("Flag('hidden') should be false after turning off")
 	}
 }
@@ -71,16 +71,16 @@ func TestComponent_Flag(t *testing.T) {
 func TestComponent_Dispatch_On(t *testing.T) {
 	c := &Component{}
 	called := false
-	var capturedEvent string
+	var capturedEvent Event
 
-	handler := func(_ Widget, event string, data ...any) bool {
+	handler := func(_ Widget, event Event, data ...any) bool {
 		called = true
 		capturedEvent = event
 		return true
 	}
 
-	c.On("click", handler)
-	c.Dispatch(c, "click")
+	c.On(EvtClick, handler)
+	c.Dispatch(c, EvtClick)
 
 	if !called {
 		t.Error("Dispatch('click') did not trigger the handler")

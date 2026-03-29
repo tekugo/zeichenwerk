@@ -39,9 +39,9 @@ type Component struct {
 	parent              Container            // reference to the parent container
 	x, y, width, height int                  // screen area of the widget (outer bounds)
 	hwidth, hheight     int                  // preferred content size for Hint() sizing; containers may use negative values for fractional sizing
-	states              map[string]bool      // map of internal boolean states like visible
+	states              map[Flag]bool        // map of internal boolean states like visible
 	styles              map[string]*Style    // visual styling information
-	handlers            map[string][]Handler // event handlers
+	handlers            map[Event][]Handler // event handlers
 }
 
 // Creates a new component.
@@ -104,7 +104,7 @@ func (c *Component) Cursor() (int, int, string) {
 //   - source: Source widget
 //   - event: The type of event to dispatch.
 //   - data: Optional data associated with the event.
-func (c *Component) Dispatch(source Widget, event string, data ...any) bool {
+func (c *Component) Dispatch(source Widget, event Event, data ...any) bool {
 	if c.handlers == nil {
 		return false
 	}
@@ -129,11 +129,11 @@ func (c *Component) Dispatch(source Widget, event string, data ...any) bool {
 //
 // Returns:
 //   - bool: The current value of the state
-func (c *Component) Flag(state string) bool {
+func (c *Component) Flag(flag Flag) bool {
 	if c.states == nil {
 		return false
 	}
-	return c.states[state]
+	return c.states[flag]
 }
 
 // Hint returns the widget's preferred content size of the widget.
@@ -189,7 +189,7 @@ func (c *Component) Info() string {
 //   - level: Log level
 //   - msg: The debug message to log (can be a format string)
 //   - params: Optional parameters for message formatting
-func (c *Component) Log(source Widget, level, msg string, params ...any) {
+func (c *Component) Log(source Widget, level Level, msg string, params ...any) {
 	if c.parent != nil {
 		c.parent.Log(source, level, msg, params...)
 	}
@@ -204,9 +204,9 @@ func (c *Component) Log(source Widget, level, msg string, params ...any) {
 // Parameters:
 //   - event: The event to listen for
 //   - handler: event handler function
-func (c *Component) On(event string, handler Handler) {
+func (c *Component) On(event Event, handler Handler) {
 	if c.handlers == nil {
-		c.handlers = make(map[string][]Handler)
+		c.handlers = make(map[Event][]Handler)
 	}
 	c.handlers[event] = append([]Handler{handler}, c.handlers[event]...)
 }
@@ -247,7 +247,7 @@ func (c *Component) Refresh() {
 //   - r: The renderer to use for rendering the widget
 func (c *Component) Render(r *Renderer) {
 	// Check if the widget is visible
-	if c.Flag("hidden") {
+	if c.Flag(FlagHidden) {
 		return
 	}
 
@@ -321,11 +321,11 @@ func (c *Component) SetBounds(x, y, width, height int) {
 // Parameters:
 //   - state: The name of the state
 //   - value: The boolean value to set
-func (c *Component) SetFlag(state string, value bool) {
+func (c *Component) SetFlag(flag Flag, value bool) {
 	if c.states == nil {
-		c.states = make(map[string]bool)
+		c.states = make(map[Flag]bool)
 	}
-	c.states[state] = value
+	c.states[flag] = value
 }
 
 // SetHint sets the sizing hint/preferred size of the widget.
@@ -349,14 +349,15 @@ func (c *Component) SetParent(parent Container) {
 
 // State returns the current widget state based on the set flags.
 func (c *Component) State() string {
-	if c.Flag("disabled") {
-		return "disabled"
-	} else if c.Flag("pressed") {
-		return "pressed"
-	} else if c.Flag("focused") {
-		return "focused"
-	} else if c.Flag("hovered") {
-		return "hovered"
+	switch {
+	case c.Flag(FlagDisabled):
+		return string(FlagDisabled)
+	case c.Flag(FlagPressed):
+		return string(FlagPressed)
+	case c.Flag(FlagFocused):
+		return string(FlagFocused)
+	case c.Flag(FlagHovered):
+		return string(FlagHovered)
 	}
 	return ""
 }

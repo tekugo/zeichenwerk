@@ -27,7 +27,7 @@ func NewTabs(id, class string) *Tabs {
 		selected:  0,
 		index:     0,
 	}
-	tabs.SetFlag("focusable", true)
+	tabs.SetFlag(FlagFocusable, true)
 	OnKey(tabs, tabs.handleKey)
 	return tabs
 }
@@ -117,7 +117,7 @@ func (t *Tabs) handleKey(_ Widget, event *tcell.EventKey) bool {
 
 	case tcell.KeyEnter:
 		t.selected = t.index
-		t.Dispatch(t, "activate", t.selected)
+		t.Dispatch(t, EvtActivate,t.selected)
 		t.Refresh()
 
 	default:
@@ -127,7 +127,7 @@ func (t *Tabs) handleKey(_ Widget, event *tcell.EventKey) bool {
 	// Only refresh and emit event if the tab actually changed
 	if t.index != oldIndex {
 		t.Refresh()
-		t.Dispatch(t, "change", t.index)
+		t.Dispatch(t, EvtChange,t.index)
 		return true
 	}
 
@@ -193,10 +193,10 @@ func (t *Tabs) Select(index int) bool {
 
 	// Emit events if anything changed
 	if t.index != oldIndex {
-		t.Dispatch(t, "change", t.index)
+		t.Dispatch(t, EvtChange,t.index)
 	}
 	if t.selected != oldSelected {
-		t.Dispatch(t, "activate", t.selected)
+		t.Dispatch(t, EvtActivate,t.selected)
 	}
 
 	t.Refresh()
@@ -228,7 +228,7 @@ func (t *Tabs) Render(r *Renderer) {
 	x, y, w, _ := t.Content()
 	var normal, highlight, line *Style
 
-	if t.Flag("focused") {
+	if t.Flag(FlagFocused) {
 		// Use focus-specific styles when tabs widget has focus
 		normal = t.Style("line:focused")
 		if normal == nil {

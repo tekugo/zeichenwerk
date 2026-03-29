@@ -31,23 +31,6 @@ func NewBuilder(theme *Theme) *Builder {
 	return &Builder{theme: theme}
 }
 
-// ---- Internal Helper Methods -----------------------------------------------
-
-// selector constructs a CSS-like selector string for styling widgets.
-// It combines the widget type (t) with optional class and id modifiers.
-// Format: "type.class#id" where class and id are optional.
-// Example: "button.primary#submit" for a button with class "primary" and
-// id "submit".
-func (b *Builder) selector(t, id string) string {
-	if b.class != "" {
-		t = t + "." + b.class
-	}
-	if id != "" {
-		t = t + "#" + id
-	}
-	return t
-}
-
 // ---- Builder Methods ------------------------------------------------------
 
 // Build finalizes the UI construction and returns a complete UI instance.
@@ -101,20 +84,9 @@ func (b *Builder) With(fn func(*Builder)) *Builder {
 func (b *Builder) Add(widget Widget) *Builder {
 	if len(b.stack) > 0 {
 		top := b.stack.Peek()
-		switch top := top.(type) {
-		case *Box:
-			top.Add(widget)
-		case *Dialog:
-			top.Add(widget)
-		case *Form:
-			top.Add(widget)
-		case *Flex:
-			top.Add(widget)
-		case *Grid:
-			top.Add(b.x, b.y, b.w, b.h, widget)
-		case *Switcher:
-			top.Add(widget)
-		case *Viewport:
+		if _, ok := top.(*Grid); ok {
+			top.Add(widget, b.x, b.y, b.w, b.h)
+		} else {
 			top.Add(widget)
 		}
 	}
@@ -261,12 +233,12 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 
 		widget := b.buildFormControl(control, sf.Name, fv, options)
 		if readonly {
-			widget.SetFlag("readonly", true)
+			widget.SetFlag(FlagReadonly, true)
 		}
 		widget.SetHint(width, 1)
 		widget.SetParent(b.stack.Peek())
-		widget.On("change", form.Update(fv))
-		group.Add(line, label, widget)
+		widget.On(EvtChange, form.Update(fv))
+		group.Add(widget, line, label)
 
 		line++
 	}
@@ -286,11 +258,11 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 	case "checkbox":
 		checkbox := NewCheckbox(id, b.class, id, v.Bool())
 		checkbox.Apply(b.theme)
-		checkbox.SetFlag("checked", v.Bool())
+		checkbox.SetFlag(FlagChecked, v.Bool())
 		return checkbox
 	case "password":
 		input := NewInput(id, b.class, "", "", "*")
-		input.SetFlag("masked", true)
+		input.SetFlag(FlagMasked, true)
 		input.Apply(b.theme)
 		input.SetText(v.String())
 		return input
@@ -421,7 +393,7 @@ func (b *Builder) Switcher(id string, connect bool) *Builder {
 	switcher := NewSwitcher(id, b.class)
 	b.Add(switcher)
 	if connect && b.tabs != nil {
-		b.tabs.On("activate", func(_ Widget, _ string, params ...any) bool {
+		b.tabs.On(EvtActivate, func(_ Widget, _ Event, params ...any) bool {
 			if len(params) > 0 {
 				if selected, ok := params[0].(int); ok {
 					switcher.Select(selected)
@@ -611,7 +583,7 @@ func (b *Builder) Foreground(params ...string) *Builder {
 }
 
 // Flag sets the flag for the current widget.
-func (b *Builder) Flag(flag string, value bool) *Builder {
+func (b *Builder) Flag(flag Flag, value bool) *Builder {
 	b.current.SetFlag(flag, value)
 	return b
 }

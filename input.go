@@ -47,9 +47,9 @@ func NewInput(id, class string, params ...string) *Input {
 		placeholder: placeholder,
 		mask:        mask,
 	}
-	input.SetFlag("focusable", true)
-	input.SetFlag("masked", false)
-	input.SetFlag("readonly", false)
+	input.SetFlag(FlagFocusable, true)
+	input.SetFlag(FlagMasked, false)
+	input.SetFlag(FlagReadonly, false)
 	OnKey(input, input.handleKey)
 	return input
 }
@@ -103,7 +103,7 @@ func (i *Input) Refresh() {
 // Parameters:
 //   - mask: The character to display instead of actual text (e.g., "*", "•")
 func (i *Input) SetMask(mask string) {
-	i.SetFlag("masked", mask != "")
+	i.SetFlag(FlagMasked, mask != "")
 	i.mask = mask
 }
 
@@ -118,7 +118,7 @@ func (i *Input) SetMask(mask string) {
 // This method is safe to call at any time and will maintain the widget's
 // internal consistency regardless of the current state.
 func (i *Input) SetText(text string) {
-	if i.Flag("readonly") {
+	if i.Flag(FlagReadonly) {
 		return
 	}
 
@@ -134,7 +134,7 @@ func (i *Input) SetText(text string) {
 	}
 	i.adjust()
 
-	i.Dispatch(i, "change", text)
+	i.Dispatch(i, EvtChange,text)
 }
 
 // Text returns the current text content.
@@ -207,7 +207,7 @@ func (i *Input) End() {
 //   - Updates horizontal scroll to keep cursor visible
 //   - Triggers OnChange callback if set
 func (i *Input) Insert(ch string) {
-	if i.Flag("readonly") {
+	if i.Flag(FlagReadonly) {
 		return
 	}
 
@@ -222,7 +222,7 @@ func (i *Input) Insert(ch string) {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, "change", i.buf.String())
+	i.Dispatch(i, EvtChange,i.buf.String())
 }
 
 // Delete removes the character immediately before the cursor position (backspace operation).
@@ -238,7 +238,7 @@ func (i *Input) Insert(ch string) {
 //
 // This method is typically called in response to the Backspace key.
 func (i *Input) Delete() {
-	if i.Flag("readonly") || i.pos == 0 {
+	if i.Flag(FlagReadonly) || i.pos == 0 {
 		return
 	}
 
@@ -249,7 +249,7 @@ func (i *Input) Delete() {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, "change", i.buf.String())
+	i.Dispatch(i, EvtChange,i.buf.String())
 }
 
 // DeleteForward removes the character at the current cursor position (delete operation).
@@ -265,7 +265,7 @@ func (i *Input) Delete() {
 //
 // This method is typically called in response to the Delete key.
 func (i *Input) DeleteForward() {
-	if i.Flag("readonly") || i.pos >= i.buf.Length() {
+	if i.Flag(FlagReadonly) || i.pos >= i.buf.Length() {
 		return
 	}
 
@@ -274,7 +274,7 @@ func (i *Input) DeleteForward() {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, "change", i.buf.String())
+	i.Dispatch(i, EvtChange,i.buf.String())
 }
 
 // Clear removes all text from the input and resets the cursor to the beginning.
@@ -291,7 +291,7 @@ func (i *Input) DeleteForward() {
 // This method is useful for programmatically clearing form fields or
 // implementing "clear" buttons in user interfaces.
 func (i *Input) Clear() {
-	if i.Flag("readonly") {
+	if i.Flag(FlagReadonly) {
 		return
 	}
 
@@ -300,7 +300,7 @@ func (i *Input) Clear() {
 	i.offset = 0
 	i.Refresh()
 
-	i.Dispatch(i, "change", "")
+	i.Dispatch(i, EvtChange,"")
 }
 
 // ---- Internal methods -----------------------------------------------------
@@ -349,7 +349,7 @@ func (i *Input) visible() string {
 	}
 
 	display := []rune(i.buf.String())
-	if i.Flag("masked") {
+	if i.Flag(FlagMasked) {
 		// Replace all characters with mask character for password fields
 		maskRune := []rune(i.mask)[0]
 		for j := range display {
@@ -379,7 +379,7 @@ func (i *Input) visible() string {
 // that supports all standard text editing operations with professional-grade functionality.
 func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 	// In read-only mode, only allow navigation keys
-	if i.Flag("readonly") && evt.Key() != tcell.KeyLeft && evt.Key() != tcell.KeyRight &&
+	if i.Flag(FlagReadonly) && evt.Key() != tcell.KeyLeft && evt.Key() != tcell.KeyRight &&
 		evt.Key() != tcell.KeyHome && evt.Key() != tcell.KeyEnd {
 		return false
 	}
@@ -411,30 +411,30 @@ func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 		return true
 	case tcell.KeyCtrlK:
 		// Delete from cursor to end of text
-		if !i.Flag("readonly") {
+		if !i.Flag(FlagReadonly) {
 			count := i.buf.Length() - i.pos
 			i.buf.Move(i.pos)
 			for j := 0; j < count; j++ {
 				i.buf.Delete()
 			}
 			i.adjust()
-			i.Dispatch(i, "change", i.buf.String())
+			i.Dispatch(i, EvtChange,i.buf.String())
 		}
 		i.Refresh()
 		return true
 	case tcell.KeyCtrlU:
 		// Delete from beginning of text to cursor
-		if !i.Flag("readonly") {
+		if !i.Flag(FlagReadonly) {
 			runes := []rune(i.buf.String())
 			i.buf = NewGapBufferFromString(string(runes[i.pos:]), 16)
 			i.pos = 0
 			i.adjust()
 			i.Refresh()
-			i.Dispatch(i, "change", i.buf.String())
+			i.Dispatch(i, EvtChange,i.buf.String())
 			return true
 		}
 	case tcell.KeyEnter:
-		i.Dispatch(i, "enter", i.buf.String())
+		i.Dispatch(i, EvtEnter,i.buf.String())
 		return true
 	case tcell.KeyRune:
 		ch := evt.Str()

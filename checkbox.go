@@ -35,9 +35,9 @@ func NewCheckbox(id, class, text string, checked bool) *Checkbox {
 		text:      text,
 	}
 	checkbox.SetHint(len(text)+4, 1)
-	checkbox.SetFlag("focusable", true)
-	checkbox.SetFlag("checked", checked)
-	checkbox.SetFlag("readonly", false)
+	checkbox.SetFlag(FlagFocusable, true)
+	checkbox.SetFlag(FlagChecked, checked)
+	checkbox.SetFlag(FlagReadonly, false)
 	OnKey(checkbox, checkbox.handleKey)
 	OnMouse(checkbox, checkbox.handleMouse)
 	return checkbox
@@ -53,15 +53,25 @@ func (c *Checkbox) Refresh() {
 	Redraw(c)
 }
 
+// Set set's the checkbox value in a generic way.
+func (c *Checkbox) Set(value any) bool {
+	if checked, ok := value.(bool); ok {
+		c.SetFlag(FlagChecked, checked)
+		return true
+	} else {
+		return false
+	}
+}
+
 // Toggle switches the checkbox state between checked and unchecked.
 // This method triggers the "change" event with the new state as data.
 // The checkbox will be refreshed to reflect the visual state change.
 func (c *Checkbox) Toggle() {
-	if c.Flag("readonly") {
+	if c.Flag(FlagReadonly) {
 		return
 	}
-	c.SetFlag("checked", !c.Flag("checked"))
-	c.Dispatch(c, "change", c.Flag("checked"))
+	c.SetFlag(FlagChecked, !c.Flag(FlagChecked))
+	c.Dispatch(c, EvtChange, c.Flag(FlagChecked))
 	c.Refresh()
 }
 
@@ -72,7 +82,7 @@ func (c *Checkbox) Toggle() {
 //   - Space: Toggles the checkbox state (standard checkbox behavior)
 //   - Enter: Toggles the checkbox state
 func (c *Checkbox) handleKey(_ Widget, event *tcell.EventKey) bool {
-	if c.Flag("readonly") {
+	if c.Flag(FlagReadonly) {
 		return false
 	}
 	switch event.Key() {
@@ -96,7 +106,7 @@ func (c *Checkbox) handleKey(_ Widget, event *tcell.EventKey) bool {
 //   - Left button click: Toggles checkbox state
 //   - Bounds checking: Only responds to clicks within checkbox area
 func (c *Checkbox) handleMouse(_ Widget, event *tcell.EventMouse) bool {
-	if c.Flag("readonly") {
+	if c.Flag(FlagReadonly) {
 		return false
 	}
 	x, y := event.Position()
@@ -125,7 +135,7 @@ func (c *Checkbox) Render(r *Renderer) {
 
 	// Determine checkbox indicator based on state
 	var indicator string
-	if c.Flag("checked") {
+	if c.Flag(FlagChecked) {
 		indicator = "[x]"
 	} else {
 		indicator = "[ ]"

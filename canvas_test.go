@@ -15,7 +15,7 @@ func TestCanvas(t *testing.T) {
 	}
 
 	// Focus the canvas
-	c.SetFlag("focused", true)
+	c.SetFlag(FlagFocused, true)
 	x, y, cs = c.Cursor()
 	if x != 0 || y != 0 {
 		t.Errorf("Expected cursor at (0,0) when focused, got (%d,%d)", x, y)

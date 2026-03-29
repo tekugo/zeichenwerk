@@ -68,7 +68,7 @@ func main() {
 	}
 
 	// Set up event handlers
-	editor.On("change", func(w Widget, event string, data ...any) bool {
+	editor.On(EvtChange, func(w Widget, event Event, data ...any) bool {
 		// Handle text changes (could implement auto-save, etc.)
 		return false
 	})

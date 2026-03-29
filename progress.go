@@ -121,7 +121,7 @@ func (p *Progress) Info() string {
 // orientation-specific renderer.
 func (p *Progress) Render(r *Renderer) {
 	// Check if the widget is visible
-	if p.Flag("hidden") {
+	if p.Flag(FlagHidden) {
 		return
 	}
 

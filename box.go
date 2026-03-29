@@ -43,15 +43,15 @@ func NewBox(id, class, title string) *Box {
 //
 // Parameters:
 //   - widget: The widget to be contained within this box
-func (b *Box) Add(widget Widget) {
-	if widget == nil {
-		return
-	}
+func (b *Box) Add(widget Widget, params ...any) error {
 	if b.child != nil {
 		b.child.SetParent(nil) // clear old parent reference
 	}
 	b.child = widget
-	b.child.SetParent(b)
+	if b.child != nil {
+		b.child.SetParent(b)
+	}
+	return nil
 }
 
 // Apply applies a theme style to the component.
@@ -99,12 +99,12 @@ func (b *Box) Hint() (int, int) {
 // The child widget is given the full content area of the box, which excludes
 // the space used by borders, padding, and margins. After positioning the child,
 // the layout of the child is also called, if it is a container itself.
-func (b *Box) Layout() {
+func (b *Box) Layout() error {
 	if b.child != nil {
 		cx, cy, cw, ch := b.Content()
 		b.child.SetBounds(cx, cy, cw, ch)
 	}
-	Layout(b)
+	return Layout(b)
 }
 
 // Render renders the box and its child widget.
@@ -127,5 +127,16 @@ func (b *Box) Render(r *Renderer) {
 	}
 	if b.child != nil {
 		b.child.Render(r)
+	}
+}
+
+// Set sets the box value (title) in a generic way.
+func (b *Box) Set(value any) bool {
+	if title, ok := value.(string); ok {
+		b.Title = title
+		b.Refresh()
+		return true
+	} else {
+		return false
 	}
 }

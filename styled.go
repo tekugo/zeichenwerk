@@ -323,7 +323,7 @@ func (s *Styled) renderP(r *Renderer, block Block, x, y, w, h int) int {
 			font += "code"
 		}
 		r.Set("", "", font)
-		s.Log(s, "debug", "span %d %d %s", span.Start, span.End, font)
+		s.Log(s, Debug, "span %d %d %s", span.Start, span.End, font)
 		for word, ww := range span.Words(block.Text) {
 			if cx-x+ww > w {
 				cx = x

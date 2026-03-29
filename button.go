@@ -35,11 +35,13 @@ func NewButton(id, class, text string) *Button {
 		Component: Component{id: id, class: class, hwidth: utf8.RuneCountInString(text), hheight: 1},
 		text:      text,
 	}
-	button.SetFlag("focusable", true)
+	button.SetFlag(FlagFocusable, true)
 	OnKey(button, button.handleKey)
 	OnMouse(button, button.handleMouse)
 	return button
 }
+
+// ---- Widget Methods -------------------------------------------------------
 
 // Apply applies a theme style to the component.
 func (b *Button) Apply(theme *Theme) {
@@ -48,8 +50,32 @@ func (b *Button) Apply(theme *Theme) {
 
 // Click programmatically triggers the button's action handler.
 func (b *Button) Click() {
-	b.Dispatch(b, "click")
+	b.Dispatch(b, EvtClick)
 }
+
+func (b *Button) Refresh() {
+	Redraw(b)
+}
+
+// Render implements the Widget interface for rendering the button.
+func (b *Button) Render(r *Renderer) {
+	b.Component.Render(r)
+	x, y, w, _ := b.Content()
+	r.Text(x, y, b.text, w)
+}
+
+// Set sets the button text. This is a generic method to allow
+// using the Setter interface.
+func (b *Button) Set(value any) bool {
+	if text, ok := value.(string); ok {
+		b.text = text
+		return true
+	} else {
+		return false
+	}
+}
+
+// ---- Internal methods -----------------------------------------------------
 
 // handleKey processes keyboard input for the button widget.
 // This method handles the standard button activation keys and provides
@@ -103,26 +129,19 @@ func (b *Button) handleMouse(_ Widget, event *tcell.EventMouse) bool {
 	if x >= bx && x < bx+bw && y >= by && y < by+bh {
 		switch event.Buttons() {
 		case tcell.Button1: // Left mouse button
-			b.SetFlag("pressed", true)
+			b.SetFlag(FlagPressed, true)
 			return true
 		case tcell.ButtonNone: // Mouse release
-			if b.Flag("pressed") {
-				b.SetFlag("pressed", false)
+			if b.Flag(FlagPressed) {
+				b.SetFlag(FlagPressed, false)
 				b.Click() // Trigger click on release
 				return true
 			}
 		}
-	} else if b.Flag("pressed") {
+	} else if b.Flag(FlagPressed) {
 		// Mouse moved outside button while pressed
-		b.SetFlag("pressed", false)
+		b.SetFlag(FlagPressed, false)
 	}
 
 	return false
-}
-
-// Render implements the Widget interface for rendering the button.
-func (b *Button) Render(r *Renderer) {
-	b.Component.Render(r)
-	x, y, w, _ := b.Content()
-	r.Text(x, y, b.text, w)
 }

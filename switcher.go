@@ -35,9 +35,9 @@ func NewSwitcher(id, class string) *Switcher {
 // Parameters:
 //   - label: Name of the pane
 //   - widget: Widget to be added as the pane content
-func (s *Switcher) Add(widget Widget) {
+func (s *Switcher) Add(widget Widget, params ...any) error {
 	if widget == nil {
-		return
+		return ErrChildIsNil
 	}
 	widget.SetParent(s)
 	s.panes = append(s.panes, widget)
@@ -45,7 +45,8 @@ func (s *Switcher) Add(widget Widget) {
 	widget.SetBounds(x, y, w, h)
 
 	// Check if the pane is hidden
-	widget.SetFlag("hidden", s.selected != len(s.panes)-1)
+	widget.SetFlag(FlagHidden, s.selected != len(s.panes)-1)
+	return nil
 }
 
 // Apply applies a theme's styles to the component.
@@ -91,12 +92,12 @@ func (s *Switcher) Refresh() {
 func (s *Switcher) Select(index any) {
 	switch pane := index.(type) {
 	case int:
-		s.Log(s, "debug", "Hiding", "index", s.selected, "ID", s.panes[s.selected].ID())
-		s.panes[s.selected].SetFlag("hidden", true)
-		s.panes[s.selected].Dispatch(s.panes[s.selected], "hide")
-		s.Log(s, "debug", "Showing", "index", pane, "ID", s.panes[pane].ID())
-		s.panes[pane].SetFlag("hidden", false)
-		s.panes[pane].Dispatch(s.panes[pane], "show")
+		s.Log(s, Debug,"Hiding", "index", s.selected, "ID", s.panes[s.selected].ID())
+		s.panes[s.selected].SetFlag(FlagHidden, true)
+		s.panes[s.selected].Dispatch(s.panes[s.selected], EvtHide)
+		s.Log(s, Debug,"Showing", "index", pane, "ID", s.panes[pane].ID())
+		s.panes[pane].SetFlag(FlagHidden, false)
+		s.panes[pane].Dispatch(s.panes[pane], EvtShow)
 		s.selected = pane
 	case string:
 		index := -1
@@ -109,10 +110,10 @@ func (s *Switcher) Select(index any) {
 		}
 		// If the pane was found, select it
 		if index >= 0 {
-			s.panes[s.selected].SetFlag("hidden", true)
-			s.panes[s.selected].Dispatch(s.panes[s.selected], "hide")
-			s.panes[index].SetFlag("hidden", false)
-			s.panes[index].Dispatch(s.panes[index], "show")
+			s.panes[s.selected].SetFlag(FlagHidden, true)
+			s.panes[s.selected].Dispatch(s.panes[s.selected], EvtHide)
+			s.panes[index].SetFlag(FlagHidden, false)
+			s.panes[index].Dispatch(s.panes[index], EvtShow)
 			s.selected = index
 		}
 	}
@@ -127,12 +128,12 @@ func (s *Switcher) Select(index any) {
 // This method is called automatically by the UI system when the switcher's
 // size changes or when the layout needs to be recalculated. The uniform
 // sizing ensures smooth transitions when switching between panes.
-func (s *Switcher) Layout() {
+func (s *Switcher) Layout() error {
 	x, y, w, h := s.Content()
 	for _, widget := range s.panes {
 		widget.SetBounds(x, y, w, h)
 	}
-	Layout(s)
+	return Layout(s)
 }
 
 // Render draws the switcher, which is the selected pane.

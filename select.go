@@ -27,7 +27,7 @@ func NewSelect(id, class string, args ...string) *Select {
 		Component: Component{id: id, class: class},
 		options:   make([]option, 0, len(args)/2),
 	}
-	s.SetFlag("focusable", true)
+	s.SetFlag(FlagFocusable, true)
 	for i := 0; i < len(args); i += 2 {
 		s.options = append(s.options, option{value: args[i], text: args[i+1]})
 	}
@@ -57,7 +57,7 @@ func (s *Select) Hint() (int, int) {
 
 // Render draws the Select widget using the given renderer.
 func (s *Select) Render(r *Renderer) {
-	if s.Flag("hidden") {
+	if s.Flag(FlagHidden) {
 		return
 	}
 
@@ -105,7 +105,7 @@ func (s *Select) handleKey(_ Widget, evt *tcell.EventKey) bool {
 
 // popup shows the dropdown list of options.
 func (s *Select) popup() {
-	s.Log(s, "debug", "Show list popup")
+	s.Log(s, Debug, "Show list popup")
 	ui := FindUI(s)
 	if ui == nil {
 		return
@@ -123,13 +123,13 @@ func (s *Select) popup() {
 		Container()
 	list, ok := Find(popup, "select-list").(*List)
 	if !ok {
-		s.Log(s, "error", "Cannot create popup")
+		s.Log(s, Error, "Cannot create popup")
 		return
 	}
 	list.Select(s.index)
-	list.On("activate", func(_ Widget, _ string, _ ...any) bool {
+	list.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		s.index = list.Selected()
-		s.Dispatch(s, "change", s.Value())
+		s.Dispatch(s, EvtChange, s.Value())
 		ui.Close()
 		ui.Focus(s)
 		return true
@@ -139,8 +139,9 @@ func (s *Select) popup() {
 		case tcell.KeyEsc:
 			ui.Close()
 			ui.Focus(s)
+			return true
 		}
-		return true
+		return false
 	})
 	ui.Popup(s.x, s.y+s.height, s.width, 10, popup)
 }

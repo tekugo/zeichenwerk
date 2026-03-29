@@ -38,13 +38,13 @@ type Widget interface {
 	//   - source: Source widget
 	//   - event: The type of event to dispatch.
 	//   - data: Optional data associated with the event.
-	Dispatch(source Widget, event string, data ...any) bool
+	Dispatch(source Widget, event Event, data ...any) bool
 
 	// Flag returns a widget's state flag.
 	//
 	// Parameters:
-	//   - name: The name of the state flag.
-	Flag(name string) bool
+	//   - flag: The state flag to query.
+	Flag(flag Flag) bool
 
 	// Hint returns the widgets preferred content size for optimal display.
 	// Container may use this as guidance for the content layout. Values can be:
@@ -70,14 +70,14 @@ type Widget interface {
 	//   - level: The severity level of the message.
 	//   - message: The message to log.
 	//   - data: Optional data associated with the message.
-	Log(widget Widget, level string, message string, data ...any)
+	Log(widget Widget, level Level, message string, data ...any)
 
 	// On registers an event handler for widget-specific actions.
 	//
 	// Parameters:
 	//   - event: The event name to handle (e.g., "click", "focus").
 	//   - handler: The callback function invoked when the event occurs.
-	On(event string, handler Handler)
+	On(event Event, handler Handler)
 
 	// Parent returns the parent container of this widget. Returns nil if the widget
 	// has no parent.
@@ -97,9 +97,9 @@ type Widget interface {
 	// SetFlag sets a widget's state flag.
 	//
 	// Parameters:
-	//   - state: The state flag to set.
+	//   - flag: The state flag to set.
 	//   - value: The value to set the state flag to.
-	SetFlag(string, bool)
+	SetFlag(Flag, bool)
 
 	// SetHint sets the widget's preferred content size for optimal display.
 	//

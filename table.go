@@ -40,7 +40,7 @@ func NewTable(id, class string, provider TableProvider) *Table {
 		inner:     true,
 		outer:     true,
 	}
-	table.SetFlag("focusable", true)
+	table.SetFlag(FlagFocusable, true)
 	table.Set(provider)
 	OnKey(table, table.handleKey)
 	return table
@@ -68,7 +68,11 @@ func (t *Table) Refresh() {
 //
 // Note: This method resets the table width calculation, so it should be called
 // whenever the column structure changes.
-func (t *Table) Set(provider TableProvider) {
+func (t *Table) Set(value any) bool {
+	provider, ok := value.(TableProvider)
+	if !ok {
+		return false
+	}
 	t.provider = provider
 	t.tableWidth = 0
 	columns := provider.Columns()
@@ -76,6 +80,7 @@ func (t *Table) Set(provider TableProvider) {
 		t.tableWidth += column.Width
 	}
 	t.tableWidth += len(columns) - 1
+	return true
 }
 
 // Hint returns the preferred size for the table widget.
@@ -235,7 +240,7 @@ func (t *Table) handleKey(_ Widget, event *tcell.EventKey) bool {
 		// Enter: Emit 'activate' event with current row data
 		if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
 			rowData := t.getCurrentRowData()
-			t.Dispatch(t, "activate", t.row, rowData)
+			t.Dispatch(t, EvtActivate,t.row, rowData)
 		}
 		return true
 	case tcell.KeyRune:
@@ -243,7 +248,7 @@ func (t *Table) handleKey(_ Widget, event *tcell.EventKey) bool {
 			// Space: Emit 'select' event with current row data
 			if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
 				rowData := t.getCurrentRowData()
-				t.Dispatch(t, "select", t.row, rowData)
+				t.Dispatch(t, EvtSelect,t.row, rowData)
 			}
 			return true
 		}
@@ -528,7 +533,7 @@ func (t *Table) renderTableContent(r *Renderer, x, y, w, h int, gridStyle *Style
 	for row < t.provider.Length() && row-t.offsetY < h {
 		// Determine row style
 		var style *Style
-		if row == t.row && t.Flag("focused") {
+		if row == t.row && t.Flag(FlagFocused) {
 			style = t.Style("highlight:focused")
 		} else if row == t.row {
 			style = t.Style("highlight")

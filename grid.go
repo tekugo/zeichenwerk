@@ -142,7 +142,29 @@ func (g *Grid) Children() []Widget {
 //
 //	// Place a text widget spanning 2 columns and 3 rows
 //	grid.Add(1, 0, 2, 3, textWidget)
-func (g *Grid) Add(x, y, w, h int, content Widget) {
+func (g *Grid) Add(content Widget, params ...any) error {
+	x, y, w, h := 0, 0, 0, 0
+	if len(params) > 0 {
+		if v, ok := params[0].(int); ok {
+			x = v
+		}
+	}
+	if len(params) > 1 {
+		if v, ok := params[1].(int); ok {
+			y = v
+		}
+	}
+	if len(params) > 2 {
+		if v, ok := params[2].(int); ok {
+			w = v
+		}
+	}
+	if len(params) > 3 {
+		if v, ok := params[3].(int); ok {
+			h = v
+		}
+	}
+
 	// If no width or height is specified, minimum is 1 cell
 	if w == 0 {
 		w = 1
@@ -171,6 +193,7 @@ func (g *Grid) Add(x, y, w, h int, content Widget) {
 
 	g.cells = append(g.cells, &cell{x: x, y: y, w: w, h: h, content: content})
 	content.SetParent(g)
+	return nil
 }
 
 // Columns sets the column sizes for the grid. The number of columns must match
@@ -183,7 +206,7 @@ func (g *Grid) Columns(columns ...int) {
 	if len(columns) == len(g.columns) {
 		g.columns = columns
 	} else {
-		g.Log(g, "error", "Cannot change grid size at runtime")
+		g.Log(g, Error, "Cannot change grid size at runtime")
 	}
 }
 
@@ -191,7 +214,7 @@ func (g *Grid) Rows(rows ...int) {
 	if len(rows) == len(g.rows) {
 		g.rows = rows
 	} else {
-		g.Log(g, "error", "Cannot change grid size at runtime")
+		g.Log(g, Error, "Cannot change grid size at runtime")
 	}
 }
 
@@ -217,11 +240,10 @@ func (g *Grid) Rows(rows ...int) {
 //   - Grid line rendering and separator configuration
 //   - Margin, padding, and border considerations
 //   - Recursive layout of child containers
-func (g *Grid) Layout() {
+func (g *Grid) Layout() error {
 	style := g.Style()                // Grid style for margins, padding, borders
 	_, _, iw, ih := g.Content()       // Available content size
 	cf, rf := 0, 0                    // Total column and row fractions
-	lc, lr := 0, 0                    // Last fractional column/row indices
 	gx := make([]int, len(g.columns)) // Calculated x positions for each column
 	gy := make([]int, len(g.rows))    // Calculated y positions for each row
 	aw := make([]int, len(g.columns)) // Preferred width for auto columns
@@ -260,31 +282,28 @@ func (g *Grid) Layout() {
 	for i := range g.columns {
 		if g.columns[i] < 0 {
 			cf -= g.columns[i] // Accumulate fractional units (negative values)
-			lc = i             // Track last fractional column for remainder handling
 		} else if g.columns[i] == 0 {
 			g.widths[i] = aw[i]
 			iw -= aw[i]
 		} else {
 			g.widths[i] = g.columns[i] // Set fixed width
-			iw -= g.columns[i]
+			iw -= g.widths[i]
 		}
 	}
 
 	// Second pass: calculate fractional column widths and positions
-	rw := iw // Remaining width after fixed columns
-	fc := 0  // Width per fractional unit (only when used)
+	fc := 0 // Width per fractional unit (only when used)
+	rw := 0 // Remaining width after fixed columns
 	if cf > 0 {
 		fc = iw / cf
+		rw = iw % cf
 	}
 	for i := range g.columns {
 		if g.columns[i] < 0 {
-			if i == lc {
-				g.widths[i] = rw // Last fractional column gets remaining space
-				// TODO: Distribute remaining space evenly
-			} else {
-				g.widths[i] = -g.columns[i] * fc // Calculate fractional width
-				rw -= g.widths[i]
-			}
+			// Calculate width and distribute remainder
+			extra := min(-g.columns[i], max(0, rw))
+			g.widths[i] = -g.columns[i]*fc + extra
+			rw -= extra
 		}
 
 		// Calculate x position for this column
@@ -305,36 +324,31 @@ func (g *Grid) Layout() {
 
 	// ---- Calculate row sizes and positions ----
 	// First pass: identify fractional rows and set fixed row heights
-	fh := ih // height remaining for fractional sizes
 	for i := range g.rows {
 		if g.rows[i] < 0 {
 			rf -= g.rows[i] // Accumulate fractional units (negative values)
-			lr = i          // Track last fractional row for remainder handling
 		} else if g.rows[i] == 0 {
 			g.heights[i] = ah[i]
 			ih -= ah[i]
 		} else {
-			fh -= g.heights[i]
 			g.heights[i] = g.rows[i] // Set fixed height
-			ih -= g.rows[i]
+			ih -= g.heights[i]
 		}
 	}
 
 	// Second pass: calculate fractional row heights and positions
-	rh := ih // Remaining height after fixed rows
-	fr := 0  // Height per fractional unit (only if used)
+	fr := 0 // Height per fractional unit (only if used)
+	rh := 0 // Remaining height after fixed rows
 	if rf > 0 {
-		fr = fh / rf
+		fr = ih / rf
+		rh = ih % rf
 	}
 	for i := range g.rows {
 		if g.rows[i] < 0 {
-			if i == lr {
-				g.heights[i] = rh // Last fractional row gets remaining space
-				// TODO: Distribute remaining space evenly
-			} else {
-				g.heights[i] = -g.rows[i] * fr // Calculate fractional height
-				rh -= g.heights[i]
-			}
+			// Calculate height and distribute remainder
+			extra := min(-g.rows[i], max(0, rh))
+			g.heights[i] = -g.rows[i]*fr + extra
+			rh -= extra
 		}
 
 		// Calculate y position for this row
@@ -398,9 +412,12 @@ func (g *Grid) Layout() {
 
 		// Recursively layout child containers or refresh leaf widgets
 		if inner, ok := cell.content.(Container); ok {
-			inner.Layout()
+			if err := inner.Layout(); err != nil {
+				g.Log(g, Error, "Layout failed", "error", err)
+			}
 		}
 	}
+	return nil
 }
 
 func (g *Grid) Render(r *Renderer) {

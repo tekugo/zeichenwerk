@@ -24,7 +24,7 @@ func main() {
 	ui = createUI()
 	loadTables()
 
-	ui.Log(ui, "debug", "Starting application")
+	ui.Log(ui, Debug, "Starting application")
 	ui.Run()
 }
 
@@ -77,13 +77,13 @@ func content(builder *Builder) {
 		End()
 
 	OnKey(builder.Find("sql"), func(widget Widget, event *tcell.EventKey) bool {
-		ui.Log(widget, "debug", "Key handler for SQL")
+		ui.Log(widget, Debug, "Key handler for SQL")
 		switch event.Key() {
 		case tcell.KeyCtrlR:
 			query()
 			return true
 		default:
-			ui.Log(widget, "debug", "Unknown key", "key", event.Key())
+			ui.Log(widget, Debug, "Unknown key", "key", event.Key())
 			return false
 		}
 	})
@@ -101,7 +101,7 @@ func query() {
 	}
 
 	rows, err := db.Query(editor.Text())
-	ui.Log(editor, "debug", "Executing query", "sql", editor.Text())
+	ui.Log(editor, Debug, "Executing query", "sql", editor.Text())
 	if err != nil {
 		panic(err)
 	}
@@ -131,13 +131,13 @@ func fill(rows *sql.Rows) {
 }
 
 func loadTables() {
-	ui.Log(ui, "debug", "Loading tables...")
+	ui.Log(ui, Debug, "Loading tables...")
 	tables := []string{}
 	var name string
 
 	rows, err := db.Query("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name")
 	if err != nil {
-		ui.Log(ui, "error", "Error loading tables", "error", err)
+		ui.Log(ui, Error, "Error loading tables", "error", err)
 		return
 	}
 	defer rows.Close()

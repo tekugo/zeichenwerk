@@ -106,9 +106,9 @@ var digits = map[rune][]string{
 		" ● ",
 	},
 	':': {
-		" ○ ",
 		"   ",
-		" ○ ",
+		" : ",
+		"   ",
 	},
 	' ': {
 		"   ",
@@ -167,6 +167,16 @@ func (d *Digits) Render(r *Renderer) {
 			}
 			cx += utf8.RuneCountInString(pattern[0])
 		}
+	}
+}
+
+// Set sets the digit text in a generic way.
+func (d *Digits) Set(value any) bool {
+	if text, ok := value.(string); ok {
+		d.SetText(text)
+		return true
+	} else {
+		return false
 	}
 }
 

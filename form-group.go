@@ -24,9 +24,21 @@ func NewFormGroup(id, class, title string, horizontal bool, spacing int) *FormGr
 	return fg
 }
 
-func (fg *FormGroup) Add(line int, label string, widget Widget) {
+func (fg *FormGroup) Add(widget Widget, params ...any) error {
 	if widget == nil {
-		return
+		return ErrChildIsNil
+	}
+	line := 0
+	label := ""
+	if len(params) > 0 {
+		if l, ok := params[0].(int); ok {
+			line = l
+		}
+	}
+	if len(params) > 1 {
+		if l, ok := params[1].(string); ok {
+			label = l
+		}
 	}
 	for len(fg.lines) <= line {
 		fg.lines = append(fg.lines, nil)
@@ -34,6 +46,7 @@ func (fg *FormGroup) Add(line int, label string, widget Widget) {
 	f := &field{label: label, widget: widget}
 	fg.lines[line] = append(fg.lines[line], f)
 	widget.SetParent(fg)
+	return nil
 }
 
 // Apply applies a theme's styles to the component.
@@ -93,7 +106,7 @@ func (fg *FormGroup) Hint() (int, int) {
 	return mlw + w, h
 }
 
-func (fg *FormGroup) Layout() {
+func (fg *FormGroup) Layout() error {
 	// Determine maximum label width (only for horizontal label placement)
 	mlw := -1
 	if fg.horizontal {
@@ -147,6 +160,7 @@ func (fg *FormGroup) Layout() {
 		}
 		ly = ly + lh + fg.spacing
 	}
+	return nil
 }
 
 func (fg *FormGroup) Render(r *Renderer) {
@@ -164,7 +178,7 @@ func (fg *FormGroup) Render(r *Renderer) {
 
 	// Render form control widgets (inputs, checkboxes, etc.)
 	for _, child := range fg.Children() {
-		if !child.Flag("hidden") {
+		if !child.Flag(FlagHidden) {
 			child.Render(r)
 		}
 	}

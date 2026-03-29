@@ -134,13 +134,13 @@ func setupEventHandlers(container Container) {
 	// Find the list widget and set up event handlers directly
 	if fontList := Find(container, "fonts"); fontList != nil {
 		if list, ok := fontList.(*List); ok {
-			list.On("activate", func(widget Widget, event string, data ...any) bool {
+			list.On(EvtActivate, func(widget Widget, event Event, data ...any) bool {
 				ui := FindUI(widget)
 				updatePreview(ui)
 				return true
 			})
 
-			list.On("select", func(widget Widget, event string, data ...any) bool {
+			list.On(EvtSelect, func(widget Widget, event Event, data ...any) bool {
 				ui := FindUI(widget)
 				updatePreview(ui)
 				return true
@@ -150,13 +150,13 @@ func setupEventHandlers(container Container) {
 
 	// Handle text input changes
 	if textInput := Find(container, "text-input"); textInput != nil {
-		textInput.On("enter", func(widget Widget, event string, data ...any) bool {
+		textInput.On(EvtEnter, func(widget Widget, event Event, data ...any) bool {
 			ui := FindUI(widget)
 			updatePreview(ui)
 			return true
 		})
 
-		textInput.On("change", func(widget Widget, event string, data ...any) bool {
+		textInput.On(EvtChange, func(widget Widget, event Event, data ...any) bool {
 			ui := FindUI(widget)
 			updatePreview(ui)
 			return true

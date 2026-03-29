@@ -14,17 +14,18 @@ func NewViewport(id, class, title string) *Viewport {
 		Component: Component{id: id, class: class},
 		Title:     title,
 	}
-	viewport.SetFlag("focusable", true)
+	viewport.SetFlag(FlagFocusable, true)
 	OnKey(viewport, viewport.handleKey)
 	return viewport
 }
 
-func (v *Viewport) Add(widget Widget) {
+func (v *Viewport) Add(widget Widget, params ...any) error {
 	if v.child != nil {
 		v.child.SetParent(nil)
 	}
 	v.child = widget
 	widget.SetParent(v)
+	return nil
 }
 
 // Apply applies a theme's styles to the component.
@@ -39,13 +40,13 @@ func (v *Viewport) Children() []Widget {
 	return []Widget{v.child}
 }
 
-func (v *Viewport) Layout() {
+func (v *Viewport) Layout() error {
 	if v.child != nil {
 		cx, cy, _, _ := v.Content()
 		pw, ph := v.child.Hint()
 		v.child.SetBounds(cx-v.tx, cy-v.ty, pw, ph)
 	}
-	Layout(v)
+	return Layout(v)
 }
 
 func (v *Viewport) handleKey(_ Widget, event *tcell.EventKey) bool {

@@ -37,15 +37,16 @@ func NewForm(id, class, title string, data any) *Form {
 // Since Form is designed to contain exactly one child container (typically a FormGroup
 // or a layout container like Flex/Grid), calling Add will replace any previously set
 // child widget.
-func (f *Form) Add(widget Widget) {
+func (f *Form) Add(widget Widget, params ...any) error {
 	if widget == nil {
-		return
+		return ErrChildIsNil
 	}
 	if f.child != nil {
 		f.child.SetParent(nil)
 	}
 	f.child = widget
 	f.child.SetParent(f)
+	return nil
 }
 
 // Apply applies a theme's styles to the component.
@@ -79,15 +80,16 @@ func (f *Form) Hint() (int, int) {
 // Layout positions the child widget within the form's content area.
 // It sets the child's bounds to the full content area of the form and
 // then recursively lays out the child if it is a container.
-func (f *Form) Layout() {
-	f.Log(f, "Debug", "Form Layout")
+func (f *Form) Layout() error {
+	f.Log(f, Debug, "Form Layout")
 	if f.child != nil {
 		cx, cy, cw, ch := f.Content()
 		f.child.SetBounds(cx, cy, cw, ch)
 		if container, ok := f.child.(Container); ok {
-			container.Layout()
+			return container.Layout()
 		}
 	}
+	return nil
 }
 
 // Render does nothing; the form itself is not a visual widget.
@@ -105,7 +107,7 @@ func (f *Form) Render(r *Renderer) {
 //   - Input: sets the struct field to the new string
 //   - Checkbox: sets the struct field to the new boolean
 func (f *Form) Update(value reflect.Value) Handler {
-	return func(widget Widget, event string, data ...any) bool {
+	return func(widget Widget, event Event, data ...any) bool {
 		switch widget.(type) {
 		case *Input:
 			if len(data) > 0 {
@@ -120,7 +122,7 @@ func (f *Form) Update(value reflect.Value) Handler {
 				}
 			}
 		default:
-			widget.Log(widget, "warn", "Unknown widget type to update")
+			widget.Log(widget, Warning, "Unknown widget type to update")
 		}
 		return false // allow event to continue bubbling
 	}

@@ -15,15 +15,15 @@ func NewDialog(id, class, title string) *Dialog {
 	}
 }
 
-func (d *Dialog) Add(widget Widget) {
-	if widget == nil {
-		return
-	}
+func (d *Dialog) Add(widget Widget, params ...any) error {
 	if d.child != nil {
 		d.child.SetParent(nil) // clear old parent reference
 	}
+	if widget != nil {
+		widget.SetParent(d)
+	}
 	d.child = widget
-	d.child.SetParent(d)
+	return nil
 }
 
 // Apply applies a theme style to the component.
@@ -40,30 +40,30 @@ func (d *Dialog) Children() []Widget {
 
 func (d *Dialog) Hint() (int, int) {
 	if d.hwidth != 0 && d.hheight != 0 {
-		d.Log(d, "debug", "Dialog Fixed Hint", "w", d.hwidth, "h", d.hheight)
+		d.Log(d, Debug,"Dialog Fixed Hint", "w", d.hwidth, "h", d.hheight)
 		return d.hwidth, d.hheight
 	} else if d.child != nil {
 		w, h := d.child.Hint()
-		d.Log(d, "debug", "Dialog dynamic Hint 1", "w", w, "h", h)
+		d.Log(d, Debug,"Dialog dynamic Hint 1", "w", w, "h", h)
 		style := d.child.Style()
 		w += style.Horizontal()
 		h += style.Vertical()
-		d.Log(d, "debug", "Dialog dynamic Hint 2", "w", w, "h", h)
+		d.Log(d, Debug,"Dialog dynamic Hint 2", "w", w, "h", h)
 
 		if d.title != "" {
 			titleStyle := d.Style("title")
 			h = h + titleStyle.Vertical() + 1
-			d.Log(d, "debug", "Dialog title Vertical", "h", titleStyle.Vertical())
+			d.Log(d, Debug,"Dialog title Vertical", "h", titleStyle.Vertical())
 		}
 
-		d.Log(d, "debug", "Dialog dynamic Hint 3", "w", w, "h", h)
+		d.Log(d, Debug,"Dialog dynamic Hint 3", "w", w, "h", h)
 		return w, h
 	} else {
 		return 0, 0
 	}
 }
 
-func (d *Dialog) Layout() {
+func (d *Dialog) Layout() error {
 	if d.child != nil {
 		cx, cy, cw, ch := d.Content()
 		if d.title != "" {
@@ -72,13 +72,13 @@ func (d *Dialog) Layout() {
 		}
 		d.child.SetBounds(cx, cy, cw, ch)
 	}
-	Layout(d)
+	return Layout(d)
 }
 
 // Render renders the box and its child widget.
 func (d *Dialog) Render(r *Renderer) {
 	// Check if the widget is visible
-	if d.Flag("hidden") {
+	if d.Flag(FlagHidden) {
 		return
 	}
 
