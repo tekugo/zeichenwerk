@@ -1,8 +1,10 @@
 # Filter
 
 A standalone input widget that progressively filters a bound `List` or `Tree`
-as the user types. The Filter widget owns the filtering logic; bound widgets
-implement a small `Filterable` interface that Filter calls on every change.
+as the user types, and optionally shows the first prefix match as inline ghost
+text. `Filter` embeds `Typeahead` — it is a full text input with ghost-text
+completion; the only addition is the `Bind` / `Unbind` mechanism and the
+filtering side-effect on `EvtChange`.
 
 ## Filterable interface
 
@@ -19,19 +21,35 @@ visible content. `ResetFilter` restores the full, unfiltered content.
 Both `List` and `Tree` implement this interface (see *Changes to existing
 widgets* below).
 
+## Suggester interface (optional)
+
+```go
+type Suggester interface {
+    Suggest(query string) []string
+}
+```
+
+An optional extension of `Filterable`. When the bound widget also implements
+`Suggester`, `Filter` wires it as the typeahead suggestion provider so ghost
+text appears as the user types.
+
+`Suggest` should return items (or node labels) that have `query` as a
+case-insensitive prefix. Because `Typeahead.updateHint` picks the first result
+that has the typed text as a case-sensitive prefix, returning only prefix
+matches avoids false negatives from case mismatches.
+
+Both `List` and `Tree` implement this interface (see *Changes to existing
+widgets* below).
+
 ## Structure
 
 ```go
 type Filter struct {
-    Input                   // All single-line input behaviour
-    bound    Filterable     // Currently bound widget (nil = no binding)
-    placeholder string      // Shown when empty (default "Filter…")
+    Typeahead                  // Ghost-text input; suggest wired on Bind
+    bound    Filterable        // Currently bound widget (nil = no binding)
+    placeholder string         // Shown when empty (default "Filter…")
 }
 ```
-
-`Filter` embeds `Input` — it is a full text input with the same editing keys,
-cursor, placeholder, and events. The only addition is the `Bind` / `Unbind`
-mechanism and the filtering side-effect on `EvtChange`.
 
 ## Constructor
 
@@ -39,7 +57,8 @@ mechanism and the filtering side-effect on `EvtChange`.
 func NewFilter(id, class string) *Filter
 ```
 
-- Creates the embedded `Input` with placeholder `"Filter…"`.
+- Creates the embedded `Typeahead` with placeholder `"Filter…"` and no initial
+  suggest function.
 - Wires an `EvtChange` handler (prepended, runs first) that calls
   `applyFilter()` on every text change.
 - Sets `FlagFocusable`.
@@ -48,10 +67,10 @@ func NewFilter(id, class string) *Filter
 
 | Method | Description |
 |--------|-------------|
-| `Bind(w Filterable)` | Sets the bound widget; immediately calls `applyFilter()` with the current text |
-| `Unbind()` | Calls `bound.ResetFilter()` then sets `bound = nil` |
+| `Bind(w Filterable)` | Sets the bound widget; if `w` implements `Suggester` calls `SetSuggest(w.Suggest)`, otherwise calls `SetSuggest(nil)`; immediately calls `applyFilter()` |
+| `Unbind()` | Calls `bound.ResetFilter()`, `SetSuggest(nil)`, then sets `bound = nil` |
 | `Bound() Filterable` | Returns the currently bound widget |
-| `Clear()` | Clears the input text and calls `bound.ResetFilter()` if bound (overrides `Input.Clear`) |
+| `Clear()` | Clears the input text and calls `bound.ResetFilter()` if bound (overrides `Typeahead.Clear`) |
 
 `applyFilter()` is unexported:
 
@@ -69,20 +88,26 @@ func (f *Filter) applyFilter() {
 }
 ```
 
+Note: ghost text (prefix completion) and list filtering use different matching
+semantics intentionally. Ghost text shows the first item that starts with the
+typed text; the bound widget shows all items that contain it as a substring.
+
 ## Events
 
-Inherits `Input` events unchanged.
+Inherits `Typeahead` events unchanged.
 
 | Event | Data | Description |
 |-------|------|-------------|
 | `"change"` | `string` | Text changed (inherited — fired after `applyFilter`) |
 | `"enter"` | `string` | Enter key pressed (inherited) |
+| `"accept"` | `string` | Suggestion accepted via Tab or → (inherited from `Typeahead`) |
 
 ## Styling
 
-Inherits `"input"` selector fully. `Apply` additionally registers
-`"filter"` for callers that want to style the filter field separately from
-plain inputs. Falls back to `"input"` styles if `"filter"` is not defined.
+Inherits `"typeahead"` and `"typeahead/hint"` selectors fully. `Apply`
+additionally registers `"filter"` for callers that want to style the filter
+field separately from plain inputs. Falls back to `"typeahead"` styles if
+`"filter"` is not defined.
 
 ## Changes to existing widgets
 
@@ -99,6 +124,7 @@ New methods:
 ```go
 func (l *List) Filter(query string)
 func (l *List) ResetFilter()
+func (l *List) Suggest(query string) []string
 ```
 
 `Filter`:
@@ -110,6 +136,11 @@ func (l *List) ResetFilter()
 1. If `original == nil`, return.
 2. Call `l.SetItems(original)`.
 3. Set `original = nil`.
+
+`Suggest`:
+1. Use `original` as the source if non-nil (unfiltered), otherwise `l.items`.
+2. Return all items where `strings.HasPrefix(strings.ToLower(item), strings.ToLower(query))`.
+3. Return nil if no matches.
 
 `SetItems` is unchanged — it always replaces `l.items` and resets the index,
 which is correct for both filtered and unfiltered updates.
@@ -127,6 +158,7 @@ New methods:
 ```go
 func (t *Tree) Filter(query string)
 func (t *Tree) ResetFilter()
+func (t *Tree) Suggest(query string) []string
 ```
 
 `Filter`:
@@ -142,6 +174,11 @@ func (t *Tree) ResetFilter()
 1. Set `filterQuery = ""`.
 2. Call `rebuild()`.
 
+`Suggest`:
+1. Walk all nodes (depth-first).
+2. Return labels of nodes where `strings.HasPrefix(strings.ToLower(label), strings.ToLower(query))`.
+3. Return nil if no matches.
+
 ## Builder
 
 ```go
@@ -150,16 +187,17 @@ func (b *Builder) Filter(id string) *Builder
 
 ## Implementation plan
 
-1. **`filterable.go`** — new file: define `Filterable` interface.
+1. **`filterable.go`** — new file: define `Filterable` and `Suggester`
+   interfaces.
 
 2. **`filter.go`** — new file: define `Filter` struct, `NewFilter`, `Bind`,
    `Unbind`, `Bound`, `Clear`, `applyFilter`, `Apply`.
 
-3. **`list.go`** — add `original []string` field; implement `Filter` and
-   `ResetFilter`.
+3. **`list.go`** — add `original []string` field; implement `Filter`,
+   `ResetFilter`, and `Suggest`.
 
 4. **`tree.go`** — add `filterQuery string` field; extend `rebuild` to skip
-   non-matching subtrees; implement `Filter` and `ResetFilter`.
+   non-matching subtrees; implement `Filter`, `ResetFilter`, and `Suggest`.
 
 5. **`builder.go`** — add `Filter` method.
 
@@ -169,3 +207,6 @@ func (b *Builder) Filter(id string) *Builder
    - `Unbind` restores the List and detaches.
    - Tree filter exposes parent nodes of matching descendants.
    - Empty query always calls `ResetFilter`, never `Filter("")`.
+   - Ghost text appears when bound widget implements `Suggester` and query is a prefix of an item.
+   - No ghost text when bound widget does not implement `Suggester`.
+   - Accepting ghost text via Tab dispatches `EvtAccept` and updates the filter.

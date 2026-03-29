@@ -9,15 +9,18 @@ it cut/copy/paste, overtype-on-type, and block deletion are all impossible.
 Selection is defined by a **mark** (the anchor) and the **cursor** (the active
 end). The region between them, in document order, is the selection.
 
-Two new fields on `Editor`:
+Three new fields on `Editor`:
 
 ```go
-markLine   int  // anchor line   (-1 = no selection)
-markColumn int  // anchor column (-1 = no selection)
+selecting  bool  // true when a selection is active
+markLine   int   // anchor line   (valid only when selecting)
+markColumn int   // anchor column (valid only when selecting)
 ```
 
-`markLine == -1` means no selection is active. The cursor fields `line` and
-`column` are unchanged.
+`selecting` is the sole indicator of whether a selection exists. `markLine` and
+`markColumn` are left unchanged when the selection is cleared so that future
+operations (e.g. re-activating the mark) can reuse the position without
+confusion. The cursor fields `line` and `column` are unchanged.
 
 ### Canonical start/end
 
@@ -27,7 +30,7 @@ Any code that needs ordered positions computes:
 func (e *Editor) selectionBounds() (startLine, startCol, endLine, endCol int, ok bool)
 ```
 
-Returns `ok = false` when `markLine == -1` or the mark equals the cursor.
+Returns `ok = false` when `!selecting` or the mark equals the cursor.
 Otherwise returns the earlier position as start and the later as end, comparing
 line first then column.
 
@@ -38,7 +41,7 @@ line first then column.
 - **Shift+Arrow** pressed with an active mark: keep mark, move cursor only.
 - **Plain Arrow / Home / End / PgUp / PgDn / MoveTo**: clear the mark first,
   then move cursor. Exception: see *Collapsing a selection* below.
-- **`ClearSelection()`**: sets `markLine = -1`.
+- **`ClearSelection()`**: sets `selecting = false` (mark position fields are not cleared).
 
 ### Collapsing a selection
 
@@ -59,7 +62,7 @@ and move normally.
 |--------|-------------|
 | `HasSelection() bool` | Returns true when an active non-empty selection exists |
 | `ClearSelection()` | Clears the mark; does not modify text |
-| `SelectAll()` | Sets mark to `(0, 0)`, cursor to last line/last column |
+| `SelectAll()` | Directly sets `selecting=true`, `markLine=0`, `markColumn=0`, `line=lastLine`, `column=lastCol` — does **not** go through movement methods (which would clear the selection) |
 | `SelectionText() string` | Returns the selected text as a string (newline-separated) |
 | `DeleteSelection()` | Deletes selected text; moves cursor to start; clears mark. No-op if no selection |
 | `Copy()` | Copies selection to the internal clipboard. No-op if no selection |
@@ -185,7 +188,7 @@ Selection state changes (mark moves) do not emit events — callers query
 ## Implementation plan
 
 1. **`editor.go`** — data model and methods
-   - Add `markLine`, `markColumn int` to `Editor` struct.
+   - Add `selecting bool`, `markLine int`, `markColumn int` to `Editor` struct.
    - Add package-level `editorClipboard string`.
    - Implement `selectionBounds`, `HasSelection`, `ClearSelection`, `SelectAll`,
      `SelectionText`, `DeleteSelection`, `Copy`, `Cut`, `Paste`.

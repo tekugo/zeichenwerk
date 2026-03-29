@@ -9,15 +9,19 @@ Intended as the popup content for the `Select` widget.
 ```go
 type Combo struct {
     Component
-    input   *Input   // Filter text input (top row)
-    list    *List    // Filtered results (remaining rows)
-    all     []string // Unfiltered source items
-    indices []int    // Maps filtered index → original index
+    input   *Typeahead // Filter text input with ghost-text completion (top row)
+    list    *List      // Filtered results (remaining rows)
+    all     []string   // Unfiltered source items
+    indices []int      // Maps filtered index → original index
 }
 ```
 
 `indices` lets callers translate an activated filtered-list position back to the
 original item index (needed by `Select` to map into its `options` slice).
+
+The `Typeahead`'s suggest function is wired in the constructor to return the
+first item in `c.all` that has the query as a case-insensitive prefix, giving
+inline ghost-text completion as the user types.
 
 ## Constructor
 
@@ -25,9 +29,11 @@ original item index (needed by `Select` to map into its `options` slice).
 func NewCombo(id, class string, items []string) *Combo
 ```
 
-- Creates an `Input` (id `id+"-input"`) and a `List` (id `id+"-list"`) as child
-  widgets. Both are stored as fields; they are not added to a Container — `Combo`
-  renders them directly.
+- Creates a `Typeahead` (id `id+"-input"`) and a `List` (id `id+"-list"`) as
+  child widgets. Both are stored as fields; they are not added to a Container —
+  `Combo` renders them directly.
+- Wires the `Typeahead`'s suggest function to return the first item in `c.all`
+  that has the query as a case-insensitive prefix.
 - Registers key handlers on both sub-widgets (see Interaction below).
 - Sets `FlagFocusable` on `Combo`; the sub-widgets do **not** participate in
   normal focus cycling — `Combo` manages them internally.
@@ -120,7 +126,7 @@ filtering, mirroring `List.Select`.
 1. **`combo.go`** — new file
    - Define `Combo` struct and `NewCombo`.
    - Implement `filter`, `Select`, `Apply`, `Hint`, `Render`, `Cursor`, `handleKey`.
-   - Wire key handler in constructor.
+   - Wire `Typeahead` suggest function and key handler in constructor.
 
 2. **`builder.go`** — add `Combo` method
    ```go
