@@ -929,10 +929,12 @@ func (e *Editor) Render(r *Renderer) {
 	// Render text content
 	textX := x + leftMargin
 	textY := y
+	normalStyle := e.Style()
 	for i := 0; i < usableH; i++ {
 		lineIdx := e.offsetY + i
 		if lineIdx >= len(e.content) {
-			// Clear remaining lines
+			// Clear remaining lines with the normal (non-highlighted) style
+			r.Set(normalStyle.Foreground(), normalStyle.Background(), normalStyle.Font())
 			r.Fill(textX, textY+i, usableW, 1, " ")
 			continue
 		}

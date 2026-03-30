@@ -143,5 +143,11 @@ func (s *Select) popup() {
 		}
 		return false
 	})
-	ui.Popup(s.x, s.y+s.height, s.width, 10, popup)
+	const popupHeight = 10
+	_, _, _, uiHeight := ui.Bounds()
+	py := s.y + s.height
+	if py+popupHeight > uiHeight {
+		py = s.y - popupHeight
+	}
+	ui.Popup(s.x, py, s.width, popupHeight, popup)
 }
