@@ -336,6 +336,28 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 	return b
 }
 
+// Tree creates a new tree widget for displaying hierarchical data.
+func (b *Builder) Tree(id string) *Builder {
+	tree := NewTree(id, b.class)
+	b.Add(tree)
+	return b
+}
+
+// TreeFS creates a filesystem tree rooted at root. If dirsOnly is true only
+// directories are shown; files are hidden.
+func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
+	tfs := NewTreeFS(id, b.class, root, dirsOnly)
+	// Apply theme through TreeFS so the "tree-fs" selector is used, then add
+	// the embedded Tree (which holds all state and rendering) to the container.
+	tfs.Apply(b.theme)
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		top.Add(tfs.Tree)
+	}
+	b.current = tfs.Tree
+	return b
+}
+
 // Typeahead creates a new typeahead widget (a text input with inline ghost-text
 // suggestions). Params are identical to Input.
 func (b *Builder) Typeahead(id string, params ...string) *Builder {

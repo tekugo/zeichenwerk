@@ -77,6 +77,10 @@ func TokyoNightTheme() *Theme {
 		NewStyle("tabs/highlight:focused").WithColors("$bg0", "$orange"),
 		NewStyle("tabs/highlight-line:focused").WithForeground("$orange"),
 		NewStyle("text"),
+		NewStyle("tree").WithColors("$fg0", "$bg0"),
+		NewStyle("tree/highlight").WithColors("$bg0", "$fg1"),
+		NewStyle("tree/highlight:focused").WithColors("$bg0", "$red"),
+		NewStyle("tree/indent").WithColors("$gray", ""),
 		NewStyle("viewport"),
 	)
 
@@ -107,6 +111,13 @@ func TokyoNightTheme() *Theme {
 
 		// ---- Select ----
 		"select.dropdown": " \u25BC",
+
+		// ---- Tree ----
+		"tree.expanded":  "▼ ",
+		"tree.collapsed": "▶ ",
+		"tree.branch":    "├─",
+		"tree.last":      "└─",
+		"tree.trunk":     "│ ",
 	})
 
 	return t

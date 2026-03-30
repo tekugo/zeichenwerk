@@ -113,6 +113,11 @@ func NewTheme() *Theme {
 	theme.SetStrings(map[string]string{
 		"collapsible.expanded":  "▼ ",
 		"collapsible.collapsed": "▶ ",
+		"tree.expanded":         "▼ ",
+		"tree.collapsed":        "▶ ",
+		"tree.branch":           "├─",
+		"tree.last":             "└─",
+		"tree.trunk":            "│ ",
 		"progress.h.prefix":        "",
 		"progress.h.suffix":        "",
 		"progress.h.start.filled":  "#",

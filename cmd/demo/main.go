@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Typeahead", "Viewport", "Dialog").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Tree FS", "Typeahead", "Viewport", "Dialog").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -46,6 +47,7 @@ func createUI() *UI {
 		With(styled).
 		With(table).
 		With(tabs).
+		With(treeFSDemo).
 		With(typeaheadDemo).
 		With(viewport).
 		End().
@@ -68,7 +70,7 @@ func createUI() *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 18:
+					case 19:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -622,6 +624,57 @@ func typeaheadDemo(builder *Builder) {
 			if label, ok := Find(container, "ta-accepted").(*Static); ok {
 				label.SetText("Accepted: " + s)
 			}
+		}
+		return true
+	})
+}
+
+func treeFSDemo(builder *Builder) {
+	var tfs *TreeFS
+
+	tfs = NewTreeFS("tree-fs", "", ".", false)
+
+	builder.Flex("tree-fs-demo", false, "stretch", 0).
+		// Toolbar: Up button + current root path
+		Flex("tree-fs-toolbar", true, "center", 1).Padding(0, 1).
+		Button("tree-fs-up", "↑ Up").Class("dialog").
+		Static("tree-fs-path", tfs.RootPath()).Padding(0, 1).
+		End().
+		// The tree itself, takes all remaining height
+		Add(tfs.Tree).Hint(0, -1).
+		// Status bar showing the highlighted path
+		Static("tree-fs-selected", "").Padding(0, 1).
+		End()
+
+	container := builder.Container()
+
+	// Up button: navigate to the parent directory
+	builder.Find("tree-fs-up").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+		parent := filepath.Dir(tfs.RootPath())
+		if parent == tfs.RootPath() {
+			return true // already at filesystem root
+		}
+		tfs.SetRoot(parent)
+		if label, ok := Find(container, "tree-fs-path").(*Static); ok {
+			label.SetText(tfs.RootPath())
+		}
+		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
+			label.SetText("")
+		}
+		return true
+	})
+
+	// Update the status bar whenever the highlighted node changes
+	tfs.Tree.On(EvtSelect, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) == 0 {
+			return true
+		}
+		node, ok := data[0].(*TreeNode)
+		if !ok {
+			return true
+		}
+		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
+			label.SetText(node.Data().(string))
 		}
 		return true
 	})
