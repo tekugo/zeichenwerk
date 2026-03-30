@@ -19,6 +19,7 @@ type Input struct {
 	max         int        // Maximum allowed text length in characters (0 = unlimited)
 	placeholder string     // Placeholder text shown when input is empty
 	mask        string     // Character used for masking (typically '*', '•', or '●')
+	refresh     func()     // Optional refresh override; called by Refresh() instead of Redraw(i)
 }
 
 // NewInput creates a new text input widget with the specified ID and default configuration.
@@ -89,7 +90,11 @@ func (i *Input) Cursor() (int, int, string) {
 
 // Refresh queues a redraw for the input.
 func (i *Input) Refresh() {
-	Redraw(i)
+	if i.refresh != nil {
+		i.refresh()
+	} else {
+		Redraw(i)
+	}
 }
 
 // ---- Input Methods --------------------------------------------------------
@@ -457,16 +462,15 @@ func (i *Input) Render(r *Renderer) {
 	}
 
 	// Determine what text to display
+	state := i.State()
+	if state != "" {
+		state = ":" + state
+	}
 	if i.buf.Length() == 0 && i.placeholder != "" {
-		// Use a dimmed style for placeholder
-		style := i.Style("placeholder")
+		style := i.Style("placeholder" + state)
 		r.Set(style.Foreground(), style.Background(), style.Font())
 		r.Text(x, y, i.placeholder, w)
 	} else {
-		state := i.State()
-		if state != "" {
-			state = ":" + state
-		}
 		style := i.Style(state)
 		r.Set(style.Foreground(), style.Background(), style.Font())
 		r.Text(x, y, i.visible(), w)

@@ -123,6 +123,24 @@ func OnSelect(widget Widget, handler func(Widget, int) bool) {
 	})
 }
 
+// Suggest returns a suggest function for use with Typeahead.SetSuggest.
+// It performs case-insensitive prefix matching against the provided candidates.
+func Suggest(candidates []string) func(string) []string {
+	return func(text string) []string {
+		if text == "" {
+			return nil
+		}
+		lower := strings.ToLower(text)
+		var matches []string
+		for _, c := range candidates {
+			if strings.HasPrefix(strings.ToLower(c), lower) {
+				matches = append(matches, c)
+			}
+		}
+		return matches
+	}
+}
+
 // Redraw queues a single widget for redraw.
 func Redraw(widget Widget) {
 	ui := FindUI(widget)

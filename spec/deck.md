@@ -10,7 +10,7 @@ multiple lines.
 ## Render function
 
 ```go
-type DeckRenderFunc func(r *Renderer, x, y, w, h, index int, data any, selected bool)
+type ItemRender func(r *Renderer, x, y, w, h, index int, data any, selected bool)
 ```
 
 Called once per visible slot immediately before the slot is drawn. `selected`
@@ -27,7 +27,7 @@ and call `deck.Style(selector)`.
 ```go
 type Deck struct {
     Component
-    render     DeckRenderFunc // Render function for each slot
+    render     ItemRender // Render function for each slot
     items      []any          // Data items, one per slot
     disabled   []int          // Indices of non-selectable items
     itemHeight int            // Fixed row count per item slot (>= 1)
@@ -40,7 +40,7 @@ type Deck struct {
 ## Constructor
 
 ```go
-func NewDeck(id, class string, render DeckRenderFunc, itemHeight int) *Deck
+func NewDeck(id, class string, render ItemRender, itemHeight int) *Deck
 ```
 
 - `itemHeight` must be >= 1; panics otherwise.
@@ -184,7 +184,7 @@ deck.SetItems(items)
 ## Implementation Plan
 
 1. **`deck.go`** — new file
-   - Define `DeckRenderFunc` type and `Deck` struct.
+   - Define `ItemRender` type and `Deck` struct.
    - Implement `NewDeck`, `SetItems`, `Items`, `SetDisabled`.
    - Implement `Select`, `Move`, `First`, `Last`, `PageUp`, `PageDown`
      and the internal `skip` and `adjust` helpers (mirrors `List`).
@@ -192,7 +192,7 @@ deck.SetItems(items)
 
 2. **`builder.go`** — add `Deck` method
    ```go
-   func (b *Builder) Deck(id string, render DeckRenderFunc, itemHeight int) *Builder
+   func (b *Builder) Deck(id string, render ItemRender, itemHeight int) *Builder
    ```
 
 3. **Tests** — `deck_test.go`

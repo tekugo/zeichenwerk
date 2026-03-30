@@ -316,6 +316,14 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 	return b
 }
 
+// Typeahead creates a new typeahead widget (a text input with inline ghost-text
+// suggestions). Params are identical to Input.
+func (b *Builder) Typeahead(id string, params ...string) *Builder {
+	t := NewTypeahead(id, b.class, params...)
+	b.Add(t)
+	return b
+}
+
 // List creates a new list widget for displaying selectable items.
 //
 // Parameters:

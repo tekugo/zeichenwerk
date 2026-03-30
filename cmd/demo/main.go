@@ -26,7 +26,7 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Viewport", "Dialog").
+		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Typeahead", "Viewport", "Dialog").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -43,6 +43,7 @@ func createUI() *UI {
 		With(styled).
 		With(table).
 		With(tabs).
+		With(typeaheadDemo).
 		With(viewport).
 		End().
 		Cell(1, 1, 1, 1).
@@ -64,7 +65,7 @@ func createUI() *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 15:
+					case 16:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -93,7 +94,7 @@ func box(builder *Builder) {
 	builder.Flex("box-demo", false, "stretch", 1).Padding(1).
 		Static("box-title", "Box Widget Demo").Padding(0, 0, 1, 0).
 		HRule("thin").
-		Flex("box-examples", true, "stretch", 2).
+		Flex("box-examples", false, "stretch", 1).
 		Box("simple-box", "Simple Box").Padding(1).
 		Static("box-content1", "This is content inside a simple box widget.").
 		End().
@@ -430,6 +431,63 @@ func tabs(builder *Builder) {
 	builder.Flex("tabs-demo", false, "stretch", 1).Padding(1, 2).
 		Tabs("tabs", "First", "Second", "Third", "Fourth").
 		End()
+}
+
+func typeaheadDemo(builder *Builder) {
+	languages := []string{
+		"Ada", "Clojure", "C", "C++", "C#", "Crystal", "D", "Dart", "Elixir",
+		"Elm", "Erlang", "F#", "Go", "Groovy", "Haskell", "Java", "JavaScript",
+		"Julia", "Kotlin", "Lisp", "Lua", "Nim", "OCaml", "Pascal", "Perl",
+		"PHP", "Python", "R", "Ruby", "Rust", "Scala", "Scheme", "Swift",
+		"TypeScript", "Zig",
+	}
+	countries := []string{
+		"Afghanistan", "Albania", "Algeria", "Argentina", "Australia", "Austria",
+		"Belgium", "Bolivia", "Brazil", "Bulgaria", "Canada", "Chile", "China",
+		"Colombia", "Croatia", "Czech Republic", "Denmark", "Egypt", "Finland",
+		"France", "Germany", "Greece", "Hungary", "India", "Indonesia", "Iran",
+		"Iraq", "Ireland", "Israel", "Italy", "Japan", "Jordan", "Kenya",
+		"Malaysia", "Mexico", "Morocco", "Netherlands", "New Zealand", "Nigeria",
+		"Norway", "Pakistan", "Peru", "Philippines", "Poland", "Portugal",
+		"Romania", "Russia", "Saudi Arabia", "Serbia", "Singapore", "South Africa",
+		"South Korea", "Spain", "Sweden", "Switzerland", "Thailand", "Turkey",
+		"Ukraine", "United Kingdom", "United States", "Vietnam",
+	}
+
+	builder.Flex("typeahead-demo", false, "stretch", 1).Padding(1, 2).
+		Static("typeahead-title", "Typeahead Widget Demo").Padding(0, 0, 1, 0).
+		Static("typeahead-desc", "Type to see inline ghost-text completions. Tab or → accepts.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("", "Programming language:").
+		Typeahead("ta-lang", "", "e.g. Go, Rust, Python…").
+		Static("", "Country:").
+		Typeahead("ta-country", "", "e.g. Germany, Japan…").
+		Static("ta-accepted", "").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+
+	langTA := Find(container, "ta-lang").(*Typeahead)
+	langTA.SetSuggest(Suggest(languages))
+	langTA.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+		if s, ok := data[0].(string); ok {
+			if label, ok := Find(container, "ta-accepted").(*Static); ok {
+				label.SetText("Accepted: " + s)
+			}
+		}
+		return true
+	})
+
+	countryTA := Find(container, "ta-country").(*Typeahead)
+	countryTA.SetSuggest(Suggest(countries))
+	countryTA.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+		if s, ok := data[0].(string); ok {
+			if label, ok := Find(container, "ta-accepted").(*Static); ok {
+				label.SetText("Accepted: " + s)
+			}
+		}
+		return true
+	})
 }
 
 func viewport(builder *Builder) {

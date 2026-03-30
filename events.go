@@ -4,6 +4,7 @@ package zeichenwerk
 type Event string
 
 const (
+	EvtAccept   Event = "accept"
 	EvtActivate Event = "activate"
 	EvtChange   Event = "change"
 	EvtClick    Event = "click"
