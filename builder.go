@@ -148,6 +148,18 @@ func (b *Builder) Dialog(id, title string) *Builder {
 	return b
 }
 
+// Deck creates a new deck widget for displaying rich multi-row items.
+//
+// Parameters:
+//   - id: unique identifier for the deck widget
+//   - render: function called to draw each item slot
+//   - itemHeight: number of rows per item slot (>= 1)
+func (b *Builder) Deck(id string, render ItemRender, itemHeight int) *Builder {
+	deck := NewDeck(id, b.class, render, itemHeight)
+	b.Add(deck)
+	return b
+}
+
 // Digits creates a new digits widget with the specified id and text.
 func (b *Builder) Digits(id, text string) *Builder {
 	d := NewDigits(id, b.class, text)

@@ -4,9 +4,9 @@
 ![Go](https://img.shields.io/github/go-mod/go-module/github.com/tekugo/zeichenwerk)
 ![License](https://img.shields.io/github/license/tekugo/zeichenwerk)
 
-Zeichenwerk (German for "character works") is a modern, idiomatic Go library
-for building terminal user interfaces. This refactored version features a
-fluent builder API, improved architecture, and an enhanced widget system.
+Zeichenwerk (German for "character works") is a modern, idiomatic Go library for
+building terminal user interfaces. This refactored version features a fluent
+builder API, improved architecture, and an enhanced widget system.
 
 ## Quick Example
 
@@ -30,6 +30,25 @@ func main() {
 }
 ```
 
+## Why zeichenwerk
+
+Zeichenwerk is designed for developers who want:
+
+- A fluent, chainable builder API
+- Higher-level widgets than tcell
+- More composable layouts than tview
+- A traditional retained widget hierarchy rather than an event/message
+  architecture
+
+Compare to other Go TUI libraries:
+
+| Library     | Style                             |
+| ----------- | --------------------------------- |
+| tcell       | Low-level terminal primitives     |
+| tview       | Traditional widget toolkit        |
+| bubbletea   | Elm-style update loop             |
+| zeichenwerk | Fluent builder + widget hierarchy |
+
 ## Installation
 
 ```bash
@@ -38,43 +57,22 @@ go get github.com/tekugo/zeichenwerk
 
 ## Widgets
 
-### Containers
+| Category    | Widgets                               |
+| ----------- | ------------------------------------- |
+| Containers  | Box, Flex, Grid, Form, Switcher, Tabs |
+| Interaction | Button, Checkbox, Input, Select       |
+| Display     | Collapsible, Deck, List, Table        |
+| Overlay     | Dialog + Containers                   |
+| Animation   | Animation, Grow, Scanner, Spinner     |
 
-- **Flex**: Linear layout (horizontal/vertical) with alignment and spacing
-- **Grid**: Table-like layout with spanning and grid lines
-- **Box**: Single-child container with borders and title
-- **Form**: Data-binding container for Go structs
-- **FormGroup**: Labeled field layout for form controls
-- **Switcher**: Stack of widgets with one visible at a time
-- **Tabs**: Tabbed interface with switchable panels
-- **Viewport**: Scrollable content area
+Also includes:
 
-### Input
-
-- **Button**: Clickable button with keyboard/mouse support
-- **Checkbox**: Toggle with checked/unchecked states
-- **Input**: Single-line text entry with editing
-- **Select**: Option selector
-- **Editor**: Multi-line text editor with gap-buffer storage
-
-### Display
-
-- **List**: Scrollable list with navigation and selection
-- **Table**: Data tables with custom providers
-- **Text**: Multi-line text with scrolling
-- **Styled**: Rich text with markup (bold, italic, underline)
-- **Static**: Simple labeled text display
-- **Spinner**: Animated loading indicator
-- **Progress**: Progress bar (determinate and indeterminate)
-- **Digits**: Large-format ASCII art number/character display
-- **Canvas**: Low-level drawing surface for custom components
-- **Rule**: Horizontal or vertical visual divider
-- **Grow**: Animated expanding container
-
-### Overlay
-
-- **Dialog**: Modal overlay with configurable content
-- **Inspector**: Debug interface for exploring widget hierarchies
+- Multi-line text editor/area
+- Inspector for introspection and debugging
+- Included structured logging
+- Canvas, which will be used for a TUI designer
+- Forms created from and bound to Go structs
+- Styled text display with inline markup and word wrapping
 
 ## Features
 
@@ -90,7 +88,7 @@ button.On("click", func(w Widget, event string, data ...any) bool {
 ### Styling & Themes
 
 ```go
-theme := NewMapTheme()
+theme := NewTheme()
 theme.Set("button.primary", NewStyle("blue", "white", ""))
 theme.Set("button#submit", NewStyle("green", "black", "bold"))
 ```
@@ -98,7 +96,7 @@ theme.Set("button#submit", NewStyle("green", "black", "bold"))
 Built-in themes:
 
 - `TokyoNightTheme()` - Dark theme with purple/blue accents
-- `UnicodeBordersTheme()` - Unicode border styles
+- more to follow
 
 ### Focus Navigation
 
@@ -110,7 +108,6 @@ Built-in themes:
 
 - Click to focus widgets
 - Hover states with visual feedback
-- Drag support for interactive widgets
 
 ## Architecture
 
@@ -144,8 +141,9 @@ go run ./cmd/demo
 
 ## Development Status
 
-**Active development** - Core features are implemented. Widget-level test coverage
-and some layout edge cases are still being worked on.
+**Active development** - Core features are implemented. Widget interface is
+stable. Widget-level test coverage and some layout edge cases are still being
+worked on.
 
 ## License
 

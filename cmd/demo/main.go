@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,13 +27,14 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Typeahead", "Viewport", "Dialog").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Typeahead", "Viewport", "Dialog").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
+		With(deckDemo).
 		With(digits).
 		With(editor).
 		With(form).
@@ -66,7 +68,7 @@ func createUI() *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 17:
+					case 18:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -257,6 +259,93 @@ func collapsibleDemo(builder *Builder) {
 			})
 		}
 	}
+}
+
+// Deck demo — displays all theme colors as rich multi-line cards.
+func deckDemo(builder *Builder) {
+	type colorItem struct{ name, hex string }
+
+	theme := TokyoNightTheme()
+	colors := theme.Colors()
+
+	names := make([]string, 0, len(colors))
+	for k := range colors {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+
+	items := make([]any, len(names))
+	for i, name := range names {
+		items[i] = colorItem{name: name, hex: colors[name]}
+	}
+
+	const previewW = 10 // columns for color swatch
+	const borderW = 1   // column for left-side selection indicator
+	const padW = 1      // padding column between indicator and text
+
+	// deck is declared first so the render closure can reference it.
+	var deck *Deck
+
+	renderFn := func(r *Renderer, x, y, w, h, _ int, data any, selected bool) {
+		item := data.(colorItem)
+		textW := w - borderW - padW - previewW
+
+		bg := theme.Color("$bg1")
+		focused := deck.Flag(FlagFocused)
+
+		var fg, font, indicator, indicatorFg string
+		if selected {
+			font = "bold"
+			if focused {
+				fg = theme.Color("$cyan")
+				indicatorFg = theme.Color("$cyan")
+			} else {
+				fg = theme.Color("$fg1")
+				indicatorFg = theme.Color("$gray")
+			}
+			indicator = "▍"
+		} else {
+			fg = theme.Color("$fg0")
+			font = ""
+			indicator = " "
+			indicatorFg = theme.Color("$gray")
+		}
+
+		// Left-side border indicator — spans all rows.
+		r.Set(indicatorFg, bg, "")
+		for row := 0; row < h; row++ {
+			r.Put(x, y+row, indicator)
+		}
+
+		// Padding column.
+		r.Set("", bg, "")
+		r.Fill(x+borderW, y, padW, h, " ")
+
+		// Text area: name row (bold/colored), hex row, empty padding row.
+		textX := x + borderW + padW
+		r.Set(fg, bg, font)
+		r.Text(textX, y, item.name, textW)
+		r.Set(fg, bg, "")
+		r.Text(textX, y+1, item.hex, textW)
+		r.Fill(textX, y+2, textW, 1, " ")
+
+		// Color swatch — 2 rows tall, right-aligned.
+		swatchX := x + borderW + padW + textW
+		r.Set("", item.hex, "")
+		r.Fill(swatchX, y, previewW, 2, " ")
+		// Clear the third row of the swatch area.
+		r.Set("", bg, "")
+		r.Fill(swatchX, y+2, previewW, 1, " ")
+	}
+
+	deck = NewDeck("deck-demo", "", renderFn, 3)
+	deck.SetItems(items)
+	// Wrap in a non-focusable Flex so the left/right padding is stable and
+	// unaffected by the deck's own focus state changing its style.
+	builder.Flex("deck-wrapper", false, "stretch", 0).Padding(0, 1).
+		Static("deck-title", "Color constants from the Tokyo Night theme").Padding(0, 0, 1, 0).
+		Add(deck).Hint(0, -1).
+		End()
 }
 
 func custom() Widget {
