@@ -3,12 +3,17 @@ package zeichenwerk
 import (
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/gdamore/tcell/v3"
 )
 
 // flagSearch is an internal flag used to track whether quick-search is enabled.
 const flagSearch Flag = "search"
+
+// doubleClickThreshold is the maximum time between two clicks on the same item
+// for them to be treated as a double-click.
+const doubleClickThreshold = 300 * time.Millisecond
 
 // List is a scrollable list widget that displays text items with comprehensive
 // interaction capabilities.
@@ -54,6 +59,10 @@ type List struct {
 	numbers     bool // Show line numbers next to each item for reference
 	scrollbar   bool // Display scrollbar indicator on the right edge
 	quickSearch bool // Enable quick-search by typing the first letter of an item
+
+	// ---- Mouse State ----
+	lastClickIndex int       // absolute list index of the last accepted click (-1 = none)
+	lastClickTime  time.Time // timestamp of the last accepted click
 }
 
 // NewList creates a new List widget with the specified ID and initial items.
@@ -69,13 +78,15 @@ func NewList(id, class string, items []string) *List {
 		index:       0,
 		selection:   make([]int, 0, 1),
 		offset:      0,
-		numbers:     false,
-		scrollbar:   true,
-		quickSearch: true,
+		numbers:        false,
+		scrollbar:      true,
+		quickSearch:    true,
+		lastClickIndex: -1,
 	}
 	list.SetFlag(FlagFocusable, true)
 	list.SetFlag(flagSearch, true)
 	OnKey(list, list.handleKey)
+	OnMouse(list, list.handleMouse)
 	return list
 }
 
@@ -232,6 +243,19 @@ func (l *List) Last() {
 	l.Refresh()
 }
 
+// moveTo moves the highlight directly to the given absolute list index without
+// the step-by-step disabled-item skipping that Move uses. Callers must verify
+// the index is not disabled before calling. No-op when already at that index.
+func (l *List) moveTo(index int) {
+	if index == l.index {
+		return
+	}
+	l.index = index
+	l.adjust()
+	l.Dispatch(l, EvtSelect, l.index)
+	l.Refresh()
+}
+
 // PageUp moves the highlight up by one page (viewport height).
 // This method provides rapid navigation through long lists by jumping
 // by the number of visible items rather than single item steps.
@@ -306,6 +330,41 @@ func (l *List) handleKey(_ Widget, event *tcell.EventKey) bool {
 		}
 	}
 	return false
+}
+
+func (l *List) handleMouse(_ Widget, event *tcell.EventMouse) bool {
+	if event.Buttons() != tcell.Button1 {
+		return false
+	}
+	mx, my := event.Position()
+	cx, cy, cw, ch := l.Content()
+	if mx < cx || mx >= cx+cw || my < cy || my >= cy+ch {
+		return false
+	}
+	// Ignore the scrollbar column when it is rendered
+	if l.scrollbar && len(l.items) > ch && mx == cx+cw-1 {
+		return false
+	}
+	index := l.offset + (my - cy)
+	if index < 0 || index >= len(l.items) {
+		return false
+	}
+	if slices.Contains(l.disabled, index) {
+		return false
+	}
+
+	now := event.When()
+	isDoubleClick := index == l.lastClickIndex && now.Sub(l.lastClickTime) <= doubleClickThreshold
+	l.lastClickIndex = index
+	l.lastClickTime = now
+
+	l.moveTo(index)
+
+	if isDoubleClick {
+		l.Dispatch(l, EvtActivate, index)
+		l.lastClickIndex = -1 // reset so a third click is a fresh single click
+	}
+	return true
 }
 
 // ---- Internal Methods ----------------------------------------------------

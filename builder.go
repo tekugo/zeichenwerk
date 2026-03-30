@@ -133,6 +133,14 @@ func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	return b
 }
 
+// Collapsible creates a new collapsible container with a clickable header.
+// The container is pushed onto the builder's stack; call End() to close it.
+func (b *Builder) Collapsible(id, title string, expanded bool) *Builder {
+	c := NewCollapsible(id, b.class, title, expanded)
+	b.Add(c)
+	return b
+}
+
 // Dialog creates a new dialog with the specified id and title.
 func (b *Builder) Dialog(id, title string) *Builder {
 	d := NewDialog(id, b.class, title)

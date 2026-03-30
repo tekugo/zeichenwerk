@@ -109,8 +109,10 @@ func NewTheme() *Theme {
 		strings: make(map[string]string),
 		styles:  make(map[string]*Style),
 	}
-	// Default progress bar strings (ASCII)
+	// Default strings (collapsible indicators + ASCII progress bar)
 	theme.SetStrings(map[string]string{
+		"collapsible.expanded":  "▼ ",
+		"collapsible.collapsed": "▶ ",
 		"progress.h.prefix":        "",
 		"progress.h.suffix":        "",
 		"progress.h.start.filled":  "#",

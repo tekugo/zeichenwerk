@@ -37,6 +37,10 @@ func TokyoNightTheme() *Theme {
 		NewStyle("checkbox:hovered").WithColors("$aqua", "$bg0"),
 		NewStyle("dialog").WithColors("$fg0", "$bg2").WithBorder("round").WithPadding(1, 2),
 		NewStyle("dialog/title").WithColors("$bg1", "$blue").WithBorder("none").WithMargin(0).WithPadding(0, 1),
+		NewStyle("collapsible"),
+		NewStyle("collapsible/header").WithColors("$fg0", "$bg1"),
+		NewStyle("collapsible/header:focused").WithColors("$fg0", "$blue"),
+		NewStyle("collapsible/header:hovered").WithColors("$fg0", "$cyan"),
 		NewStyle("custom"),
 		NewStyle("flex"),
 		NewStyle("form"),
@@ -76,6 +80,10 @@ func TokyoNightTheme() *Theme {
 	)
 
 	t.SetStrings(map[string]string{
+		// ---- Collapsible ----
+		"collapsible.expanded":  "▼ ",
+		"collapsible.collapsed": "▶ ",
+
 		// ---- Progress bar ----
 		// Horizontal orientation
 		"progress.h.prefix":        "",

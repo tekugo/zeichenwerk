@@ -149,6 +149,17 @@ func Redraw(widget Widget) {
 	}
 }
 
+// Relayout walks up the parent chain to the root UI, re-runs the full layout
+// top-down, and then queues a full screen repaint. Use this when a widget
+// changes its own preferred size at runtime (e.g. Collapsible expand/collapse).
+func Relayout(widget Widget) {
+	ui := FindUI(widget)
+	if ui != nil {
+		ui.Layout()
+		ui.Refresh()
+	}
+}
+
 // WidgetType returns a clean, human-readable string representation of the
 // widget's type.
 func WidgetType(widget Widget) string {

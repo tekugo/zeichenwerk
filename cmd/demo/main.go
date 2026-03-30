@@ -26,12 +26,13 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Typeahead", "Viewport", "Dialog").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Typeahead", "Viewport", "Dialog").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
 		With(canvas).
 		With(checkbox).
+		With(collapsibleDemo).
 		With(digits).
 		With(editor).
 		With(form).
@@ -65,7 +66,7 @@ func createUI() *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 16:
+					case 17:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -203,6 +204,53 @@ func checkbox(builder *Builder) {
 							name = "Terms agreed"
 						}
 						label.SetText(fmt.Sprintf("%s: %v", name, checked))
+					}
+				}
+				return true
+			})
+		}
+	}
+}
+
+// Collapsible demo
+func collapsibleDemo(builder *Builder) {
+	builder.Flex("collapsible-demo", false, "stretch", 1).Padding(1, 2).
+		Static("collapsible-title", "Collapsible Widget Demo").Padding(0, 0, 1, 0).
+		Static("collapsible-info", "Click the header or press Enter/Space to toggle. → expands, ← collapses.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Collapsible("col-basic", "Basic section (starts expanded)", true).
+			Flex("col-basic-content", false, "stretch", 1).Padding(0, 1).
+			Static("", "This is the body of the first collapsible.").
+			Static("", "It can contain any widget — here a few statics.").
+			Static("", "Collapse me with ← or by clicking the header.").
+			End().
+		End().
+		Collapsible("col-list", "List section (starts collapsed)", false).
+			List("col-list-items", "Alpha", "Beta", "Gamma", "Delta", "Epsilon").
+		End().
+		Collapsible("col-inputs", "Input section (starts collapsed)", false).
+			Flex("col-inputs-content", false, "stretch", 1).Padding(0, 1).
+			Static("", "Name:").
+			Input("col-name", "").
+			Static("", "Email:").
+			Input("col-email", "").
+			End().
+		End().
+		Static("col-status", "").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+	for _, id := range []string{"col-basic", "col-list", "col-inputs"} {
+		id := id
+		if w := Find(container, id); w != nil {
+			w.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+				if v, ok := data[0].(bool); ok {
+					state := "collapsed"
+					if v {
+						state = "expanded"
+					}
+					if label, ok := Find(container, "col-status").(*Static); ok {
+						label.SetText(fmt.Sprintf("%s: %s", id, state))
 					}
 				}
 				return true
