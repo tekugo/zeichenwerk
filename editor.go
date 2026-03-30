@@ -1,11 +1,17 @@
 package zeichenwerk
 
 import (
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
 )
+
+// editorClipboard is the package-level internal clipboard shared across all
+// Editor instances within the same process.
+var editorClipboard string
 
 // Editor is a multi-line text editor widget that provides comprehensive text editing
 // capabilities with efficient gap buffer-based line storage. It supports all standard
@@ -24,6 +30,11 @@ type Editor struct {
 	numbers  int          // Line numbers width (0 = none)
 	indent   bool         // Auto-indent
 	disabled bool         // Read-only flag
+
+	// ---- Selection State ----
+	selecting  bool // true when a selection is active
+	markLine   int  // anchor line   (valid only when selecting)
+	markColumn int  // anchor column (valid only when selecting)
 }
 
 // NewEditor creates a new multi-line text editor widget with the specified ID.
@@ -54,6 +65,7 @@ func (e *Editor) Apply(theme *Theme) {
 	theme.Apply(e, e.Selector("editor/current-line-number"))
 	theme.Apply(e, e.Selector("editor/line-numbers"))
 	theme.Apply(e, e.Selector("editor/separator"))
+	theme.Apply(e, e.Selector("editor/selection"))
 }
 
 // Cursor returns the current cursor position relative to the content area.
@@ -109,6 +121,7 @@ func (e *Editor) SetContent(lines []string) {
 	e.column = 0
 	e.offsetX = 0
 	e.offsetY = 0
+	e.ClearSelection()
 	e.updateLongestLine()
 	e.Dispatch(e, EvtChange)
 	e.Refresh()
@@ -172,9 +185,226 @@ func (e *Editor) SetReadOnly(ro bool) {
 	}
 }
 
+// ---- Selection ------------------------------------------------------------
+
+// selectionBounds returns the ordered start and end positions of the selection.
+// Returns ok=false when no selection is active or the mark equals the cursor.
+func (e *Editor) selectionBounds() (startLine, startCol, endLine, endCol int, ok bool) {
+	if !e.selecting {
+		return 0, 0, 0, 0, false
+	}
+	if e.markLine == e.line && e.markColumn == e.column {
+		return 0, 0, 0, 0, false
+	}
+	if e.markLine < e.line || (e.markLine == e.line && e.markColumn < e.column) {
+		return e.markLine, e.markColumn, e.line, e.column, true
+	}
+	return e.line, e.column, e.markLine, e.markColumn, true
+}
+
+// HasSelection returns true when an active non-empty selection exists.
+func (e *Editor) HasSelection() bool {
+	_, _, _, _, ok := e.selectionBounds()
+	return ok
+}
+
+// ClearSelection clears the selection mark. Does not modify text.
+func (e *Editor) ClearSelection() {
+	e.selecting = false
+}
+
+// SelectAll selects the entire document content.
+func (e *Editor) SelectAll() {
+	e.selecting = true
+	e.markLine = 0
+	e.markColumn = 0
+	e.line = len(e.content) - 1
+	e.column = e.content[e.line].Length()
+	e.adjustViewport()
+	e.Refresh()
+}
+
+// SelectionText returns the selected text as a newline-separated string.
+func (e *Editor) SelectionText() string {
+	startLine, startCol, endLine, endCol, ok := e.selectionBounds()
+	if !ok {
+		return ""
+	}
+	var parts []string
+	for l := startLine; l <= endLine; l++ {
+		lineRunes := []rune(e.content[l].String())
+		sc := 0
+		ec := len(lineRunes)
+		if l == startLine {
+			sc = startCol
+		}
+		if l == endLine {
+			ec = endCol
+		}
+		if sc > len(lineRunes) {
+			sc = len(lineRunes)
+		}
+		if ec > len(lineRunes) {
+			ec = len(lineRunes)
+		}
+		parts = append(parts, string(lineRunes[sc:ec]))
+	}
+	return strings.Join(parts, "\n")
+}
+
+// DeleteSelection deletes the selected text, moves cursor to the selection
+// start, and clears the mark. No-op when no selection is active.
+func (e *Editor) DeleteSelection() {
+	startLine, startCol, endLine, endCol, ok := e.selectionBounds()
+	if !ok {
+		return
+	}
+
+	if startLine == endLine {
+		// Same-line deletion: remove chars in [startCol, endCol)
+		buf := e.content[startLine]
+		for i := 0; i < endCol-startCol; i++ {
+			buf.Move(startCol)
+			buf.Delete()
+		}
+	} else {
+		// Multi-line deletion:
+		// 1. Truncate startLine at startCol
+		startBuf := e.content[startLine]
+		for startBuf.Length() > startCol {
+			startBuf.Move(startCol)
+			startBuf.Delete()
+		}
+		// 2. Append endLine suffix (from endCol onwards) to startLine
+		endRunes := []rune(e.content[endLine].String())
+		for i := endCol; i < len(endRunes); i++ {
+			startBuf.Move(startBuf.Length())
+			startBuf.Insert(endRunes[i])
+		}
+		// 3. Remove intermediate lines and endLine
+		e.content = append(e.content[:startLine+1], e.content[endLine+1:]...)
+	}
+
+	e.line = startLine
+	e.column = startCol
+	e.ClearSelection()
+	e.updateLongestLine()
+	e.adjustViewport()
+	e.Dispatch(e, EvtChange)
+	e.Refresh()
+}
+
+// Copy copies the selection to the internal (and optionally system) clipboard.
+// No-op when no selection is active.
+func (e *Editor) Copy() {
+	if !e.HasSelection() {
+		return
+	}
+	text := e.SelectionText()
+	editorClipboard = text
+	_ = systemCopy(text)
+}
+
+// Cut copies the selection and then deletes it.
+func (e *Editor) Cut() {
+	e.Copy()
+	e.DeleteSelection()
+}
+
+// Paste inserts clipboard text at the cursor, replacing any active selection first.
+func (e *Editor) Paste() {
+	if e.disabled {
+		return
+	}
+	if e.HasSelection() {
+		e.DeleteSelection()
+	}
+
+	// Try system clipboard; fall back to internal.
+	text, err := systemPaste()
+	if err != nil {
+		text = editorClipboard
+	} else {
+		editorClipboard = text
+	}
+
+	if text == "" {
+		return
+	}
+
+	lines := strings.Split(text, "\n")
+	for i, part := range lines {
+		if i > 0 {
+			// Split current line at cursor (without auto-indent)
+			currentBuf := e.content[e.line]
+			suffix := string([]rune(currentBuf.String())[e.column:])
+			for currentBuf.Length() > e.column {
+				currentBuf.Move(e.column)
+				currentBuf.Delete()
+			}
+			newBuf := NewGapBufferFromString(suffix, 32)
+			e.content = append(e.content[:e.line+1], append([]*GapBuffer{newBuf}, e.content[e.line+1:]...)...)
+			e.line++
+			e.column = 0
+		}
+		for _, ch := range part {
+			e.content[e.line].Move(e.column)
+			e.content[e.line].Insert(ch)
+			e.column++
+		}
+	}
+
+	e.updateLongestLine()
+	e.adjustViewport()
+	e.Dispatch(e, EvtChange)
+	e.Refresh()
+}
+
+// ---- System Clipboard -----------------------------------------------------
+
+// systemCopy writes text to the system clipboard via an external command.
+// Falls back silently when the command is unavailable or returns an error.
+func systemCopy(text string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("pbcopy")
+	default:
+		cmd = exec.Command("xclip", "-selection", "clipboard")
+	}
+	cmd.Stdin = strings.NewReader(text)
+	return cmd.Run()
+}
+
+// systemPaste reads text from the system clipboard via an external command.
+// Returns an error when the command is unavailable or fails.
+func systemPaste() (string, error) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("pbpaste")
+	default:
+		cmd = exec.Command("xclip", "-selection", "clipboard", "-o")
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
 // ---- Movement -------------------------------------------------------------
 
 func (e *Editor) Left() {
+	if e.HasSelection() {
+		startLine, startCol, _, _, _ := e.selectionBounds()
+		e.ClearSelection()
+		e.line = startLine
+		e.column = startCol
+		e.adjustViewport()
+		e.Refresh()
+		return
+	}
 	if e.column > 0 {
 		e.column--
 		e.adjustViewport()
@@ -188,6 +418,15 @@ func (e *Editor) Left() {
 }
 
 func (e *Editor) Right() {
+	if e.HasSelection() {
+		_, _, endLine, endCol, _ := e.selectionBounds()
+		e.ClearSelection()
+		e.line = endLine
+		e.column = endCol
+		e.adjustViewport()
+		e.Refresh()
+		return
+	}
 	lineLen := e.content[e.line].Length()
 	if e.column < lineLen {
 		e.column++
@@ -202,6 +441,7 @@ func (e *Editor) Right() {
 }
 
 func (e *Editor) Up() {
+	e.ClearSelection()
 	if e.line > 0 {
 		e.line--
 		lineLen := e.content[e.line].Length()
@@ -214,6 +454,7 @@ func (e *Editor) Up() {
 }
 
 func (e *Editor) Down() {
+	e.ClearSelection()
 	if e.line < len(e.content)-1 {
 		e.line++
 		lineLen := e.content[e.line].Length()
@@ -226,18 +467,21 @@ func (e *Editor) Down() {
 }
 
 func (e *Editor) Home() {
+	e.ClearSelection()
 	e.column = 0
 	e.adjustViewport()
 	e.Refresh()
 }
 
 func (e *Editor) End() {
+	e.ClearSelection()
 	e.column = e.content[e.line].Length()
 	e.adjustViewport()
 	e.Refresh()
 }
 
 func (e *Editor) PageUp() {
+	e.ClearSelection()
 	_, _, _, h := e.Content()
 	target := max(e.line-h, 0)
 	e.MoveTo(target, e.column)
@@ -245,6 +489,7 @@ func (e *Editor) PageUp() {
 }
 
 func (e *Editor) PageDown() {
+	e.ClearSelection()
 	_, _, _, h := e.Content()
 	target := min(e.line+h, len(e.content)-1)
 	e.MoveTo(target, e.column)
@@ -263,6 +508,7 @@ func (e *Editor) DocumentEnd() {
 
 // MoveTo moves the cursor to the specified line and column.
 func (e *Editor) MoveTo(line, column int) {
+	e.ClearSelection()
 	if line < 0 {
 		line = 0
 	} else if line >= len(e.content) {
@@ -280,11 +526,105 @@ func (e *Editor) MoveTo(line, column int) {
 	e.Refresh()
 }
 
+// ---- Shift-Movement (selection extension) ---------------------------------
+
+func (e *Editor) ShiftLeft() {
+	if !e.selecting {
+		e.selecting = true
+		e.markLine = e.line
+		e.markColumn = e.column
+	}
+	if e.column > 0 {
+		e.column--
+	} else if e.line > 0 {
+		e.line--
+		e.column = e.content[e.line].Length()
+	}
+	e.adjustViewport()
+	e.Refresh()
+}
+
+func (e *Editor) ShiftRight() {
+	if !e.selecting {
+		e.selecting = true
+		e.markLine = e.line
+		e.markColumn = e.column
+	}
+	lineLen := e.content[e.line].Length()
+	if e.column < lineLen {
+		e.column++
+	} else if e.line < len(e.content)-1 {
+		e.line++
+		e.column = 0
+	}
+	e.adjustViewport()
+	e.Refresh()
+}
+
+func (e *Editor) ShiftUp() {
+	if !e.selecting {
+		e.selecting = true
+		e.markLine = e.line
+		e.markColumn = e.column
+	}
+	if e.line > 0 {
+		e.line--
+		lineLen := e.content[e.line].Length()
+		if e.column > lineLen {
+			e.column = lineLen
+		}
+	}
+	e.adjustViewport()
+	e.Refresh()
+}
+
+func (e *Editor) ShiftDown() {
+	if !e.selecting {
+		e.selecting = true
+		e.markLine = e.line
+		e.markColumn = e.column
+	}
+	if e.line < len(e.content)-1 {
+		e.line++
+		lineLen := e.content[e.line].Length()
+		if e.column > lineLen {
+			e.column = lineLen
+		}
+	}
+	e.adjustViewport()
+	e.Refresh()
+}
+
+func (e *Editor) ShiftHome() {
+	if !e.selecting {
+		e.selecting = true
+		e.markLine = e.line
+		e.markColumn = e.column
+	}
+	e.column = 0
+	e.adjustViewport()
+	e.Refresh()
+}
+
+func (e *Editor) ShiftEnd() {
+	if !e.selecting {
+		e.selecting = true
+		e.markLine = e.line
+		e.markColumn = e.column
+	}
+	e.column = e.content[e.line].Length()
+	e.adjustViewport()
+	e.Refresh()
+}
+
 // ---- Editing --------------------------------------------------------------
 
 func (e *Editor) Insert(ch rune) {
 	if e.disabled {
 		return
+	}
+	if e.HasSelection() {
+		e.DeleteSelection()
 	}
 
 	// Handle tab character
@@ -310,6 +650,10 @@ func (e *Editor) Insert(ch rune) {
 
 func (e *Editor) Delete() {
 	if e.disabled {
+		return
+	}
+	if e.HasSelection() {
+		e.DeleteSelection()
 		return
 	}
 
@@ -344,6 +688,10 @@ func (e *Editor) DeleteForward() {
 	if e.disabled {
 		return
 	}
+	if e.HasSelection() {
+		e.DeleteSelection()
+		return
+	}
 
 	lineLen := e.content[e.line].Length()
 	if e.column < lineLen {
@@ -368,6 +716,9 @@ func (e *Editor) DeleteForward() {
 func (e *Editor) Enter() {
 	if e.disabled {
 		return
+	}
+	if e.HasSelection() {
+		e.DeleteSelection()
 	}
 
 	// Split current line at cursor
@@ -585,21 +936,7 @@ func (e *Editor) Render(r *Renderer) {
 			r.Fill(textX, textY+i, usableW, 1, " ")
 			continue
 		}
-		line := e.content[lineIdx].String()
-		visible := e.getVisibleLineContent(line, e.offsetX, usableW, e.tab)
-		// Choose style: current line highlighted if focused
-		if e.Flag(FlagFocused) && lineIdx == e.line {
-			style := e.Style("current-line")
-			if style != nil {
-				r.Set(style.Foreground(), style.Background(), style.Font())
-			} else {
-				r.Set(e.Style().Foreground(), e.Style().Background(), e.Style().Font())
-			}
-		} else {
-			style := e.Style()
-			r.Set(style.Foreground(), style.Background(), style.Font())
-		}
-		r.Text(textX, textY+i, visible, usableW)
+		e.renderLine(r, lineIdx, textX, textY+i, usableW)
 	}
 
 	// Render scrollbars
@@ -611,6 +948,85 @@ func (e *Editor) Render(r *Renderer) {
 		// Horizontal scrollbar at the bottom of the widget (y + h - 1)
 		r.ScrollbarH(x, y+h-1, w, e.offsetX, e.longest)
 	}
+}
+
+// renderLine draws a single visible line with optional selection highlighting.
+// It renders up to three segments: before-selection, selected, after-selection.
+func (e *Editor) renderLine(r *Renderer, lineIdx, textX, textY, usableW int) {
+	line := e.content[lineIdx].String()
+
+	// Determine normal style for this line.
+	var normalStyle *Style
+	if e.Flag(FlagFocused) && lineIdx == e.line {
+		normalStyle = e.Style("current-line")
+		if normalStyle == nil {
+			normalStyle = e.Style()
+		}
+	} else {
+		normalStyle = e.Style()
+	}
+
+	startLine, startCol, endLine, endCol, ok := e.selectionBounds()
+	if !ok || lineIdx < startLine || lineIdx > endLine {
+		// No selection on this line — render normally.
+		r.Set(normalStyle.Foreground(), normalStyle.Background(), normalStyle.Font())
+		r.Text(textX, textY, e.getVisibleLineContent(line, e.offsetX, usableW, e.tab), usableW)
+		return
+	}
+
+	// Determine char column range selected on this line.
+	lineLen := e.content[lineIdx].Length()
+	var selStart, selEnd int
+	if lineIdx > startLine {
+		selStart = 0
+	} else {
+		selStart = startCol
+	}
+	if lineIdx < endLine {
+		selEnd = lineLen
+	} else {
+		selEnd = endCol
+	}
+
+	// Convert char columns to visual columns.
+	visualSelStart := charToVisualCol(line, selStart, e.tab)
+	visualSelEnd := charToVisualCol(line, selEnd, e.tab)
+
+	// Expand tabs for segment rendering.
+	expanded := expandTabs(line, e.tab)
+	runes := []rune(expanded)
+
+	selStyle := e.Style("selection")
+	if selStyle == nil {
+		selStyle = normalStyle
+	}
+
+	e.renderVisualRange(r, runes, 0, visualSelStart, textX, textY, usableW, normalStyle)
+	e.renderVisualRange(r, runes, visualSelStart, visualSelEnd, textX, textY, usableW, selStyle)
+	e.renderVisualRange(r, runes, visualSelEnd, e.offsetX+usableW, textX, textY, usableW, normalStyle)
+}
+
+// renderVisualRange renders a horizontal slice [visStart, visEnd) of the
+// expanded-tab rune slice, clipped to the visible viewport [offsetX, offsetX+usableW).
+func (e *Editor) renderVisualRange(r *Renderer, runes []rune, visStart, visEnd, textX, textY, usableW int, style *Style) {
+	clipStart := max(visStart, e.offsetX)
+	clipEnd := min(visEnd, e.offsetX+usableW)
+	if clipStart >= clipEnd {
+		return
+	}
+	screenX := textX + (clipStart - e.offsetX)
+	width := clipEnd - clipStart
+
+	text := ""
+	if clipStart < len(runes) {
+		end := min(clipEnd, len(runes))
+		if clipStart < end {
+			text = string(runes[clipStart:end])
+		}
+	}
+
+	r.Set(style.Foreground(), style.Background(), style.Font())
+	r.Text(screenX, textY, text, width)
 }
 
 // renderLineNumbers draws line numbers in the left margin.
@@ -712,6 +1128,25 @@ func visualWidth(s string, tabWidth int) int {
 	return width
 }
 
+// charToVisualCol converts a character column index to a visual column index,
+// expanding tabs according to tabWidth.
+func charToVisualCol(line string, charCol int, tabWidth int) int {
+	col := 0
+	i := 0
+	for _, ch := range line {
+		if i >= charCol {
+			break
+		}
+		if ch == '\t' {
+			col = ((col / tabWidth) + 1) * tabWidth
+		} else {
+			col++
+		}
+		i++
+	}
+	return col
+}
+
 // b2i converts bool to int (1 for true, 0 for false).
 func b2i(b bool) int {
 	if b {
@@ -723,31 +1158,63 @@ func b2i(b bool) int {
 // ---- Event Handling -------------------------------------------------------
 
 func (e *Editor) handleKey(_ Widget, evt *tcell.EventKey) bool {
+	shift := evt.Modifiers()&tcell.ModShift != 0
+	ctrl := evt.Modifiers()&tcell.ModCtrl != 0
+
 	if e.disabled && evt.Key() != tcell.KeyLeft && evt.Key() != tcell.KeyRight &&
 		evt.Key() != tcell.KeyUp && evt.Key() != tcell.KeyDown &&
 		evt.Key() != tcell.KeyHome && evt.Key() != tcell.KeyEnd &&
-		evt.Key() != tcell.KeyPgUp && evt.Key() != tcell.KeyPgDn {
+		evt.Key() != tcell.KeyPgUp && evt.Key() != tcell.KeyPgDn &&
+		evt.Key() != tcell.KeyCtrlC {
 		return false
 	}
 
 	switch evt.Key() {
 	case tcell.KeyLeft:
-		e.Left()
+		if shift {
+			e.ShiftLeft()
+		} else {
+			e.Left()
+		}
 		return true
 	case tcell.KeyRight:
-		e.Right()
+		if shift {
+			e.ShiftRight()
+		} else {
+			e.Right()
+		}
 		return true
 	case tcell.KeyUp:
-		e.Up()
+		if shift {
+			e.ShiftUp()
+		} else {
+			e.Up()
+		}
 		return true
 	case tcell.KeyDown:
-		e.Down()
+		if shift {
+			e.ShiftDown()
+		} else {
+			e.Down()
+		}
 		return true
 	case tcell.KeyHome:
-		e.Home()
+		if ctrl {
+			e.DocumentHome()
+		} else if shift {
+			e.ShiftHome()
+		} else {
+			e.Home()
+		}
 		return true
 	case tcell.KeyEnd:
-		e.End()
+		if ctrl {
+			e.DocumentEnd()
+		} else if shift {
+			e.ShiftEnd()
+		} else {
+			e.End()
+		}
 		return true
 	case tcell.KeyPgUp:
 		e.PageUp()
@@ -756,10 +1223,19 @@ func (e *Editor) handleKey(_ Widget, evt *tcell.EventKey) bool {
 		e.PageDown()
 		return true
 	case tcell.KeyCtrlA:
-		e.DocumentHome()
+		e.SelectAll()
 		return true
 	case tcell.KeyCtrlE:
 		e.DocumentEnd()
+		return true
+	case tcell.KeyCtrlC:
+		e.Copy()
+		return true
+	case tcell.KeyCtrlX:
+		e.Cut()
+		return true
+	case tcell.KeyCtrlV:
+		e.Paste()
 		return true
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		e.Delete()

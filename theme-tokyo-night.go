@@ -50,6 +50,7 @@ func TokyoNightTheme() *Theme {
 		NewStyle("grid").WithBorder("thin"),
 		NewStyle("list/highlight").WithColors("$bg0", "$fg1"),
 		NewStyle("list/highlight:focused").WithColors("$bg0", "$red"),
+		NewStyle("editor/selection").WithColors("$bg0", "$blue"),
 		NewStyle("input").WithColors("$fg0", "$bg2").WithCursor("*bar"),
 		NewStyle("input:focused").WithColors("$bg0", "$blue"),
 		NewStyle("typeahead").WithColors("$fg0", "$bg2").WithCursor("*bar"),
