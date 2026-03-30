@@ -1,5 +1,8 @@
 package zeichenwerk
 
+// AddUnicodeBorders registers the standard set of Unicode border styles in the
+// given theme. Available border names: "thin", "double", "double-thin",
+// "round", "thick", "thick-thin", "thick-slashed", "lines", "lines2".
 func AddUnicodeBorders(theme *Theme) {
 	theme.SetBorders(map[string]*Border{
 		// "thin" - Standard single-line borders (┌─┐│└─┘)

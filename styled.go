@@ -7,26 +7,32 @@ import (
 	"unicode/utf8"
 )
 
+// Style flag constants for Span.Style. They are combined as a bitmask.
 const (
-	Italic        = 1
-	Bold          = 2
-	Underline     = 4
-	Strikethrough = 8
-	Code          = 16
+	Italic        = 1  // Italic text
+	Bold          = 2  // Bold text
+	Underline     = 4  // Underlined text
+	Strikethrough = 8  // Strikethrough text
+	Code          = 16 // Inline code (monospace, no further parsing inside)
 )
 
+// Block is a parsed unit of styled text (paragraph, heading, list item, or
+// code block). Its Content field holds the parsed inline spans after Parse is
+// called.
 type Block struct {
-	Type    string
-	Text    string
-	Content []Span
-	Height  int
+	Type    string // "p", "h1", "h2", "list", or "code"
+	Text    string // Raw text of the block
+	Content []Span // Parsed inline spans; populated by Parse
+	Height  int    // Rendered height in rows, set during layout
 }
 
+// Span describes a contiguous run of text within a Block with a single inline
+// style. Start and End are byte offsets into Block.Text; Length is the rune count.
 type Span struct {
-	Start  int
-	End    int
-	Length int
-	Style  int
+	Start  int // Byte offset of the span start in Block.Text
+	End    int // Byte offset of the span end in Block.Text
+	Length int // Rune count of the span
+	Style  int // Bitmask of style flags (Bold, Italic, etc.)
 }
 
 // Words returns an iterator over the words in the span.
@@ -84,6 +90,9 @@ func (s Span) Words(text string) iter.Seq2[string, int] {
 	}
 }
 
+// Parse parses the inline markup in Block.Text and populates Block.Content
+// with the resulting Spans. Supported markers: *italic*, **bold**,
+// __underline__, ~~strikethrough~~, `code`.
 func (b *Block) Parse() {
 	b.Content = make([]Span, 0)
 	n := len(b.Text)
@@ -170,6 +179,9 @@ func (b *Block) Parse() {
 	}
 }
 
+// Parse re-parses the widget's text into blocks and inline spans. It is called
+// automatically by NewStyled and SetText; call it again if the text is mutated
+// directly.
 func (s *Styled) Parse() {
 	s.blocks = make([]Block, 0)
 	lines := strings.Split(s.text, "\n")
@@ -262,6 +274,10 @@ func (s *Styled) Parse() {
 	}
 }
 
+// Styled is a read-only text widget that renders a subset of Markdown-like
+// markup with word wrapping. Supported block types: paragraphs, # h1, ## h2,
+// - list items, and ``` code blocks. Supported inline styles: *italic*,
+// **bold**, __underline__, ~~strikethrough~~, `code`.
 type Styled struct {
 	Component
 	text    string
@@ -270,6 +286,7 @@ type Styled struct {
 	offsetY int
 }
 
+// NewStyled creates a Styled widget and immediately parses the markup in text.
 func NewStyled(id, class, text string) *Styled {
 	styled := &Styled{
 		Component: Component{id: id, class: class},
@@ -284,10 +301,13 @@ func (s *Styled) Apply(theme *Theme) {
 	theme.Apply(s, s.Selector("styled"))
 }
 
+// Refresh triggers a redraw of the widget.
 func (s *Styled) Refresh() {
 	Redraw(s)
 }
 
+// Render draws all parsed blocks to the screen with word wrapping and inline
+// style attributes applied.
 func (s *Styled) Render(r *Renderer) {
 	x, y, w, h := s.Content()
 	for _, block := range s.blocks {

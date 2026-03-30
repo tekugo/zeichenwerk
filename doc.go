@@ -1,4 +1,4 @@
-// Package next provides the Zeichenwerk terminal UI toolkit.
+// Package zeichenwerk provides the Zeichenwerk terminal UI toolkit.
 //
 // Zeichenwerk (german for "character works) is a complete Terminal UI toolkit
 // for building interactive terminal applications. It is designed to be easy

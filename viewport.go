@@ -2,6 +2,9 @@ package zeichenwerk
 
 import "github.com/gdamore/tcell/v3"
 
+// Viewport is a scrollable single-child container. The child widget is given
+// its full preferred size (from Hint) and the viewport shows a windowed view
+// into it with horizontal and vertical scrollbars when needed.
 type Viewport struct {
 	Component
 	Title  string // Optional title text to display in the border
@@ -9,6 +12,8 @@ type Viewport struct {
 	tx, ty int    // Current horizontal and vertical scroll offsets
 }
 
+// NewViewport creates a Viewport with the given id, CSS class, and optional
+// border title. The widget is focusable and handles arrow keys for scrolling.
 func NewViewport(id, class, title string) *Viewport {
 	viewport := &Viewport{
 		Component: Component{id: id, class: class},
@@ -19,6 +24,7 @@ func NewViewport(id, class, title string) *Viewport {
 	return viewport
 }
 
+// Add sets the single child widget, replacing any previous child.
 func (v *Viewport) Add(widget Widget, params ...any) error {
 	if v.child != nil {
 		v.child.SetParent(nil)
@@ -33,6 +39,7 @@ func (v *Viewport) Apply(theme *Theme) {
 	theme.Apply(v, v.Selector("viewport"))
 }
 
+// Children returns the child widget slice (empty if no child has been set).
 func (v *Viewport) Children() []Widget {
 	if v.child == nil {
 		return []Widget{}
@@ -40,6 +47,8 @@ func (v *Viewport) Children() []Widget {
 	return []Widget{v.child}
 }
 
+// Layout positions the child at its full preferred size offset by the current
+// scroll position.
 func (v *Viewport) Layout() error {
 	if v.child != nil {
 		cx, cy, _, _ := v.Content()
@@ -122,10 +131,14 @@ func (v *Viewport) handleKey(_ Widget, event *tcell.EventKey) bool {
 	return false
 }
 
+// Refresh triggers a redraw of the viewport.
 func (v *Viewport) Refresh() {
 	Redraw(v)
 }
 
+// Render draws the viewport background and border, then clips to the content
+// area and renders the child at its scrolled position. Scrollbars are drawn
+// when the child is larger than the visible area.
 func (v *Viewport) Render(r *Renderer) {
 	// Render styling and border
 	v.Component.Render(r)

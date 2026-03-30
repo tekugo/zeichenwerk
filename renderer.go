@@ -1,5 +1,8 @@
 package zeichenwerk
 
+// Renderer wraps a Screen and a Theme and provides higher-level drawing
+// primitives (text, fills, borders, scrollbars) on top of the raw cell
+// operations. All widget Render methods receive a *Renderer.
 type Renderer struct {
 	screen Screen
 	theme  *Theme
@@ -15,30 +18,42 @@ func NewRenderer(screen Screen, theme *Theme) *Renderer {
 
 // ---- Primitive Rendering Operations from Screen ----
 
+// Clear clears the entire screen.
 func (r *Renderer) Clear() {
 	r.screen.Clear()
 }
 
+// Clip restricts subsequent drawing to the rectangle (x, y, width, height).
+// Pass (0, 0, 0, 0) to remove the clipping region.
 func (r *Renderer) Clip(x, y, width, height int) {
 	r.screen.Clip(x, y, width, height)
 }
 
+// Flush writes all pending cell changes to the terminal.
 func (r *Renderer) Flush() {
 	r.screen.Flush()
 }
 
+// Get returns the character string currently at cell (x, y).
 func (r *Renderer) Get(x, y int) string {
 	return r.screen.Get(x, y)
 }
 
+// Put writes the single character ch into the cell at (x, y) using the
+// current style. For multi-character strings use Text.
 func (r *Renderer) Put(x, y int, ch string) {
 	r.screen.Put(x, y, ch)
 }
 
+// Set sets the foreground colour, background colour, and font for subsequent
+// drawing operations. Colour strings starting with "$" are resolved through
+// the theme's colour registry.
 func (r *Renderer) Set(foreground, background, font string) {
 	r.screen.Set(r.theme.Color(foreground), r.theme.Color(background), font)
 }
 
+// Translate shifts the origin for subsequent drawing by (tx, ty). Pass (0, 0)
+// to reset.
 func (r *Renderer) Translate(tx, ty int) {
 	r.screen.Translate(tx, ty)
 }

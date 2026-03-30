@@ -54,8 +54,8 @@ func (b *Builder) Find(id string) Widget {
 	return Find(b.stack[0], id)
 }
 
-// Run builds and runs the UI in one go.
-// Short-hand method for Build() and Run().
+// Run builds the UI and starts the main event loop. Shorthand for
+// Build().Run().
 func (b *Builder) Run() {
 	b.Build().Run()
 }
@@ -413,6 +413,8 @@ func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
 	return b
 }
 
+// Spacer adds an unstyled Component that acts as flexible empty space in a
+// Flex layout. Use Size or Hint to set its preferred dimensions.
 func (b *Builder) Spacer() *Builder {
 	spacer := NewComponent("spacer", b.class)
 	b.Add(spacer)
