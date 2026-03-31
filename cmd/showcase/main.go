@@ -24,6 +24,7 @@ func createUI() *UI {
 		navItem{"≡", "Log Monitor", "Live log tail & stats"},
 		navItem{"⬡", "Processes", "Running process list"},
 		navItem{"◧", "Data Entry", "Forms & input controls"},
+		navItem{"✎", "Code Editor", "Edit files & preview"},
 	}
 
 	renderNav := func(r *Renderer, x, y, w, h, index int, data any, selected bool) {
@@ -85,6 +86,7 @@ func createUI() *UI {
 		With(logMonitorScreen).
 		With(processScreen).
 		With(dataEntryScreen).
+		With(codeEditorScreen).
 		End(). // Switcher("content")
 		End(). // Grid("body")
 		// ── Footer ────────────────────────────────────────────────────────────
@@ -771,6 +773,183 @@ func dataEntryScreen(b *Builder) {
 		if lbl, ok := Find(container, "de-status").(*Static); ok {
 			lbl.SetText("Changes discarded.")
 		}
+		return true
+	})
+}
+
+// ── Screen 6: Code Editor ──────────────────────────────────────────────────────
+
+func codeEditorScreen(b *Builder) {
+	// ── File contents (short illustrative snippets) ────────────────────────────
+	mainGoContent := []string{
+		"package main",
+		"",
+		"import (",
+		`    . "github.com/tekugo/zeichenwerk"`,
+		")",
+		"",
+		"func main() {",
+		"    createUI().Run()",
+		"}",
+		"",
+		"func createUI() *UI {",
+		"    return NewBuilder(MidnightNeonTheme()).",
+		`        Flex("root", false, "stretch", 0).`,
+		`        Static("title", "Hello, World!").`,
+		`            Font("bold").Foreground("$cyan").`,
+		`        End(). // Flex("root")`,
+		"        Build()",
+		"}",
+	}
+
+	tableGoContent := []string{
+		"// Table is a scrollable data grid widget.",
+		"// It renders rows from a TableProvider with",
+		"// optional column separators and highlights.",
+		"type Table struct {",
+		"    Component",
+		"    provider   TableProvider",
+		"    row        int",
+		"    column     int",
+		"    offsetX    int",
+		"    offsetY    int",
+		"    grid       *Border",
+		"    inner      bool",
+		"    outer      bool",
+		"}",
+		"",
+		"func (t *Table) Render(r *Renderer) {",
+		"    t.Component.Render(r)",
+		"    x, y, w, h := t.Content()",
+		"    t.renderTableHeader(r, x, y, w, h)",
+		"    t.renderTableContent(r, x, y+2, w, h-2)",
+		"}",
+	}
+
+	readmeContent := "# Zeichenwerk\n\n" +
+		"**Zeichenwerk** is a lightweight TUI framework for Go.\n\n" +
+		"## Features\n\n" +
+		"- *Declarative* builder API\n" +
+		"- CSS-like theming with `$variables`\n" +
+		"- **Responsive** layout engine (Flex, Grid)\n" +
+		"- Rich widget set: `Table`, `Tree`, `Editor`, `Deck`\n\n" +
+		"## Quick Start\n\n" +
+		"Create a `NewBuilder`, compose screens with fluent calls,\n" +
+		"then call `Run()` to start the event loop.\n\n" +
+		"## Keyboard Shortcuts\n\n" +
+		"- `Tab` / `Shift+Tab`  move focus between widgets\n" +
+		"- `Ctrl+D`  open the live widget inspector\n" +
+		"- `Ctrl+Q`  quit\n\n" +
+		"*Tip: Press Ctrl+D to inspect the widget tree of this screen.*"
+
+	// ── File tree ──────────────────────────────────────────────────────────────
+	root := NewTreeNode("zeichenwerk")
+	widgets := NewTreeNode("widgets")
+	widgets.Add(NewTreeNode("main.go", 0)) // data = tab index
+	widgets.Add(NewTreeNode("table.go", 1))
+	widgets.Add(NewTreeNode("flex.go"))
+	widgets.Add(NewTreeNode("editor.go"))
+	cmd := NewTreeNode("cmd")
+	cmd.Add(NewTreeNode("showcase"))
+	cmd.Add(NewTreeNode("demo"))
+	root.Add(widgets)
+	root.Add(cmd)
+	root.Add(NewTreeNode("README.md", 2))
+	root.Add(NewTreeNode("go.mod"))
+
+	// ── Layout ─────────────────────────────────────────────────────────────────
+	b.Flex("code-editor", false, "stretch", 0).Padding(1, 2).
+		// Header
+		Flex("ce-hdr", true, "center", 2).Padding(0, 0, 1, 0).
+		Static("ce-title", "Code Editor").Font("bold").Foreground("$cyan").
+		Spacer().Hint(-1, 0).
+		Static("ce-status", "main.go — Ln 1, Col 1").Foreground("$gray").
+		Button("ce-btn-new", " + New").
+		End(). // Flex("ce-hdr")
+		HRule("thin").Padding(0, 0, 1, 0).
+		// Body: file tree + tabbed editor
+		Grid("ce-body", 1, 2, false).Hint(0, -1).Columns(26, -1).Border("none").
+		Cell(0, 0, 1, 1).
+		Flex("ce-tree-pane", false, "stretch", 0).Border("", "round").
+		Static("ce-tree-title", " Project").Font("bold").Background("$bg2").
+		Tree("ce-tree").Hint(0, -1).
+		End(). // Flex("ce-tree-pane")
+		Cell(1, 0, 1, 1).
+		Flex("ce-edit-col", false, "stretch", 0).Hint(0, -1).
+		Tabs("ce-tabs").
+		Switcher("ce-switcher", true).Hint(0, -1). // auto-wired to Tabs via EvtActivate
+		Tab("main.go").
+		Editor("ce-editor-main").Hint(0, -1).
+		Tab("table.go").
+		Editor("ce-editor-table").Hint(0, -1).
+		Tab("README.md").
+		Viewport("ce-viewport", "").
+		Styled("ce-preview", readmeContent).
+		End(). // Viewport("ce-viewport")
+		End(). // Switcher("ce-switcher")
+		End(). // Tabs("ce-tabs")
+		End(). // Flex("ce-edit-col")
+		End(). // Grid("ce-body")
+		End()  // Flex("code-editor")
+
+	// ── Post-build wiring ──────────────────────────────────────────────────────
+	container := b.Find("code-editor").(Container)
+
+	// Set editor contents and enable line numbers
+	mainEditor := Find(container, "ce-editor-main").(*Editor)
+	mainEditor.SetContent(mainGoContent)
+	mainEditor.ShowLineNumbers(true)
+
+	tableEditor := Find(container, "ce-editor-table").(*Editor)
+	tableEditor.SetContent(tableGoContent)
+	tableEditor.ShowLineNumbers(true)
+
+	// Populate the file tree and expand top-level directories
+	tree := Find(container, "ce-tree").(*Tree)
+	tree.Add(root)
+	tree.Expand(root)
+	tree.Expand(widgets)
+
+	// Wire tree selection → switch active tab + pane
+	tabs := Find(container, "ce-tabs").(*Tabs)
+	switcher := Find(container, "ce-switcher").(*Switcher)
+	tree.On(EvtSelect, func(_ Widget, _ Event, _ ...any) bool {
+		if node := tree.Selected(); node != nil {
+			if idx, ok := node.Data().(int); ok {
+				tabs.Select(idx)
+				switcher.Select(idx)
+			}
+		}
+		return false
+	})
+
+	// Wire editor changes → update status bar with cursor position
+	statusLbl := Find(container, "ce-status").(*Static)
+	mainEditor.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool {
+		cx, cy, _ := mainEditor.Cursor()
+		statusLbl.SetText(fmt.Sprintf("main.go — Ln %d, Col %d", cy+1, cx+1))
+		return false
+	})
+
+	// Wire "New" button → popup a dialog
+	b.Find("ce-btn-new").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+		ui := FindUI(container)
+		dlg := NewDialog("ce-dlg", "dialog", " New File")
+		body := ui.NewBuilder().
+			Flex("ce-dlg-body", false, "stretch", 0).
+			Static("ce-dlg-lbl", "Filename:").Foreground("$fg1").
+			Input("ce-dlg-input", "untitled.go").Hint(28, 1).
+			Flex("ce-dlg-btns", true, "end", 2).Padding(1, 0, 0, 0).
+			Button("ce-dlg-ok", " ✓ Create").Class("dialog").
+			Button("ce-dlg-cancel", " ✕ Cancel").
+			End(). // Flex("ce-dlg-btns")
+			Container()
+		dlg.Add(body)
+		Find(body, "ce-dlg-cancel").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+			ui.Close()
+			return true
+		})
+		ui.Popup(-1, -1, 0, 0, dlg)
 		return true
 	})
 }

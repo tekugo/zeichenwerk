@@ -60,7 +60,7 @@ func (s *Switcher) Children() []Widget {
 // The preferred size is the maximum width and height of all children.
 func (s *Switcher) Hint() (int, int) {
 	// If a hint is set manually, we return it instead
-	if s.hwidth != 0 && s.hheight != 0 {
+	if s.hwidth != 0 || s.hheight != 0 {
 		return s.hwidth, s.hheight
 	}
 
@@ -87,10 +87,10 @@ func (s *Switcher) Refresh() {
 func (s *Switcher) Select(index any) {
 	switch pane := index.(type) {
 	case int:
-		s.Log(s, Debug,"Hiding", "index", s.selected, "ID", s.panes[s.selected].ID())
+		s.Log(s, Debug, "Hiding", "index", s.selected, "ID", s.panes[s.selected].ID())
 		s.panes[s.selected].SetFlag(FlagHidden, true)
 		s.panes[s.selected].Dispatch(s.panes[s.selected], EvtHide)
-		s.Log(s, Debug,"Showing", "index", pane, "ID", s.panes[pane].ID())
+		s.Log(s, Debug, "Showing", "index", pane, "ID", s.panes[pane].ID())
 		s.panes[pane].SetFlag(FlagHidden, false)
 		s.panes[pane].Dispatch(s.panes[pane], EvtShow)
 		s.selected = pane
