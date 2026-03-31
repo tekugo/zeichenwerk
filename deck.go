@@ -58,10 +58,14 @@ func (d *Deck) Apply(theme *Theme) {
 	theme.Apply(d, d.Selector("deck"), "disabled", "focused", "hovered")
 }
 
-// Hint returns the preferred size. Width comes from the manually set hint (or
-// 0). Height requests enough rows to display all items without scrolling.
+// Hint returns the preferred size. If a hint override has been set via
+// SetHint (e.g. Hint(0, -1) for flexible height), that value is returned.
+// Otherwise the natural height is len(items)*itemHeight.
 func (d *Deck) Hint() (int, int) {
-	return d.hwidth, len(d.items) * d.itemHeight
+	if d.hwidth != 0 || d.hheight != 0 {
+		return d.hwidth, d.hheight
+	}
+	return 0, len(d.items) * d.itemHeight
 }
 
 // ---- Data -----------------------------------------------------------------

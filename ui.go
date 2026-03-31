@@ -128,7 +128,7 @@ func parseLevel(l Level) slog.Level {
 //   - error: Any error that occurred during initialization (currently always nil)
 func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 	ui := &UI{
-		Component: Component{id: "root", x: 0, y: 0, width: 0, height: 0},
+		Component: Component{id: "__ui__", x: 0, y: 0, width: 0, height: 0},
 		screen:    nil,
 		renderer:  &Renderer{theme: theme},
 		layers:    []Container{root},

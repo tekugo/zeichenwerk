@@ -9,6 +9,8 @@ import (
 	. "github.com/tekugo/zeichenwerk"
 )
 
+type navItem struct{ icon, name, desc string }
+
 func main() {
 	createUI().Run()
 }
@@ -16,6 +18,38 @@ func main() {
 // ── Shell ──────────────────────────────────────────────────────────────────────
 
 func createUI() *UI {
+	navItems := []any{
+		navItem{"◈", "Dashboard", "System metrics & KPIs"},
+		navItem{"◉", "User Admin", "Manage users & roles"},
+		navItem{"≡", "Log Monitor", "Live log tail & stats"},
+		navItem{"⬡", "Processes", "Running process list"},
+		navItem{"◧", "Data Entry", "Forms & input controls"},
+	}
+
+	renderNav := func(r *Renderer, x, y, w, h, index int, data any, selected bool) {
+		item := data.(navItem)
+		bg := "$bg1"
+		if selected {
+			r.Set("$cyan", bg, "bold")
+			r.Fill(x, y, w, 1, " ")
+			r.Put(x, y, "┃")
+			r.Text(x+2, y, item.icon+"  "+item.name, w-2)
+			r.Set("$cyan", bg, "")
+			r.Fill(x, y+1, w, 1, " ")
+			r.Put(x, y+1, "┃")
+			r.Text(x+2, y+1, item.desc, w-2)
+		} else {
+			r.Set("$fg1", bg, "")
+			r.Fill(x, y, w, 1, " ")
+			r.Text(x+2, y, item.icon+"  "+item.name, w-2)
+			r.Set("$gray", bg, "")
+			r.Fill(x, y+1, w, 1, " ")
+			r.Text(x+2, y+1, item.desc, w-2)
+		}
+		r.Set("$fg3", bg, "")
+		r.Fill(x, y+2, w, 1, " ")
+	}
+
 	ui := NewBuilder(MidnightNeonTheme()).
 		Flex("root", false, "stretch", 0).
 		// ── Header ────────────────────────────────────────────────────────────
@@ -33,19 +67,12 @@ func createUI() *UI {
 		Select("theme-select", "neon", "Midnight Neon", "tokyo", "Tokyo Night", "gruvbox-dark", "Gruvbox Dark", "nrrd", "Nord").Padding(0, 1, 0, 0).
 		End().
 		// ── Body ──────────────────────────────────────────────────────────────
-		Grid("body", 1, 2, false).Hint(0, -1).Columns(24, -1).
+		Grid("body", 1, 2, false).Hint(0, -1).Columns(26, -1).
 		Cell(0, 0, 1, 1).
 		Flex("sidebar", false, "stretch", 0).Background("$bg1").
 		Static("sidebar-brand", " ◈ SHOWCASE").Font("bold").Foreground("$magenta").Padding(1, 0).
 		HRule("thin").
-		Spacer().Hint(0, 1).
-		List("nav",
-			"  ⬡  Dashboard",
-			"  ⬡  User Admin",
-			"  ⬡  Log Monitor",
-			"  ⬡  Processes",
-			"  ⬡  Data Entry",
-		).Hint(0, -1).
+		Deck("nav", renderNav, 3).Hint(0, -1).
 		HRule("thin").
 		Static("sidebar-key1", "  ↑↓  Navigate").Foreground("$gray").Padding(0, 0, 0, 0).
 		Static("sidebar-key2", "  ↵   Select").Foreground("$gray").
@@ -70,14 +97,18 @@ func createUI() *UI {
 
 	// Wire navigation
 	switcher := Find(ui, "content").(*Switcher)
-	Find(ui, "nav").On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
+	nav := Find(ui, "nav").(*Deck)
+	nav.SetItems(navItems)
+	navSwitch := func(_ Widget, _ Event, data ...any) bool {
 		if len(data) == 1 {
 			if sel, ok := data[0].(int); ok {
 				switcher.Select(sel)
 			}
 		}
 		return true
-	})
+	}
+	nav.On(EvtSelect, navSwitch)
+	nav.On(EvtActivate, navSwitch)
 
 	// Wire theme switcher
 	themes := map[string]*Theme{
@@ -123,12 +154,12 @@ func dashboardScreen(b *Builder) {
 	// Service status table
 	svcHeaders := []string{"Service", "Status", "CPU", "Memory", "Uptime"}
 	svcData := [][]string{
-		{"nginx",      "● running", "0.3%", " 24 MB", "14d 06h"},
+		{"nginx", "● running", "0.3%", " 24 MB", "14d 06h"},
 		{"postgresql", "● running", "2.1%", "512 MB", "14d 06h"},
-		{"redis",      "● running", "0.1%", " 64 MB", "14d 05h"},
-		{"celery",     "○ stopped", "  —  ", "    —  ", "     —  "},
+		{"redis", "● running", "0.1%", " 64 MB", "14d 05h"},
+		{"celery", "○ stopped", "  —  ", "    —  ", "     —  "},
 		{"prometheus", "● running", "1.8%", "128 MB", " 2d 11h"},
-		{"grafana",    "● running", "0.9%", " 96 MB", " 2d 11h"},
+		{"grafana", "● running", "0.9%", " 96 MB", " 2d 11h"},
 	}
 	svcTable := NewArrayTableProvider(svcHeaders, svcData)
 
@@ -161,34 +192,34 @@ func dashboardScreen(b *Builder) {
 		// CPU card
 		Flex("kpi-cpu", false, "start", 0).Border("", "round").Padding(1, 2).
 		Static("kpi-cpu-lbl", "CPU Usage").Foreground("$gray").
-		Static("kpi-cpu-val", "  64%").Font("bold").Foreground("$yellow").
+		Digits("kpi-cpu-val", "64").Foreground("$yellow").
 		Add(cpuProg).Hint(0, 1).
-		Static("kpi-cpu-sub", "8 cores · 3.2 GHz").Foreground("$gray").
+		Static("kpi-cpu-sub", "% · 8 cores · 3.2 GHz").Foreground("$gray").
 		End().
 		// Memory card
 		Flex("kpi-mem", false, "start", 0).Border("", "round").Padding(1, 2).
 		Static("kpi-mem-lbl", "Memory").Foreground("$gray").
-		Static("kpi-mem-val", "4.1 GB").Font("bold").Foreground("$cyan").
+		Digits("kpi-mem-val", "4.1").Foreground("$cyan").
 		Add(memProg).Hint(0, 1).
-		Static("kpi-mem-sub", "of 10 GB total").Foreground("$gray").
+		Static("kpi-mem-sub", "GB of 10 GB total").Foreground("$gray").
 		End().
 		// Disk card
 		Flex("kpi-disk", false, "start", 0).Border("", "round").Padding(1, 2).
 		Static("kpi-disk-lbl", "Disk").Foreground("$gray").
-		Static("kpi-disk-val", " 780 GB").Font("bold").Foreground("$orange").
+		Digits("kpi-disk-val", "780").Foreground("$orange").
 		Add(diskProg).Hint(0, 1).
-		Static("kpi-disk-sub", "of 1 TB · 78% full").Foreground("$gray").
+		Static("kpi-disk-sub", "GB of 1 TB · 78% full").Foreground("$gray").
 		End().
 		// Network card
 		Flex("kpi-net", false, "start", 0).Border("", "round").Padding(1, 2).
 		Static("kpi-net-lbl", "Network").Foreground("$gray").
-		Static("kpi-net-val", "↑2.4 Mb/s").Font("bold").Foreground("$green").
+		Digits("kpi-net-val", "2.4").Foreground("$green").
 		Add(netProg).Hint(0, 1).
-		Static("kpi-net-sub", "↓8.1 Mb/s recv").Foreground("$gray").
+		Static("kpi-net-sub", "Mb/s ↑ · ↓8.1 Mb/s recv").Foreground("$gray").
 		End().
 		End().
 		// ── Services + Alerts ────────────────────────────────────────────────
-		Grid("dash-mid", 1, 2, false).Hint(0, 10).Columns(-2, -1).Padding(0, 0, 1, 0).
+		Grid("dash-mid", 1, 2, false).Hint(0, 10).Columns(-2, -1).Padding(0, 0, 1, 0).Border("none").
 		Cell(0, 0, 1, 1).
 		Flex("svc-pane", false, "stretch", 0).Border("", "round").
 		Static("svc-title", " Services").Font("bold").Foreground("$fg0").Background("$bg2").
@@ -233,18 +264,18 @@ func dashboardScreen(b *Builder) {
 func userAdminScreen(b *Builder) {
 	userHeaders := []string{"ID", "Name", "Email", "Role", "Status", "Last Login"}
 	userData := [][]string{
-		{"001", "Alice Johnson",  "alice@example.com",  "Admin",     "● Active",   "2026-03-31 11:42"},
-		{"002", "Bob Martinez",   "bob@example.com",    "Editor",    "● Active",   "2026-03-31 09:15"},
-		{"003", "Carol White",    "carol@example.com",  "Viewer",    "● Active",   "2026-03-30 17:03"},
-		{"004", "David Kim",      "david@example.com",  "Editor",    "○ Inactive", "2026-03-28 08:55"},
-		{"005", "Eva Müller",     "eva@example.com",    "Admin",     "● Active",   "2026-03-31 10:30"},
-		{"006", "Frank Chen",     "frank@example.com",  "Viewer",    "● Active",   "2026-03-29 14:22"},
-		{"007", "Grace Okafor",   "grace@example.com",  "Editor",    "⊘ Pending",  "          —     "},
-		{"008", "Henry Dubois",   "henry@example.com",  "Viewer",    "○ Inactive", "2026-03-15 09:00"},
-		{"009", "Iris Nakamura",  "iris@example.com",   "Editor",    "● Active",   "2026-03-31 07:48"},
-		{"010", "Jack O'Brien",   "jack@example.com",   "Viewer",    "● Active",   "2026-03-30 22:11"},
-		{"011", "Karen Singh",    "karen@example.com",  "Admin",     "● Active",   "2026-03-31 11:01"},
-		{"012", "Leon Petrov",    "leon@example.com",   "Editor",    "⊘ Pending",  "          —     "},
+		{"001", "Alice Johnson", "alice@example.com", "Admin", "● Active", "2026-03-31 11:42"},
+		{"002", "Bob Martinez", "bob@example.com", "Editor", "● Active", "2026-03-31 09:15"},
+		{"003", "Carol White", "carol@example.com", "Viewer", "● Active", "2026-03-30 17:03"},
+		{"004", "David Kim", "david@example.com", "Editor", "○ Inactive", "2026-03-28 08:55"},
+		{"005", "Eva Müller", "eva@example.com", "Admin", "● Active", "2026-03-31 10:30"},
+		{"006", "Frank Chen", "frank@example.com", "Viewer", "● Active", "2026-03-29 14:22"},
+		{"007", "Grace Okafor", "grace@example.com", "Editor", "⊘ Pending", "          —     "},
+		{"008", "Henry Dubois", "henry@example.com", "Viewer", "○ Inactive", "2026-03-15 09:00"},
+		{"009", "Iris Nakamura", "iris@example.com", "Editor", "● Active", "2026-03-31 07:48"},
+		{"010", "Jack O'Brien", "jack@example.com", "Viewer", "● Active", "2026-03-30 22:11"},
+		{"011", "Karen Singh", "karen@example.com", "Admin", "● Active", "2026-03-31 11:01"},
+		{"012", "Leon Petrov", "leon@example.com", "Editor", "⊘ Pending", "          —     "},
 	}
 
 	selectedUser := struct {
@@ -272,13 +303,13 @@ func userAdminScreen(b *Builder) {
 		Flex("ua-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
 		Static("ua-search-lbl", "Search:").Foreground("$gray").
 		Typeahead("ua-search", "", "name, email or role…").Hint(28, 1).
-		Spacer().Hint(-1, 0).
-		Button("ua-btn-new", " + New User").Class("dialog").
+		Spacer().Hint(-1, 0).Class("dialog").
+		Button("ua-btn-new", " + New User").
 		Button("ua-btn-del", " ✕ Delete").
 		Button("ua-btn-exp", " ↓ Export").
 		End().
 		// Split: table left, detail right
-		Grid("ua-body", 1, 2, false).Hint(0, -1).Columns(-3, -2).
+		Grid("ua-body", 1, 2, false).Hint(0, -1).Columns(-3, -2).Border("none").
 		Cell(0, 0, 1, 1).
 		Flex("ua-list-pane", false, "stretch", 0).Border("", "round").
 		Static("ua-list-title", " Users").Font("bold").Background("$bg2").
@@ -318,11 +349,14 @@ func userAdminScreen(b *Builder) {
 // ── Screen 3: Log Monitor ──────────────────────────────────────────────────────
 
 // logLevels and sample sources for generating entries
-var logLevels = []string{"DEBUG", "INFO ", "INFO ", "INFO ", "WARN ", "WARN ", "ERROR"}
-var logSources = []string{
-	"api-server", "worker-01", "worker-02", "db-pool", "cache",
-	"scheduler", "mailer", "auth", "storage", "metrics",
-}
+var (
+	logLevels  = []string{"DEBUG", "INFO ", "INFO ", "INFO ", "WARN ", "WARN ", "ERROR"}
+	logSources = []string{
+		"api-server", "worker-01", "worker-02", "db-pool", "cache",
+		"scheduler", "mailer", "auth", "storage", "metrics",
+	}
+)
+
 var logMessages = []string{
 	"Request processed in 42ms GET /api/v2/users",
 	"Request processed in 128ms POST /api/v2/orders",
@@ -399,7 +433,7 @@ func logMonitorScreen(b *Builder) {
 		Button("log-save", " ↓ Save").
 		End().
 		// Main split: log view + stats sidebar
-		Grid("log-body", 1, 2, false).Hint(0, -1).Columns(-3, -1).
+		Grid("log-body", 1, 2, false).Hint(0, -1).Columns(-3, -1).Border("none").
 		Cell(0, 0, 1, 1).
 		Flex("log-view-pane", false, "stretch", 0).Border("", "round").
 		Static("log-view-title", " Log Stream").Font("bold").Background("$bg2").
@@ -412,8 +446,8 @@ func logMonitorScreen(b *Builder) {
 		Static("log-stat-hdr", "Last 30 min").Font("bold").Foreground("$fg1").Padding(0, 1).
 		HRule("thin").
 		Static("log-stat-total", "  Total      1,842").Foreground("$fg0").Padding(0, 1).
-		Static("log-stat-info",  "  INFO       1,209").Foreground("$cyan").Padding(0, 1).
-		Static("log-stat-warn",  "  WARN         487").Foreground("$yellow").Padding(0, 1).
+		Static("log-stat-info", "  INFO       1,209").Foreground("$cyan").Padding(0, 1).
+		Static("log-stat-warn", "  WARN         487").Foreground("$yellow").Padding(0, 1).
 		Static("log-stat-error", "  ERROR         93").Foreground("$red").Padding(0, 1).
 		Static("log-stat-debug", "  DEBUG          53").Foreground("$gray").Padding(0, 1).
 		HRule("thin").
@@ -485,20 +519,20 @@ func logMonitorScreen(b *Builder) {
 func processScreen(b *Builder) {
 	procHeaders := []string{"PID", "Name", "User", "CPU%", "MEM", "Status", "Threads", "Started"}
 	procData := [][]string{
-		{"1",     "systemd",      "root",     "0.0", "  8 MB", "● running",  " 1", "14d ago"},
-		{"412",   "nginx",        "www-data", "0.3", " 24 MB", "● running",  " 4", "14d ago"},
-		{"1204",  "postgresql",   "postgres", "2.1", "512 MB", "● running",  "12", "14d ago"},
-		{"1831",  "redis-server", "redis",    "0.1", " 64 MB", "● running",  " 4", "14d ago"},
-		{"2048",  "app-server",   "app",      "8.4", "256 MB", "● running",  "16", " 2d ago"},
-		{"2051",  "app-server",   "app",      "7.9", "248 MB", "● running",  "16", " 2d ago"},
-		{"2055",  "app-server",   "app",      "9.2", "261 MB", "● running",  "16", " 2d ago"},
-		{"3100",  "celery",       "app",      "0.0", "  0 MB", "○ stopped",  " 0", "  —    "},
-		{"3210",  "prometheus",   "monitor",  "1.8", "128 MB", "● running",  " 8", " 2d ago"},
-		{"3215",  "grafana",      "monitor",  "0.9", " 96 MB", "● running",  " 6", " 2d ago"},
-		{"4001",  "node_exporter","monitor",  "0.2", " 16 MB", "● running",  " 4", " 2d ago"},
-		{"5500",  "sshd",         "root",     "0.0", " 12 MB", "● running",  " 1", "14d ago"},
-		{"8912",  "bash",         "admin",    "0.0", "  4 MB", "● running",  " 1", " 1h ago"},
-		{"14022", "top",          "admin",    "0.4", "  2 MB", "● running",  " 1", " 0h ago"},
+		{"1", "systemd", "root", "0.0", "  8 MB", "● running", " 1", "14d ago"},
+		{"412", "nginx", "www-data", "0.3", " 24 MB", "● running", " 4", "14d ago"},
+		{"1204", "postgresql", "postgres", "2.1", "512 MB", "● running", "12", "14d ago"},
+		{"1831", "redis-server", "redis", "0.1", " 64 MB", "● running", " 4", "14d ago"},
+		{"2048", "app-server", "app", "8.4", "256 MB", "● running", "16", " 2d ago"},
+		{"2051", "app-server", "app", "7.9", "248 MB", "● running", "16", " 2d ago"},
+		{"2055", "app-server", "app", "9.2", "261 MB", "● running", "16", " 2d ago"},
+		{"3100", "celery", "app", "0.0", "  0 MB", "○ stopped", " 0", "  —    "},
+		{"3210", "prometheus", "monitor", "1.8", "128 MB", "● running", " 8", " 2d ago"},
+		{"3215", "grafana", "monitor", "0.9", " 96 MB", "● running", " 6", " 2d ago"},
+		{"4001", "node_exporter", "monitor", "0.2", " 16 MB", "● running", " 4", " 2d ago"},
+		{"5500", "sshd", "root", "0.0", " 12 MB", "● running", " 1", "14d ago"},
+		{"8912", "bash", "admin", "0.0", "  4 MB", "● running", " 1", " 1h ago"},
+		{"14022", "top", "admin", "0.4", "  2 MB", "● running", " 1", " 0h ago"},
 	}
 
 	// Summary progress bars
@@ -544,9 +578,9 @@ func processScreen(b *Builder) {
 		Input("proc-filter", "name or PID…").Hint(24, 1).
 		Select("proc-sort", "cpu", "Sort: CPU%", "mem", "Sort: Memory", "pid", "Sort: PID", "name", "Sort: Name").
 		Spacer().Hint(-1, 0).
-		Button("proc-kill",    " ✕ Kill").
+		Button("proc-kill", " ✕ Kill").
 		Button("proc-restart", " ↺ Restart").
-		Button("proc-detail",  " ⬡ Details").
+		Button("proc-detail", " ⬡ Details").
 		Button("proc-refresh", " ↻ Refresh").Class("dialog").
 		End().
 		// Process table
@@ -598,11 +632,11 @@ func dataEntryScreen(b *Builder) {
 	}
 
 	type PaymentInfo struct {
-		Method      string `label:"Payment Method" control:"select" options:"invoice,Invoice,cc,Credit Card,wire,Wire Transfer,crypto,Crypto"`
-		PO          string `label:"PO Number" width:"24"`
-		VATNumber   string `label:"VAT / Tax ID" width:"24"`
-		Notes       string `label:"Order Notes" width:"40"`
-		Agreed      bool   `label:"I agree to the terms & conditions"`
+		Method    string `label:"Payment Method" control:"select" options:"invoice,Invoice,cc,Credit Card,wire,Wire Transfer,crypto,Crypto"`
+		PO        string `label:"PO Number" width:"24"`
+		VATNumber string `label:"VAT / Tax ID" width:"24"`
+		Notes     string `label:"Order Notes" width:"40"`
+		Agreed    bool   `label:"I agree to the terms & conditions"`
 	}
 
 	customer := CustomerInfo{
@@ -620,16 +654,16 @@ func dataEntryScreen(b *Builder) {
 		Insurance:  true,
 	}
 	payment := PaymentInfo{
-		Method:  "invoice",
-		PO:      "PO-2026-0042",
+		Method:    "invoice",
+		PO:        "PO-2026-0042",
 		VATNumber: "US-123456789",
 	}
 
 	orderHeaders := []string{"#", "SKU", "Product", "Qty", "Unit Price", "Total"}
 	orderData := [][]string{
-		{"1", "ZW-2001", "Zeichenwerk Pro License",   "5",  "  $249.00", " $1,245.00"},
-		{"2", "SW-4412", "Support & Maintenance 1yr", "5",  "   $49.00", "   $245.00"},
-		{"3", "TR-0801", "Training Package (remote)",  "2", "  $599.00", " $1,198.00"},
+		{"1", "ZW-2001", "Zeichenwerk Pro License", "5", "  $249.00", " $1,245.00"},
+		{"2", "SW-4412", "Support & Maintenance 1yr", "5", "   $49.00", "   $245.00"},
+		{"3", "TR-0801", "Training Package (remote)", "2", "  $599.00", " $1,198.00"},
 	}
 
 	b.Flex("data-entry", false, "stretch", 0).Padding(1, 2).
@@ -707,7 +741,7 @@ func dataEntryScreen(b *Builder) {
 		Spacer().Hint(0, -1).
 		// Action buttons
 		Flex("de-actions", true, "end", 2).
-		Button("de-btn-draft",  " ↓ Save Draft").
+		Button("de-btn-draft", " ↓ Save Draft").
 		Button("de-btn-cancel", " ✕ Cancel").
 		Button("de-btn-submit", " ✓ Submit Order").Class("dialog").
 		End().
@@ -740,4 +774,3 @@ func dataEntryScreen(b *Builder) {
 		return true
 	})
 }
-

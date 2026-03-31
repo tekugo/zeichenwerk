@@ -240,7 +240,7 @@ func (t *Table) handleKey(_ Widget, event *tcell.EventKey) bool {
 		// Enter: Emit 'activate' event with current row data
 		if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
 			rowData := t.getCurrentRowData()
-			t.Dispatch(t, EvtActivate,t.row, rowData)
+			t.Dispatch(t, EvtActivate, t.row, rowData)
 		}
 		return true
 	case tcell.KeyRune:
@@ -248,7 +248,7 @@ func (t *Table) handleKey(_ Widget, event *tcell.EventKey) bool {
 			// Space: Emit 'select' event with current row data
 			if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
 				rowData := t.getCurrentRowData()
-				t.Dispatch(t, EvtSelect,t.row, rowData)
+				t.Dispatch(t, EvtSelect, t.row, rowData)
 			}
 			return true
 		}
@@ -273,8 +273,9 @@ func (t *Table) adjust() {
 	// Get actual content height
 	_, _, _, h := t.Content()
 
-	// We do not need to adjust anything, if all rows fit
+	// We do not need to adjust the offset, if all rows fit
 	if t.provider.Length() < h-2 {
+		t.Refresh()
 		return
 	}
 	if t.row < t.offsetY {
@@ -572,6 +573,31 @@ func (t *Table) renderTableContent(r *Renderer, x, y, w, h int, gridStyle *Style
 				if row != t.row {
 					r.Set(gridStyle.Foreground(), gridStyle.Background(), gridStyle.Font())
 				}
+				r.screen.Put(cx+column.Width, cy, t.grid.InnerV)
+			}
+			rx = rx + column.Width + 1
+			rw = rw - column.Width - 1
+		}
+		row++
+	}
+	// Fill remaining rows with empty grid lines
+	for row-t.offsetY < h {
+		rx := 0
+		rw := w
+		cy := y - t.offsetY + row
+		for i, column := range columns {
+			if rw <= 0 {
+				break
+			}
+			if rx+column.Width < t.offsetX {
+				rx = rx + column.Width + 1
+				continue
+			}
+			cx := x - t.offsetX + rx
+			r.Set(gridStyle.Foreground(), gridStyle.Background(), gridStyle.Font())
+			cw := min(rw, column.Width)
+			r.Repeat(cx, cy, 1, 0, cw, " ")
+			if i < len(columns)-1 && t.inner && rw > column.Width {
 				r.screen.Put(cx+column.Width, cy, t.grid.InnerV)
 			}
 			rx = rx + column.Width + 1
