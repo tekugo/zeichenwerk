@@ -12,7 +12,7 @@ import (
 type navItem struct{ icon, name, desc string }
 
 func main() {
-	createUI().Run()
+	createUI().Debug().Run()
 }
 
 // ── Shell ──────────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ func createUI() *UI {
 		Static("header-sep", " | ").Foreground("$gray").
 		Static("header-theme-lbl", "Theme ").Foreground("$gray").
 		Select("theme-select", "neon", "Midnight Neon", "tokyo", "Tokyo Night", "gruvbox-dark", "Gruvbox Dark", "nrrd", "Nord").Padding(0, 1, 0, 0).
-		End().
+		End(). // Flex("header")
 		// ── Body ──────────────────────────────────────────────────────────────
 		Grid("body", 1, 2, false).Hint(0, -1).Columns(26, -1).
 		Cell(0, 0, 1, 1).
@@ -77,7 +77,7 @@ func createUI() *UI {
 		Static("sidebar-key1", "  ↑↓  Navigate").Foreground("$gray").Padding(0, 0, 0, 0).
 		Static("sidebar-key2", "  ↵   Select").Foreground("$gray").
 		Static("sidebar-key3", "  Tab Focus").Foreground("$gray").Padding(0, 0, 1, 0).
-		End().
+		End(). // Flex("sidebar")
 		Cell(1, 0, 1, 1).
 		Switcher("content", false).
 		With(dashboardScreen).
@@ -85,14 +85,14 @@ func createUI() *UI {
 		With(logMonitorScreen).
 		With(processScreen).
 		With(dataEntryScreen).
-		End().
-		End().
+		End(). // Switcher("content")
+		End(). // Grid("body")
 		// ── Footer ────────────────────────────────────────────────────────────
 		Flex("footer", true, "center", 0).Background("$bg1").Padding(0, 1).
 		Static("footer-keys", " ↑↓ Navigate   Tab/Shift+Tab Focus   Enter/Space Activate   Esc Cancel").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("footer-brand", "Zeichenwerk v2.0 ◈").Foreground("$gray").
-		End().
+		End(). // Flex("footer")
 		Build()
 
 	// Wire navigation
@@ -185,7 +185,7 @@ func dashboardScreen(b *Builder) {
 		Static("dash-date", time.Now().Format("Mon, 02 Jan 2006")).Foreground("$gray").
 		Static("dash-sep", "  ·  ").Foreground("$gray").
 		Static("dash-time", time.Now().Format("15:04 MST")).Foreground("$fg1").Font("bold").
-		End().
+		End(). // Flex("dash-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// ── KPI cards ────────────────────────────────────────────────────────
 		Flex("kpi-row", true, "stretch", 2).Padding(0, 0, 1, 0).
@@ -195,36 +195,36 @@ func dashboardScreen(b *Builder) {
 		Digits("kpi-cpu-val", "64").Foreground("$yellow").
 		Add(cpuProg).Hint(0, 1).
 		Static("kpi-cpu-sub", "% · 8 cores · 3.2 GHz").Foreground("$gray").
-		End().
+		End(). // Flex("kpi-cpu")
 		// Memory card
 		Flex("kpi-mem", false, "start", 0).Border("", "round").Padding(1, 2).
 		Static("kpi-mem-lbl", "Memory").Foreground("$gray").
 		Digits("kpi-mem-val", "4.1").Foreground("$cyan").
 		Add(memProg).Hint(0, 1).
 		Static("kpi-mem-sub", "GB of 10 GB total").Foreground("$gray").
-		End().
+		End(). // Flex("kpi-mem")
 		// Disk card
 		Flex("kpi-disk", false, "start", 0).Border("", "round").Padding(1, 2).
 		Static("kpi-disk-lbl", "Disk").Foreground("$gray").
 		Digits("kpi-disk-val", "780").Foreground("$orange").
 		Add(diskProg).Hint(0, 1).
 		Static("kpi-disk-sub", "GB of 1 TB · 78% full").Foreground("$gray").
-		End().
+		End(). // Flex("kpi-disk")
 		// Network card
 		Flex("kpi-net", false, "start", 0).Border("", "round").Padding(1, 2).
 		Static("kpi-net-lbl", "Network").Foreground("$gray").
 		Digits("kpi-net-val", "2.4").Foreground("$green").
 		Add(netProg).Hint(0, 1).
 		Static("kpi-net-sub", "Mb/s ↑ · ↓8.1 Mb/s recv").Foreground("$gray").
-		End().
-		End().
+		End(). // Flex("kpi-net")
+		End(). // Flex("kpi-row")
 		// ── Services + Alerts ────────────────────────────────────────────────
 		Grid("dash-mid", 1, 2, false).Hint(0, 10).Columns(-2, -1).Padding(0, 0, 1, 0).Border("none").
 		Cell(0, 0, 1, 1).
 		Flex("svc-pane", false, "stretch", 0).Border("", "round").
 		Static("svc-title", " Services").Font("bold").Foreground("$fg0").Background("$bg2").
 		Table("svc-table", svcTable).Hint(0, -1).
-		End().
+		End(). // Flex("svc-pane")
 		Cell(1, 0, 1, 1).
 		Flex("alerts-pane", false, "stretch", 0).Border("", "round").
 		Static("alerts-title", " Alerts & Notices").Font("bold").Foreground("$fg0").Background("$bg2").
@@ -234,14 +234,14 @@ func dashboardScreen(b *Builder) {
 		Static("alert4", "✓  Last backup: 4h ago (success)").Foreground("$green").Padding(0, 1).
 		Static("alert5", "✓  All database replicas in sync").Foreground("$green").Padding(0, 1).
 		Static("alert6", "ℹ  Maintenance window: Sun 02:00 UTC").Foreground("$cyan").Padding(0, 1).
-		End().
-		End().
+		End(). // Flex("alerts-pane")
+		End(). // Grid("dash-mid")
 		// ── Activity log ─────────────────────────────────────────────────────
 		Flex("activity-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
 		Static("activity-title", " Recent Activity").Font("bold").Foreground("$fg0").Background("$bg2").
 		Text("activity-log", activityLines, false, 200).Hint(0, -1).
-		End().
-		End()
+		End(). // Flex("activity-pane")
+		End()  // Flex("dashboard")
 
 	// Animate spinners when visible
 	container := b.Find("dashboard").(Container)
@@ -297,7 +297,7 @@ func userAdminScreen(b *Builder) {
 		Static("ua-title", "User Administration").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("ua-count", "12 users  ·  9 active  ·  3 pending/inactive").Foreground("$gray").
-		End().
+		End(). // Flex("ua-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// Toolbar
 		Flex("ua-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
@@ -307,29 +307,29 @@ func userAdminScreen(b *Builder) {
 		Button("ua-btn-new", " + New User").
 		Button("ua-btn-del", " ✕ Delete").
 		Button("ua-btn-exp", " ↓ Export").
-		End().
+		End(). // Flex("ua-toolbar")
 		// Split: table left, detail right
 		Grid("ua-body", 1, 2, false).Hint(0, -1).Columns(-3, -2).Border("none").
 		Cell(0, 0, 1, 1).
 		Flex("ua-list-pane", false, "stretch", 0).Border("", "round").
 		Static("ua-list-title", " Users").Font("bold").Background("$bg2").
 		Table("ua-table", NewArrayTableProvider(userHeaders, userData)).Hint(0, -1).
-		End().
+		End(). // Flex("ua-list-pane")
 		Cell(1, 0, 1, 1).
 		Flex("ua-detail-pane", false, "stretch", 0).Border("", "round").
 		Static("ua-detail-title", " Edit User").Font("bold").Background("$bg2").
 		Form("ua-form", "", &selectedUser).
 		Group("ua-group", "", "", false, 1).Padding(1).
-		End().
-		End().
+		End(). // Group("ua-group")
+		End(). // Form("ua-form")
 		Flex("ua-detail-btns", true, "end", 2).Padding(1).
 		Button("ua-save", " ✓ Save Changes").Class("dialog").
 		Button("ua-reset", " ↺ Reset").
 		Button("ua-deactivate", " ⊘ Deactivate").
-		End().
-		End().
-		End().
-		End()
+		End(). // Flex("ua-detail-btns")
+		End(). // Flex("ua-detail-pane")
+		End(). // Grid("ua-body")
+		End()  // Flex("user-admin")
 
 	container := b.Find("user-admin").(Container)
 	b.Find("ua-save").On(EvtClick, func(w Widget, _ Event, _ ...any) bool {
@@ -404,7 +404,7 @@ func logMonitorScreen(b *Builder) {
 		Spacer().Hint(-1, 0).
 		Spinner("log-spinner", Spinners["braille"]).
 		Static("log-live-lbl", " streaming").Foreground("$green").
-		End().
+		End(). // Flex("log-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// Toolbar
 		Flex("log-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
@@ -431,14 +431,14 @@ func logMonitorScreen(b *Builder) {
 		Button("log-clear", " ✕ Clear").
 		Button("log-pause", " ⏸ Pause").
 		Button("log-save", " ↓ Save").
-		End().
+		End(). // Flex("log-toolbar")
 		// Main split: log view + stats sidebar
 		Grid("log-body", 1, 2, false).Hint(0, -1).Columns(-3, -1).Border("none").
 		Cell(0, 0, 1, 1).
 		Flex("log-view-pane", false, "stretch", 0).Border("", "round").
 		Static("log-view-title", " Log Stream").Font("bold").Background("$bg2").
 		Text("log-text", initial, true, 2000).Hint(0, -1).
-		End().
+		End(). // Flex("log-view-pane")
 		Cell(1, 0, 1, 1).
 		Flex("log-stats-pane", false, "stretch", 0).Border("", "round").
 		Static("log-stats-title", " Statistics").Font("bold").Background("$bg2").
@@ -460,9 +460,9 @@ func logMonitorScreen(b *Builder) {
 		Static("log-top3", "  db-pool     18%").Foreground("$fg0").Padding(0, 1).
 		Static("log-top4", "  scheduler    9%").Foreground("$fg0").Padding(0, 1).
 		Static("log-top5", "  others      13%").Foreground("$gray").Padding(0, 1).
-		End().
-		End().
-		End()
+		End(). // Flex("log-stats-pane")
+		End(). // Grid("log-body")
+		End()  // Flex("log-monitor")
 
 	container := b.Find("log-monitor").(Container)
 	var ticker *time.Ticker
@@ -550,7 +550,7 @@ func processScreen(b *Builder) {
 		Static("proc-title", "Process Manager").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("proc-summary", "14 processes  ·  13 running  ·  1 stopped").Foreground("$gray").
-		End().
+		End(). // Flex("proc-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// Resource summary bar
 		Flex("proc-res-row", true, "stretch", 4).Padding(0, 0, 1, 0).
@@ -558,20 +558,20 @@ func processScreen(b *Builder) {
 		Static("proc-cpu-lbl", "Total CPU").Foreground("$gray").
 		Static("proc-cpu-val", "31%").Font("bold").Foreground("$yellow").
 		Add(cpuTotal).Hint(20, 1).
-		End().
+		End(). // Flex("proc-cpu-card")
 		Flex("proc-mem-card", false, "start", 0).Border("", "round").Padding(0, 2).
 		Static("proc-mem-lbl", "Memory Used").Foreground("$gray").
 		Static("proc-mem-val", "1.43 GB / 10 GB").Font("bold").Foreground("$cyan").
 		Add(memTotal).Hint(20, 1).
-		End().
+		End(). // Flex("proc-mem-card")
 		Spacer().Hint(-1, 0).
 		Flex("proc-info-card", false, "start", 0).Border("", "round").Padding(0, 2).
 		Static("proc-load-lbl", "Load Average").Foreground("$gray").
 		Static("proc-load-val", "1.42  1.55  1.61").Font("bold").Foreground("$green").
 		Static("proc-uptime-lbl", "Uptime").Foreground("$gray").
 		Static("proc-uptime-val", "14d 06h 23m").Font("bold").Foreground("$fg1").
-		End().
-		End().
+		End(). // Flex("proc-info-card")
+		End(). // Flex("proc-res-row")
 		// Toolbar
 		Flex("proc-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
 		Static("proc-filter-lbl", "Filter:").Foreground("$gray").
@@ -582,13 +582,13 @@ func processScreen(b *Builder) {
 		Button("proc-restart", " ↺ Restart").
 		Button("proc-detail", " ⬡ Details").
 		Button("proc-refresh", " ↻ Refresh").Class("dialog").
-		End().
+		End(). // Flex("proc-toolbar")
 		// Process table
 		Flex("proc-table-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
 		Static("proc-table-title", " Processes").Font("bold").Background("$bg2").
 		Table("proc-table", NewArrayTableProvider(procHeaders, procData)).Hint(0, -1).
-		End().
-		End()
+		End(). // Flex("proc-table-pane")
+		End()  // Flex("process-mgr")
 
 	container := b.Find("process-mgr").(Container)
 
@@ -672,7 +672,7 @@ func dataEntryScreen(b *Builder) {
 		Static("de-title", "New Order Entry").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("de-ref", "Draft  ·  REF #2026-0099").Foreground("$gray").
-		End().
+		End(). // Flex("de-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// Two-column layout: form sections left, order items right
 		Grid("de-body", 1, 2, false).Hint(0, -1).Columns(-1, -1).
@@ -683,29 +683,29 @@ func dataEntryScreen(b *Builder) {
 		Flex("de-cust-content", false, "stretch", 0).Padding(0, 2).
 		Form("de-cust-form", "", &customer).
 		Group("de-cust-grp", "", "", false, 1).
-		End().
-		End().
-		End().
-		End(). // de-cust-section
+		End(). // Group("de-cust-grp")
+		End(). // Form("de-cust-form")
+		End(). // Flex("de-cust-content")
+		End(). // Collapsible("de-cust-section")
 		Spacer().Hint(0, 1).
 		Collapsible("de-ship-section", "  ② Shipping Details", true).
 		Flex("de-ship-content", false, "stretch", 0).Padding(0, 2).
 		Form("de-ship-form", "", &shipping).
 		Group("de-ship-grp", "", "", false, 1).
-		End().
-		End().
-		End().
-		End(). // de-ship-section
+		End(). // Group("de-ship-grp")
+		End(). // Form("de-ship-form")
+		End(). // Flex("de-ship-content")
+		End(). // Collapsible("de-ship-section")
 		Spacer().Hint(0, 1).
 		Collapsible("de-pay-section", "  ③ Payment & Terms", false).
 		Flex("de-pay-content", false, "stretch", 0).Padding(0, 2).
 		Form("de-pay-form", "", &payment).
 		Group("de-pay-grp", "", "", false, 1).
-		End().
-		End().
-		End().
-		End(). // de-pay-section
-		End(). // de-form-col
+		End(). // Group("de-pay-grp")
+		End(). // Form("de-pay-form")
+		End(). // Flex("de-pay-content")
+		End(). // Collapsible("de-pay-section")
+		End(). // Flex("de-form-col")
 		// Right column: order items + summary
 		Cell(1, 0, 1, 1).
 		Flex("de-items-col", false, "stretch", 0).Padding(0, 0, 0, 2).
@@ -720,35 +720,35 @@ func dataEntryScreen(b *Builder) {
 		Static("de-sum-subtotal-lbl", "Subtotal").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-subtotal-val", "$2,688.00").
-		End().
+		End(). // Flex("de-sum-row1")
 		Flex("de-sum-row2", true, "stretch", 0).
 		Static("de-sum-tax-lbl", "Tax (0%)").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-tax-val", "    $0.00").
-		End().
+		End(). // Flex("de-sum-row2")
 		Flex("de-sum-row3", true, "stretch", 0).
 		Static("de-sum-ship-lbl", "Shipping (Express)").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-ship-val", "   $35.00").
-		End().
+		End(). // Flex("de-sum-row3")
 		HRule("thin").
 		Flex("de-sum-total-row", true, "stretch", 0).
 		Static("de-sum-total-lbl", "Total").Font("bold").Foreground("$fg0").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-total-val", "$2,723.00").Font("bold").Foreground("$cyan").
-		End().
-		End().
+		End(). // Flex("de-sum-total-row")
+		End(). // Flex("de-summary")
 		Spacer().Hint(0, -1).
 		// Action buttons
 		Flex("de-actions", true, "end", 2).
 		Button("de-btn-draft", " ↓ Save Draft").
 		Button("de-btn-cancel", " ✕ Cancel").
 		Button("de-btn-submit", " ✓ Submit Order").Class("dialog").
-		End().
+		End(). // Flex("de-actions")
 		Static("de-status", "").Foreground("$green").Padding(1, 0, 0, 0).
-		End().
-		End().
-		End()
+		End(). // Flex("de-items-col")
+		End(). // Grid("de-body")
+		End()  // Flex("data-entry")
 
 	container := b.Find("data-entry").(Container)
 

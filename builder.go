@@ -37,7 +37,7 @@ func NewBuilder(theme *Theme) *Builder {
 // It creates a new UI with the current theme and root container from the
 // stack.
 func (b *Builder) Build() *UI {
-	ui, _ := NewUI(b.theme, b.stack.Peek(), true)
+	ui, _ := NewUI(b.theme, b.stack.Peek())
 	return ui
 }
 
