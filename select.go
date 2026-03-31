@@ -28,7 +28,7 @@ func NewSelect(id, class string, args ...string) *Select {
 		options:   make([]option, 0, len(args)/2),
 	}
 	s.SetFlag(FlagFocusable, true)
-	for i := 0; i < len(args); i += 2 {
+	for i := 0; i+1 < len(args); i += 2 {
 		s.options = append(s.options, option{value: args[i], text: args[i+1]})
 	}
 	OnKey(s, s.handleKey)
