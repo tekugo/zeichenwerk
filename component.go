@@ -34,13 +34,13 @@ var stylePartRegExp = regexp.MustCompile(`([0-9A-Za-z_\-]*):?([0-9A-Za-z_\-]*)`)
 //
 // Also do not forget to add it to the builder for easy building and styling.
 type Component struct {
-	id                  string               // widget identification datum
-	class               string               // style class for styling
-	parent              Container            // reference to the parent container
-	x, y, width, height int                  // screen area of the widget (outer bounds)
-	hwidth, hheight     int                  // preferred content size for Hint() sizing; containers may use negative values for fractional sizing
-	states              map[Flag]bool        // map of internal boolean states like visible
-	styles              map[string]*Style    // visual styling information
+	id                  string              // widget identification datum
+	class               string              // style class for styling
+	parent              Container           // reference to the parent container
+	x, y, width, height int                 // screen area of the widget (outer bounds)
+	hwidth, hheight     int                 // preferred content size for Hint() sizing; containers may use negative values for fractional sizing
+	states              map[Flag]bool       // map of internal boolean states like visible
+	styles              map[string]*Style   // visual styling information
 	handlers            map[Event][]Handler // event handlers
 }
 
@@ -313,6 +313,11 @@ func (c *Component) Selector(t string) string {
 //   - height: The total height of the widget
 func (c *Component) SetBounds(x, y, width, height int) {
 	c.x, c.y, c.width, c.height = x, y, width, height
+}
+
+// SetClass sets the style class of the component.
+func (c *Component) SetClass(class string) {
+	c.class = class
 }
 
 // SetFlag sets a boolean state flag for the widget.

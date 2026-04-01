@@ -37,7 +37,7 @@ func MidnightNeonTheme() *Theme {
 	t.SetStyles(
 		NewStyle("").WithColors("$fg0", "$bg0").WithMargin(0).WithPadding(0),
 		NewStyle("box").WithBorder("thin"),
-		NewStyle("button").WithColors("$fg0", "$blue").WithBorder("lines").WithPadding(0, 2),
+		NewStyle("button").WithColors("$fg0", "$blue").WithBorder("none").WithPadding(0, 2),
 		NewStyle("button:focused").WithColors("$bg0", "$cyan"),
 		NewStyle("button:hovered").WithColors("$bg0", "$aqua"),
 		NewStyle("button.dialog").WithBorder("none"),

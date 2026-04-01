@@ -336,36 +336,6 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 	return b
 }
 
-// Tree creates a new tree widget for displaying hierarchical data.
-func (b *Builder) Tree(id string) *Builder {
-	tree := NewTree(id, b.class)
-	b.Add(tree)
-	return b
-}
-
-// TreeFS creates a filesystem tree rooted at root. If dirsOnly is true only
-// directories are shown; files are hidden.
-func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
-	tfs := NewTreeFS(id, b.class, root, dirsOnly)
-	// Apply theme through TreeFS so the "tree-fs" selector is used, then add
-	// the embedded Tree (which holds all state and rendering) to the container.
-	tfs.Apply(b.theme)
-	if len(b.stack) > 0 {
-		top := b.stack.Peek()
-		top.Add(tfs.Tree)
-	}
-	b.current = tfs.Tree
-	return b
-}
-
-// Typeahead creates a new typeahead widget (a text input with inline ghost-text
-// suggestions). Params are identical to Input.
-func (b *Builder) Typeahead(id string, params ...string) *Builder {
-	t := NewTypeahead(id, b.class, params...)
-	b.Add(t)
-	return b
-}
-
 // List creates a new list widget for displaying selectable items.
 //
 // Parameters:
@@ -386,6 +356,19 @@ func (b *Builder) Progress(id string, horizontal bool) *Builder {
 	return b
 }
 
+// Scanner creates a new scanner widget for displaying a back-and-forth
+// scanning animation with a fading trail.
+//
+// Parameters:
+//   - id: unique identifier for the scanner widget
+//   - width: display width in characters (e.g., 8)
+//   - charStyle: character set style, either "blocks" or "diamonds"
+func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
+	scanner := NewScanner(id, b.class, width, charStyle)
+	b.Add(scanner)
+	return b
+}
+
 // Select creates a select dropdown.
 func (b *Builder) Select(id string, args ...string) *Builder {
 	s := NewSelect(id, b.class, args...)
@@ -397,19 +380,6 @@ func (b *Builder) Select(id string, args ...string) *Builder {
 func (b *Builder) Spinner(id string, sequence string) *Builder {
 	spinner := NewSpinner(id, b.class, sequence)
 	b.Add(spinner)
-	return b
-}
-
-// Scanner creates a new scanner widget for displaying a back-and-forth
-// scanning animation with a fading trail.
-//
-// Parameters:
-//   - id: unique identifier for the scanner widget
-//   - width: display width in characters (e.g., 8)
-//   - charStyle: character set style, either "blocks" or "diamonds"
-func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
-	scanner := NewScanner(id, b.class, width, charStyle)
-	b.Add(scanner)
 	return b
 }
 
@@ -488,6 +458,36 @@ func (b *Builder) Tabs(id string, names ...string) *Builder {
 func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
 	text := NewText(id, b.class, content, follow, max)
 	b.Add(text)
+	return b
+}
+
+// Tree creates a new tree widget for displaying hierarchical data.
+func (b *Builder) Tree(id string) *Builder {
+	tree := NewTree(id, b.class)
+	b.Add(tree)
+	return b
+}
+
+// TreeFS creates a filesystem tree rooted at root. If dirsOnly is true only
+// directories are shown; files are hidden.
+func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
+	tfs := NewTreeFS(id, b.class, root, dirsOnly)
+	// Apply theme through TreeFS so the "tree-fs" selector is used, then add
+	// the embedded Tree (which holds all state and rendering) to the container.
+	tfs.Apply(b.theme)
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		top.Add(tfs.Tree)
+	}
+	b.current = tfs.Tree
+	return b
+}
+
+// Typeahead creates a new typeahead widget (a text input with inline ghost-text
+// suggestions). Params are identical to Input.
+func (b *Builder) Typeahead(id string, params ...string) *Builder {
+	t := NewTypeahead(id, b.class, params...)
+	b.Add(t)
 	return b
 }
 

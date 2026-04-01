@@ -119,11 +119,11 @@ func TokyoNightTheme() *Theme {
 		"select.dropdown": " \u25BC",
 
 		// ---- Tree ----
-		"tree.expanded":  "▼ ",
-		"tree.collapsed": "▶ ",
-		"tree.branch":    "├─",
-		"tree.last":      "└─",
-		"tree.trunk":     "│ ",
+		"tree.expanded":  " ▼",
+		"tree.collapsed": " ▶",
+		"tree.branch":    " ├─",
+		"tree.last":      " └─",
+		"tree.trunk":     " │ ",
 	})
 
 	return t

@@ -131,7 +131,7 @@ func NewUI(theme *Theme, root Container) (*UI, error) {
 		Component: Component{id: "__ui__", x: 0, y: 0, width: 0, height: 0},
 		screen:    nil,
 		renderer:  &Renderer{theme: theme},
-		layers:    []Container{root},
+		layers:    []Container{},
 		debug:     false,
 		tableLog:  NewTableLog(2000),
 		dirty:     true, // Initial draw needed
@@ -140,7 +140,10 @@ func NewUI(theme *Theme, root Container) (*UI, error) {
 		redraw:    make(chan Widget, 10), // Initialize redraw channel with buffer
 		refresh:   make(chan struct{}, 1),
 	}
-	root.SetParent(ui)
+
+	if root != nil {
+		ui.Add(root)
+	}
 
 	return ui, nil
 }
@@ -175,7 +178,6 @@ func (ui *UI) NewBuilder() *Builder {
 }
 
 // ---- Widget methods -------------------------------------------------------
-// Implementation of the Widget interface
 
 // Handle processes tcell events and coordinates their handling throughout the
 // application. This is the main event processing method that handles keyboard
@@ -289,6 +291,19 @@ func (ui *UI) dispatch(target Widget, event Event, data ...any) bool {
 
 // ---- Container Methods ----------------------------------------------------
 
+// Add adds a new container layer to the UI.
+// This should only be done for the base layer, other layers should be added
+// via Popup().
+func (ui *UI) Add(widget Widget, _ ...any) error {
+	if container, ok := widget.(Container); ok {
+		container.SetParent(ui)
+		ui.layers = append(ui.layers, container)
+		return nil
+	} else {
+		return ErrNoContainer
+	}
+}
+
 // Children returns the child widgets of the App.
 // Since UI acts as the root container, it returns a slice containing
 // only the root container widget.
@@ -298,11 +313,6 @@ func (ui *UI) Children() []Widget {
 		result = append(result, layer)
 	}
 	return result
-}
-
-// Add is a no-op for UI; widgets are added via the builder or layer stack.
-func (ui *UI) Add(_ Widget, _ ...any) error {
-	return nil
 }
 
 // Layout recalculates and applies the layout for all widget layers in the UI.

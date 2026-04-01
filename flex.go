@@ -131,6 +131,16 @@ func (f *Flex) Hint() (int, int) {
 	return width, height
 }
 
+// Render draws the flex container and all its children.
+func (f *Flex) Render(r *Renderer) {
+	f.Component.Render(r)
+	for _, child := range f.children {
+		child.Render(r)
+	}
+}
+
+// ---- Layout ---------------------------------------------------------------
+
 // Layout arranges all child widgets within the flex container according to
 // the specified orientation, alignment, and spacing configuration.
 func (f *Flex) Layout() error {
@@ -320,13 +330,5 @@ func align(alignment string, start, end, size int) (int, int) {
 		return start, space
 	default: // "start" or any other value
 		return start, size
-	}
-}
-
-// Render draws the flex container and all its children.
-func (f *Flex) Render(r *Renderer) {
-	f.Component.Render(r)
-	for _, child := range f.children {
-		child.Render(r)
 	}
 }

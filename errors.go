@@ -14,7 +14,10 @@ const (
 )
 
 // ErrChildIsNil is returned by container Add methods when the widget argument is nil.
-var ErrChildIsNil *MessageCode = NewErrorCode("child-is-nil", "Child is nil")
+var (
+	ErrChildIsNil  *MessageCode = NewErrorCode("child-is-nil", "Child is nil")
+	ErrNoContainer *MessageCode = NewErrorCode("no-container", "Widget must be a Container")
+)
 
 // MessageCode is an error value that carries a severity level, a short
 // machine-readable code, and a human-readable message.

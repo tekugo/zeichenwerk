@@ -270,29 +270,29 @@ func (t *Tree) Render(r *Renderer) {
 			fg, bg, font = s.Foreground(), s.Background(), s.Font()
 		}
 
-		// Draw indent columns (one per ancestor level, 2 chars each)
+		// Draw indent columns (one per ancestor level, 3 chars each)
 		col := cx
 		r.Set(indentStyle.Foreground(), bg, "")
-		for d := 0; d < item.depth; d++ {
+		for d := 1; d < item.depth; d++ {
 			if d < len(item.trunk) && item.trunk[d] {
-				r.Text(col, rowY, strTrunk, 2)
+				r.Text(col, rowY, strTrunk, 3)
 			} else {
-				r.Text(col, rowY, "  ", 2)
+				r.Text(col, rowY, "   ", 3)
 			}
-			col += 2
+			col += 3
 		}
 
-		// Draw connector (2 chars; empty for top-level)
+		// Draw connector (3 chars; empty for top-level)
 		if item.depth > 0 {
 			if item.isLast {
-				r.Text(col, rowY, strLast, 2)
+				r.Text(col, rowY, strLast, 3)
 			} else {
-				r.Text(col, rowY, strBranch, 2)
+				r.Text(col, rowY, strBranch, 3)
 			}
-			col += 2
+			col += 3
 		}
 
-		// Draw indicator (2 chars)
+		// Draw indicator (3 chars)
 		var indicator string
 		if item.node.Leaf() {
 			indicator = "  "
@@ -302,8 +302,8 @@ func (t *Tree) Render(r *Renderer) {
 			indicator = strCollapsed
 		}
 		r.Set(fg, bg, font)
-		r.Text(col, rowY, indicator, 2)
-		col += 2
+		r.Text(col, rowY, indicator, len(indicator))
+		col += len(indicator) - 1
 
 		// Draw text, truncated to remaining width
 		remaining := cx + tw - col
