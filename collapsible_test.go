@@ -203,7 +203,7 @@ func TestCollapsible_EvtChange_Collapse(t *testing.T) {
 func TestCollapsible_KeyEnter_Toggles(t *testing.T) {
 	c := NewCollapsible("c", "", "Title", false)
 	ev := tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModNone)
-	c.handleKey(c, ev)
+	c.handleKey(ev)
 	if !c.Expanded() {
 		t.Error("Enter key should expand a collapsed collapsible")
 	}
@@ -212,7 +212,7 @@ func TestCollapsible_KeyEnter_Toggles(t *testing.T) {
 func TestCollapsible_KeySpace_Toggles(t *testing.T) {
 	c := NewCollapsible("c", "", "Title", false)
 	ev := tcell.NewEventKey(tcell.KeyRune, " ", tcell.ModNone)
-	c.handleKey(c, ev)
+	c.handleKey(ev)
 	if !c.Expanded() {
 		t.Error("Space key should expand a collapsed collapsible")
 	}
@@ -221,7 +221,7 @@ func TestCollapsible_KeySpace_Toggles(t *testing.T) {
 func TestCollapsible_KeyRight_Expands(t *testing.T) {
 	c := NewCollapsible("c", "", "Title", false)
 	ev := tcell.NewEventKey(tcell.KeyRight, "", tcell.ModNone)
-	c.handleKey(c, ev)
+	c.handleKey(ev)
 	if !c.Expanded() {
 		t.Error("→ should expand a collapsed collapsible")
 	}
@@ -230,7 +230,7 @@ func TestCollapsible_KeyRight_Expands(t *testing.T) {
 func TestCollapsible_KeyLeft_Collapses(t *testing.T) {
 	c := NewCollapsible("c", "", "Title", true)
 	ev := tcell.NewEventKey(tcell.KeyLeft, "", tcell.ModNone)
-	c.handleKey(c, ev)
+	c.handleKey(ev)
 	if c.Expanded() {
 		t.Error("← should collapse an expanded collapsible")
 	}
@@ -239,7 +239,7 @@ func TestCollapsible_KeyLeft_Collapses(t *testing.T) {
 func TestCollapsible_KeyRight_NoopIfExpanded(t *testing.T) {
 	c := NewCollapsible("c", "", "Title", true)
 	ev := tcell.NewEventKey(tcell.KeyRight, "", tcell.ModNone)
-	handled := c.handleKey(c, ev)
+	handled := c.handleKey(ev)
 	if !handled {
 		t.Error("→ should return true (consumed) even when already expanded")
 	}
@@ -251,7 +251,7 @@ func TestCollapsible_KeyRight_NoopIfExpanded(t *testing.T) {
 func TestCollapsible_KeyLeft_NoopIfCollapsed(t *testing.T) {
 	c := NewCollapsible("c", "", "Title", false)
 	ev := tcell.NewEventKey(tcell.KeyLeft, "", tcell.ModNone)
-	handled := c.handleKey(c, ev)
+	handled := c.handleKey(ev)
 	if !handled {
 		t.Error("← should return true (consumed) even when already collapsed")
 	}

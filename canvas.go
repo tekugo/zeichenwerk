@@ -228,7 +228,7 @@ func (c *Canvas) SetCell(x, y int, ch string, style *Style) {
 func (c *Canvas) SetCursor(x, y int) {
 	c.cursorX = x
 	c.cursorY = y
-	c.Dispatch(c, EvtMove,x, y)
+	c.Dispatch(c, EvtMove, x, y)
 }
 
 // SetMode sets the canvas mode. Valid modes are ModeNormal and ModeInsert.
@@ -236,7 +236,7 @@ func (c *Canvas) SetCursor(x, y int) {
 func (c *Canvas) SetMode(mode string) {
 	c.mode = mode
 	c.Refresh()
-	c.Dispatch(c, EvtMode,c.mode)
+	c.Dispatch(c, EvtMode, c.mode)
 }
 
 // SetPage sets the current page
@@ -260,7 +260,7 @@ func (c *Canvas) Size() (width, height int) {
 // mode, keys are used for movement and mode switching. In insert mode,
 // printable characters are inserted and ESC returns to normal mode.
 // Returns true if the event was handled.
-func (c *Canvas) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (c *Canvas) handleKey(evt *tcell.EventKey) bool {
 	switch c.mode {
 	case ModeNormal:
 		return c.handleNormalMode(evt)
@@ -377,7 +377,7 @@ func (c *Canvas) move(dx, dy int) {
 	}
 
 	c.cursorX, c.cursorY = newX, newY
-	c.Dispatch(c, EvtMove,newX, newY)
+	c.Dispatch(c, EvtMove, newX, newY)
 	c.Refresh()
 }
 

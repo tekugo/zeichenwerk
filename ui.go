@@ -126,7 +126,7 @@ func parseLevel(l Level) slog.Level {
 // Returns:
 //   - *UI: The initialized UI application instance ready for Run()
 //   - error: Any error that occurred during initialization (currently always nil)
-func NewUI(theme *Theme, root Container) (*UI, error) {
+func NewUI(theme *Theme, root Container) *UI {
 	ui := &UI{
 		Component: Component{id: "__ui__", x: 0, y: 0, width: 0, height: 0},
 		screen:    nil,
@@ -145,7 +145,7 @@ func NewUI(theme *Theme, root Container) (*UI, error) {
 		ui.Add(root)
 	}
 
-	return ui, nil
+	return ui
 }
 
 // Debug sets the UI into debug mode
@@ -457,7 +457,7 @@ func (ui *UI) SetFocus(which string) {
 		if widget.Flag(FlagHidden) {
 			return false
 		}
-		if !widget.Flag(FlagFocusable) {
+		if !widget.Flag(FlagFocusable) || widget.Flag(FlagSkip) {
 			return true
 		}
 		if first == nil {
@@ -667,11 +667,11 @@ func (ui *UI) Run() error {
 	// Initialize screen
 	ui.screen, err = tcell.NewScreen()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrScreenInit, err)
 	}
 
 	if err := ui.screen.Init(); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrScreenInit, err)
 	}
 
 	defer func() {

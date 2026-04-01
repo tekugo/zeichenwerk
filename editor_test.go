@@ -548,7 +548,7 @@ func TestEditor_KeyShiftLeft_ExtendSelection(t *testing.T) {
 	e.line = 0
 	e.column = 3
 	ev := tcell.NewEventKey(tcell.KeyLeft, "", tcell.ModShift)
-	e.handleKey(e, ev)
+	e.handleKey(ev)
 	if !e.HasSelection() {
 		t.Error("Shift+Left should create a selection")
 	}
@@ -560,7 +560,7 @@ func TestEditor_KeyShiftLeft_ExtendSelection(t *testing.T) {
 func TestEditor_KeyCtrlA_SelectAll(t *testing.T) {
 	e := newEditor("hello", "world")
 	ev := tcell.NewEventKey(tcell.KeyCtrlA, "", tcell.ModNone)
-	e.handleKey(e, ev)
+	e.handleKey(ev)
 	if !e.HasSelection() {
 		t.Error("Ctrl+A should select all")
 	}
@@ -577,7 +577,7 @@ func TestEditor_KeyCtrlC_Copy(t *testing.T) {
 	e.line = 0
 	e.column = 5
 	ev := tcell.NewEventKey(tcell.KeyCtrlC, "", tcell.ModNone)
-	e.handleKey(e, ev)
+	e.handleKey(ev)
 	if editorClipboard != "hello" {
 		t.Errorf("clipboard = %q; want %q", editorClipboard, "hello")
 	}
@@ -588,7 +588,7 @@ func TestEditor_KeyCtrlHome_DocumentHome(t *testing.T) {
 	e.line = 1
 	e.column = 3
 	ev := tcell.NewEventKey(tcell.KeyHome, "", tcell.ModCtrl)
-	e.handleKey(e, ev)
+	e.handleKey(ev)
 	if e.line != 0 || e.column != 0 {
 		t.Errorf("cursor = (%d,%d); want (0,0)", e.line, e.column)
 	}
@@ -599,7 +599,7 @@ func TestEditor_KeyCtrlEnd_DocumentEnd(t *testing.T) {
 	e.line = 0
 	e.column = 0
 	ev := tcell.NewEventKey(tcell.KeyEnd, "", tcell.ModCtrl)
-	e.handleKey(e, ev)
+	e.handleKey(ev)
 	if e.line != 1 || e.column != 3 {
 		t.Errorf("cursor = (%d,%d); want (1,3)", e.line, e.column)
 	}

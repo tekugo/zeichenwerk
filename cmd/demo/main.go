@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math/rand"
 	"path/filepath"
@@ -12,15 +13,31 @@ import (
 	. "github.com/tekugo/zeichenwerk"
 )
 
+func parseTheme() *Theme {
+	t := flag.String("t", "tokyo", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+	flag.Parse()
+	switch *t {
+	case "midnight":
+		return MidnightNeonTheme()
+	case "nord":
+		return NordTheme()
+	case "gruvbox-dark":
+		return GruvboxDarkTheme()
+	case "gruvbox-light":
+		return GruvboxLightTheme()
+	default:
+		return TokyoNightTheme()
+	}
+}
+
 // main function
 func main() {
-	ui := createUI()
-	ui.Run()
+	createUI(parseTheme()).Run()
 }
 
 // Create the terminal UI.
-func createUI() *UI {
-	ui := NewBuilder(TokyoNightTheme()).
+func createUI(theme *Theme) *UI {
+	ui := NewBuilder(theme).
 		Flex("main", false, "stretch", 0).
 		Flex("header", true, "stretch", 2).
 		Static("title", "Zeichenwerk Demo").
@@ -35,7 +52,7 @@ func createUI() *UI {
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
-		With(deckDemo).
+		With(func(b *Builder) { deckDemo(b, theme) }).
 		With(digits).
 		With(editor).
 		With(form).
@@ -64,11 +81,11 @@ func createUI() *UI {
 		Build()
 
 	themes := map[string]*Theme{
-		"tokyo":       TokyoNightTheme(),
+		"tokyo":         TokyoNightTheme(),
 		"gruvbox-dark":  GruvboxDarkTheme(),
 		"gruvbox-light": GruvboxLightTheme(),
-		"nrrd":        NordTheme(),
-		"neon":        MidnightNeonTheme(),
+		"nrrd":          NordTheme(),
+		"neon":          MidnightNeonTheme(),
 	}
 
 	Find(ui, "theme-select").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
@@ -284,10 +301,9 @@ func collapsibleDemo(builder *Builder) {
 }
 
 // Deck demo — displays all theme colors as rich multi-line cards.
-func deckDemo(builder *Builder) {
+func deckDemo(builder *Builder, theme *Theme) {
 	type colorItem struct{ name, hex string }
 
-	theme := TokyoNightTheme()
 	colors := theme.Colors()
 
 	names := make([]string, 0, len(colors))
@@ -308,12 +324,11 @@ func deckDemo(builder *Builder) {
 	// deck is declared first so the render closure can reference it.
 	var deck *Deck
 
-	renderFn := func(r *Renderer, x, y, w, h, _ int, data any, selected bool) {
+	renderFn := func(r *Renderer, x, y, w, h, _ int, data any, selected, focused bool) {
 		item := data.(colorItem)
 		textW := w - borderW - padW - previewW
 
 		bg := theme.Color("$bg1")
-		focused := deck.Flag(FlagFocused)
 
 		var fg, font, indicator, indicatorFg string
 		if selected {
@@ -457,8 +472,8 @@ func form(builder *Builder) {
 		End().
 		End()
 
-	builder.Find("save-button").On(EvtClick, func(widget Widget, _ Event, _ ...any) bool {
-		Update(FindUI(widget), "info-label", "Click "+time.Now().String())
+	builder.Find("save-button").On(EvtActivate, func(widget Widget, _ Event, _ ...any) bool {
+		Update(FindUI(widget), "info-label", "Activate "+time.Now().String())
 		text, _ := json.Marshal(user)
 		widget.Log(widget, Debug, string(text))
 		return true
@@ -670,7 +685,7 @@ func treeFSDemo(builder *Builder) {
 	container := builder.Container()
 
 	// Up button: navigate to the parent directory
-	builder.Find("tree-fs-up").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	builder.Find("tree-fs-up").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		parent := filepath.Dir(tfs.RootPath())
 		if parent == tfs.RootPath() {
 			return true // already at filesystem root

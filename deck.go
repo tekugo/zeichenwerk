@@ -7,9 +7,10 @@ import (
 )
 
 // ItemRender is the render function type for Deck slots. It is called once per
-// visible slot with the renderer, slot bounds, item index, the data item, and
-// whether the slot is the currently highlighted item.
-type ItemRender func(r *Renderer, x, y, w, h, index int, data any, selected bool)
+// visible slot with the renderer, slot bounds, item index, the data item,
+// whether the slot is the currently highlighted item, and whether the Deck
+// widget itself currently holds keyboard focus.
+type ItemRender func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool)
 
 // Deck is a scrollable list widget where every item occupies a fixed number of
 // rows. Rendering is delegated to a caller-supplied ItemRender function so
@@ -240,7 +241,7 @@ func (d *Deck) adjust() {
 
 // ---- Event Handlers -------------------------------------------------------
 
-func (d *Deck) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (d *Deck) handleKey(event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyUp:
 		d.Move(-1)
@@ -269,7 +270,7 @@ func (d *Deck) handleKey(_ Widget, event *tcell.EventKey) bool {
 	return false
 }
 
-func (d *Deck) handleMouse(_ Widget, event *tcell.EventMouse) bool {
+func (d *Deck) handleMouse(event *tcell.EventMouse) bool {
 	if event.Buttons() != tcell.Button1 {
 		return false
 	}
@@ -319,7 +320,7 @@ func (d *Deck) Render(r *Renderer) {
 			break
 		}
 		slotY := cy + s*d.itemHeight
-		d.render(r, cx, slotY, tw, d.itemHeight, itemIndex, d.items[itemIndex], itemIndex == d.index)
+		d.render(r, cx, slotY, tw, d.itemHeight, itemIndex, d.items[itemIndex], itemIndex == d.index, d.Flag(FlagFocused))
 	}
 
 	if d.scrollbar && len(d.items)*d.itemHeight > ch {

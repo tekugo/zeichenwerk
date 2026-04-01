@@ -35,14 +35,15 @@ func NewCollapsible(id, class, title string, expanded bool) *Collapsible {
 // Add sets the single child widget. Calling Add again replaces any existing
 // child. The child is hidden immediately when the collapsible is collapsed.
 func (c *Collapsible) Add(widget Widget, params ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
 	if c.child != nil {
 		c.child.SetParent(nil)
 	}
 	c.child = widget
-	if c.child != nil {
-		c.child.SetParent(c)
-		c.child.SetFlag(FlagHidden, !c.expanded)
-	}
+	c.child.SetParent(c)
+	c.child.SetFlag(FlagHidden, !c.expanded)
 	return nil
 }
 
@@ -175,7 +176,7 @@ func (c *Collapsible) Expanded() bool {
 	return c.expanded
 }
 
-func (c *Collapsible) handleKey(_ Widget, ev *tcell.EventKey) bool {
+func (c *Collapsible) handleKey(ev *tcell.EventKey) bool {
 	switch ev.Key() {
 	case tcell.KeyEnter:
 		c.Toggle()
@@ -199,7 +200,7 @@ func (c *Collapsible) handleKey(_ Widget, ev *tcell.EventKey) bool {
 	return false
 }
 
-func (c *Collapsible) handleMouse(_ Widget, ev *tcell.EventMouse) bool {
+func (c *Collapsible) handleMouse(ev *tcell.EventMouse) bool {
 	_, my := ev.Position()
 	style := c.Style()
 	headerY := c.y + style.Margin().Top

@@ -135,7 +135,7 @@ func (t *Text) adjust() {
 //
 // Returns:
 //   - bool: true if the key was handled, false otherwise
-func (t *Text) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (t *Text) handleKey(event *tcell.EventKey) bool {
 	_, _, w, h := t.Content()
 	maxOffsetY := max(len(t.content)-h, 0)
 

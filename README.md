@@ -5,8 +5,8 @@
 ![License](https://img.shields.io/github/license/tekugo/zeichenwerk)
 
 Zeichenwerk (German for "character works") is a modern, idiomatic Go library for
-building terminal user interfaces. This refactored version features a fluent
-builder API, improved architecture, and an enhanced widget system.
+building terminal user interfaces. It features a fluent builder API, a
+functional composition API, and an enhanced widget system.
 
 ## How it looks
 
@@ -34,11 +34,59 @@ func main() {
 }
 ```
 
+## Composition API
+
+The `compose` sub-package offers a functional alternative to the builder. Each
+widget is an `Option` — a plain function — that you nest directly:
+
+```go
+package main
+
+import (
+    z "github.com/tekugo/zeichenwerk"
+    . "github.com/tekugo/zeichenwerk/compose"
+)
+
+func main() {
+    UI(z.TokyoNightTheme(),
+        Flex("main", "", false, "stretch", 0,
+            Flex("header", "", true, "center", 1,
+                Static("title", "", "My App"),
+            ),
+            Grid("content", "", []int{0}, []int{20, -1}, false,
+                Cell(0, 0, 1, 1, List("menu", "", []string{"Item 1", "Item 2", "Item 3"})),
+                Cell(1, 0, 1, 1, Button("action", "", "Click Me")),
+            ),
+        ),
+    ).Run()
+}
+```
+
+Screens can be split into separate functions and composed with `Include`:
+
+```go
+UI(z.TokyoNightTheme(),
+    Flex("root", "", false, "stretch", 0,
+        Include(header),
+        Include(content),
+        Include(footer),
+    ),
+).Run()
+
+func header(theme *z.Theme) z.Widget {
+    return Build(theme, Static("title", "", "My App", Font("bold"), Fg("$cyan")))
+}
+```
+
+Where direct widget access is needed after construction — for example to wire
+events, populate a tree, or start animations — retrieve the widget imperatively
+with `z.Find` and call methods on it directly.
+
 ## Why zeichenwerk
 
 Zeichenwerk is designed for developers who want:
 
-- A fluent, chainable builder API
+- A fluent, chainable builder API or a functional composition API
 - Higher-level widgets than tcell
 - More composable layouts than tview
 - A traditional retained widget hierarchy rather than an event/message
@@ -46,12 +94,12 @@ Zeichenwerk is designed for developers who want:
 
 Compare to other Go TUI libraries:
 
-| Library     | Style                             |
-| ----------- | --------------------------------- |
-| tcell       | Low-level terminal primitives     |
-| tview       | Traditional widget toolkit        |
-| bubbletea   | Elm-style update loop             |
-| zeichenwerk | Fluent builder + widget hierarchy |
+| Library     | Style                               |
+| ----------- | ----------------------------------- |
+| tcell       | Low-level terminal primitives       |
+| tview       | Traditional widget toolkit          |
+| bubbletea   | Elm-style update loop               |
+| zeichenwerk | Builder + functional composition    |
 
 ## Installation
 
@@ -130,16 +178,25 @@ UI (root)
 
 ## Demo
 
-Explore the demo application for examples of all widgets:
+Explore the showcase for examples of all widgets using the builder API:
 
 ```bash
-go run ./cmd/demo
+go run ./cmd/showcase
+```
+
+Or the same showcase rewritten with the composition API:
+
+```bash
+go run ./cmd/compose
 ```
 
 ## Documentation
 
+- **Tutorial (start here):** [doc/tutorial.md](doc/tutorial.md)
 - Package docs: [doc.go](doc.go)
+- Widget reference: [doc/reference/overview.md](doc/reference/overview.md)
 - Builder pattern: [builder.go](builder.go)
+- Composition API: [compose/compose.go](compose/compose.go)
 - Theme system: [theme.go](theme.go)
 - Component base: [component.go](component.go)
 

@@ -143,6 +143,9 @@ func (g *Grid) Children() []Widget {
 //	// Place a text widget spanning 2 columns and 3 rows
 //	grid.Add(1, 0, 2, 3, textWidget)
 func (g *Grid) Add(content Widget, params ...any) error {
+	if content == nil {
+		return ErrChildIsNil
+	}
 	x, y, w, h := 0, 0, 0, 0
 	if len(params) > 0 {
 		if v, ok := params[0].(int); ok {

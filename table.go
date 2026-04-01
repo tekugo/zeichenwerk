@@ -141,7 +141,7 @@ func (t *Table) Hint() (int, int) {
 //
 // The method automatically adjusts the viewport when navigating to ensure
 // the selected row remains visible.
-func (t *Table) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (t *Table) handleKey(event *tcell.EventKey) bool {
 	_, _, _, h := t.Content()
 	pageSize := max(1, h-3) // Account for header and borders
 

@@ -333,7 +333,7 @@ func (t *Tree) Render(r *Renderer) {
 
 // ---- Keyboard / Mouse ----------------------------------------------------
 
-func (t *Tree) handleKey(_ Widget, ev *tcell.EventKey) bool {
+func (t *Tree) handleKey(ev *tcell.EventKey) bool {
 	switch ev.Key() {
 	case tcell.KeyUp:
 		t.Move(-1)
@@ -423,7 +423,7 @@ func (t *Tree) handleActivate() {
 	t.Dispatch(t, EvtActivate, node)
 }
 
-func (t *Tree) handleMouse(_ Widget, ev *tcell.EventMouse) bool {
+func (t *Tree) handleMouse(ev *tcell.EventMouse) bool {
 	if ev.Buttons() != tcell.Button1 {
 		return false
 	}

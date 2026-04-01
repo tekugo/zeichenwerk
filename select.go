@@ -94,7 +94,7 @@ func (s *Select) Value() string {
 }
 
 // handleKey processes key events for the Select widget.
-func (s *Select) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (s *Select) handleKey(evt *tcell.EventKey) bool {
 	switch evt.Key() {
 	case tcell.KeyEnter:
 		s.popup()
@@ -134,7 +134,7 @@ func (s *Select) popup() {
 		ui.Focus(s)
 		return true
 	})
-	OnKey(list, func(_ Widget, evt *tcell.EventKey) bool {
+	OnKey(list, func(evt *tcell.EventKey) bool {
 		switch evt.Key() {
 		case tcell.KeyEsc:
 			ui.Close()

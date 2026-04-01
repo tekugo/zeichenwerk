@@ -229,7 +229,7 @@ func TestTree_RightExpands(t *testing.T) {
 	tr := newTree(parent)
 	tr.index = 0
 
-	tr.handleKey(tr, buildKey(tcell.KeyRight))
+	tr.handleKey(buildKey(tcell.KeyRight))
 
 	if !parent.Expanded() {
 		t.Fatal("right on collapsed node should expand it")
@@ -243,7 +243,7 @@ func TestTree_RightMovesToFirstChild(t *testing.T) {
 	tr := newTree(parent)
 	tr.index = 0
 
-	tr.handleKey(tr, buildKey(tcell.KeyRight))
+	tr.handleKey(buildKey(tcell.KeyRight))
 
 	if tr.index != 1 {
 		t.Fatalf("right on expanded node should move to first child, got %d", tr.index)
@@ -265,7 +265,7 @@ func TestTree_LeftCollapses(t *testing.T) {
 		return true
 	})
 
-	tr.handleKey(tr, buildKey(tcell.KeyLeft))
+	tr.handleKey(buildKey(tcell.KeyLeft))
 
 	if parent.Expanded() {
 		t.Fatal("left on expanded node should collapse it")
@@ -282,7 +282,7 @@ func TestTree_LeftMovesToParent(t *testing.T) {
 	tr := newTree(parent)
 	tr.index = 1 // child
 
-	tr.handleKey(tr, buildKey(tcell.KeyLeft))
+	tr.handleKey(buildKey(tcell.KeyLeft))
 
 	if tr.index != 0 {
 		t.Fatalf("left on non-expanded child should move to parent, got %d", tr.index)
@@ -305,7 +305,7 @@ func TestTree_EnterTogglesAndActivates(t *testing.T) {
 		return true
 	})
 
-	tr.handleKey(tr, buildKey(tcell.KeyEnter))
+	tr.handleKey(buildKey(tcell.KeyEnter))
 
 	if !parent.Expanded() {
 		t.Fatal("enter should expand a collapsed node")
@@ -321,7 +321,7 @@ func TestTree_SpaceToggles(t *testing.T) {
 	tr := newTree(parent)
 	tr.index = 0
 
-	tr.handleKey(tr, buildRune(" "))
+	tr.handleKey(buildRune(" "))
 
 	if !parent.Expanded() {
 		t.Fatal("space should expand a collapsed node")

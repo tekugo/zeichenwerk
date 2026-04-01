@@ -1159,7 +1159,7 @@ func b2i(b bool) int {
 
 // ---- Event Handling -------------------------------------------------------
 
-func (e *Editor) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (e *Editor) handleKey(evt *tcell.EventKey) bool {
 	shift := evt.Modifiers()&tcell.ModShift != 0
 	ctrl := evt.Modifiers()&tcell.ModCtrl != 0
 

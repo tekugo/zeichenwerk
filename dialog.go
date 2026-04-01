@@ -34,7 +34,7 @@ func (d *Dialog) Add(widget Widget, params ...any) error {
 
 // Apply applies a theme style to the component.
 func (d *Dialog) Apply(theme *Theme) {
-	theme.Apply(d, d.Selector("custom"))
+	theme.Apply(d, d.Selector("dialog"))
 }
 
 // Children returns the body widget slice (empty if no child has been set).

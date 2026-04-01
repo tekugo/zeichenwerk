@@ -66,6 +66,6 @@ func (d *Designer) Render(r *Renderer) {
 
 // main function
 func main() {
-	ui, _ := NewUI(TokyoNightTheme(), NewDesigner(), true)
+	ui := NewUI(TokyoNightTheme(), NewDesigner())
 	ui.Run()
 }

@@ -14,8 +14,6 @@ const (
 	// (e.g. Checkbox toggled, Tree node expanded/collapsed).
 	EvtChange Event = "change"
 	// EvtClick is dispatched on a single mouse button-1 click.
-	EvtClick Event = "click"
-	// EvtEnter is dispatched when the mouse cursor enters a widget's area.
 	EvtEnter Event = "enter"
 	// EvtHide is dispatched when a widget becomes hidden.
 	EvtHide Event = "hide"

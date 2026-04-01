@@ -62,10 +62,7 @@ func main() {
 
 	// Create UI with theme
 	theme := TokyoNightTheme()
-	ui, err := NewUI(theme, container, true)
-	if err != nil {
-		panic(err)
-	}
+	ui := NewUI(theme, container)
 
 	// Set up event handlers
 	editor.On(EvtChange, func(w Widget, event Event, data ...any) bool {

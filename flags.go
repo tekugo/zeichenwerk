@@ -27,4 +27,8 @@ const (
 	FlagPressed Flag = "pressed"
 	// FlagReadonly prevents the widget's value from being modified by the user.
 	FlagReadonly Flag = "readonly"
+	// FlagSkip excludes the widget from Tab/Shift-Tab focus traversal even when
+	// FlagFocusable is set. Useful for read-only or decorative interactive widgets
+	// that should not participate in keyboard navigation.
+	FlagSkip Flag = "skip"
 )

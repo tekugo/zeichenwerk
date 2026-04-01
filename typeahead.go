@@ -47,7 +47,7 @@ func NewTypeahead(id, class string, params ...string) *Typeahead {
 	OnKey(t, t.handleKey)
 
 	// Update suggestion after every text change, including SetText.
-	OnChange(t, func(_ Widget, value string) bool {
+	OnChange(t, func(value string) bool {
 		t.updateSuggestion(value)
 		return false
 	})
@@ -121,7 +121,7 @@ func (t *Typeahead) accept() {
 
 // handleKey intercepts Tab and → for suggestion acceptance, and Esc to clear.
 // It runs before Input's handler because OnKey prepends.
-func (t *Typeahead) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (t *Typeahead) handleKey(evt *tcell.EventKey) bool {
 	switch evt.Key() {
 	case tcell.KeyTab:
 		if t.suggestion != "" {

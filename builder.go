@@ -37,7 +37,7 @@ func NewBuilder(theme *Theme) *Builder {
 // It creates a new UI with the current theme and root container from the
 // stack.
 func (b *Builder) Build() *UI {
-	ui, _ := NewUI(b.theme, b.stack.Peek())
+	ui := NewUI(b.theme, b.stack.Peek())
 	return ui
 }
 
@@ -220,7 +220,8 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 	line := 0
 	v := reflect.ValueOf(form.data)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-		panic("expecting pointer to struct")
+		b.current.Log(b.current, Warning, "buildGroup: form data must be a pointer to a struct")
+		return
 	}
 
 	v = v.Elem()
@@ -590,14 +591,26 @@ func (b *Builder) Class(class string) *Builder {
 }
 
 // Columns sets the column sizes for the current grid container.
+// It is a no-op (with a warning) when the current widget is not a Grid.
 func (b *Builder) Columns(columns ...int) *Builder {
-	b.current.(*Grid).Columns(columns...)
+	grid, ok := b.current.(*Grid)
+	if !ok {
+		b.current.Log(b.current, Warning, "Columns called outside a Grid context")
+		return b
+	}
+	grid.Columns(columns...)
 	return b
 }
 
 // Rows sets the row sizes for the current grid container.
+// It is a no-op (with a warning) when the current widget is not a Grid.
 func (b *Builder) Rows(rows ...int) *Builder {
-	b.current.(*Grid).Rows(rows...)
+	grid, ok := b.current.(*Grid)
+	if !ok {
+		b.current.Log(b.current, Warning, "Rows called outside a Grid context")
+		return b
+	}
+	grid.Rows(rows...)
 	return b
 }
 

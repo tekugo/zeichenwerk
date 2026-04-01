@@ -26,11 +26,14 @@ func NewViewport(id, class, title string) *Viewport {
 
 // Add sets the single child widget, replacing any previous child.
 func (v *Viewport) Add(widget Widget, params ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
 	if v.child != nil {
 		v.child.SetParent(nil)
 	}
 	v.child = widget
-	widget.SetParent(v)
+	v.child.SetParent(v)
 	return nil
 }
 
@@ -58,7 +61,7 @@ func (v *Viewport) Layout() error {
 	return Layout(v)
 }
 
-func (v *Viewport) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (v *Viewport) handleKey(event *tcell.EventKey) bool {
 	if v.child == nil {
 		return false
 	}

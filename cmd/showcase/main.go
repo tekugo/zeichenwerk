@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -11,13 +12,30 @@ import (
 
 type navItem struct{ icon, name, desc string }
 
+func parseTheme() *Theme {
+	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+	flag.Parse()
+	switch *t {
+	case "tokyo":
+		return TokyoNightTheme()
+	case "nord":
+		return NordTheme()
+	case "gruvbox-dark":
+		return GruvboxDarkTheme()
+	case "gruvbox-light":
+		return GruvboxLightTheme()
+	default:
+		return MidnightNeonTheme()
+	}
+}
+
 func main() {
-	createUI().Run()
+	createUI(parseTheme()).Run()
 }
 
 // ── Shell ──────────────────────────────────────────────────────────────────────
 
-func createUI() *UI {
+func createUI(theme *Theme) *UI {
 	navItems := []any{
 		navItem{"◈", "Dashboard", "System metrics & KPIs"},
 		navItem{"◉", "User Admin", "Manage users & roles"},
@@ -27,15 +45,19 @@ func createUI() *UI {
 		navItem{"✎", "Code Editor", "Edit files & preview"},
 	}
 
-	renderNav := func(r *Renderer, x, y, w, h, index int, data any, selected bool) {
+	renderNav := func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		item := data.(navItem)
 		bg := "$bg1"
 		if selected {
-			r.Set("$cyan", bg, "bold")
+			itemBg := bg
+			if focused {
+				itemBg = "$bg2"
+			}
+			r.Set("$cyan", itemBg, "bold")
 			r.Fill(x, y, w, 1, " ")
 			r.Put(x, y, "┃")
 			r.Text(x+2, y, item.icon+"  "+item.name, w-2)
-			r.Set("$cyan", bg, "")
+			r.Set("$cyan", itemBg, "")
 			r.Fill(x, y+1, w, 1, " ")
 			r.Put(x, y+1, "┃")
 			r.Text(x+2, y+1, item.desc, w-2)
@@ -51,7 +73,7 @@ func createUI() *UI {
 		r.Fill(x, y+2, w, 1, " ")
 	}
 
-	ui := NewBuilder(MidnightNeonTheme()).
+	ui := NewBuilder(theme).
 		Flex("root", false, "stretch", 0).
 		// ── Header ────────────────────────────────────────────────────────────
 		Flex("header", true, "center", 0).Background("$bg1").Padding(0, 1).
@@ -334,13 +356,13 @@ func userAdminScreen(b *Builder) {
 		End()  // Flex("user-admin")
 
 	container := b.Find("user-admin").(Container)
-	b.Find("ua-save").On(EvtClick, func(w Widget, _ Event, _ ...any) bool {
+	b.Find("ua-save").On(EvtActivate, func(w Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "ua-detail-title").(*Static); ok {
 			lbl.SetText(fmt.Sprintf(" Edit User  ✓ Saved %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
-	b.Find("ua-reset").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("ua-reset").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "ua-detail-title").(*Static); ok {
 			lbl.SetText(" Edit User")
 		}
@@ -496,7 +518,7 @@ func logMonitorScreen(b *Builder) {
 		return true
 	})
 
-	b.Find("log-pause").On(EvtClick, func(w Widget, _ Event, _ ...any) bool {
+	b.Find("log-pause").On(EvtActivate, func(w Widget, _ Event, _ ...any) bool {
 		paused = !paused
 		if btn, ok := w.(*Button); ok {
 			if paused {
@@ -508,7 +530,7 @@ func logMonitorScreen(b *Builder) {
 		}
 		return true
 	})
-	b.Find("log-clear").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("log-clear").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if logText, ok := Find(container, "log-text").(*Text); ok {
 			logText.Clear()
 		}
@@ -594,7 +616,7 @@ func processScreen(b *Builder) {
 
 	container := b.Find("process-mgr").(Container)
 
-	b.Find("proc-kill").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("proc-kill").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		procTable := Find(container, "proc-table").(*Table)
 		row := procTable.GetSelectedRow()
 		if row >= 0 && row < len(procData) {
@@ -606,7 +628,7 @@ func processScreen(b *Builder) {
 		}
 		return true
 	})
-	b.Find("proc-refresh").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("proc-refresh").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "proc-summary").(*Static); ok {
 			lbl.SetText(fmt.Sprintf("14 processes  ·  refreshed %s", time.Now().Format("15:04:05")))
 		}
@@ -754,7 +776,7 @@ func dataEntryScreen(b *Builder) {
 
 	container := b.Find("data-entry").(Container)
 
-	b.Find("de-btn-submit").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("de-btn-submit").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "de-status").(*Static); ok {
 			lbl.SetText(fmt.Sprintf("✓  Order REF #2026-0099 submitted at %s", time.Now().Format("15:04:05")))
 		}
@@ -763,13 +785,13 @@ func dataEntryScreen(b *Builder) {
 		}
 		return true
 	})
-	b.Find("de-btn-draft").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("de-btn-draft").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "de-status").(*Static); ok {
 			lbl.SetText(fmt.Sprintf("Draft saved at %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
-	b.Find("de-btn-cancel").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("de-btn-cancel").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "de-status").(*Static); ok {
 			lbl.SetText("Changes discarded.")
 		}
@@ -932,7 +954,7 @@ func codeEditorScreen(b *Builder) {
 	})
 
 	// Wire "New" button → popup a dialog
-	b.Find("ce-btn-new").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+	b.Find("ce-btn-new").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		ui := FindUI(container)
 		dlg := NewDialog("ce-dlg", "dialog", " New File")
 		body := ui.NewBuilder().
@@ -945,7 +967,7 @@ func codeEditorScreen(b *Builder) {
 			End(). // Flex("ce-dlg-btns")
 			Container()
 		dlg.Add(body)
-		Find(body, "ce-dlg-cancel").On(EvtClick, func(_ Widget, _ Event, _ ...any) bool {
+		Find(body, "ce-dlg-cancel").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 			ui.Close()
 			return true
 		})

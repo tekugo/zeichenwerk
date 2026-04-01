@@ -2,6 +2,8 @@ package zeichenwerk
 
 import (
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // Form is a container that binds to a Go struct and manages form controls.
@@ -125,6 +127,91 @@ func (f *Form) Update(value reflect.Value) Handler {
 			widget.Log(widget, Warning, "Unknown widget type to update")
 		}
 		return false // allow event to continue bubbling
+	}
+}
+
+// BuildFormGroup populates group with form controls generated from the struct
+// fields of form's data. name filters by the "group" struct tag; pass an empty
+// string to include all fields regardless of grouping. theme is applied to
+// each generated control. This is the public equivalent of the Builder's
+// internal buildGroup method, intended for use by the compose package and
+// other non-Builder code that constructs forms imperatively.
+func BuildFormGroup(form *Form, group *FormGroup, name string, theme *Theme) {
+	line := 0
+	v := reflect.ValueOf(form.Data())
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
+		return
+	}
+	v = v.Elem()
+	t := v.Type()
+
+	for i := range v.NumField() {
+		sf := t.Field(i)
+		fv := v.Field(i)
+		g := sf.Tag.Get("group")
+		if name != "" && name != g {
+			continue
+		}
+		label := sf.Tag.Get("label")
+		if label == "-" {
+			continue
+		} else if label == "" {
+			label = sf.Name
+		}
+		control := sf.Tag.Get("control")
+		options := sf.Tag.Get("options")
+		_, readonly := sf.Tag.Lookup("readonly")
+		width, err := strconv.Atoi(sf.Tag.Get("width"))
+		if err != nil {
+			width = 10
+		}
+		if l, err := strconv.Atoi(sf.Tag.Get("line")); err == nil {
+			line = l
+		}
+
+		widget := buildFormControl(control, sf.Name, "", fv, options, theme)
+		if readonly {
+			widget.SetFlag(FlagReadonly, true)
+		}
+		widget.SetHint(width, 1)
+		widget.On(EvtChange, form.Update(fv))
+		group.Add(widget, line, label)
+		line++
+	}
+}
+
+func buildFormControl(control, id, class string, v reflect.Value, options string, theme *Theme) Widget {
+	if control == "" {
+		switch v.Kind() {
+		case reflect.Bool:
+			control = "checkbox"
+		default:
+			control = "input"
+		}
+	}
+	switch control {
+	case "checkbox":
+		w := NewCheckbox(id, class, id, v.Bool())
+		w.Apply(theme)
+		w.SetFlag(FlagChecked, v.Bool())
+		return w
+	case "password":
+		w := NewInput(id, class, "", "", "*")
+		w.SetFlag(FlagMasked, true)
+		w.Apply(theme)
+		w.SetText(v.String())
+		return w
+	case "select":
+		o := strings.Split(options, ",")
+		w := NewSelect(id, class, o...)
+		w.Apply(theme)
+		w.Select(v.String())
+		return w
+	default:
+		w := NewInput(id, class)
+		w.Apply(theme)
+		w.SetText(v.String())
+		return w
 	}
 }
 

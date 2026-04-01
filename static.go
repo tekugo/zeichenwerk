@@ -45,6 +45,17 @@ func (s *Static) Render(r *Renderer) {
 	r.Text(cx, cy, s.Text, cw)
 }
 
+// Set implements Setter. Accepts a string value; any other type is formatted
+// with fmt.Sprintf("%v", value).
+func (s *Static) Set(value any) bool {
+	if str, ok := value.(string); ok {
+		s.SetText(str)
+	} else {
+		s.SetText(fmt.Sprintf("%v", value))
+	}
+	return true
+}
+
 // SetAlignment sets the text alignment for the label.
 // This controls how the text is positioned within the label's content area.
 //
@@ -64,15 +75,4 @@ func (s *Static) SetAlignment(align string) {
 func (s *Static) SetText(text string) {
 	s.Text = text
 	s.Refresh()
-}
-
-// Set implements Setter. Accepts a string value; any other type is formatted
-// with fmt.Sprintf("%v", value).
-func (s *Static) Set(value any) bool {
-	if str, ok := value.(string); ok {
-		s.SetText(str)
-	} else {
-		s.SetText(fmt.Sprintf("%v", value))
-	}
-	return true
 }

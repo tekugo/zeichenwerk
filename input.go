@@ -382,7 +382,7 @@ func (i *Input) visible() string {
 // Handle processes keyboard events for the input widget and performs the appropriate
 // text editing operations. This method implements a comprehensive keyboard interface
 // that supports all standard text editing operations with professional-grade functionality.
-func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (i *Input) handleKey(evt *tcell.EventKey) bool {
 	// In read-only mode, only allow navigation keys
 	if i.Flag(FlagReadonly) && evt.Key() != tcell.KeyLeft && evt.Key() != tcell.KeyRight &&
 		evt.Key() != tcell.KeyHome && evt.Key() != tcell.KeyEnd {
