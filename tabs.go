@@ -40,7 +40,7 @@ func (t *Tabs) Add(title string) {
 // Apply applies a theme's styles to the component.
 func (t *Tabs) Apply(theme *Theme) {
 	theme.Apply(t, t.Selector("tabs"), "disabled", "focused")
-	theme.Apply(t, t.Selector("tabs/hightlight"), "disabled", "focused")
+	theme.Apply(t, t.Selector("tabs/highlight"), "disabled", "focused")
 	theme.Apply(t, t.Selector("tabs/line"), "disabled", "focused")
 	theme.Apply(t, t.Selector("tabs/line-highlight"), "disabled", "focused")
 }
@@ -75,7 +75,7 @@ func (t *Tabs) Hint() (int, int) {
 //   - Left/Right arrows: Navigate between adjacent tabs with wraparound
 //   - Home/End: Quick navigation to first/last tab
 //   - Letter keys: Jump to tabs by first letter with cycling behavior
-func (t *Tabs) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (t *Tabs) handleKey(event *tcell.EventKey) bool {
 	if len(t.tabs) == 0 {
 		return false // No tabs to navigate
 	}
@@ -117,7 +117,7 @@ func (t *Tabs) handleKey(_ Widget, event *tcell.EventKey) bool {
 
 	case tcell.KeyEnter:
 		t.selected = t.index
-		t.Dispatch(t, EvtActivate,t.selected)
+		t.Dispatch(t, EvtActivate, t.selected)
 		t.Refresh()
 
 	default:
@@ -127,7 +127,7 @@ func (t *Tabs) handleKey(_ Widget, event *tcell.EventKey) bool {
 	// Only refresh and emit event if the tab actually changed
 	if t.index != oldIndex {
 		t.Refresh()
-		t.Dispatch(t, EvtChange,t.index)
+		t.Dispatch(t, EvtChange, t.index)
 		return true
 	}
 
@@ -193,10 +193,10 @@ func (t *Tabs) Select(index int) bool {
 
 	// Emit events if anything changed
 	if t.index != oldIndex {
-		t.Dispatch(t, EvtChange,t.index)
+		t.Dispatch(t, EvtChange, t.index)
 	}
 	if t.selected != oldSelected {
-		t.Dispatch(t, EvtActivate,t.selected)
+		t.Dispatch(t, EvtActivate, t.selected)
 	}
 
 	t.Refresh()

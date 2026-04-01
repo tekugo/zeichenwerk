@@ -79,13 +79,13 @@ func TestComponent_Dispatch_On(t *testing.T) {
 		return true
 	}
 
-	c.On(EvtClick, handler)
-	c.Dispatch(c, EvtClick)
+	c.On(EvtActivate, handler)
+	c.Dispatch(c, EvtActivate)
 
 	if !called {
-		t.Error("Dispatch('click') did not trigger the handler")
+		t.Error("Dispatch('activate') did not trigger the handler")
 	}
-	if capturedEvent != "click" {
+	if capturedEvent != "activate" {
 		t.Errorf("Handler captured event %s; want click", capturedEvent)
 	}
 }

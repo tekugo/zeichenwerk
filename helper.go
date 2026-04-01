@@ -36,54 +36,35 @@ func ID(widget Widget) string {
 	}
 }
 
-// OnKey registers a key event handler for the given widget.
-func OnKey(widget Widget, handler func(Widget, *tcell.EventKey) bool) {
+// OnAccept registers an accept event handler for the given widget.
+// The handler receives the accepted string value.
+func OnAccept(widget Widget, handler func(string) bool) {
 	if widget == nil {
 		return
 	}
-
-	widget.On(EvtKey, func(widget Widget, event Event, data ...any) bool {
-		if len(data) != 1 {
+	widget.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) < 1 {
 			return false
 		}
-		if ev, ok := data[0].(*tcell.EventKey); ok {
-			return handler(widget, ev)
-		} else {
-			return false
+		if value, ok := data[0].(string); ok {
+			return handler(value)
 		}
-	})
-}
-
-// OnMouse registers a mouse event handler for the given widget.
-func OnMouse(widget Widget, handler func(Widget, *tcell.EventMouse) bool) {
-	if widget == nil {
-		return
-	}
-
-	widget.On(EvtMouse, func(widget Widget, event Event, data ...any) bool {
-		if len(data) != 1 {
-			return false
-		}
-		if ev, ok := data[0].(*tcell.EventMouse); ok {
-			return handler(widget, ev)
-		} else {
-			return false
-		}
+		return false
 	})
 }
 
 // OnActivate registers an activate event handler for the given widget.
 // The handler receives the index of the activated item.
-func OnActivate(widget Widget, handler func(Widget, int) bool) {
+func OnActivate(widget Widget, handler func(int) bool) {
 	if widget == nil {
 		return
 	}
-	widget.On(EvtActivate, func(widget Widget, event Event, data ...any) bool {
+	widget.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
 		if len(data) < 1 {
 			return false
 		}
 		if index, ok := data[0].(int); ok {
-			return handler(widget, index)
+			return handler(index)
 		}
 		return false
 	})
@@ -91,35 +72,106 @@ func OnActivate(widget Widget, handler func(Widget, int) bool) {
 
 // OnChange registers a change event handler for the given widget.
 // The handler receives the new value as a string.
-func OnChange(widget Widget, handler func(Widget, string) bool) {
+func OnChange(widget Widget, handler func(string) bool) {
 	if widget == nil {
 		return
 	}
-	widget.On(EvtChange, func(widget Widget, event Event, data ...any) bool {
+	widget.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		if len(data) < 1 {
 			return false
 		}
 		if value, ok := data[0].(string); ok {
-			return handler(widget, value)
+			return handler(value)
 		}
 		return false
 	})
 }
 
-// OnSelect registers a select event handler for the given widget.
-// The handler receives the index of the selected item.
-func OnSelect(widget Widget, handler func(Widget, int) bool) {
+// OnEnter registers an Enter event handler for the given widget.
+func OnEnter(widget Widget, handler func(value string) bool) {
 	if widget == nil {
 		return
 	}
-	widget.On(EvtSelect, func(widget Widget, event Event, data ...any) bool {
+	widget.On(EvtEnter, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) < 1 {
+			return false
+		}
+		if value, ok := data[0].(string); ok {
+			return handler(value)
+		}
+		return false
+	})
+}
+
+// OnHide registers a hide event handler for the given widget.
+func OnHide(widget Widget, handler func() bool) {
+	if widget == nil {
+		return
+	}
+	widget.On(EvtHide, func(_ Widget, _ Event, data ...any) bool {
+		return handler()
+	})
+}
+
+// OnKey registers a key event handler for the given widget.
+func OnKey(widget Widget, handler func(*tcell.EventKey) bool) {
+	if widget == nil {
+		return
+	}
+
+	widget.On(EvtKey, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) != 1 {
+			return false
+		}
+		if ev, ok := data[0].(*tcell.EventKey); ok {
+			return handler(ev)
+		} else {
+			return false
+		}
+	})
+}
+
+// OnMouse registers a mouse event handler for the given widget.
+func OnMouse(widget Widget, handler func(*tcell.EventMouse) bool) {
+	if widget == nil {
+		return
+	}
+	widget.On(EvtMouse, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) != 1 {
+			return false
+		}
+		if ev, ok := data[0].(*tcell.EventMouse); ok {
+			return handler(ev)
+		} else {
+			return false
+		}
+	})
+}
+
+// OnSelect registers a select event handler for the given widget.
+// The handler receives the index of the selected item.
+func OnSelect(widget Widget, handler func(int) bool) {
+	if widget == nil {
+		return
+	}
+	widget.On(EvtSelect, func(_ Widget, _ Event, data ...any) bool {
 		if len(data) < 1 {
 			return false
 		}
 		if index, ok := data[0].(int); ok {
-			return handler(widget, index)
+			return handler(index)
 		}
 		return false
+	})
+}
+
+// OnShow registers a show event handler for the given widget.
+func OnShow(widget Widget, handler func() bool) {
+	if widget == nil {
+		return
+	}
+	widget.On(EvtShow, func(_ Widget, _ Event, data ...any) bool {
+		return handler()
 	})
 }
 
@@ -164,42 +216,6 @@ func Relayout(widget Widget) {
 // widget's type.
 func WidgetType(widget Widget) string {
 	return strings.TrimPrefix(fmt.Sprintf("%T", widget), "*zeichenwerk.")
-}
-
-// HandleKeyEvent registers a key event handler for a widget within a container.
-func HandleKeyEvent(container Container, id string, fn func(Widget, *tcell.EventKey) bool) {
-	widget := Find(container, id)
-	if widget == nil {
-		container.Log(container, Error,"Widget %s not found", id)
-		return
-	}
-	OnKey(widget, fn)
-}
-
-// HandleListEvent registers a handler for List-specific events.
-func HandleListEvent(container Container, id string, event Event, fn func(*List, Event, int) bool) {
-	widget := Find(container, id)
-	if widget == nil {
-		container.Log(container, Error, "Widget %s not found", id)
-		return
-	}
-	list, ok := widget.(*List)
-	if !ok {
-		container.Log(container, Error, "Widget %s is not a List", id)
-		return
-	}
-	widget.On(event, func(widget Widget, event Event, data ...any) bool {
-		if len(data) != 1 {
-			container.Log(container, Error, "List event %s expected 1 data parameter, got %d", event, len(data))
-			return false
-		}
-		index, ok := data[0].(int)
-		if !ok {
-			container.Log(container, Error, "List event %s data should be int, got %T", event, data[0])
-			return false
-		}
-		return fn(list, event, index)
-	})
 }
 
 // Update updates the content of the widget identified by id within container.

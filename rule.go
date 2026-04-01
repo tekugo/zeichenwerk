@@ -7,6 +7,8 @@ type Rule struct {
 	style      string
 }
 
+// NewHRule creates a horizontal rule using the named border style.
+// The rule has a fixed hint height of 1.
 func NewHRule(class, style string) *Rule {
 	return &Rule{
 		Component:  Component{id: "hrule", class: class, hheight: 1},
@@ -15,6 +17,8 @@ func NewHRule(class, style string) *Rule {
 	}
 }
 
+// NewVRule creates a vertical rule using the named border style.
+// The rule has a fixed hint width of 1.
 func NewVRule(class, style string) *Rule {
 	return &Rule{
 		Component:  Component{id: "vrule", class: class, hwidth: 1},
@@ -28,7 +32,8 @@ func (c *Rule) Apply(theme *Theme) {
 	theme.Apply(c, c.Selector("rule"))
 }
 
-// Render the rule
+// Render draws the rule as a horizontal or vertical line using the configured
+// border style's inner-H or inner-V character.
 func (c *Rule) Render(r *Renderer) {
 	c.Component.Render(r)
 

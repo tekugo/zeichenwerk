@@ -126,13 +126,13 @@ func parseLevel(l Level) slog.Level {
 // Returns:
 //   - *UI: The initialized UI application instance ready for Run()
 //   - error: Any error that occurred during initialization (currently always nil)
-func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
+func NewUI(theme *Theme, root Container) *UI {
 	ui := &UI{
-		Component: Component{id: "root", x: 0, y: 0, width: 0, height: 0},
+		Component: Component{id: "__ui__", x: 0, y: 0, width: 0, height: 0},
 		screen:    nil,
 		renderer:  &Renderer{theme: theme},
-		layers:    []Container{root},
-		debug:     debug,
+		layers:    []Container{},
+		debug:     false,
 		tableLog:  NewTableLog(2000),
 		dirty:     true, // Initial draw needed
 		quit:      make(chan struct{}),
@@ -140,20 +140,26 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		redraw:    make(chan Widget, 10), // Initialize redraw channel with buffer
 		refresh:   make(chan struct{}, 1),
 	}
-	root.SetParent(ui)
 
-	// Initialize structured logging
-	if debug {
-		level := slog.LevelDebug
-		ui.logHandler = &UILogHandler{
-			tableLog: ui.tableLog,
-			level:    level,
-			console:  false,
-		}
-		ui.logger = slog.New(ui.logHandler)
-		ui.logger.Debug("==== Debug log started! =====", "source", "ui", "widgetType", "UI")
-
+	if root != nil {
+		ui.Add(root)
 	}
+
+	return ui
+}
+
+// Debug sets the UI into debug mode
+func (ui *UI) Debug() *UI {
+	ui.debug = true
+
+	level := slog.LevelDebug
+	ui.logHandler = &UILogHandler{
+		tableLog: ui.tableLog,
+		level:    level,
+		console:  false,
+	}
+	ui.logger = slog.New(ui.logHandler)
+	ui.logger.Debug("==== Debug log started! =====", "source", "ui", "widgetType", "UI")
 
 	// Connect debug log widget and initialize structured logging
 	loggerWidget := Find(ui, "debug-log")
@@ -163,7 +169,7 @@ func NewUI(theme *Theme, root Container, debug bool) (*UI, error) {
 		}
 	}
 
-	return ui, nil
+	return ui
 }
 
 // Creates a new builder with the current UI theme.
@@ -172,7 +178,6 @@ func (ui *UI) NewBuilder() *Builder {
 }
 
 // ---- Widget methods -------------------------------------------------------
-// Implementation of the Widget interface
 
 // Handle processes tcell events and coordinates their handling throughout the
 // application. This is the main event processing method that handles keyboard
@@ -206,12 +211,12 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
 			close(ui.quit)
 		case tcell.KeyCtrlD:
-			ui.Log(ui, Debug,"Opening inspector")
+			ui.Log(ui, Debug, "Opening inspector")
 			animation := NewGrow("inspector-grow", "", false)
 			animation.Add(NewInspector(ui).UI())
 			hw, hh := animation.Hint()
 			animation.Start(10 * time.Millisecond)
-			ui.Log(ui, Debug,"Inspection hint", "hw", hw, "hh", hh)
+			ui.Log(ui, Debug, "Inspection hint", "hw", hw, "hh", hh)
 			ui.Popup(-1, -1, 0, 0, animation)
 			ui.Refresh()
 		case tcell.KeyRune:
@@ -254,7 +259,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		if ui.width != w || ui.height != h {
 			ui.width, ui.height = w, h
 			ui.Layout()
-			ui.Log(ui, Debug,"Screen size: %d:%d", ui.width, ui.height)
+			ui.Log(ui, Debug, "Screen size: %d:%d", ui.width, ui.height)
 			ui.Refresh()
 			ui.screen.Sync()
 		}
@@ -286,6 +291,19 @@ func (ui *UI) dispatch(target Widget, event Event, data ...any) bool {
 
 // ---- Container Methods ----------------------------------------------------
 
+// Add adds a new container layer to the UI.
+// This should only be done for the base layer, other layers should be added
+// via Popup().
+func (ui *UI) Add(widget Widget, _ ...any) error {
+	if container, ok := widget.(Container); ok {
+		container.SetParent(ui)
+		ui.layers = append(ui.layers, container)
+		return nil
+	} else {
+		return ErrNoContainer
+	}
+}
+
 // Children returns the child widgets of the App.
 // Since UI acts as the root container, it returns a slice containing
 // only the root container widget.
@@ -295,11 +313,6 @@ func (ui *UI) Children() []Widget {
 		result = append(result, layer)
 	}
 	return result
-}
-
-// Add is a no-op for UI; widgets are added via the builder or layer stack.
-func (ui *UI) Add(_ Widget, _ ...any) error {
-	return nil
 }
 
 // Layout recalculates and applies the layout for all widget layers in the UI.
@@ -444,7 +457,7 @@ func (ui *UI) SetFocus(which string) {
 		if widget.Flag(FlagHidden) {
 			return false
 		}
-		if !widget.Flag(FlagFocusable) {
+		if !widget.Flag(FlagFocusable) || widget.Flag(FlagSkip) {
 			return true
 		}
 		if first == nil {
@@ -460,7 +473,7 @@ func (ui *UI) SetFocus(which string) {
 		last = widget
 		return true
 	})
-	ui.Log(ui, Debug,"SetFocus", "which", which, "layer", ui.layers[len(ui.layers)-1].ID(), "first", ID(first), "previous", ID(previous), "next", ID(next), "last", ID(last))
+	ui.Log(ui, Debug, "SetFocus", "which", which, "layer", ui.layers[len(ui.layers)-1].ID(), "first", ID(first), "previous", ID(previous), "next", ID(next), "last", ID(last))
 	switch which {
 	case "last":
 		ui.Focus(last)
@@ -654,11 +667,11 @@ func (ui *UI) Run() error {
 	// Initialize screen
 	ui.screen, err = tcell.NewScreen()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrScreenInit, err)
 	}
 
 	if err := ui.screen.Init(); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrScreenInit, err)
 	}
 
 	defer func() {

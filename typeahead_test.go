@@ -66,7 +66,7 @@ func TestTypeahead_Tab_Accepts(t *testing.T) {
 		return true
 	})
 
-	consumed := ta.handleKey(ta, newKey(tcell.KeyTab))
+	consumed := ta.handleKey(newKey(tcell.KeyTab))
 	if !consumed {
 		t.Error("Tab with active suggestion should be consumed")
 	}
@@ -80,7 +80,7 @@ func TestTypeahead_Tab_Accepts(t *testing.T) {
 
 func TestTypeahead_Tab_Propagates_WhenEmpty(t *testing.T) {
 	ta := NewTypeahead("ta", "")
-	consumed := ta.handleKey(ta, newKey(tcell.KeyTab))
+	consumed := ta.handleKey(newKey(tcell.KeyTab))
 	if consumed {
 		t.Error("Tab without suggestion should not be consumed")
 	}
@@ -95,7 +95,7 @@ func TestTypeahead_Right_AtEnd_Accepts(t *testing.T) {
 	ta.Input.End()
 	ta.suggestion = "hello world"
 
-	consumed := ta.handleKey(ta, newKey(tcell.KeyRight))
+	consumed := ta.handleKey(newKey(tcell.KeyRight))
 	if !consumed {
 		t.Error("→ at end with suggestion should be consumed")
 	}
@@ -110,7 +110,7 @@ func TestTypeahead_Right_MidText_Propagates(t *testing.T) {
 	ta.Input.SetText("hel")
 	ta.pos = 1 // mid-text
 
-	consumed := ta.handleKey(ta, newKey(tcell.KeyRight))
+	consumed := ta.handleKey(newKey(tcell.KeyRight))
 	if consumed {
 		t.Error("→ mid-text should not be consumed by Typeahead")
 	}
@@ -120,7 +120,7 @@ func TestTypeahead_Esc_ClearsSuggestion(t *testing.T) {
 	ta := NewTypeahead("ta", "")
 	ta.suggestion = "hello world"
 
-	consumed := ta.handleKey(ta, newKey(tcell.KeyEscape))
+	consumed := ta.handleKey(newKey(tcell.KeyEscape))
 	if consumed {
 		t.Error("Esc should not be consumed (should propagate)")
 	}

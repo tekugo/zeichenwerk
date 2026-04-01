@@ -44,14 +44,8 @@ func Find(container Container, id string) Widget {
 	return nil
 }
 
-// FindAll returns all widgets of the specified type found inside the container.
-//
-// Parameters:
-//   - container: The container to search within
-//   - visible: If true, search only visible children; if false, search all
-//
-// Returns:
-//   - T: An array containing all found widgets, may be empty, but never nil
+// FindAll returns all widgets of type T found anywhere inside container using
+// depth-first traversal. The result slice may be empty but is never nil.
 func FindAll[T any](container Container) []T {
 	var result []T
 	Traverse(container, func(widget Widget) bool {

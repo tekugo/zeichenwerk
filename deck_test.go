@@ -11,19 +11,19 @@ import (
 // mockScreen is a minimal Screen implementation for render tests.
 type mockScreen struct{}
 
-func (m *mockScreen) Clear()                          {}
-func (m *mockScreen) Clip(x, y, w, h int)            {}
-func (m *mockScreen) Flush()                          {}
-func (m *mockScreen) Get(x, y int) string             { return "" }
-func (m *mockScreen) Put(x, y int, ch string)         {}
-func (m *mockScreen) Set(fg, bg, font string)         {}
-func (m *mockScreen) Translate(x, y int)              {}
+func (m *mockScreen) Clear()                  {}
+func (m *mockScreen) Clip(x, y, w, h int)     {}
+func (m *mockScreen) Flush()                  {}
+func (m *mockScreen) Get(x, y int) string     { return "" }
+func (m *mockScreen) Put(x, y int, ch string) {}
+func (m *mockScreen) Set(fg, bg, font string) {}
+func (m *mockScreen) Translate(x, y int)      {}
 
 func newTestRenderer() *Renderer {
 	return NewRenderer(&mockScreen{}, NewTheme())
 }
 
-func nopRender(r *Renderer, x, y, w, h, index int, data any, selected bool) {}
+func nopRender(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {}
 
 func newDeck(itemHeight int, items ...any) *Deck {
 	d := NewDeck("d", "", nopRender, itemHeight)
@@ -241,7 +241,7 @@ func TestDeck_Render_CorrectArgs(t *testing.T) {
 	var calls []call
 
 	items := []any{"alpha", "beta", "gamma"}
-	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected bool) {
+	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		calls = append(calls, call{index, data, selected})
 	}, 2)
 	d.SetItems(items)
@@ -276,7 +276,7 @@ func TestDeck_Render_SlotPositions(t *testing.T) {
 	type slotBounds struct{ x, y, w, h int }
 	var slots []slotBounds
 
-	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected bool) {
+	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		slots = append(slots, slotBounds{x, y, w, h})
 	}, 3)
 	d.SetItems([]any{"a", "b"})
@@ -308,7 +308,7 @@ func TestDeck_Scrollbar_UnitCalculation(t *testing.T) {
 	// checking the render function is called for the correct item indices.
 	var calledIndices []int
 	items := []any{"a", "b", "c", "d", "e"}
-	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected bool) {
+	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		calledIndices = append(calledIndices, index)
 	}, 2)
 	d.SetItems(items)
@@ -333,7 +333,7 @@ func TestDeck_Scrollbar_UnitCalculation(t *testing.T) {
 func TestDeck_KeyDown_MovesHighlight(t *testing.T) {
 	d := newDeck(2, "a", "b", "c")
 	ev := tcell.NewEventKey(tcell.KeyDown, "", tcell.ModNone)
-	d.handleKey(d, ev)
+	d.handleKey(ev)
 	if d.index != 1 {
 		t.Errorf("index = %d; want 1 after Down", d.index)
 	}
@@ -343,7 +343,7 @@ func TestDeck_KeyUp_MovesHighlight(t *testing.T) {
 	d := newDeck(2, "a", "b", "c")
 	d.index = 2
 	ev := tcell.NewEventKey(tcell.KeyUp, "", tcell.ModNone)
-	d.handleKey(d, ev)
+	d.handleKey(ev)
 	if d.index != 1 {
 		t.Errorf("index = %d; want 1 after Up", d.index)
 	}
@@ -353,7 +353,7 @@ func TestDeck_KeyHome_First(t *testing.T) {
 	d := newDeck(2, "a", "b", "c")
 	d.index = 2
 	ev := tcell.NewEventKey(tcell.KeyHome, "", tcell.ModNone)
-	d.handleKey(d, ev)
+	d.handleKey(ev)
 	if d.index != 0 {
 		t.Errorf("index = %d; want 0 after Home", d.index)
 	}
@@ -362,7 +362,7 @@ func TestDeck_KeyHome_First(t *testing.T) {
 func TestDeck_KeyEnd_Last(t *testing.T) {
 	d := newDeck(2, "a", "b", "c")
 	ev := tcell.NewEventKey(tcell.KeyEnd, "", tcell.ModNone)
-	d.handleKey(d, ev)
+	d.handleKey(ev)
 	if d.index != 2 {
 		t.Errorf("index = %d; want 2 after End", d.index)
 	}
@@ -379,7 +379,7 @@ func TestDeck_KeyEnter_DispatchesActivate(t *testing.T) {
 		return true
 	})
 	ev := tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModNone)
-	d.handleKey(d, ev)
+	d.handleKey(ev)
 	if activated != 1 {
 		t.Errorf("EvtActivate data = %d; want 1", activated)
 	}
@@ -392,7 +392,7 @@ func TestDeck_Mouse_SelectsItem(t *testing.T) {
 	d.SetBounds(0, 0, 20, 9)
 	// Click row 4 → (4-0)/3 + 0 = 1
 	ev := tcell.NewEventMouse(4, 4, tcell.Button1, tcell.ModNone)
-	d.handleMouse(d, ev)
+	d.handleMouse(ev)
 	if d.index != 1 {
 		t.Errorf("index = %d; want 1", d.index)
 	}
@@ -411,7 +411,7 @@ func TestDeck_Mouse_ClickSelectedActivates(t *testing.T) {
 	})
 	// Click row 4 → item 1 (already selected)
 	ev := tcell.NewEventMouse(4, 4, tcell.Button1, tcell.ModNone)
-	d.handleMouse(d, ev)
+	d.handleMouse(ev)
 	if activated != 1 {
 		t.Errorf("EvtActivate data = %d; want 1", activated)
 	}
@@ -424,7 +424,7 @@ func TestDeck_Mouse_DisabledIgnored(t *testing.T) {
 	d.index = 0
 	// Click row 4 → item 1 (disabled)
 	ev := tcell.NewEventMouse(4, 4, tcell.Button1, tcell.ModNone)
-	handled := d.handleMouse(d, ev)
+	handled := d.handleMouse(ev)
 	if handled {
 		t.Error("click on disabled item should not be handled")
 	}
@@ -438,7 +438,7 @@ func TestDeck_Mouse_OutsideBoundsIgnored(t *testing.T) {
 	d.SetBounds(5, 5, 20, 10)
 	// Click outside the content area
 	ev := tcell.NewEventMouse(0, 0, tcell.Button1, tcell.ModNone)
-	handled := d.handleMouse(d, ev)
+	handled := d.handleMouse(ev)
 	if handled {
 		t.Error("click outside bounds should not be handled")
 	}
@@ -448,7 +448,7 @@ func TestDeck_Mouse_Button2Ignored(t *testing.T) {
 	d := newDeck(2, "a", "b")
 	d.SetBounds(0, 0, 20, 10)
 	ev := tcell.NewEventMouse(1, 1, tcell.Button2, tcell.ModNone)
-	handled := d.handleMouse(d, ev)
+	handled := d.handleMouse(ev)
 	if handled {
 		t.Error("non-Button1 click should not be handled")
 	}

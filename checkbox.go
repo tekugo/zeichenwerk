@@ -81,7 +81,7 @@ func (c *Checkbox) Toggle() {
 // Supported keys:
 //   - Space: Toggles the checkbox state (standard checkbox behavior)
 //   - Enter: Toggles the checkbox state
-func (c *Checkbox) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (c *Checkbox) handleKey(event *tcell.EventKey) bool {
 	if c.Flag(FlagReadonly) {
 		return false
 	}
@@ -105,7 +105,7 @@ func (c *Checkbox) handleKey(_ Widget, event *tcell.EventKey) bool {
 // Mouse interaction behavior:
 //   - Left button click: Toggles checkbox state
 //   - Bounds checking: Only responds to clicks within checkbox area
-func (c *Checkbox) handleMouse(_ Widget, event *tcell.EventMouse) bool {
+func (c *Checkbox) handleMouse(event *tcell.EventMouse) bool {
 	if c.Flag(FlagReadonly) {
 		return false
 	}

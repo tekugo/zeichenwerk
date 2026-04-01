@@ -43,14 +43,14 @@ func NewButton(id, class, text string) *Button {
 
 // ---- Widget Methods -------------------------------------------------------
 
+// Activate programmatically triggers the button's action handler.
+func (b *Button) Activate() {
+	b.Dispatch(b, EvtActivate, 0)
+}
+
 // Apply applies a theme style to the component.
 func (b *Button) Apply(theme *Theme) {
 	theme.Apply(b, b.Selector("button"), "disabled", "focused", "hovered", "pressed")
-}
-
-// Click programmatically triggers the button's action handler.
-func (b *Button) Click() {
-	b.Dispatch(b, EvtClick)
 }
 
 func (b *Button) Refresh() {
@@ -90,15 +90,15 @@ func (b *Button) Set(value any) bool {
 //
 // Returns:
 //   - bool: true if the key was handled, false otherwise
-func (b *Button) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (b *Button) handleKey(event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyEnter:
-		b.Click()
+		b.Activate()
 		return true
 	case tcell.KeyRune:
 		// Handle space bar activation (standard button behavior)
 		if event.Str() == " " {
-			b.Click()
+			b.Activate()
 			return true
 		}
 	}
@@ -121,7 +121,7 @@ func (b *Button) handleKey(_ Widget, event *tcell.EventKey) bool {
 //
 // Returns:
 //   - bool: true if the mouse event was handled, false otherwise
-func (b *Button) handleMouse(_ Widget, event *tcell.EventMouse) bool {
+func (b *Button) handleMouse(event *tcell.EventMouse) bool {
 	x, y := event.Position()
 	bx, by, bw, bh := b.Bounds()
 
@@ -134,7 +134,7 @@ func (b *Button) handleMouse(_ Widget, event *tcell.EventMouse) bool {
 		case tcell.ButtonNone: // Mouse release
 			if b.Flag(FlagPressed) {
 				b.SetFlag(FlagPressed, false)
-				b.Click() // Trigger click on release
+				b.Activate() // Trigger click on release
 				return true
 			}
 		}

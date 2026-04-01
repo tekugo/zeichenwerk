@@ -929,10 +929,12 @@ func (e *Editor) Render(r *Renderer) {
 	// Render text content
 	textX := x + leftMargin
 	textY := y
+	normalStyle := e.Style()
 	for i := 0; i < usableH; i++ {
 		lineIdx := e.offsetY + i
 		if lineIdx >= len(e.content) {
-			// Clear remaining lines
+			// Clear remaining lines with the normal (non-highlighted) style
+			r.Set(normalStyle.Foreground(), normalStyle.Background(), normalStyle.Font())
 			r.Fill(textX, textY+i, usableW, 1, " ")
 			continue
 		}
@@ -1157,7 +1159,7 @@ func b2i(b bool) int {
 
 // ---- Event Handling -------------------------------------------------------
 
-func (e *Editor) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (e *Editor) handleKey(evt *tcell.EventKey) bool {
 	shift := evt.Modifiers()&tcell.ModShift != 0
 	ctrl := evt.Modifiers()&tcell.ModCtrl != 0
 

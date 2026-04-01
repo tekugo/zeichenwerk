@@ -305,7 +305,7 @@ func (h *HALExplorer) updateResponseDisplay(ui *UI) {
 func (h *HALExplorer) setupEventHandlers(ui *UI) {
 	sendBtn := Find(ui, "send-btn")
 	if sendBtn != nil {
-		sendBtn.On(EvtClick, func(widget Widget, event Event, data ...any) bool {
+		sendBtn.On(EvtActivate, func(widget Widget, event Event, data ...any) bool {
 			h.handleSendRequest(ui)
 			return true
 		})
@@ -331,7 +331,7 @@ func (h *HALExplorer) setupEventHandlers(ui *UI) {
 
 	addHeaderBtn := Find(ui, "add-header-btn")
 	if addHeaderBtn != nil {
-		addHeaderBtn.On(EvtClick, func(widget Widget, event Event, data ...any) bool {
+		addHeaderBtn.On(EvtActivate, func(widget Widget, event Event, data ...any) bool {
 			Update(ui, "status-bar", "Dynamic headers not implemented in demo")
 			return true
 		})

@@ -1,38 +1,73 @@
-// Package next provides the Zeichenwerk terminal UI toolkit.
+// Package zeichenwerk provides the Zeichenwerk terminal UI toolkit.
 //
-// Zeichenwerk (german for "character works) is a complete Terminal UI toolkit
-// for building interactive terminal applications. It is designed to be easy
-// to use and understand.
+// Zeichenwerk (German for "character works") is a complete Terminal UI toolkit
+// for building interactive terminal applications in Go. It offers two APIs for
+// constructing UIs: a fluent builder and a functional composition API.
 //
-// # Overview
+// # Builder API
 //
-// The main feature is a fluent API for building the UI in a declarative
-// way using the Builder type. Even complex UIs are built easily with the
-// Builder
+// The [Builder] type provides a chainable, method-based API. Calls return the
+// builder itself so the entire layout can be expressed as a single expression.
+// Child scopes are opened implicitly and closed with End().
 //
-// Example:
+//	func main() {
+//	    NewBuilder(TokyoNightTheme()).
+//	        Flex("root", false, "stretch", 0).
+//	            Flex("header", true, "center", 1).
+//	                Static("title", "My App").Font("bold").Foreground("$cyan").
+//	            End().
+//	            Grid("body", 1, 2, false).Columns(20, -1).
+//	                Cell(0, 0, 1, 1).List("nav", "Home", "Settings", "About").
+//	                Cell(1, 0, 1, 1).With(content).
+//	            End().
+//	        End().
+//	        Run()
+//	}
 //
-// ui := NewBuilder(TokyoNightTheme).
+//	func content(b *Builder) {
+//	    b.Static("body-text", "Select an item from the menu.")
+//	}
 //
-//	   Flex("main", false, "stretch", 0).
-//	   Flex("header", true, "stretch", 2).
-//	   Static("header-logo", "Zeichenwerk").
-//		 Static("header-title", "Demo Application").
-//		 End().
-//		 Grid("body", 1, 2, true).Columns(30, -1).
-//		 Cell(0, 0, 1, 1).
-//		 List("navigation", "First", "Second", "Third").
-//		 Cell(1, 0, 1, 1).With(content). // builder function for the content
-//		 End().
-//		 Flex("footer", true, "stretch", 1).
-//		 Static("footer-text", "Footer").
-//		 End().
-//		 Run()
+// # Composition API
 //
-// # widgets
+// The compose sub-package (github.com/tekugo/zeichenwerk/compose) provides a
+// functional alternative. Every widget is an Option — a plain function value —
+// that can be nested directly or passed around as data. The theme flows through
+// the tree automatically so no global state is required.
 //
-// Nearly everything including the root UI
-// implements the Widget interface, which is implemented completely by the
-// Component type. Creating new UI widgets is easy if the Component type
-// is embedded. For simple UI widgets look at the Static or Button widgets.
+//	import (
+//	    z  "github.com/tekugo/zeichenwerk"
+//	    .  "github.com/tekugo/zeichenwerk/compose"
+//	)
+//
+//	func main() {
+//	    UI(z.TokyoNightTheme(),
+//	        Flex("root", "", false, "stretch", 0,
+//	            Flex("header", "", true, "center", 1,
+//	                Static("title", "", "My App", Font("bold"), Fg("$cyan")),
+//	            ),
+//	            Grid("body", "", []int{0}, []int{20, -1}, false,
+//	                Cell(0, 0, 1, 1, List("nav", "", []string{"Home", "Settings", "About"})),
+//	                Cell(1, 0, 1, 1, Include(content)),
+//	            ),
+//	        ),
+//	    ).Run()
+//	}
+//
+//	func content(theme *z.Theme) z.Widget {
+//	    return Build(theme, Static("body-text", "", "Select an item from the menu."))
+//	}
+//
+// Where direct widget access is needed after construction — to wire events,
+// populate a Tree, or start animations — retrieve the widget with [Find] and
+// call methods on it directly.
+//
+// # Widgets
+//
+// Nearly everything, including the root [UI], implements the [Widget] interface,
+// which is fully provided by the embedded [Component] type. Creating new widgets
+// is straightforward: embed Component and implement Render.
+//
+// For simple examples see [Static] and [Button]; for containers see [Flex],
+// [Grid], and [Switcher].
 package zeichenwerk

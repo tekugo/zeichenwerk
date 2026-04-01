@@ -37,7 +37,7 @@ func NewBuilder(theme *Theme) *Builder {
 // It creates a new UI with the current theme and root container from the
 // stack.
 func (b *Builder) Build() *UI {
-	ui, _ := NewUI(b.theme, b.stack.Peek(), true)
+	ui := NewUI(b.theme, b.stack.Peek())
 	return ui
 }
 
@@ -54,8 +54,8 @@ func (b *Builder) Find(id string) Widget {
 	return Find(b.stack[0], id)
 }
 
-// Run builds and runs the UI in one go.
-// Short-hand method for Build() and Run().
+// Run builds the UI and starts the main event loop. Shorthand for
+// Build().Run().
 func (b *Builder) Run() {
 	b.Build().Run()
 }
@@ -220,7 +220,8 @@ func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 	line := 0
 	v := reflect.ValueOf(form.data)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-		panic("expecting pointer to struct")
+		b.current.Log(b.current, Warning, "buildGroup: form data must be a pointer to a struct")
+		return
 	}
 
 	v = v.Elem()
@@ -336,14 +337,6 @@ func (b *Builder) Input(id string, params ...string) *Builder {
 	return b
 }
 
-// Typeahead creates a new typeahead widget (a text input with inline ghost-text
-// suggestions). Params are identical to Input.
-func (b *Builder) Typeahead(id string, params ...string) *Builder {
-	t := NewTypeahead(id, b.class, params...)
-	b.Add(t)
-	return b
-}
-
 // List creates a new list widget for displaying selectable items.
 //
 // Parameters:
@@ -364,6 +357,19 @@ func (b *Builder) Progress(id string, horizontal bool) *Builder {
 	return b
 }
 
+// Scanner creates a new scanner widget for displaying a back-and-forth
+// scanning animation with a fading trail.
+//
+// Parameters:
+//   - id: unique identifier for the scanner widget
+//   - width: display width in characters (e.g., 8)
+//   - charStyle: character set style, either "blocks" or "diamonds"
+func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
+	scanner := NewScanner(id, b.class, width, charStyle)
+	b.Add(scanner)
+	return b
+}
+
 // Select creates a select dropdown.
 func (b *Builder) Select(id string, args ...string) *Builder {
 	s := NewSelect(id, b.class, args...)
@@ -378,19 +384,8 @@ func (b *Builder) Spinner(id string, sequence string) *Builder {
 	return b
 }
 
-// Scanner creates a new scanner widget for displaying a back-and-forth
-// scanning animation with a fading trail.
-//
-// Parameters:
-//   - id: unique identifier for the scanner widget
-//   - width: display width in characters (e.g., 8)
-//   - charStyle: character set style, either "blocks" or "diamonds"
-func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
-	scanner := NewScanner(id, b.class, width, charStyle)
-	b.Add(scanner)
-	return b
-}
-
+// Spacer adds an unstyled Component that acts as flexible empty space in a
+// Flex layout. Use Size or Hint to set its preferred dimensions.
 func (b *Builder) Spacer() *Builder {
 	spacer := NewComponent("spacer", b.class)
 	b.Add(spacer)
@@ -464,6 +459,36 @@ func (b *Builder) Tabs(id string, names ...string) *Builder {
 func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
 	text := NewText(id, b.class, content, follow, max)
 	b.Add(text)
+	return b
+}
+
+// Tree creates a new tree widget for displaying hierarchical data.
+func (b *Builder) Tree(id string) *Builder {
+	tree := NewTree(id, b.class)
+	b.Add(tree)
+	return b
+}
+
+// TreeFS creates a filesystem tree rooted at root. If dirsOnly is true only
+// directories are shown; files are hidden.
+func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
+	tfs := NewTreeFS(id, b.class, root, dirsOnly)
+	// Apply theme through TreeFS so the "tree-fs" selector is used, then add
+	// the embedded Tree (which holds all state and rendering) to the container.
+	tfs.Apply(b.theme)
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		top.Add(tfs.Tree)
+	}
+	b.current = tfs.Tree
+	return b
+}
+
+// Typeahead creates a new typeahead widget (a text input with inline ghost-text
+// suggestions). Params are identical to Input.
+func (b *Builder) Typeahead(id string, params ...string) *Builder {
+	t := NewTypeahead(id, b.class, params...)
+	b.Add(t)
 	return b
 }
 
@@ -566,14 +591,26 @@ func (b *Builder) Class(class string) *Builder {
 }
 
 // Columns sets the column sizes for the current grid container.
+// It is a no-op (with a warning) when the current widget is not a Grid.
 func (b *Builder) Columns(columns ...int) *Builder {
-	b.current.(*Grid).Columns(columns...)
+	grid, ok := b.current.(*Grid)
+	if !ok {
+		b.current.Log(b.current, Warning, "Columns called outside a Grid context")
+		return b
+	}
+	grid.Columns(columns...)
 	return b
 }
 
 // Rows sets the row sizes for the current grid container.
+// It is a no-op (with a warning) when the current widget is not a Grid.
 func (b *Builder) Rows(rows ...int) *Builder {
-	b.current.(*Grid).Rows(rows...)
+	grid, ok := b.current.(*Grid)
+	if !ok {
+		b.current.Log(b.current, Warning, "Rows called outside a Grid context")
+		return b
+	}
+	grid.Rows(rows...)
 	return b
 }
 

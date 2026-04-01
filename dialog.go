@@ -2,12 +2,17 @@ package zeichenwerk
 
 import "strings"
 
+// Dialog is a single-child container designed for overlay use. It renders a
+// title bar, an optional border, and its body widget. Dialogs are typically
+// shown as popups via UI.Popup rather than added to the main layout tree.
 type Dialog struct {
 	Component
-	title string // The title text displayed in the box header (optional)
+	title string // The title text displayed in the dialog header (optional)
 	child Widget // Dialog content
 }
 
+// NewDialog creates a Dialog with the given id, CSS class, and title.
+// An empty title string suppresses the title bar.
 func NewDialog(id, class, title string) *Dialog {
 	return &Dialog{
 		Component: Component{id: id, class: class},
@@ -15,6 +20,7 @@ func NewDialog(id, class, title string) *Dialog {
 	}
 }
 
+// Add sets the single body widget, replacing any previous child.
 func (d *Dialog) Add(widget Widget, params ...any) error {
 	if d.child != nil {
 		d.child.SetParent(nil) // clear old parent reference
@@ -28,9 +34,10 @@ func (d *Dialog) Add(widget Widget, params ...any) error {
 
 // Apply applies a theme style to the component.
 func (d *Dialog) Apply(theme *Theme) {
-	theme.Apply(d, d.Selector("custom"))
+	theme.Apply(d, d.Selector("dialog"))
 }
 
+// Children returns the body widget slice (empty if no child has been set).
 func (d *Dialog) Children() []Widget {
 	if d.child == nil {
 		return []Widget{}
@@ -38,31 +45,35 @@ func (d *Dialog) Children() []Widget {
 	return []Widget{d.child}
 }
 
+// Hint returns the preferred size of the dialog. If an explicit hint has been
+// set it is returned directly; otherwise the size is derived from the child's
+// hint plus the dialog's own style overhead (border, padding) and title bar.
 func (d *Dialog) Hint() (int, int) {
 	if d.hwidth != 0 && d.hheight != 0 {
-		d.Log(d, Debug,"Dialog Fixed Hint", "w", d.hwidth, "h", d.hheight)
+		d.Log(d, Debug, "Dialog Fixed Hint", "w", d.hwidth, "h", d.hheight)
 		return d.hwidth, d.hheight
 	} else if d.child != nil {
 		w, h := d.child.Hint()
-		d.Log(d, Debug,"Dialog dynamic Hint 1", "w", w, "h", h)
+		d.Log(d, Debug, "Dialog dynamic Hint 1", "w", w, "h", h)
 		style := d.child.Style()
 		w += style.Horizontal()
 		h += style.Vertical()
-		d.Log(d, Debug,"Dialog dynamic Hint 2", "w", w, "h", h)
+		d.Log(d, Debug, "Dialog dynamic Hint 2", "w", w, "h", h)
 
 		if d.title != "" {
 			titleStyle := d.Style("title")
 			h = h + titleStyle.Vertical() + 1
-			d.Log(d, Debug,"Dialog title Vertical", "h", titleStyle.Vertical())
+			d.Log(d, Debug, "Dialog title Vertical", "h", titleStyle.Vertical())
 		}
 
-		d.Log(d, Debug,"Dialog dynamic Hint 3", "w", w, "h", h)
+		d.Log(d, Debug, "Dialog dynamic Hint 3", "w", w, "h", h)
 		return w, h
 	} else {
 		return 0, 0
 	}
 }
 
+// Layout positions the body widget below the title bar within the content area.
 func (d *Dialog) Layout() error {
 	if d.child != nil {
 		cx, cy, cw, ch := d.Content()
@@ -75,7 +86,7 @@ func (d *Dialog) Layout() error {
 	return Layout(d)
 }
 
-// Render renders the box and its child widget.
+// Render draws the dialog: title bar, background fill, border, and body widget.
 func (d *Dialog) Render(r *Renderer) {
 	// Check if the widget is visible
 	if d.Flag(FlagHidden) {

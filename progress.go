@@ -26,7 +26,7 @@ type Progress struct {
 // Parameters:
 //   - id: Unique identifier for the progress widget
 //   - class: Style class
-//   - horizontal: horizontal flag oder false for vertical
+//   - horizontal: true for horizontal orientation, false for vertical
 //
 // Returns:
 //   - *Progress: A new progress widget instance

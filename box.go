@@ -44,13 +44,14 @@ func NewBox(id, class, title string) *Box {
 // Parameters:
 //   - widget: The widget to be contained within this box
 func (b *Box) Add(widget Widget, params ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
 	if b.child != nil {
 		b.child.SetParent(nil) // clear old parent reference
 	}
 	b.child = widget
-	if b.child != nil {
-		b.child.SetParent(b)
-	}
+	b.child.SetParent(b)
 	return nil
 }
 

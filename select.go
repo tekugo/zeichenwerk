@@ -28,7 +28,7 @@ func NewSelect(id, class string, args ...string) *Select {
 		options:   make([]option, 0, len(args)/2),
 	}
 	s.SetFlag(FlagFocusable, true)
-	for i := 0; i < len(args); i += 2 {
+	for i := 0; i+1 < len(args); i += 2 {
 		s.options = append(s.options, option{value: args[i], text: args[i+1]})
 	}
 	OnKey(s, s.handleKey)
@@ -94,7 +94,7 @@ func (s *Select) Value() string {
 }
 
 // handleKey processes key events for the Select widget.
-func (s *Select) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (s *Select) handleKey(evt *tcell.EventKey) bool {
 	switch evt.Key() {
 	case tcell.KeyEnter:
 		s.popup()
@@ -134,7 +134,7 @@ func (s *Select) popup() {
 		ui.Focus(s)
 		return true
 	})
-	OnKey(list, func(_ Widget, evt *tcell.EventKey) bool {
+	OnKey(list, func(evt *tcell.EventKey) bool {
 		switch evt.Key() {
 		case tcell.KeyEsc:
 			ui.Close()
@@ -143,5 +143,11 @@ func (s *Select) popup() {
 		}
 		return false
 	})
-	ui.Popup(s.x, s.y+s.height, s.width, 10, popup)
+	const popupHeight = 10
+	_, _, _, uiHeight := ui.Bounds()
+	py := s.y + s.height
+	if py+popupHeight > uiHeight {
+		py = s.y - popupHeight
+	}
+	ui.Popup(s.x, py, s.width, popupHeight, popup)
 }

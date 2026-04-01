@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -11,15 +13,31 @@ import (
 	. "github.com/tekugo/zeichenwerk"
 )
 
+func parseTheme() *Theme {
+	t := flag.String("t", "tokyo", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+	flag.Parse()
+	switch *t {
+	case "midnight":
+		return MidnightNeonTheme()
+	case "nord":
+		return NordTheme()
+	case "gruvbox-dark":
+		return GruvboxDarkTheme()
+	case "gruvbox-light":
+		return GruvboxLightTheme()
+	default:
+		return TokyoNightTheme()
+	}
+}
+
 // main function
 func main() {
-	ui := createUI()
-	ui.Run()
+	createUI(parseTheme()).Run()
 }
 
 // Create the terminal UI.
-func createUI() *UI {
-	ui := NewBuilder(TokyoNightTheme()).
+func createUI(theme *Theme) *UI {
+	ui := NewBuilder(theme).
 		Flex("main", false, "stretch", 0).
 		Flex("header", true, "stretch", 2).
 		Static("title", "Zeichenwerk Demo").
@@ -27,14 +45,14 @@ func createUI() *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Typeahead", "Viewport", "Dialog").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Tree FS", "Typeahead", "Viewport", "Dialog").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
-		With(deckDemo).
+		With(func(b *Builder) { deckDemo(b, theme) }).
 		With(digits).
 		With(editor).
 		With(form).
@@ -46,6 +64,7 @@ func createUI() *UI {
 		With(styled).
 		With(table).
 		With(tabs).
+		With(treeFSDemo).
 		With(typeaheadDemo).
 		With(viewport).
 		End().
@@ -55,10 +74,30 @@ func createUI() *UI {
 		Text("debug-log", []string{"Hello, World!"}, true, 100).Hint(0, -1).
 		End().
 		End().
-		Flex("footer", true, "stretch", 0).
-		Static("footer-text", "Footer").
+		Flex("footer", true, "center", 0).
+		Static("theme-label", " Theme: ").
+		Select("theme-select", "tokyo", "Tokyo Night", "gruvbox-dark", "Gruvbox Dark", "gruvbox-light", "Gruvbox Light", "nrrd", "Nord", "neon", "Midnight Neon").
 		End().
 		Build()
+
+	themes := map[string]*Theme{
+		"tokyo":         TokyoNightTheme(),
+		"gruvbox-dark":  GruvboxDarkTheme(),
+		"gruvbox-light": GruvboxLightTheme(),
+		"nrrd":          NordTheme(),
+		"neon":          MidnightNeonTheme(),
+	}
+
+	Find(ui, "theme-select").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) == 1 {
+			if key, ok := data[0].(string); ok {
+				if theme, found := themes[key]; found {
+					ui.SetTheme(theme)
+				}
+			}
+		}
+		return true
+	})
 
 	switcher := Find(ui, "switcher").(*Switcher)
 	Find(ui, "navigation").On(EvtActivate, func(_ Widget, event Event, data ...any) bool {
@@ -68,7 +107,7 @@ func createUI() *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 18:
+					case 19:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -221,22 +260,22 @@ func collapsibleDemo(builder *Builder) {
 		Static("collapsible-info", "Click the header or press Enter/Space to toggle. → expands, ← collapses.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
 		Collapsible("col-basic", "Basic section (starts expanded)", true).
-			Flex("col-basic-content", false, "stretch", 1).Padding(0, 1).
-			Static("", "This is the body of the first collapsible.").
-			Static("", "It can contain any widget — here a few statics.").
-			Static("", "Collapse me with ← or by clicking the header.").
-			End().
+		Flex("col-basic-content", false, "stretch", 1).Padding(0, 1).
+		Static("", "This is the body of the first collapsible.").
+		Static("", "It can contain any widget — here a few statics.").
+		Static("", "Collapse me with ← or by clicking the header.").
+		End().
 		End().
 		Collapsible("col-list", "List section (starts collapsed)", false).
-			List("col-list-items", "Alpha", "Beta", "Gamma", "Delta", "Epsilon").
+		List("col-list-items", "Alpha", "Beta", "Gamma", "Delta", "Epsilon").
 		End().
 		Collapsible("col-inputs", "Input section (starts collapsed)", false).
-			Flex("col-inputs-content", false, "stretch", 1).Padding(0, 1).
-			Static("", "Name:").
-			Input("col-name", "").
-			Static("", "Email:").
-			Input("col-email", "").
-			End().
+		Flex("col-inputs-content", false, "stretch", 1).Padding(0, 1).
+		Static("", "Name:").
+		Input("col-name", "").
+		Static("", "Email:").
+		Input("col-email", "").
+		End().
 		End().
 		Static("col-status", "").Padding(1, 0, 0, 0).
 		End()
@@ -262,10 +301,9 @@ func collapsibleDemo(builder *Builder) {
 }
 
 // Deck demo — displays all theme colors as rich multi-line cards.
-func deckDemo(builder *Builder) {
+func deckDemo(builder *Builder, theme *Theme) {
 	type colorItem struct{ name, hex string }
 
-	theme := TokyoNightTheme()
 	colors := theme.Colors()
 
 	names := make([]string, 0, len(colors))
@@ -286,12 +324,11 @@ func deckDemo(builder *Builder) {
 	// deck is declared first so the render closure can reference it.
 	var deck *Deck
 
-	renderFn := func(r *Renderer, x, y, w, h, _ int, data any, selected bool) {
+	renderFn := func(r *Renderer, x, y, w, h, _ int, data any, selected, focused bool) {
 		item := data.(colorItem)
 		textW := w - borderW - padW - previewW
 
 		bg := theme.Color("$bg1")
-		focused := deck.Flag(FlagFocused)
 
 		var fg, font, indicator, indicatorFg string
 		if selected {
@@ -387,7 +424,8 @@ func editor(builder *Builder) {
 	builder.Editor("editor-demo").Hint(0, -1).Padding(1)
 	if ed := Find(builder.Container(), "editor-demo"); ed != nil {
 		if editor, ok := ed.(*Editor); ok {
-			editor.Load("This is a sample text.\nYou can edit me!\n\nPress Tab to insert tabs,\nBackspace to delete,\nand arrow keys to navigate.\n\nLine numbers are disabled by default.\nEnable them with ShowLineNumbers(true).")
+			editor.ShowLineNumbers(true)
+			editor.Load("This is a sample text.\nYou can edit me!\n\nPress Tab to insert tabs,\nBackspace to delete,\nand arrow keys to navigate.")
 		}
 	}
 }
@@ -434,8 +472,8 @@ func form(builder *Builder) {
 		End().
 		End()
 
-	builder.Find("save-button").On(EvtClick, func(widget Widget, _ Event, _ ...any) bool {
-		Update(FindUI(widget), "info-label", "Click "+time.Now().String())
+	builder.Find("save-button").On(EvtActivate, func(widget Widget, _ Event, _ ...any) bool {
+		Update(FindUI(widget), "info-label", "Activate "+time.Now().String())
 		text, _ := json.Marshal(user)
 		widget.Log(widget, Debug, string(text))
 		return true
@@ -622,6 +660,57 @@ func typeaheadDemo(builder *Builder) {
 			if label, ok := Find(container, "ta-accepted").(*Static); ok {
 				label.SetText("Accepted: " + s)
 			}
+		}
+		return true
+	})
+}
+
+func treeFSDemo(builder *Builder) {
+	var tfs *TreeFS
+
+	tfs = NewTreeFS("tree-fs", "", ".", false)
+
+	builder.Flex("tree-fs-demo", false, "stretch", 0).
+		// Toolbar: Up button + current root path
+		Flex("tree-fs-toolbar", true, "center", 1).Padding(0, 1).
+		Button("tree-fs-up", "↑ Up").Class("dialog").
+		Static("tree-fs-path", tfs.RootPath()).Padding(0, 1).
+		End().
+		// The tree itself, takes all remaining height
+		Add(tfs.Tree).Hint(0, -1).
+		// Status bar showing the highlighted path
+		Static("tree-fs-selected", "").Padding(0, 1).
+		End()
+
+	container := builder.Container()
+
+	// Up button: navigate to the parent directory
+	builder.Find("tree-fs-up").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		parent := filepath.Dir(tfs.RootPath())
+		if parent == tfs.RootPath() {
+			return true // already at filesystem root
+		}
+		tfs.SetRoot(parent)
+		if label, ok := Find(container, "tree-fs-path").(*Static); ok {
+			label.SetText(tfs.RootPath())
+		}
+		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
+			label.SetText("")
+		}
+		return true
+	})
+
+	// Update the status bar whenever the highlighted node changes
+	tfs.Tree.On(EvtSelect, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) == 0 {
+			return true
+		}
+		node, ok := data[0].(*TreeNode)
+		if !ok {
+			return true
+		}
+		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
+			label.SetText(node.Data().(string))
 		}
 		return true
 	})

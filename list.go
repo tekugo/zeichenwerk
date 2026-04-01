@@ -73,11 +73,11 @@ type List struct {
 //   - *List: A fully initialized List widget ready for configuration and use
 func NewList(id, class string, items []string) *List {
 	list := &List{
-		Component:   Component{id: id, class: class},
-		items:       items,
-		index:       0,
-		selection:   make([]int, 0, 1),
-		offset:      0,
+		Component:      Component{id: id, class: class},
+		items:          items,
+		index:          0,
+		selection:      make([]int, 0, 1),
+		offset:         0,
 		numbers:        false,
 		scrollbar:      true,
 		quickSearch:    true,
@@ -117,7 +117,7 @@ func (l *List) Set(value any) bool {
 	}
 	l.SetItems(items)
 	if len(items) > 0 {
-		l.Dispatch(l, EvtSelect,0)
+		l.Dispatch(l, EvtSelect, 0)
 	}
 	return true
 }
@@ -206,7 +206,7 @@ func (l *List) Move(count int) {
 	if newIndex != l.index {
 		l.index = newIndex
 		l.adjust()
-		l.Dispatch(l, EvtSelect,l.index)
+		l.Dispatch(l, EvtSelect, l.index)
 		l.Refresh()
 	}
 }
@@ -220,7 +220,7 @@ func (l *List) First() {
 		if !slices.Contains(l.disabled, i) {
 			l.index = i
 			l.adjust()
-			l.Dispatch(l, EvtSelect,l.index)
+			l.Dispatch(l, EvtSelect, l.index)
 			break
 		}
 	}
@@ -236,7 +236,7 @@ func (l *List) Last() {
 		if !slices.Contains(l.disabled, i) {
 			l.index = i
 			l.adjust()
-			l.Dispatch(l, EvtSelect,l.index)
+			l.Dispatch(l, EvtSelect, l.index)
 			break
 		}
 	}
@@ -291,7 +291,7 @@ func (l *List) PageDown() {
 //
 // Returns:
 //   - bool: true if event was handled/consumed, false if should be propagated
-func (l *List) handleKey(_ Widget, event *tcell.EventKey) bool {
+func (l *List) handleKey(event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyUp:
 		l.Move(-1)
@@ -332,7 +332,7 @@ func (l *List) handleKey(_ Widget, event *tcell.EventKey) bool {
 	return false
 }
 
-func (l *List) handleMouse(_ Widget, event *tcell.EventMouse) bool {
+func (l *List) handleMouse(event *tcell.EventMouse) bool {
 	if event.Buttons() != tcell.Button1 {
 		return false
 	}
@@ -456,7 +456,7 @@ func (l *List) Render(r *Renderer) {
 		current := l.offset + i
 
 		// Determine style for this item
-		if slices.Contains(l.disabled, i) {
+		if slices.Contains(l.disabled, current) {
 			style := l.Style(":disabled")
 			r.Set(style.Foreground(), style.Background(), style.Font())
 		} else if current == l.index {

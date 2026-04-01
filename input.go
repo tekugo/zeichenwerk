@@ -139,7 +139,7 @@ func (i *Input) SetText(text string) {
 	}
 	i.adjust()
 
-	i.Dispatch(i, EvtChange,text)
+	i.Dispatch(i, EvtChange, text)
 }
 
 // Text returns the current text content.
@@ -227,7 +227,7 @@ func (i *Input) Insert(ch string) {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, EvtChange,i.buf.String())
+	i.Dispatch(i, EvtChange, i.buf.String())
 }
 
 // Delete removes the character immediately before the cursor position (backspace operation).
@@ -254,7 +254,7 @@ func (i *Input) Delete() {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, EvtChange,i.buf.String())
+	i.Dispatch(i, EvtChange, i.buf.String())
 }
 
 // DeleteForward removes the character at the current cursor position (delete operation).
@@ -279,7 +279,7 @@ func (i *Input) DeleteForward() {
 	i.adjust()
 	i.Refresh()
 
-	i.Dispatch(i, EvtChange,i.buf.String())
+	i.Dispatch(i, EvtChange, i.buf.String())
 }
 
 // Clear removes all text from the input and resets the cursor to the beginning.
@@ -305,7 +305,7 @@ func (i *Input) Clear() {
 	i.offset = 0
 	i.Refresh()
 
-	i.Dispatch(i, EvtChange,"")
+	i.Dispatch(i, EvtChange, "")
 }
 
 // ---- Internal methods -----------------------------------------------------
@@ -382,7 +382,7 @@ func (i *Input) visible() string {
 // Handle processes keyboard events for the input widget and performs the appropriate
 // text editing operations. This method implements a comprehensive keyboard interface
 // that supports all standard text editing operations with professional-grade functionality.
-func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
+func (i *Input) handleKey(evt *tcell.EventKey) bool {
 	// In read-only mode, only allow navigation keys
 	if i.Flag(FlagReadonly) && evt.Key() != tcell.KeyLeft && evt.Key() != tcell.KeyRight &&
 		evt.Key() != tcell.KeyHome && evt.Key() != tcell.KeyEnd {
@@ -423,7 +423,7 @@ func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 				i.buf.Delete()
 			}
 			i.adjust()
-			i.Dispatch(i, EvtChange,i.buf.String())
+			i.Dispatch(i, EvtChange, i.buf.String())
 		}
 		i.Refresh()
 		return true
@@ -435,11 +435,11 @@ func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 			i.pos = 0
 			i.adjust()
 			i.Refresh()
-			i.Dispatch(i, EvtChange,i.buf.String())
+			i.Dispatch(i, EvtChange, i.buf.String())
 			return true
 		}
 	case tcell.KeyEnter:
-		i.Dispatch(i, EvtEnter,i.buf.String())
+		i.Dispatch(i, EvtEnter, i.buf.String())
 		return true
 	case tcell.KeyRune:
 		ch := evt.Str()
@@ -456,6 +456,14 @@ func (i *Input) handleKey(_ Widget, evt *tcell.EventKey) bool {
 // This method handles the display of user input text or placeholder text
 // depending on the input's current state and content.
 func (i *Input) Render(r *Renderer) {
+	// Do not render hidden Inputs
+	if i.Flag(FlagHidden) {
+		return
+	}
+
+	// Render common component elements (style, border, ...)
+	i.Component.Render(r)
+
 	x, y, w, h := i.Content()
 	if h < 1 || w < 1 {
 		return

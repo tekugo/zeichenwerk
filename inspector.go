@@ -13,6 +13,8 @@ type Inspector struct {
 	ui        Container
 	container Container
 	current   Widget
+	widgets   *List
+	styles    *List
 }
 
 // NewInspector creates a new Inspector for the given root container.
@@ -68,19 +70,18 @@ func (i *Inspector) BuildUI() {
 		Class("").
 		Container()
 
-	HandleListEvent(i.ui, "children", EvtSelect, i.SelectWidget)
-	HandleListEvent(i.ui, "children", EvtActivate, i.Activate)
-	HandleListEvent(i.ui, "styles", EvtSelect, i.SelectStyle)
-	HandleKeyEvent(i.ui, "children", func(widget Widget, event *tcell.EventKey) bool {
+	i.widgets = Find(i.ui, "children").(*List)
+	i.styles = Find(i.ui, "styles").(*List)
+
+	OnActivate(i.widgets, i.Activate)
+	OnSelect(i.widgets, i.SelectWidget)
+	OnSelect(i.styles, i.SelectStyle)
+
+	OnKey(i.widgets, func(event *tcell.EventKey) bool {
 		switch event.Key() {
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
 			if i.container.Parent() != nil {
-				container, ok := i.container.Parent().(Container)
-				if !ok {
-					widget.Log(container, Error, "Parent is no container! %T", i.container.Parent())
-				}
-				i.container = container
-				widget.Log(i.ui, Debug, "Going back to %s", i.container.ID())
+				i.container = i.container.Parent()
 				i.Refresh()
 			}
 			return true
@@ -92,8 +93,8 @@ func (i *Inspector) BuildUI() {
 }
 
 // SelectWidget handles selection of a widget from the children list.
-func (i *Inspector) SelectWidget(list *List, event Event, index int) bool {
-	items := list.Items()
+func (i *Inspector) SelectWidget(index int) bool {
+	items := i.widgets.Items()
 	if index < 0 || index >= len(items) {
 		return true
 	}
@@ -125,7 +126,7 @@ func (i *Inspector) SelectWidget(list *List, event Event, index int) bool {
 }
 
 // Activate navigates into a container widget.
-func (i *Inspector) Activate(_ *List, _ Event, _ int) bool {
+func (i *Inspector) Activate(_ int) bool {
 	if i.current != nil {
 		if container, ok := i.current.(Container); ok {
 			i.container = container
@@ -137,8 +138,8 @@ func (i *Inspector) Activate(_ *List, _ Event, _ int) bool {
 }
 
 // SelectStyle displays details of the selected style.
-func (i *Inspector) SelectStyle(list *List, _ Event, index int) bool {
-	items := list.Items()
+func (i *Inspector) SelectStyle(index int) bool {
+	items := i.styles.Items()
 	if index < 0 || index >= len(items) {
 		return true
 	}
@@ -147,7 +148,7 @@ func (i *Inspector) SelectStyle(list *List, _ Event, index int) bool {
 	if style != nil {
 		Update(i.ui, "style-info", strings.Split(style.Info(), "\n"))
 	} else {
-		list.Log(list, Error, "Style %s not found in widget %s", name, list.ID())
+		i.styles.Log(i.styles, Error, "Style not found in widget", "name", name, "ID", i.styles.ID())
 	}
 	i.ui.Refresh()
 	return true
@@ -159,7 +160,7 @@ func (i *Inspector) Refresh() {
 		i.ui.Log(i.ui, Error, "No current container!")
 		return
 	}
-	i.ui.Log(i.ui, Debug, "Refresh inspector %s", i.container.ID())
+	i.ui.Log(i.ui, Debug, "Refresh inspector", "ID", i.container.ID())
 	children := i.container.Children()
 	items := make([]string, len(children))
 	for j, child := range children {
@@ -227,5 +228,5 @@ func widgetDetails(w Widget) string {
 
 // widgetType returns the widget type name without package prefix.
 func widgetType(w Widget) string {
-	return strings.TrimPrefix(fmt.Sprintf("%T", w), "*next.")
+	return strings.TrimPrefix(fmt.Sprintf("%T", w), "*zeichenwerk.")
 }

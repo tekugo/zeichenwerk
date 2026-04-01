@@ -76,14 +76,15 @@ func content(builder *Builder) {
 		Border("grid:focused", "none").
 		End()
 
-	OnKey(builder.Find("sql"), func(widget Widget, event *tcell.EventKey) bool {
-		ui.Log(widget, Debug, "Key handler for SQL")
+	sql := builder.Find("sql")
+	OnKey(sql, func(event *tcell.EventKey) bool {
+		ui.Log(sql, Debug, "Key handler for SQL")
 		switch event.Key() {
 		case tcell.KeyCtrlR:
 			query()
 			return true
 		default:
-			ui.Log(widget, Debug, "Unknown key", "key", event.Key())
+			ui.Log(sql, Debug, "Unknown key", "key", event.Key())
 			return false
 		}
 	})

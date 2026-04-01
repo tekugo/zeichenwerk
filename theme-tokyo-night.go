@@ -1,5 +1,8 @@
 package zeichenwerk
 
+// TokyoNightTheme returns a Theme styled after the Tokyo Night colour palette.
+// It registers Unicode borders via AddUnicodeBorders and sets colours, styles,
+// and string indicators for all built-in widgets.
 func TokyoNightTheme() *Theme {
 	t := NewTheme()
 
@@ -9,9 +12,11 @@ func TokyoNightTheme() *Theme {
 		"$bg0":     "#1a1b26",
 		"$bg1":     "#1e1e2e",
 		"$bg2":     "#1b263b",
+		"$bg3":     "#292e42", // highlight background
 		"$fg0":     "#c0caf5",
-		"$fg1":     "#565f89",
-		"$gray":    "#414868",
+		"$fg1":     "#a9b1d6", // secondary text
+		"$fg2":     "#565f89", // muted / comment text
+		"$gray":    "#3b4261", // decorative / line numbers
 		"$blue":    "#7aa2f7",
 		"$cyan":    "#2ac3de",
 		"$aqua":    "#89ddff",
@@ -25,13 +30,13 @@ func TokyoNightTheme() *Theme {
 	t.SetStyles(
 		NewStyle("").WithColors("$fg0", "$bg0").WithMargin(0).WithPadding(0),
 		NewStyle("box").WithBorder("thin"),
-		NewStyle("button").WithColors("$bg0", "$blue").WithBorder("lines").WithPadding(0, 2),
+		NewStyle("button").WithColors("$bg0", "$blue").WithBorder("none").WithPadding(0, 2),
 		NewStyle("button:focused").WithColors("$fg0", "$blue"),
 		NewStyle("button:hovered").WithColors("$red", "$blue"),
 		NewStyle("button.dialog").WithBorder("none"),
 		NewStyle("button.dialog:focused").WithBorder("none"),
 		NewStyle("button.dialog:hovered").WithBorder("none"),
-		NewStyle("checkbox").WithColors("$fg1", "$bg0"),
+		NewStyle("checkbox").WithColors("$fg2", "$bg0"),
 		NewStyle("checkbox:disabled").WithColors("$gray", "$bg0"),
 		NewStyle("checkbox:focused").WithColors("$fg0", "$bg0"),
 		NewStyle("checkbox:hovered").WithColors("$aqua", "$bg0"),
@@ -46,10 +51,13 @@ func TokyoNightTheme() *Theme {
 		NewStyle("form"),
 		NewStyle("formgroup").WithColors("$fg0", "$bg1"),
 		NewStyle("formgroup:title").WithColors("$blue", "$bg1"),
-		NewStyle("formgroup:label").WithColors("$gray", "$bg1"),
+		NewStyle("formgroup:label").WithColors("$fg2", "$bg1"),
 		NewStyle("grid").WithBorder("thin"),
-		NewStyle("list/highlight").WithColors("$bg0", "$fg1"),
-		NewStyle("list/highlight:focused").WithColors("$bg0", "$red"),
+		NewStyle("list/highlight").WithColors("$bg0", "$fg2"),
+		NewStyle("list/highlight:focused").WithColors("$bg0", "$blue"),
+		NewStyle("editor/current-line").WithColors("$fg0", "$bg1"),
+		NewStyle("editor/current-line-number").WithColors("$blue", "$bg1"),
+		NewStyle("editor/line-numbers").WithColors("$gray", "$bg0"),
 		NewStyle("editor/selection").WithColors("$bg0", "$blue"),
 		NewStyle("input").WithColors("$fg0", "$bg2").WithCursor("*bar"),
 		NewStyle("input:focused").WithColors("$bg0", "$blue"),
@@ -69,14 +77,18 @@ func TokyoNightTheme() *Theme {
 		NewStyle("table/grid").WithColors("$fg1", "$bg0").WithBorder("thin"),
 		NewStyle("table/grid:focused").WithBorder("double-thin"),
 		NewStyle("table/header").WithColors("$fg0", "$bg0"),
-		NewStyle("table/highlight").WithColors("$bg0", "$fg1"),
-		NewStyle("table/highlight:focused").WithColors("$bg0", "$red"),
+		NewStyle("table/highlight").WithColors("$bg0", "$fg2"),
+		NewStyle("table/highlight:focused").WithColors("$bg0", "$blue").WithFont("bold"),
 		NewStyle("tabs/highlight").WithColors("$bg0", "$fg0"),
 		NewStyle("tabs/highlight-line").WithForeground("$bg3"),
 		NewStyle("tabs/line:focused").WithForeground("$blue"),
 		NewStyle("tabs/highlight:focused").WithColors("$bg0", "$orange"),
 		NewStyle("tabs/highlight-line:focused").WithForeground("$orange"),
 		NewStyle("text"),
+		NewStyle("tree").WithColors("$fg0", "$bg0"),
+		NewStyle("tree/highlight").WithColors("$bg0", "$fg2"),
+		NewStyle("tree/highlight:focused").WithColors("$bg0", "$blue"),
+		NewStyle("tree/indent").WithColors("$gray", ""),
 		NewStyle("viewport"),
 	)
 
@@ -107,6 +119,13 @@ func TokyoNightTheme() *Theme {
 
 		// ---- Select ----
 		"select.dropdown": " \u25BC",
+
+		// ---- Tree ----
+		"tree.expanded":  " ▼",
+		"tree.collapsed": " ▶",
+		"tree.branch":    " ├─",
+		"tree.last":      " └─",
+		"tree.trunk":     " │ ",
 	})
 
 	return t

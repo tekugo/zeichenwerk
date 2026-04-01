@@ -75,32 +75,17 @@ type Theme struct {
 	styles  map[string]*Style  // Registry of style definitions indexed by CSS-like selectors
 }
 
-// NewMapTheme creates a new MapTheme instance with empty initialized registries.
-// This is the recommended constructor for creating themes that will be populated
-// with styles, colors, and other resources.
+// NewTheme creates a new Theme with empty registries and ASCII default strings
+// for progress bars, collapsible indicators, and tree connectors.
 //
-// # Initialization
+// Usage:
 //
-// The constructor initializes all internal maps to empty states:
-//   - styles: Empty style registry ready for selector-based style definitions
-//   - colors: Empty color variable registry for theme color schemes
-//   - borders: Empty border style registry for widget frame styles
-//   - runes: Empty Unicode character registry for decorative elements
-//   - flags: Empty flag registry for behavioral configuration
-//
-// # Usage Pattern
-//
-// Typically used in combination with theme builder methods or bulk assignment:
-//
-//	theme := NewMapTheme()
+//	theme := NewTheme()
 //	theme.SetColors(map[string]string{
 //		"$primary":   "#007ACC",
 //		"$secondary": "#FF6B35",
 //	})
-//	theme.Set("button.primary", NewStyle("$primary", "white"))
-//
-// Returns:
-//   - *MapTheme: A new MapTheme instance with empty registries ready for configuration
+//	theme.SetStyles(NewStyle("button").WithColors("$primary", "white"))
 func NewTheme() *Theme {
 	theme := &Theme{
 		borders: make(map[string]*Border),
@@ -113,6 +98,11 @@ func NewTheme() *Theme {
 	theme.SetStrings(map[string]string{
 		"collapsible.expanded":  "▼ ",
 		"collapsible.collapsed": "▶ ",
+		"tree.expanded":         "▼ ",
+		"tree.collapsed":        "▶ ",
+		"tree.branch":           "├─",
+		"tree.last":             "└─",
+		"tree.trunk":            "│ ",
 		"progress.h.prefix":        "",
 		"progress.h.suffix":        "",
 		"progress.h.start.filled":  "#",
@@ -135,7 +125,7 @@ func NewTheme() *Theme {
 
 // Add adds a style to the theme.
 // The style is automatically assigned a parent based on the style selector.
-// THrough this mechanism, inheritance/cascading is implemented.
+// Through this mechanism, inheritance/cascading is implemented.
 func (t *Theme) Add(style *Style) {
 	parts := split(style.selector)
 	key, priority := selector(0, parts)
@@ -254,16 +244,10 @@ func (t *Theme) Get(s string) *Style {
 	return &DefaultStyle
 }
 
-// Rune retrieves a special Unicode character by name from the theme's rune registry.
-// Returns the zero value (rune 0) if the rune name is not found.
-//
-// # Common Rune Names
-//
-// Typical rune names include:
-//   - "arrow-up", "arrow-down", "arrow-left", "arrow-right"
-//   - "bullet", "checkbox", "radio"
-//   - "spinner1", "spinner2", etc.
-//   - Border drawing characters for custom borders
+// String retrieves a named string (typically a Unicode symbol or indicator)
+// from the theme's string registry. Returns an empty string if the name is
+// not found. Keys follow a dot-separated naming convention, e.g.
+// "tree.expanded", "progress.h.start.filled", "select.dropdown".
 func (t *Theme) String(name string) string {
 	return t.strings[name]
 }
@@ -302,11 +286,9 @@ func (t *Theme) SetFlags(flags map[string]bool) {
 	t.flags = flags
 }
 
-// SetRunes replaces the theme's Unicode character registry with the provided map.
-// This method is used for bulk rune configuration and theme initialization.
-//
-// Parameters:
-//   - runes: Map of character names to their Unicode values
+// SetStrings replaces the theme's string registry with the provided map.
+// This is used for bulk configuration of Unicode symbols and indicators,
+// such as tree connectors, progress bar characters, and dropdown arrows.
 func (t *Theme) SetStrings(strings map[string]string) {
 	t.strings = strings
 }

@@ -6,6 +6,11 @@ type field struct {
 	x, y   int // label position; negative means don't render label
 }
 
+// FormGroup is a layout container for form controls. Each control occupies a
+// named line; a label string may be placed to the left of the first control on
+// each line. When horizontal is true labels appear to the left of the control
+// row; when false labels appear above. spacing adds extra blank rows between
+// lines.
 type FormGroup struct {
 	Component
 	title      string
@@ -14,6 +19,8 @@ type FormGroup struct {
 	lines      [][]*field
 }
 
+// NewFormGroup creates a FormGroup with the given id, CSS class, title,
+// orientation, and line spacing.
 func NewFormGroup(id, class, title string, horizontal bool, spacing int) *FormGroup {
 	fg := &FormGroup{
 		Component:  Component{id: id, class: class},
@@ -24,6 +31,9 @@ func NewFormGroup(id, class, title string, horizontal bool, spacing int) *FormGr
 	return fg
 }
 
+// Add appends widget to the group. params[0] (int) selects the line index;
+// params[1] (string) sets the label for that control. Returns ErrChildIsNil
+// if widget is nil.
 func (fg *FormGroup) Add(widget Widget, params ...any) error {
 	if widget == nil {
 		return ErrChildIsNil
@@ -54,6 +64,7 @@ func (fg *FormGroup) Apply(theme *Theme) {
 	theme.Apply(fg, fg.Selector("form-group"))
 }
 
+// Children returns all child widgets across all lines.
 func (fg *FormGroup) Children() []Widget {
 	children := make([]Widget, 0, len(fg.lines))
 	for _, line := range fg.lines {
@@ -64,6 +75,8 @@ func (fg *FormGroup) Children() []Widget {
 	return children
 }
 
+// Hint returns the preferred content size needed to display all lines and
+// their labels at their natural sizes.
 func (fg *FormGroup) Hint() (int, int) {
 	w, h := 0, 0 // preferred width and height total
 	mlw := 0     // maximum label width in horizontal layout
@@ -106,6 +119,7 @@ func (fg *FormGroup) Hint() (int, int) {
 	return mlw + w, h
 }
 
+// Layout calculates and applies positions for all labels and controls.
 func (fg *FormGroup) Layout() error {
 	// Determine maximum label width (only for horizontal label placement)
 	mlw := -1
@@ -163,6 +177,7 @@ func (fg *FormGroup) Layout() error {
 	return nil
 }
 
+// Render draws the group background, labels, and all child controls.
 func (fg *FormGroup) Render(r *Renderer) {
 	// Render common styling
 	fg.Component.Render(r)

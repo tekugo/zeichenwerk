@@ -92,6 +92,12 @@ func (f *Flex) Children() []Widget {
 func (f *Flex) Hint() (int, int) {
 	var width, height int
 
+	// If a hint was set manually, use this one
+	if f.hwidth != 0 || f.hheight != 0 {
+		return f.hwidth, f.hheight
+	}
+
+	// otherwise calculate the preferred size
 	if f.horizontal {
 		// Horizontal layout: sum widths, take max height
 		for i, child := range f.children {
@@ -121,17 +127,28 @@ func (f *Flex) Hint() (int, int) {
 			}
 		}
 	}
+
 	return width, height
 }
+
+// Render draws the flex container and all its children.
+func (f *Flex) Render(r *Renderer) {
+	f.Component.Render(r)
+	for _, child := range f.children {
+		child.Render(r)
+	}
+}
+
+// ---- Layout ---------------------------------------------------------------
 
 // Layout arranges all child widgets within the flex container according to
 // the specified orientation, alignment, and spacing configuration.
 func (f *Flex) Layout() error {
 	if f.horizontal {
-		f.Log(f, Debug,"Flex horizontal layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
+		f.Log(f, Debug, "Flex horizontal layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
 		f.layoutHorizontal()
 	} else {
-		f.Log(f, Debug,"Flex vertical layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
+		f.Log(f, Debug, "Flex vertical layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
 		f.layoutVertical()
 	}
 
@@ -273,7 +290,7 @@ func (f *Flex) layoutVertical() {
 			child.SetBounds(wx, y, ww, hh+style.Vertical())
 		}
 		_, _, _, height := child.Bounds()
-		f.Log(f, Debug,"Child", "i", i, "ID", child.ID(), "hint", hh, "height", height)
+		f.Log(f, Debug, "Child", "i", i, "ID", child.ID(), "hint", hh, "height", height)
 		y += height + f.spacing
 	}
 }
@@ -313,13 +330,5 @@ func align(alignment string, start, end, size int) (int, int) {
 		return start, space
 	default: // "start" or any other value
 		return start, size
-	}
-}
-
-// Render draws the flex container and all its children.
-func (f *Flex) Render(r *Renderer) {
-	f.Component.Render(r)
-	for _, child := range f.children {
-		child.Render(r)
 	}
 }

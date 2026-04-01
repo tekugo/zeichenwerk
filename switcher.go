@@ -30,11 +30,8 @@ func NewSwitcher(id, class string) *Switcher {
 	}
 }
 
-// Add adds a new pane to the switcher.
-//
-// Parameters:
-//   - label: Name of the pane
-//   - widget: Widget to be added as the pane content
+// Add appends widget as a new pane. The pane is hidden immediately unless it
+// is the first pane added. Returns ErrChildIsNil if widget is nil.
 func (s *Switcher) Add(widget Widget, params ...any) error {
 	if widget == nil {
 		return ErrChildIsNil
@@ -54,11 +51,7 @@ func (s *Switcher) Apply(theme *Theme) {
 	theme.Apply(s, s.Selector("switcher"))
 }
 
-// Children returns the child widgets of the switcher based on visibility preference.
-// This method supports two modes: visible-only and all children.
-//
-// Returns:
-//   - []Widget: Slice of all child widgets
+// Children returns all pane widgets regardless of visibility.
 func (s *Switcher) Children() []Widget {
 	return s.panes
 }
@@ -67,7 +60,7 @@ func (s *Switcher) Children() []Widget {
 // The preferred size is the maximum width and height of all children.
 func (s *Switcher) Hint() (int, int) {
 	// If a hint is set manually, we return it instead
-	if s.hwidth != 0 && s.hheight != 0 {
+	if s.hwidth != 0 || s.hheight != 0 {
 		return s.hwidth, s.hheight
 	}
 
@@ -88,14 +81,16 @@ func (s *Switcher) Refresh() {
 	Redraw(s)
 }
 
-// Select sets the currently selected pane by index or id.
+// Select sets the visible pane. Pass an int index or a string widget ID.
+// The previously visible pane receives EvtHide; the new one receives EvtShow.
+// Panics if an int index is out of range.
 func (s *Switcher) Select(index any) {
 	switch pane := index.(type) {
 	case int:
-		s.Log(s, Debug,"Hiding", "index", s.selected, "ID", s.panes[s.selected].ID())
+		s.Log(s, Debug, "Hiding", "index", s.selected, "ID", s.panes[s.selected].ID())
 		s.panes[s.selected].SetFlag(FlagHidden, true)
 		s.panes[s.selected].Dispatch(s.panes[s.selected], EvtHide)
-		s.Log(s, Debug,"Showing", "index", pane, "ID", s.panes[pane].ID())
+		s.Log(s, Debug, "Showing", "index", pane, "ID", s.panes[pane].ID())
 		s.panes[pane].SetFlag(FlagHidden, false)
 		s.panes[pane].Dispatch(s.panes[pane], EvtShow)
 		s.selected = pane
