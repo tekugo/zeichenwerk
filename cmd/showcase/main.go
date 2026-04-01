@@ -12,7 +12,7 @@ import (
 type navItem struct{ icon, name, desc string }
 
 func main() {
-	createUI().Debug().Run()
+	createUI().Run()
 }
 
 // ── Shell ──────────────────────────────────────────────────────────────────────

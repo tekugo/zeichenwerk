@@ -8,6 +8,10 @@ Zeichenwerk (German for "character works") is a modern, idiomatic Go library for
 building terminal user interfaces. This refactored version features a fluent
 builder API, improved architecture, and an enhanced widget system.
 
+## How it looks
+
+[Showcase](showcase.png)
+
 ## Quick Example
 
 ```go
