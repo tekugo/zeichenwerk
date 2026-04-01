@@ -10,7 +10,7 @@ builder API, improved architecture, and an enhanced widget system.
 
 ## How it looks
 
-[Showcase](showcase-1.png)
+![Showcase](showcase-1.png)
 
 ## Quick Example
 
