@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -12,9 +13,11 @@ import (
 
 type navItem struct{ icon, name, desc string }
 
-func parseFlags() (*Theme, bool) {
+func parseFlags() (*Theme, bool, bool, bool) {
 	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
 	dbg := flag.Bool("debug", false, "Start in debug mode")
+	dmp := flag.Bool("dump", false, "Dump widget hierarchy to stdout and exit")
+	dmpV := flag.Bool("dump-verbose", false, "Dump widget hierarchy with style details to stdout and exit")
 	flag.Parse()
 	var theme *Theme
 	switch *t {
@@ -31,12 +34,18 @@ func parseFlags() (*Theme, bool) {
 	default:
 		theme = MidnightNeonTheme()
 	}
-	return theme, *dbg
+	return theme, *dbg, *dmp, *dmpV
 }
 
 func main() {
-	theme, dbg := parseFlags()
+	theme, dbg, dmp, dmpV := parseFlags()
 	ui := createUI(theme)
+	if dmp || dmpV {
+		ui.SetBounds(0, 0, 120, 40)
+		ui.Layout()
+		ui.Dump(os.Stdout, DumpOptions{Style: dmpV})
+		return
+	}
 	if dbg {
 		ui.Debug()
 	}

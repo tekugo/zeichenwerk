@@ -20,17 +20,7 @@ func NewDialog(id, class, title string) *Dialog {
 	}
 }
 
-// Add sets the single body widget, replacing any previous child.
-func (d *Dialog) Add(widget Widget, params ...any) error {
-	if d.child != nil {
-		d.child.SetParent(nil) // clear old parent reference
-	}
-	if widget != nil {
-		widget.SetParent(d)
-	}
-	d.child = widget
-	return nil
-}
+// ---- Widget Methods -------------------------------------------------------
 
 // Apply applies a theme style to the component.
 func (d *Dialog) Apply(theme *Theme) {
@@ -38,19 +28,11 @@ func (d *Dialog) Apply(theme *Theme) {
 	theme.Apply(d, d.Selector("dialog/title"))
 }
 
-// Children returns the body widget slice (empty if no child has been set).
-func (d *Dialog) Children() []Widget {
-	if d.child == nil {
-		return []Widget{}
-	}
-	return []Widget{d.child}
-}
-
 // Hint returns the preferred size of the dialog. If an explicit hint has been
 // set it is returned directly; otherwise the size is derived from the child's
 // hint plus the dialog's own style overhead (border, padding) and title bar.
 func (d *Dialog) Hint() (int, int) {
-	if d.hwidth != 0 && d.hheight != 0 {
+	if d.hwidth != 0 || d.hheight != 0 {
 		d.Log(d, Debug, "Dialog Fixed Hint", "w", d.hwidth, "h", d.hheight)
 		return d.hwidth, d.hheight
 	} else if d.child != nil {
@@ -74,6 +56,33 @@ func (d *Dialog) Hint() (int, int) {
 	}
 }
 
+// ---- Summarizer -----------------------------------------------------------
+
+// Summary returns the dialog title for Dump output.
+func (d *Dialog) Summary() string { return d.title }
+
+// ---- Container Methods ----------------------------------------------------
+
+// Add sets the single body widget, replacing any previous child.
+func (d *Dialog) Add(widget Widget, params ...any) error {
+	if d.child != nil {
+		d.child.SetParent(nil) // clear old parent reference
+	}
+	if widget != nil {
+		widget.SetParent(d)
+	}
+	d.child = widget
+	return nil
+}
+
+// Children returns the body widget slice (empty if no child has been set).
+func (d *Dialog) Children() []Widget {
+	if d.child == nil {
+		return []Widget{}
+	}
+	return []Widget{d.child}
+}
+
 // Layout positions the body widget below the title bar within the content area.
 func (d *Dialog) Layout() error {
 	if d.child != nil {
@@ -88,6 +97,8 @@ func (d *Dialog) Layout() error {
 	}
 	return Layout(d)
 }
+
+// ---- Rendering ------------------------------------------------------------
 
 // Render draws the dialog: title bar, background fill, border, and body widget.
 func (d *Dialog) Render(r *Renderer) {

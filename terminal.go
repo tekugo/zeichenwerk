@@ -86,6 +86,9 @@ func (t *Terminal) Apply(theme *Theme) {
 // Hint returns the buffer dimensions (80×24 by default).
 // Callers wanting a flexible-size terminal should call SetHint.
 func (t *Terminal) Hint() (int, int) {
+	if t.hwidth != 0 || t.hheight != 0 {
+		return t.hwidth, t.hheight
+	}
 	return t.main.Width(), t.main.Height()
 }
 

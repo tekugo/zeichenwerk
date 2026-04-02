@@ -17,11 +17,15 @@ type Animation struct {
 	stop   chan struct{}
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Refresh triggers a redraw of the widget. This method should be called
 // by the Tick implementation to update the display.
 func (a *Animation) Refresh() {
 	Redraw(a)
 }
+
+// ---- Animation Control ----------------------------------------------------
 
 // Running returns whether the animation is currently active.
 func (a *Animation) Running() bool {

@@ -54,6 +54,8 @@ func NewDeck(id, class string, render ItemRender, itemHeight int) *Deck {
 	return d
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Apply applies the deck's theme styles.
 func (d *Deck) Apply(theme *Theme) {
 	theme.Apply(d, d.Selector("deck"), "disabled", "focused", "hovered")
@@ -94,7 +96,7 @@ func (d *Deck) SetDisabled(indices []int) {
 	d.disabled = indices
 }
 
-// ---- Navigation -----------------------------------------------------------
+// ---- Selection ------------------------------------------------------------
 
 // Selected returns the currently highlighted item index (-1 if none).
 func (d *Deck) Selected() int {
@@ -113,31 +115,7 @@ func (d *Deck) Select(index int) {
 	Redraw(d)
 }
 
-// Move advances the highlight by count steps (positive = down, negative = up),
-// skipping disabled items and clamping at the list boundaries.
-func (d *Deck) Move(count int) {
-	if len(d.items) == 0 || count == 0 {
-		return
-	}
-	steps := count
-	if steps < 0 {
-		steps = -steps
-	}
-	newIndex := d.index
-	for i := 0; i < steps; i++ {
-		if count > 0 {
-			newIndex = d.skip(newIndex+1, 1)
-		} else {
-			newIndex = d.skip(newIndex-1, -1)
-		}
-	}
-	if newIndex != d.index {
-		d.index = newIndex
-		d.adjust()
-		d.Dispatch(d, EvtSelect, d.index)
-		Redraw(d)
-	}
-}
+// ---- Navigation -----------------------------------------------------------
 
 // First highlights the first enabled item.
 func (d *Deck) First() {
@@ -167,14 +145,30 @@ func (d *Deck) Last() {
 	Redraw(d)
 }
 
-// PageUp moves the highlight up by the number of fully visible slots.
-func (d *Deck) PageUp() {
-	_, _, _, ch := d.Content()
-	slots := ch / d.itemHeight
-	if slots < 1 {
-		slots = 1
+// Move advances the highlight by count steps (positive = down, negative = up),
+// skipping disabled items and clamping at the list boundaries.
+func (d *Deck) Move(count int) {
+	if len(d.items) == 0 || count == 0 {
+		return
 	}
-	d.Move(-slots)
+	steps := count
+	if steps < 0 {
+		steps = -steps
+	}
+	newIndex := d.index
+	for i := 0; i < steps; i++ {
+		if count > 0 {
+			newIndex = d.skip(newIndex+1, 1)
+		} else {
+			newIndex = d.skip(newIndex-1, -1)
+		}
+	}
+	if newIndex != d.index {
+		d.index = newIndex
+		d.adjust()
+		d.Dispatch(d, EvtSelect, d.index)
+		Redraw(d)
+	}
 }
 
 // PageDown moves the highlight down by the number of fully visible slots.
@@ -185,6 +179,16 @@ func (d *Deck) PageDown() {
 		slots = 1
 	}
 	d.Move(slots)
+}
+
+// PageUp moves the highlight up by the number of fully visible slots.
+func (d *Deck) PageUp() {
+	_, _, _, ch := d.Content()
+	slots := ch / d.itemHeight
+	if slots < 1 {
+		slots = 1
+	}
+	d.Move(-slots)
 }
 
 // ---- Internal helpers -----------------------------------------------------

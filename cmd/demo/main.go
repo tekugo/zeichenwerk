@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,9 +14,11 @@ import (
 	. "github.com/tekugo/zeichenwerk"
 )
 
-func parseFlags() (*Theme, bool) {
+func parseFlags() (*Theme, bool, bool, bool) {
 	t := flag.String("t", "tokyo", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
 	dbg := flag.Bool("debug", false, "Start in debug mode")
+	dmp := flag.Bool("dump", false, "Dump widget hierarchy to stdout and exit")
+	dmpV := flag.Bool("dump-verbose", false, "Dump widget hierarchy with style details to stdout and exit")
 	flag.Parse()
 	var theme *Theme
 	switch *t {
@@ -32,13 +35,19 @@ func parseFlags() (*Theme, bool) {
 	default:
 		theme = TokyoNightTheme()
 	}
-	return theme, *dbg
+	return theme, *dbg, *dmp, *dmpV
 }
 
 // main function
 func main() {
-	theme, dbg := parseFlags()
+	theme, dbg, dmp, dmpV := parseFlags()
 	ui := createUI(theme)
+	if dmp || dmpV {
+		ui.SetBounds(0, 0, 120, 40)
+		ui.Layout()
+		ui.Dump(os.Stdout, DumpOptions{Style: dmpV})
+		return
+	}
 	if dbg {
 		ui.Debug()
 	}
@@ -818,7 +827,7 @@ func treeFSDemo(builder *Builder) {
 	builder.Flex("tree-fs-demo", false, "stretch", 0).
 		// Toolbar: Up button + current root path
 		Flex("tree-fs-toolbar", true, "center", 1).Padding(0, 1).
-		Button("tree-fs-up", "↑ Up").Class("dialog").
+		Button("tree-fs-up", "↑ Up").
 		Static("tree-fs-path", tfs.RootPath()).Padding(0, 1).
 		End().
 		// The tree itself, takes all remaining height

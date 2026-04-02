@@ -13,6 +13,9 @@ const (
 	// EvtChange is dispatched when a widget's value or state changes
 	// (e.g. Checkbox toggled, Tree node expanded/collapsed).
 	EvtChange Event = "change"
+	// EvtClose is dispatched to a popup layer just before it is removed by
+	// UI.Close, giving widgets inside the dialog a chance to clean up state.
+	EvtClose Event = "close"
 	// EvtClick is dispatched on a single mouse button-1 click.
 	EvtEnter Event = "enter"
 	// EvtHide is dispatched when a widget becomes hidden.
@@ -36,7 +39,4 @@ const (
 	EvtSelect Event = "select"
 	// EvtShow is dispatched when a widget becomes visible.
 	EvtShow Event = "show"
-	// EvtClose is dispatched to a popup layer just before it is removed by
-	// UI.Close, giving widgets inside the dialog a chance to clean up state.
-	EvtClose Event = "close"
 )

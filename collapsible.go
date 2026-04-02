@@ -69,7 +69,7 @@ func (c *Collapsible) Children() []Widget {
 // Style overhead (border, padding, margin) of the collapsible itself is added
 // by the parent layout engine, consistent with Box.Hint().
 func (c *Collapsible) Hint() (int, int) {
-	if c.hwidth != 0 && c.hheight != 0 {
+	if c.hwidth != 0 || c.hheight != 0 {
 		return c.hwidth, c.hheight
 	}
 	childW, childH := 0, 0

@@ -73,6 +73,9 @@ func (s *Spinner) Apply(theme *Theme) {
 //   - int: Preferred width (always 1)
 //   - int: Preferred height (always 1)
 func (s *Spinner) Hint() (int, int) {
+	if s.hwidth != 0 || s.hheight != 0 {
+		return s.hwidth, s.hheight
+	}
 	max := 1
 	for _, s := range s.sequence {
 		if len(s) > max {

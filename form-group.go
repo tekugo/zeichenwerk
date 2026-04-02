@@ -78,6 +78,9 @@ func (fg *FormGroup) Children() []Widget {
 // Hint returns the preferred content size needed to display all lines and
 // their labels at their natural sizes.
 func (fg *FormGroup) Hint() (int, int) {
+	if fg.hwidth != 0 || fg.hheight != 0 {
+		return fg.hwidth, fg.hheight
+	}
 	w, h := 0, 0 // preferred width and height total
 	mlw := 0     // maximum label width in horizontal layout
 	for i, line := range fg.lines {

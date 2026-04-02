@@ -164,6 +164,33 @@ Update(container, id, value any)  // Type-aware value setter (List, Static, Tabl
 Suggest(items []string)           // Returns a suggest func for Typeahead prefix matching
 ```
 
+### AI / Agent tooling (`dump.go`)
+
+```go
+Dump(w io.Writer, root Widget)   // Stream indented widget tree to any writer
+DumpToStdout(root Widget)        // Convenience: Dump to os.Stdout
+ui.Dump(w io.Writer)             // Dump all layers with UI header line
+```
+
+Run `go run ./cmd/demo -dump` (or `./cmd/showcase -dump`, `./cmd/compose -dump`)
+to print the fully laid-out widget hierarchy of that application to stdout and
+exit — no terminal required. Useful for giving an AI agent a complete snapshot
+of the UI structure and current widget state.
+
+The output is an indented text tree: one line per widget with its type, ID,
+content summary (text labels, input values, tab names, etc.), screen bounds,
+and state flags (`[FOCUSED]`, `[HIDDEN]`, `[DISABLED]`). Hidden widgets are
+always included with their full subtree so all content is readable. Custom
+widgets may implement the `Summarizer` interface (`Summary() string`) to
+provide their own single-line description.
+
+`-dump-verbose` adds a `style:` line below each widget showing the effective
+border type, non-zero padding/margin (compact CSS notation), and foreground/
+background color variables for the widget's current state.
+
+Both flags lay out the UI at a fixed 120×40 terminal size so the output is
+deterministic without a live terminal session.
+
 ## Building a new widget — checklist
 
 1. Create `mywidget.go` with `type MyWidget struct { Component; ... }`

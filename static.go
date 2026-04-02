@@ -27,15 +27,26 @@ type Static struct {
 //   - *Static: A new static widget instance
 func NewStatic(id, class string, text string) *Static {
 	return &Static{
-		Component: Component{id: id, class: class, hwidth: utf8.RuneCountInString(text), hheight: 1},
+		Component: Component{id: id, class: class},
 		Text:      text,
 		Alignment: "left", // Set default alignment
 	}
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Apply applies a theme's styles to the component.
 func (s *Static) Apply(theme *Theme) {
 	theme.Apply(s, s.Selector("static"))
+}
+
+// Hint returns the natural size of the static derived from its current text.
+// If hwidth or hheight has been set explicitly, both are returned as-is.
+func (s *Static) Hint() (int, int) {
+	if s.hwidth != 0 || s.hheight != 0 {
+		return s.hwidth, s.hheight
+	}
+	return utf8.RuneCountInString(s.Text), 1
 }
 
 // Render renders the static widget to the screen using the Renderer.
@@ -44,6 +55,19 @@ func (s *Static) Render(r *Renderer) {
 	cx, cy, cw, _ := s.Content()
 	r.Text(cx, cy, s.Text, cw)
 }
+
+// ---- Summarizer -----------------------------------------------------------
+
+// Summary returns the static text for Dump output (truncated to 60 runes).
+func (s *Static) Summary() string {
+	r := []rune(s.Text)
+	if len(r) > 60 {
+		return string(r[:60]) + "…"
+	}
+	return s.Text
+}
+
+// ---- Setter ---------------------------------------------------------------
 
 // Set implements Setter. Accepts a string value; any other type is formatted
 // with fmt.Sprintf("%v", value).

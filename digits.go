@@ -124,6 +124,8 @@ type Digits struct {
 	Text string // Text to render as large digits/characters
 }
 
+// ---- Constructor ----------------------------------------------------------
+
 // NewDigits creates a digits widget with the given ID and initial text.
 func NewDigits(id, class, text string) *Digits {
 	d := &Digits{
@@ -141,6 +143,8 @@ func NewDigits(id, class, text string) *Digits {
 	d.hheight = 3
 	return d
 }
+
+// ---- Widget Methods -------------------------------------------------------
 
 // Apply applies a theme style to the component.
 func (d *Digits) Apply(theme *Theme) {
@@ -169,6 +173,8 @@ func (d *Digits) Render(r *Renderer) {
 		}
 	}
 }
+
+// ---- Setter ---------------------------------------------------------------
 
 // Set sets the digit text in a generic way.
 func (d *Digits) Set(value any) bool {

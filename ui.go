@@ -3,6 +3,7 @@ package zeichenwerk
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"runtime/debug"
@@ -71,7 +72,7 @@ type UI struct {
 	// Event handling channels
 	events   chan tcell.Event // Buffered channel for incoming tcell events (keyboard, mouse, resize)
 	quit     chan struct{}    // Channel for signaling graceful application shutdown
-	quitOnce sync.Once       // Guards the quit channel so Quit() is safe to call multiple times
+	quitOnce sync.Once        // Guards the quit channel so Quit() is safe to call multiple times
 
 	// Rendering channels
 	redraw  chan Widget   // Buffered channel for triggering individual widget redraws (performance optimization)
@@ -179,7 +180,7 @@ func (ui *UI) NewBuilder() *Builder {
 	return NewBuilder(ui.renderer.theme)
 }
 
-// ---- Widget methods -------------------------------------------------------
+// ---- Event Handling -------------------------------------------------------
 
 // Handle processes tcell events and coordinates their handling throughout the
 // application. This is the main event processing method that handles keyboard
@@ -270,7 +271,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 	return true
 }
 
-// propagate sends an event up the widget hierarchy starting from the target widget.
+// dispatch sends an event up the widget hierarchy starting from the target widget.
 // This implements the event bubbling pattern where events are first handled by
 // the most specific widget (target), then by its parent, and so on up the chain
 // until either a widget handles the event or the root UI is reached.
@@ -536,6 +537,8 @@ func (ui *UI) ShowCursor() {
 		}
 	}
 }
+
+// ---- Loggging ------------------------------------------------------------
 
 // Log adds a structured log entry using the application's slog logger.
 // The log is routed to both the debug Text widget (human-readable) and the
@@ -842,4 +845,18 @@ func (ui *UI) SetTheme(theme *Theme) {
 //   - Theme: The currently active theme
 func (ui *UI) Theme() *Theme {
 	return ui.renderer.theme
+}
+
+// Dump writes a human- and LLM-readable text tree of the full UI state to w.
+// It prints a header line with the screen dimensions and layer count, followed
+// by the widget hierarchy of each layer. Use this to give an AI agent a
+// snapshot of the current interface without running the full event loop.
+func (ui *UI) Dump(w io.Writer, opts ...DumpOptions) {
+	fmt.Fprintf(w, "[UI] %dx%d layers=%d\n", ui.width, ui.height, len(ui.layers))
+	for i, layer := range ui.layers {
+		if i > 0 {
+			fmt.Fprintf(w, "  ── layer %d ──\n", i)
+		}
+		Dump(w, layer, opts...)
+	}
 }

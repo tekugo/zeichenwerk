@@ -10,7 +10,7 @@ functional composition API, and an enhanced widget system.
 
 ## How it looks
 
-![Showcase](showcase-1.png)
+![Showcase](showcase.gif)
 
 ## Quick Example
 
@@ -94,12 +94,12 @@ Zeichenwerk is designed for developers who want:
 
 Compare to other Go TUI libraries:
 
-| Library     | Style                               |
-| ----------- | ----------------------------------- |
-| tcell       | Low-level terminal primitives       |
-| tview       | Traditional widget toolkit          |
-| bubbletea   | Elm-style update loop               |
-| zeichenwerk | Builder + functional composition    |
+| Library     | Style                            |
+| ----------- | -------------------------------- |
+| tcell       | Low-level terminal primitives    |
+| tview       | Traditional widget toolkit       |
+| bubbletea   | Elm-style update loop            |
+| zeichenwerk | Builder + functional composition |
 
 ## Installation
 
@@ -199,6 +199,67 @@ go run ./cmd/compose
 - Composition API: [compose/compose.go](compose/compose.go)
 - Theme system: [theme.go](theme.go)
 - Component base: [component.go](component.go)
+
+## Agentic-ready
+
+Zeichenwerk ships with first-class support for AI agents and automated tooling
+that need to observe or interact with a running UI without a live terminal.
+
+### Widget hierarchy dump
+
+`Dump(w io.Writer, root Widget)` streams the full widget tree to any writer as
+an indented, human- and LLM-readable text. One line per widget — type, ID,
+class, content summary, screen bounds, and state flags (`[FOCUSED]`, `[HIDDEN]`,
+`[DISABLED]`). Hidden containers are always included so every part of the UI is
+readable regardless of what is currently visible on screen.
+
+```go
+// Snapshot the entire UI (all layers) to stdout
+ui.Dump(os.Stdout)
+
+// Dump a subtree
+zeichenwerk.Dump(os.Stdout, someContainer)
+
+// Include per-widget style details (border, padding, margin, fg/bg)
+ui.Dump(os.Stdout, zeichenwerk.DumpOptions{Style: true})
+```
+
+All three demo binaries support `-dump` and `-dump-verbose` flags that lay out
+the UI at a fixed 120×40 size, print the hierarchy, and exit — no terminal
+required:
+
+```bash
+go run ./cmd/showcase -dump
+go run ./cmd/showcase -dump-verbose
+go run ./cmd/demo -dump
+go run ./cmd/compose -dump
+```
+
+### Summarizer interface
+
+Built-in widgets produce concise inline summaries (button labels, input values,
+checkbox state, active tab, etc.). Custom widgets can opt in by implementing the
+`Summarizer` interface:
+
+```go
+type Summarizer interface {
+    Summary() string
+}
+```
+
+### AGENTS.md
+
+`AGENTS.md` at the repository root is a machine-readable project guide kept up
+to date for AI coding assistants. It covers architecture rules, the full widget
+reference, selector format, event constants, and the builder checklist.
+
+### Claude Code skill
+
+A Claude Code skill is bundled at `.claude/skills/zeichenwerk/`. When you open
+this repository in Claude Code, the skill is loaded automatically — Claude gains
+knowledge of all widget constructors, style keys, event constants, the selector
+format, and both APIs without requiring additional context in the prompt.
+A detailed widget reference is included in `.claude/skills/zeichenwerk/widgets.md`.
 
 ## Development Status
 

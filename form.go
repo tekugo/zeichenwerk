@@ -68,6 +68,9 @@ func (f *Form) Children() []Widget {
 }
 
 func (f *Form) Hint() (int, int) {
+	if f.hwidth != 0 || f.hheight != 0 {
+		return f.hwidth, f.hheight
+	}
 	if f.child != nil {
 		w, h := f.child.Hint()
 		style := f.child.Style()

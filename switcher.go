@@ -1,5 +1,7 @@
 package zeichenwerk
 
+import "fmt"
+
 // Switcher represents a container widget that displays one pane at a time
 // from a collection of named panes. It acts like a tabbed interface without
 // visible tabs, where only the currently selected pane is visible.
@@ -79,6 +81,11 @@ func (s *Switcher) Hint() (int, int) {
 // Refresh redraws the switcher.
 func (s *Switcher) Refresh() {
 	Redraw(s)
+}
+
+// Summary returns the active pane index for Dump output.
+func (s *Switcher) Summary() string {
+	return fmt.Sprintf("showing=%d", s.selected)
 }
 
 // Select sets the visible pane. Pass an int index or a string widget ID.

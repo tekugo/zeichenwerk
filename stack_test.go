@@ -89,7 +89,7 @@ func TestStackPop(t *testing.T) {
 			t.Errorf("Pop() = %q, want %q", value3, "first")
 		}
 
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Stack should be empty after popping all elements")
 		}
 	})
@@ -102,7 +102,7 @@ func TestStackPop(t *testing.T) {
 			t.Errorf("Pop() = %d, want 42", value)
 		}
 
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Stack should be empty after popping last element")
 		}
 	})
@@ -173,7 +173,7 @@ func TestStackIsEmpty(t *testing.T) {
 	t.Run("Empty stack", func(t *testing.T) {
 		var stack Stack[int]
 
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("New stack should be empty")
 		}
 	})
@@ -181,7 +181,7 @@ func TestStackIsEmpty(t *testing.T) {
 	t.Run("Non-empty stack", func(t *testing.T) {
 		stack := Stack[string]{"element"}
 
-		if stack.IsEmpty() {
+		if stack.Empty() {
 			t.Error("Stack with elements should not be empty")
 		}
 	})
@@ -190,19 +190,19 @@ func TestStackIsEmpty(t *testing.T) {
 		var stack Stack[int]
 
 		// Initially empty
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Initial stack should be empty")
 		}
 
 		// After push
 		stack.Push(1)
-		if stack.IsEmpty() {
+		if stack.Empty() {
 			t.Error("Stack should not be empty after push")
 		}
 
 		// After pop
 		stack.Pop()
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Stack should be empty after popping last element")
 		}
 	})
@@ -251,7 +251,7 @@ func TestStackClear(t *testing.T) {
 
 		stack.Clear()
 
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Stack should be empty after clear")
 		}
 
@@ -265,7 +265,7 @@ func TestStackClear(t *testing.T) {
 
 		stack.Clear()
 
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Stack should be empty after clear")
 		}
 
@@ -389,7 +389,7 @@ func TestStackLIFOBehavior(t *testing.T) {
 		}
 	}
 
-	if !stack.IsEmpty() {
+	if !stack.Empty() {
 		t.Error("Stack should be empty after popping all elements")
 	}
 }
@@ -425,7 +425,7 @@ func TestStackOperationSequences(t *testing.T) {
 			t.Errorf("Pop() = %q, want %q", val3, "first")
 		}
 
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Stack should be empty at end")
 		}
 	})
@@ -445,7 +445,7 @@ func TestStackOperationSequences(t *testing.T) {
 		// Clear and verify
 		stack.Clear()
 
-		if !stack.IsEmpty() {
+		if !stack.Empty() {
 			t.Error("Stack should be empty after clear")
 		}
 
@@ -527,7 +527,7 @@ func BenchmarkStackPushPop(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		stack.Push(i)
-		if i%2 == 1 && !stack.IsEmpty() {
+		if i%2 == 1 && !stack.Empty() {
 			stack.Pop()
 		}
 	}

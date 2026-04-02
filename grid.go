@@ -1,5 +1,7 @@
 package zeichenwerk
 
+import "fmt"
+
 // cell represents a single cell within a grid container that holds a widget
 // and defines its position and span within the grid layout.
 //
@@ -105,6 +107,11 @@ func NewGrid(id, class string, rows, columns int, lines bool) *Grid {
 // Apply applies a theme's styles to the component.
 func (g *Grid) Apply(theme *Theme) {
 	theme.Apply(g, g.Selector("grid"))
+}
+
+// Summary returns row/column sizes and grid-lines setting for Dump output.
+func (g *Grid) Summary() string {
+	return fmt.Sprintf("rows=%v cols=%v lines=%v", g.rows, g.columns, g.lines)
 }
 
 // Children returns a slice of all child widgets contained in the grid cells.

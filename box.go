@@ -35,43 +35,11 @@ func NewBox(id, class, title string) *Box {
 	}
 }
 
-// Add sets the child widget for this box container.
-// Since Box is designed to contain exactly one child widget, calling Add
-// will replace any previously set child widget. If you need to contain
-// multiple widgets, consider using a layout container (like Flex or Grid)
-// as the child widget.
-//
-// Parameters:
-//   - widget: The widget to be contained within this box
-func (b *Box) Add(widget Widget, params ...any) error {
-	if widget == nil {
-		return ErrChildIsNil
-	}
-	if b.child != nil {
-		b.child.SetParent(nil) // clear old parent reference
-	}
-	b.child = widget
-	b.child.SetParent(b)
-	return nil
-}
+// ---- Widget Methods -------------------------------------------------------
 
 // Apply applies a theme style to the component.
 func (b *Box) Apply(theme *Theme) {
 	theme.Apply(b, b.Selector("box"))
-}
-
-// Children returns a slice containing the single child widget of this box.
-// This method implements the Container interface requirement. The returned
-// slice will contain exactly one element if a child has been added, or will
-// be empty if no child widget has been set.
-//
-// Returns:
-//   - []Widget: A slice containing the child widget, or empty slice
-func (b *Box) Children() []Widget {
-	if b.child == nil {
-		return []Widget{}
-	}
-	return []Widget{b.child}
 }
 
 // Hint returns the box's preferred content size for optimal display.
@@ -83,7 +51,7 @@ func (b *Box) Children() []Widget {
 //   - int: Preferred width without box styling
 //   - int: Preferred height without box styling
 func (b *Box) Hint() (int, int) {
-	if b.hwidth != 0 && b.hheight != 0 {
+	if b.hwidth != 0 || b.hheight != 0 {
 		return b.hwidth, b.hheight
 	} else if b.child != nil {
 		w, h := b.child.Hint()
@@ -94,18 +62,6 @@ func (b *Box) Hint() (int, int) {
 	} else {
 		return 0, 0
 	}
-}
-
-// Layout positions and sizes the child widget within this box's content area.
-// The child widget is given the full content area of the box, which excludes
-// the space used by borders, padding, and margins. After positioning the child,
-// the layout of the child is also called, if it is a container itself.
-func (b *Box) Layout() error {
-	if b.child != nil {
-		cx, cy, cw, ch := b.Content()
-		b.child.SetBounds(cx, cy, cw, ch)
-	}
-	return Layout(b)
 }
 
 // Render renders the box and its child widget.
@@ -131,6 +87,8 @@ func (b *Box) Render(r *Renderer) {
 	}
 }
 
+// ---- Setter ---------------------------------------------------------------
+
 // Set sets the box value (title) in a generic way.
 func (b *Box) Set(value any) bool {
 	if title, ok := value.(string); ok {
@@ -140,4 +98,52 @@ func (b *Box) Set(value any) bool {
 	} else {
 		return false
 	}
+}
+
+// ---- Container Methods ----------------------------------------------------
+
+// Add sets the child widget for this box container.
+// Since Box is designed to contain exactly one child widget, calling Add
+// will replace any previously set child widget. If you need to contain
+// multiple widgets, consider using a layout container (like Flex or Grid)
+// as the child widget.
+//
+// Parameters:
+//   - widget: The widget to be contained within this box
+func (b *Box) Add(widget Widget, params ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if b.child != nil {
+		b.child.SetParent(nil) // clear old parent reference
+	}
+	b.child = widget
+	b.child.SetParent(b)
+	return nil
+}
+
+// Children returns a slice containing the single child widget of this box.
+// This method implements the Container interface requirement. The returned
+// slice will contain exactly one element if a child has been added, or will
+// be empty if no child widget has been set.
+//
+// Returns:
+//   - []Widget: A slice containing the child widget, or empty slice
+func (b *Box) Children() []Widget {
+	if b.child == nil {
+		return []Widget{}
+	}
+	return []Widget{b.child}
+}
+
+// Layout positions and sizes the child widget within this box's content area.
+// The child widget is given the full content area of the box, which excludes
+// the space used by borders, padding, and margins. After positioning the child,
+// the layout of the child is also called, if it is a container itself.
+func (b *Box) Layout() error {
+	if b.child != nil {
+		cx, cy, cw, ch := b.Content()
+		b.child.SetBounds(cx, cy, cw, ch)
+	}
+	return Layout(b)
 }
