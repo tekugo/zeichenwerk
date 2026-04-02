@@ -106,13 +106,35 @@ func (t *Terminal) Clear() {
 }
 
 // Resize resizes both buffers and clamps cursor/scroll region.
+// If the scroll region covered the full old buffer (i.e. it was the default,
+// never explicitly set via DECSTBM), it is expanded to cover the full new
+// buffer so that the terminal does not start scrolling at the old height.
 func (t *Terminal) Resize(w, h int) {
 	t.mu.Lock()
+	oldH := t.main.Height()
+	wasFullScreen := t.scroll.top == 0 && t.scroll.bot == oldH-1
 	t.main.Resize(w, h)
 	t.alt.Resize(w, h)
+	if wasFullScreen {
+		t.scroll.bot = h - 1
+	}
 	t.clampCursor()
 	t.clampScroll()
 	t.mu.Unlock()
+}
+
+// SetBounds overrides Component.SetBounds to immediately resize the cell
+// buffers to match the new content area. This ensures that Write() always
+// writes into a buffer that is sized to the visible widget area, regardless
+// of whether Render() has been called yet.
+func (t *Terminal) SetBounds(x, y, w, h int) {
+	t.Component.SetBounds(x, y, w, h)
+	style := t.Style()
+	cw := w - style.Horizontal()
+	ch := h - style.Vertical()
+	if cw > 0 && ch > 0 {
+		t.Resize(cw, ch)
+	}
 }
 
 // Render draws the active buffer to the screen.

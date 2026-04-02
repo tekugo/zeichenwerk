@@ -115,6 +115,9 @@ func NordTheme() *Theme {
 		NewStyle("viewport"),
 		NewStyle("terminal").WithColors("$fg0", "$bg0"),
 		NewStyle("terminal:focused").WithColors("$fg0", "$bg0"),
+		NewStyle("shortcuts").WithColors("$fg2", "$bg0"),
+		NewStyle("shortcuts/key").WithForeground("$cyan").WithFont("bold"),
+		NewStyle("shortcuts/label").WithForeground("$fg1"),
 	)
 
 	t.SetStrings(map[string]string{
@@ -142,6 +145,11 @@ func NordTheme() *Theme {
 
 		// ---- Select ----
 		"select.dropdown": " ▼",
+
+		// ---- Shortcuts ----
+		"shortcuts.prefix":    "",
+		"shortcuts.separator": "   ",
+		"shortcuts.suffix":    "",
 
 		// ---- Tree ----
 		"tree.expanded":  "▼ ",

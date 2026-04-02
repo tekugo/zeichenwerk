@@ -95,6 +95,8 @@ func createUI(theme *Theme) *UI {
 		End().
 		End().
 		Flex("footer", true, "center", 0).
+		Shortcuts("footer-shortcuts", "↑↓", "navigate", "Enter", "select", "i", "debug", "t", "theme", "q", "quit").
+		Spacer().Hint(-1, 0).
 		Static("theme-label", " Theme: ").
 		Select("theme-select", "tokyo", "Tokyo Night", "gruvbox-dark", "Gruvbox Dark", "gruvbox-light", "Gruvbox Light", "nrrd", "Nord", "neon", "Midnight Neon").
 		End().

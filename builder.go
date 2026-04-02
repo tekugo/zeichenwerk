@@ -384,6 +384,13 @@ func (b *Builder) Spinner(id string, sequence string) *Builder {
 	return b
 }
 
+// Shortcuts adds a Shortcuts widget with the given alternating key/label pairs.
+func (b *Builder) Shortcuts(id string, pairs ...string) *Builder {
+	s := NewShortcuts(id, b.class, pairs...)
+	b.Add(s)
+	return b
+}
+
 // Spacer adds an unstyled Component that acts as flexible empty space in a
 // Flex layout. Use Size or Hint to set its preferred dimensions.
 func (b *Builder) Spacer() *Builder {
