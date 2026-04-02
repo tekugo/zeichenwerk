@@ -17,6 +17,8 @@ type Container interface {
 	Layout() error
 }
 
+// ---- Container Helper Functions -------------------------------------------
+
 // Find searches for a widget by ID within a container hierarchy.
 //
 // Parameters:

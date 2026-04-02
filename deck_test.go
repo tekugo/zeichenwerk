@@ -16,8 +16,9 @@ func (m *mockScreen) Clip(x, y, w, h int)     {}
 func (m *mockScreen) Flush()                  {}
 func (m *mockScreen) Get(x, y int) string     { return "" }
 func (m *mockScreen) Put(x, y int, ch string) {}
-func (m *mockScreen) Set(fg, bg, font string) {}
-func (m *mockScreen) Translate(x, y int)      {}
+func (m *mockScreen) Set(fg, bg, font string)          {}
+func (m *mockScreen) SetUnderline(style int, color string) {}
+func (m *mockScreen) Translate(x, y int)               {}
 
 func newTestRenderer() *Renderer {
 	return NewRenderer(&mockScreen{}, NewTheme())

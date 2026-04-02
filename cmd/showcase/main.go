@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -12,25 +13,43 @@ import (
 
 type navItem struct{ icon, name, desc string }
 
-func parseTheme() *Theme {
-	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+func parseFlags() (*Theme, bool, bool, bool) {
+	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
+	dbg := flag.Bool("debug", false, "Start in debug mode")
+	dmp := flag.Bool("dump", false, "Dump widget hierarchy to stdout and exit")
+	dmpV := flag.Bool("dump-verbose", false, "Dump widget hierarchy with style details to stdout and exit")
 	flag.Parse()
+	var theme *Theme
 	switch *t {
 	case "tokyo":
-		return TokyoNightTheme()
+		theme = TokyoNightTheme()
 	case "nord":
-		return NordTheme()
+		theme = NordTheme()
 	case "gruvbox-dark":
-		return GruvboxDarkTheme()
+		theme = GruvboxDarkTheme()
 	case "gruvbox-light":
-		return GruvboxLightTheme()
+		theme = GruvboxLightTheme()
+	case "lipstick":
+		theme = LipstickTheme()
 	default:
-		return MidnightNeonTheme()
+		theme = MidnightNeonTheme()
 	}
+	return theme, *dbg, *dmp, *dmpV
 }
 
 func main() {
-	createUI(parseTheme()).Run()
+	theme, dbg, dmp, dmpV := parseFlags()
+	ui := createUI(theme)
+	if dmp || dmpV {
+		ui.SetBounds(0, 0, 120, 40)
+		ui.Layout()
+		ui.Dump(os.Stdout, DumpOptions{Style: dmpV})
+		return
+	}
+	if dbg {
+		ui.Debug()
+	}
+	ui.Run()
 }
 
 // ── Shell ──────────────────────────────────────────────────────────────────────
@@ -327,7 +346,7 @@ func userAdminScreen(b *Builder) {
 		Flex("ua-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
 		Static("ua-search-lbl", "Search:").Foreground("$gray").
 		Typeahead("ua-search", "", "name, email or role…").Hint(28, 1).
-		Spacer().Hint(-1, 0).Class("dialog").
+		Spacer().Hint(-1, 0).
 		Button("ua-btn-new", " + New User").
 		Button("ua-btn-del", " ✕ Delete").
 		Button("ua-btn-exp", " ↓ Export").
@@ -347,7 +366,7 @@ func userAdminScreen(b *Builder) {
 		End(). // Group("ua-group")
 		End(). // Form("ua-form")
 		Flex("ua-detail-btns", true, "end", 2).Padding(1).
-		Button("ua-save", " ✓ Save Changes").Class("dialog").
+		Button("ua-save", " ✓ Save Changes").
 		Button("ua-reset", " ↺ Reset").
 		Button("ua-deactivate", " ⊘ Deactivate").
 		End(). // Flex("ua-detail-btns")
@@ -605,7 +624,7 @@ func processScreen(b *Builder) {
 		Button("proc-kill", " ✕ Kill").
 		Button("proc-restart", " ↺ Restart").
 		Button("proc-detail", " ⬡ Details").
-		Button("proc-refresh", " ↻ Refresh").Class("dialog").
+		Button("proc-refresh", " ↻ Refresh").
 		End(). // Flex("proc-toolbar")
 		// Process table
 		Flex("proc-table-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
@@ -767,7 +786,7 @@ func dataEntryScreen(b *Builder) {
 		Flex("de-actions", true, "end", 2).
 		Button("de-btn-draft", " ↓ Save Draft").
 		Button("de-btn-cancel", " ✕ Cancel").
-		Button("de-btn-submit", " ✓ Submit Order").Class("dialog").
+		Button("de-btn-submit", " ✓ Submit Order").
 		End(). // Flex("de-actions")
 		Static("de-status", "").Foreground("$green").Padding(1, 0, 0, 0).
 		End(). // Flex("de-items-col")

@@ -342,6 +342,21 @@ func Static(id, class, text string, options ...Option) Option {
 	}
 }
 
+// Terminal adds a Terminal widget to the parent container.
+// Terminal is a leaf widget that renders arbitrary ANSI/VT terminal output.
+func Terminal(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewTerminal(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Checkbox adds a toggleable checkbox widget to the parent. checked sets the
 // initial state.
 func Checkbox(id, class, text string, checked bool, options ...Option) Option {

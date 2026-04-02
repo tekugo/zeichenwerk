@@ -33,9 +33,9 @@ func TokyoNightTheme() *Theme {
 		NewStyle("button").WithColors("$bg0", "$blue").WithBorder("none").WithPadding(0, 2),
 		NewStyle("button:focused").WithColors("$fg0", "$blue"),
 		NewStyle("button:hovered").WithColors("$red", "$blue"),
-		NewStyle("button.dialog").WithBorder("none"),
-		NewStyle("button.dialog:focused").WithBorder("none"),
-		NewStyle("button.dialog:hovered").WithBorder("none"),
+		NewStyle("button.dialog").WithColors("$fg0", "$bg2").WithBorder("none"),
+		NewStyle("button.dialog:focused").WithColors("$fg0", "$blue").WithBorder("none"),
+		NewStyle("button.dialog:hovered").WithColors("$red", "$blue").WithBorder("none"),
 		NewStyle("checkbox").WithColors("$fg2", "$bg0"),
 		NewStyle("checkbox:disabled").WithColors("$gray", "$bg0"),
 		NewStyle("checkbox:focused").WithColors("$fg0", "$bg0"),
@@ -48,6 +48,7 @@ func TokyoNightTheme() *Theme {
 		NewStyle("collapsible/header:hovered").WithColors("$fg0", "$cyan"),
 		NewStyle("custom"),
 		NewStyle("flex"),
+		NewStyle("flex.dialog").WithColors("$fg0", "$bg2"),
 		NewStyle("form"),
 		NewStyle("formgroup").WithColors("$fg0", "$bg1"),
 		NewStyle("formgroup:title").WithColors("$blue", "$bg1"),
@@ -68,6 +69,7 @@ func TokyoNightTheme() *Theme {
 		NewStyle("rule"),
 		NewStyle("scanner").WithColors("$cyan", "$bg0"),
 		NewStyle("static").WithColors("$fg0", "$bg1").WithMargin(0).WithPadding(0),
+		NewStyle("static.dialog").WithColors("$fg0", "$bg2").WithMargin(0).WithPadding(0),
 		NewStyle("select").WithColors("$fg0", "$bg2").WithPadding(0, 1),
 		NewStyle("select:focused").WithColors("$bg0", "$blue"),
 		NewStyle("styled").WithColors("$fg0", "$bg1"),
@@ -90,6 +92,8 @@ func TokyoNightTheme() *Theme {
 		NewStyle("tree/highlight:focused").WithColors("$bg0", "$blue"),
 		NewStyle("tree/indent").WithColors("$gray", ""),
 		NewStyle("viewport"),
+		NewStyle("terminal").WithColors("$fg0", "$bg0"),
+		NewStyle("terminal:focused").WithColors("$fg0", "$bg0"),
 	)
 
 	t.SetStrings(map[string]string{

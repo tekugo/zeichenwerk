@@ -57,6 +57,9 @@ func (g *Grow) Children() []Widget {
 
 // Hint returns the preferred size of the child widget including its style overhead.
 func (g *Grow) Hint() (int, int) {
+	if g.hwidth != 0 || g.hheight != 0 {
+		return g.hwidth, g.hheight
+	}
 	w, h := g.child.Hint()
 	style := g.child.Style()
 	w += style.Horizontal()

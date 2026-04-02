@@ -1,6 +1,7 @@
 package zeichenwerk
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
@@ -59,6 +60,9 @@ func (t *Tabs) Apply(theme *Theme) {
 //   - width: Preferred width in characters
 //   - height: Preferred height in characters (always 2)
 func (t *Tabs) Hint() (int, int) {
+	if t.hwidth != 0 || t.hheight != 0 {
+		return t.hwidth, t.hheight
+	}
 	width := 0
 	for _, tab := range t.tabs {
 		width += len([]rune(tab))
@@ -201,6 +205,19 @@ func (t *Tabs) Select(index int) bool {
 
 	t.Refresh()
 	return true
+}
+
+// Summary returns tab names with the active tab marked for Dump output.
+func (t *Tabs) Summary() string {
+	parts := make([]string, len(t.tabs))
+	for i, name := range t.tabs {
+		if i == t.selected {
+			parts[i] = fmt.Sprintf("%q(%d*)", name, i)
+		} else {
+			parts[i] = fmt.Sprintf("%q(%d)", name, i)
+		}
+	}
+	return strings.Join(parts, " | ")
 }
 
 // Selected returns the index of the currently selected tab.

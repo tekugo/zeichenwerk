@@ -78,33 +78,11 @@ func NewCanvas(id, class string, pages, width, height int) *Canvas {
 	return c
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Apply applies a theme style to the component.
 func (c *Canvas) Apply(theme *Theme) {
 	theme.Apply(c, c.Selector("canvas"))
-}
-
-// CellAt returns a pointer to the cell at the specified position, or nil if
-// the coordinates are out of bounds. The coordinates are relative to the
-// canvas buffer (0,0 is top-left).
-func (c *Canvas) Cell(x, y int) *Cell {
-	if c.page >= len(c.cells) || y < 0 || y >= len(c.cells[c.page]) || x < 0 || x >= len(c.cells[c.page][y]) {
-		return nil
-	}
-	return &c.cells[c.page][y][x]
-}
-
-// Clear removes all content from the canvas by resetting every cell to an
-// empty string with a default style. The cursor position is reset to (0,0)
-// and the widget is refreshed.
-func (c *Canvas) Clear() {
-	defaultStyle := NewStyle("")
-	for y := range c.cells[c.page] {
-		for x := range c.cells[c.page][y] {
-			c.cells[c.page][y][x] = Cell{ch: "", style: defaultStyle}
-		}
-	}
-	c.cursorX, c.cursorY = 0, 0
-	c.Refresh()
 }
 
 // Cursor returns the current cursor position relative to the canvas content
@@ -130,6 +108,37 @@ func (c *Canvas) Cursor() (int, int, string) {
 	return c.cursorX, c.cursorY, cursor
 }
 
+// Refresh redraws the canvas widget
+func (c *Canvas) Refresh() {
+	Redraw(c)
+}
+
+// ---- Canvas Methods ------------------------------------------------------
+
+// CellAt returns a pointer to the cell at the specified position, or nil if
+// the coordinates are out of bounds. The coordinates are relative to the
+// canvas buffer (0,0 is top-left).
+func (c *Canvas) Cell(x, y int) *Cell {
+	if c.page >= len(c.cells) || y < 0 || y >= len(c.cells[c.page]) || x < 0 || x >= len(c.cells[c.page][y]) {
+		return nil
+	}
+	return &c.cells[c.page][y][x]
+}
+
+// Clear removes all content from the canvas by resetting every cell to an
+// empty string with a default style. The cursor position is reset to (0,0)
+// and the widget is refreshed.
+func (c *Canvas) Clear() {
+	defaultStyle := NewStyle("")
+	for y := range c.cells[c.page] {
+		for x := range c.cells[c.page][y] {
+			c.cells[c.page][y][x] = Cell{ch: "", style: defaultStyle}
+		}
+	}
+	c.cursorX, c.cursorY = 0, 0
+	c.Refresh()
+}
+
 // Fill sets every cell in the canvas to the specified character and style.
 // If style is nil, the default style is used. This provides a fast way to
 // clear or uniformly populate the canvas.
@@ -148,11 +157,6 @@ func (c *Canvas) Fill(ch string, style *Style) {
 // Mode returns the current mode of the canvas ("normal" or "insert").
 func (c *Canvas) Mode() string {
 	return c.mode
-}
-
-// Refresh redraws the canvas widget
-func (c *Canvas) Refresh() {
-	Redraw(c)
 }
 
 // Resize changes the pages and cell buffers to the new size.
@@ -255,6 +259,8 @@ func (c *Canvas) Size() (width, height int) {
 	}
 	return len(c.cells[0][0]), len(c.cells[0])
 }
+
+// ---- Internal Event Handling ----------------------------------------------
 
 // handleKey processes keyboard events based on the current mode. In normal
 // mode, keys are used for movement and mode switching. In insert mode,
@@ -396,6 +402,8 @@ func (c *Canvas) insertCharacter(ch string) {
 		c.cursorX++
 	}
 }
+
+// ---- Rendering ------------------------------------------------------------
 
 // Render draws the canvas content to the screen. It iterates over the
 // visible content area and renders each cell's character with its

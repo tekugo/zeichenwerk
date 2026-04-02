@@ -187,12 +187,10 @@ func (t *Tree) Apply(theme *Theme) {
 }
 
 // Hint returns (maxRowWidth, len(flat)) where maxRowWidth is the widest
-// rendered row across all currently visible flat items. If either dimension
-// has been set explicitly via SetHint, that value is returned for that
-// dimension — this lets callers use Hint(0, -1) to request fractional height
-// without an explicit width.
+// rendered row across all currently visible flat items. If either hwidth or
+// hheight has been set explicitly, both are returned as-is.
 func (t *Tree) Hint() (int, int) {
-	if t.hwidth != 0 && t.hheight != 0 {
+	if t.hwidth != 0 || t.hheight != 0 {
 		return t.hwidth, t.hheight
 	}
 	maxW := 0
@@ -205,14 +203,7 @@ func (t *Tree) Hint() (int, int) {
 			maxW = w
 		}
 	}
-	h := len(t.flat)
-	if t.hheight != 0 {
-		h = t.hheight
-	}
-	if t.hwidth != 0 {
-		maxW = t.hwidth
-	}
-	return maxW, h
+	return maxW, len(t.flat)
 }
 
 // Render draws the visible rows of the tree.

@@ -58,6 +58,13 @@ func (r *Renderer) Translate(tx, ty int) {
 	r.screen.Translate(tx, ty)
 }
 
+// SetUnderline sets the underline style and colour for subsequent Put calls.
+// style: 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed.
+// color: empty string = terminal default.
+func (r *Renderer) SetUnderline(style int, color string) {
+	r.screen.SetUnderline(style, color)
+}
+
 // ---- Additional Rendering Operations ----
 
 // Border draws a complete border around a rectangular area using the specified BorderStyle.

@@ -1,6 +1,8 @@
 package zeichenwerk
 
 import (
+	"fmt"
+
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -145,6 +147,17 @@ func (i *Input) SetText(text string) {
 // Text returns the current text content.
 func (i *Input) Text() string {
 	return i.buf.String()
+}
+
+// Summary returns the current value or placeholder for Dump output.
+func (i *Input) Summary() string {
+	if t := i.buf.String(); t != "" {
+		return fmt.Sprintf("value=%q", t)
+	}
+	if i.placeholder != "" {
+		return fmt.Sprintf("placeholder=%q", i.placeholder)
+	}
+	return ""
 }
 
 // ---- Movement -------------------------------------------------------------

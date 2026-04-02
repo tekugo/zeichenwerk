@@ -11,11 +11,11 @@ const (
 	// FlagDisabled marks a widget as non-interactive. Disabled widgets do not
 	// receive focus or input events and are rendered with the ":disabled" style.
 	FlagDisabled Flag = "disabled"
-	// FlagFocused indicates that the widget currently holds keyboard focus.
-	FlagFocused Flag = "focused"
 	// FlagFocusable marks a widget as eligible to receive keyboard focus.
 	// Widgets without this flag are skipped during tab-order traversal.
 	FlagFocusable Flag = "focusable"
+	// FlagFocused indicates that the widget currently holds keyboard focus.
+	FlagFocused Flag = "focused"
 	// FlagHidden makes a widget invisible and excluded from layout.
 	FlagHidden Flag = "hidden"
 	// FlagHovered indicates that the mouse cursor is over the widget.

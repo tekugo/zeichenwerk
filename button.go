@@ -32,7 +32,7 @@ type Button struct {
 //   - *Button: A new button widget instance
 func NewButton(id, class, text string) *Button {
 	button := &Button{
-		Component: Component{id: id, class: class, hwidth: utf8.RuneCountInString(text), hheight: 1},
+		Component: Component{id: id, class: class},
 		text:      text,
 	}
 	button.SetFlag(FlagFocusable, true)
@@ -42,6 +42,15 @@ func NewButton(id, class, text string) *Button {
 }
 
 // ---- Widget Methods -------------------------------------------------------
+
+// Hint returns the natural size of the button derived from its label text.
+// If hwidth or hheight has been set explicitly, both are returned as-is.
+func (b *Button) Hint() (int, int) {
+	if b.hwidth != 0 || b.hheight != 0 {
+		return b.hwidth, b.hheight
+	}
+	return utf8.RuneCountInString(b.text), 1
+}
 
 // Activate programmatically triggers the button's action handler.
 func (b *Button) Activate() {
@@ -64,8 +73,13 @@ func (b *Button) Render(r *Renderer) {
 	r.Text(x, y, b.text, w)
 }
 
+// ---- Summarizer -----------------------------------------------------------
+
 // Set sets the button text. This is a generic method to allow
 // using the Setter interface.
+// Summary returns the button label for Dump output.
+func (b *Button) Summary() string { return b.text }
+
 func (b *Button) Set(value any) bool {
 	if text, ok := value.(string); ok {
 		b.text = text

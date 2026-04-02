@@ -46,6 +46,25 @@ func NewFlex(id, class string, horizontal bool, alignment string, spacing int) *
 	}
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
+// Apply applies a theme's styles to the component.
+func (f *Flex) Apply(theme *Theme) {
+	theme.Apply(f, f.Selector("flex"))
+}
+
+// See Layout section for Hint()
+
+// Render draws the flex container and all its children.
+func (f *Flex) Render(r *Renderer) {
+	f.Component.Render(r)
+	for _, child := range f.children {
+		child.Render(r)
+	}
+}
+
+// ---- Container Methods ----------------------------------------------------
+
 // Add appends a new child widget to the flex container.
 // The widget will be positioned according to the flex's orientation and alignment
 // settings. The layout will need to be recalculated after adding widgets.
@@ -62,11 +81,6 @@ func (f *Flex) Add(widget Widget, params ...any) error {
 	}
 }
 
-// Apply applies a theme's styles to the component.
-func (f *Flex) Apply(theme *Theme) {
-	theme.Apply(f, f.Selector("flex"))
-}
-
 // Children returns a slice of all child widgets in this flex container.
 // The widgets are returned in the order they were added, which determines
 // their layout order within the flex container.
@@ -76,6 +90,19 @@ func (f *Flex) Apply(theme *Theme) {
 func (f *Flex) Children() []Widget {
 	return f.children
 }
+
+// ---- Summarizer -----------------------------------------------------------
+
+// Summary returns direction and alignment for Dump output.
+func (f *Flex) Summary() string {
+	dir := "vertical"
+	if f.horizontal {
+		dir = "horizontal"
+	}
+	return dir + " " + f.alignment
+}
+
+// ---- Layout ---------------------------------------------------------------
 
 // Hint calculates and returns the preferred size for the flex container
 // based on its children's size hints and the layout orientation.
@@ -130,16 +157,6 @@ func (f *Flex) Hint() (int, int) {
 
 	return width, height
 }
-
-// Render draws the flex container and all its children.
-func (f *Flex) Render(r *Renderer) {
-	f.Component.Render(r)
-	for _, child := range f.children {
-		child.Render(r)
-	}
-}
-
-// ---- Layout ---------------------------------------------------------------
 
 // Layout arranges all child widgets within the flex container according to
 // the specified orientation, alignment, and spacing configuration.

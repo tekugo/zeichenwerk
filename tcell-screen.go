@@ -129,6 +129,30 @@ func (t *TcellScreen) Style(x, y int) tcell.Style {
 	return style
 }
 
+// SetUnderline sets the underline style and colour for subsequent Put calls.
+// style: 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed.
+// ulColor: empty string = terminal default.
+func (t *TcellScreen) SetUnderline(style int, ulColor string) {
+	us := tcell.UnderlineStyleNone
+	switch style {
+	case 1:
+		us = tcell.UnderlineStyleSolid
+	case 2:
+		us = tcell.UnderlineStyleDouble
+	case 3:
+		us = tcell.UnderlineStyleCurly
+	case 4:
+		us = tcell.UnderlineStyleDotted
+	case 5:
+		us = tcell.UnderlineStyleDashed
+	}
+	if ulColor != "" {
+		t.style = t.style.Underline(us, color.GetColor(ulColor))
+	} else {
+		t.style = t.style.Underline(us)
+	}
+}
+
 // Translate updates the coordinate translation offsets.
 //
 // This shifts the origin for subsequent Put and Get operations by the specified amounts.

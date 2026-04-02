@@ -101,6 +101,9 @@ func (s *Scanner) Apply(theme *Theme) {
 // Hint returns the preferred size for the scanner widget.
 // The scanner prefers a width equal to its configured width and height of 1.
 func (s *Scanner) Hint() (int, int) {
+	if s.hwidth != 0 || s.hheight != 0 {
+		return s.hwidth, s.hheight
+	}
 	return s.width, 1
 }
 

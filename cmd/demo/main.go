@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,26 +14,44 @@ import (
 	. "github.com/tekugo/zeichenwerk"
 )
 
-func parseTheme() *Theme {
-	t := flag.String("t", "tokyo", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+func parseFlags() (*Theme, bool, bool, bool) {
+	t := flag.String("t", "tokyo", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
+	dbg := flag.Bool("debug", false, "Start in debug mode")
+	dmp := flag.Bool("dump", false, "Dump widget hierarchy to stdout and exit")
+	dmpV := flag.Bool("dump-verbose", false, "Dump widget hierarchy with style details to stdout and exit")
 	flag.Parse()
+	var theme *Theme
 	switch *t {
 	case "midnight":
-		return MidnightNeonTheme()
+		theme = MidnightNeonTheme()
 	case "nord":
-		return NordTheme()
+		theme = NordTheme()
 	case "gruvbox-dark":
-		return GruvboxDarkTheme()
+		theme = GruvboxDarkTheme()
 	case "gruvbox-light":
-		return GruvboxLightTheme()
+		theme = GruvboxLightTheme()
+	case "lipstick":
+		theme = LipstickTheme()
 	default:
-		return TokyoNightTheme()
+		theme = TokyoNightTheme()
 	}
+	return theme, *dbg, *dmp, *dmpV
 }
 
 // main function
 func main() {
-	createUI(parseTheme()).Run()
+	theme, dbg, dmp, dmpV := parseFlags()
+	ui := createUI(theme)
+	if dmp || dmpV {
+		ui.SetBounds(0, 0, 120, 40)
+		ui.Layout()
+		ui.Dump(os.Stdout, DumpOptions{Style: dmpV})
+		return
+	}
+	if dbg {
+		ui.Debug()
+	}
+	ui.Run()
 }
 
 // Create the terminal UI.
@@ -45,7 +64,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Tree FS", "Typeahead", "Viewport", "Dialog").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Viewport", "Dialog", "Confirm", "Prompt").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -64,6 +83,7 @@ func createUI(theme *Theme) *UI {
 		With(styled).
 		With(table).
 		With(tabs).
+		With(terminalDemo).
 		With(treeFSDemo).
 		With(typeaheadDemo).
 		With(viewport).
@@ -107,11 +127,11 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 19:
+					case 20:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
-							Flex("dialog-content", false, "end", 1).
+							Flex("dialog-content", false, "stretch", 1).
 							Static("", "Do you really want to do this?").
 							Flex("dialog-buttons", true, "end", 2).
 							Button("btn-yes", "YES").
@@ -120,7 +140,41 @@ func createUI(theme *Theme) *UI {
 							End().
 							Class("").
 							Container()
+						Find(dialog, "btn-yes").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+							ui.Close()
+							return true
+						})
+						Find(dialog, "btn-no").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+							ui.Close()
+							return true
+						})
 						ui.Popup(-1, -1, 0, 0, dialog)
+					case 21:
+						ui.Confirm("Confirm Action", "Do you really want to do this?",
+							func() {
+								if log, ok := Find(ui, "debug-log").(*Text); ok {
+									log.Add("Confirm → OK")
+								}
+							},
+							func() {
+								if log, ok := Find(ui, "debug-log").(*Text); ok {
+									log.Add("Confirm → Cancel")
+								}
+							},
+						)
+					case 22:
+						ui.Prompt("Enter Value", "Please enter a value:",
+							func(text string) {
+								if log, ok := Find(ui, "debug-log").(*Text); ok {
+									log.Add("Prompt → " + text)
+								}
+							},
+							func() {
+								if log, ok := Find(ui, "debug-log").(*Text); ok {
+									log.Add("Prompt → Cancel")
+								}
+							},
+						)
 					}
 				}
 			}
@@ -608,6 +662,106 @@ func tabs(builder *Builder) {
 		End()
 }
 
+// Terminal demo — feeds representative ANSI/VT sequences into a Terminal widget.
+func terminalDemo(builder *Builder) {
+	term := NewTerminal("terminal-demo", "")
+	term.SetHint(0, -1)
+
+	builder.Flex("terminal-pane", false, "stretch", 0).Hint(0, -1).Padding(0, 1).
+		Static("terminal-title", "Terminal Widget Demo").Padding(0, 0, 1, 0).
+		Add(term).Hint(0, -1).
+		End()
+
+	// Re-render on each visit so the content fits the current dimensions.
+	pane := builder.Find("terminal-pane").(Container)
+	pane.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		term.Clear()
+		writeTerminalDemo(term)
+		return true
+	})
+}
+
+// writeTerminalDemo pipes a sequence of ANSI escape sequences into t to
+// showcase the terminal widget's rendering capabilities.
+func writeTerminalDemo(t *Terminal) {
+	w := func(s string) { t.Write([]byte(s)) }
+
+	// ---- Title ----
+	w("\033[1;37mANSI / VT Terminal Demo\033[0m\r\n")
+	w("\033[2m─────────────────────────────────────────────────────\033[0m\r\n\r\n")
+
+	// ---- Text attributes ----
+	w("\033[1mBold\033[0m  ")
+	w("\033[2mDim\033[0m  ")
+	w("\033[3mItalic\033[0m  ")
+	w("\033[9mStrikethrough\033[0m  ")
+	w("\033[5mBlink\033[0m\r\n\r\n")
+
+	// ---- Underline styles ----
+	w("Underline styles: ")
+	w("\033[4mSingle\033[0m  ")
+	w("\033[21mDouble\033[0m  ")
+	w("\033[4:3mCurly\033[0m  ")
+	w("\033[4:4mDotted\033[0m  ")
+	w("\033[4:5mDashed\033[0m\r\n\r\n")
+
+	// ---- Standard 16 ANSI colours ----
+	w("Standard colours:  ")
+	for i := 0; i < 8; i++ {
+		w(fmt.Sprintf("\033[%dm  \033[0m", 40+i))
+	}
+	w("\r\n                   ")
+	for i := 0; i < 8; i++ {
+		w(fmt.Sprintf("\033[%dm  \033[0m", 100+i))
+	}
+	w("\r\n\r\n")
+
+	// ---- 256-colour palette strip ----
+	w("256-colour palette:\r\n")
+	for row := 0; row < 4; row++ {
+		w("  ")
+		for col := 0; col < 36; col++ {
+			idx := 16 + row*36 + col
+			if idx > 231 {
+				break
+			}
+			w(fmt.Sprintf("\033[48;5;%dm  \033[0m", idx))
+		}
+		w("\r\n")
+	}
+	// Greyscale ramp
+	w("  ")
+	for i := 232; i <= 255; i++ {
+		w(fmt.Sprintf("\033[48;5;%dm  \033[0m", i))
+	}
+	w("\r\n\r\n")
+
+	// ---- True colour gradient ----
+	w("True colour: ")
+	steps := 48
+	for i := 0; i < steps; i++ {
+		r := 255 * i / (steps - 1)
+		g := 128
+		b := 255 - r
+		w(fmt.Sprintf("\033[48;2;%d;%d;%dm \033[0m", r, g, b))
+	}
+	w("\r\n\r\n")
+
+	// ---- Underline colour ----
+	w("\033[4:3m\033[58;2;255;100;0mCurly underline in orange\033[0m\r\n\r\n")
+
+	// ---- Box-drawing ----
+	w("Box-drawing: ┌──────────┐\r\n")
+	w("             │  \033[1;32mHello!\033[0m  │\r\n")
+	w("             └──────────┘\r\n\r\n")
+
+	// ---- Reverse video ----
+	w("\033[7m Reverse video \033[0m\r\n\r\n")
+
+	// ---- OSC title (not visible but exercises the parser) ----
+	w("\033]0;Terminal Widget Demo\007")
+}
+
 func typeaheadDemo(builder *Builder) {
 	languages := []string{
 		"Ada", "Clojure", "C", "C++", "C#", "Crystal", "D", "Dart", "Elixir",
@@ -673,7 +827,7 @@ func treeFSDemo(builder *Builder) {
 	builder.Flex("tree-fs-demo", false, "stretch", 0).
 		// Toolbar: Up button + current root path
 		Flex("tree-fs-toolbar", true, "center", 1).Padding(0, 1).
-		Button("tree-fs-up", "↑ Up").Class("dialog").
+		Button("tree-fs-up", "↑ Up").
 		Static("tree-fs-path", tfs.RootPath()).Padding(0, 1).
 		End().
 		// The tree itself, takes all remaining height

@@ -1,6 +1,7 @@
 package zeichenwerk
 
 import (
+	"fmt"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
@@ -42,7 +43,7 @@ func (s *Select) Apply(theme *Theme) {
 
 // Hint returns the preferred size of the Select widget as width and height in characters.
 func (s *Select) Hint() (int, int) {
-	if s.hwidth != 0 && s.hheight != 0 {
+	if s.hwidth != 0 || s.hheight != 0 {
 		return s.hwidth, s.hheight
 	}
 
@@ -86,6 +87,14 @@ func (s *Select) Select(value string) {
 // Text returns the display text of the currently selected option.
 func (s *Select) Text() string {
 	return s.options[s.index].text
+}
+
+// Summary returns the currently selected value for Dump output.
+func (s *Select) Summary() string {
+	if len(s.options) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("selected=%q", s.options[s.index].value)
 }
 
 // Value returns the value of the currently selected option.

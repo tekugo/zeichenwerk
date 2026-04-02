@@ -1,6 +1,10 @@
 package zeichenwerk
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"fmt"
+
+	"github.com/gdamore/tcell/v3"
+)
 
 // Checkbox represents a boolean input widget that can be toggled between
 // checked and unchecked states. It displays a checkbox indicator with
@@ -43,6 +47,8 @@ func NewCheckbox(id, class, text string, checked bool) *Checkbox {
 	return checkbox
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Apply applies a theme style to the component.
 func (c *Checkbox) Apply(theme *Theme) {
 	theme.Apply(c, c.Selector("checkbox"), "checked", "disabled", "focused", "hovered")
@@ -53,6 +59,8 @@ func (c *Checkbox) Refresh() {
 	Redraw(c)
 }
 
+// ---- Setter ---------------------------------------------------------------
+
 // Set set's the checkbox value in a generic way.
 func (c *Checkbox) Set(value any) bool {
 	if checked, ok := value.(bool); ok {
@@ -62,6 +70,15 @@ func (c *Checkbox) Set(value any) bool {
 		return false
 	}
 }
+
+// ---- Summarizer -----------------------------------------------------------
+
+// Summary returns label and checked state for Dump output.
+func (c *Checkbox) Summary() string {
+	return fmt.Sprintf("%q checked=%v", c.text, c.Flag(FlagChecked))
+}
+
+// ---- Checkbox Methods -----------------------------------------------------
 
 // Toggle switches the checkbox state between checked and unchecked.
 // This method triggers the "change" event with the new state as data.
@@ -74,6 +91,8 @@ func (c *Checkbox) Toggle() {
 	c.Dispatch(c, EvtChange, c.Flag(FlagChecked))
 	c.Refresh()
 }
+
+// ---- Internal Event Handling ----------------------------------------------
 
 // handleKey processes keyboard input for the checkbox widget.
 // This method handles the standard checkbox activation keys.
@@ -123,6 +142,8 @@ func (c *Checkbox) handleMouse(event *tcell.EventMouse) bool {
 
 	return false
 }
+
+// ---- Rendering ------------------------------------------------------------
 
 func (c *Checkbox) Render(r *Renderer) {
 	x, y, w, h := c.Content()

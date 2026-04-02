@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -14,25 +15,39 @@ import (
 
 type navItem struct{ icon, name, desc string }
 
-func parseTheme() *z.Theme {
-	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+func parseFlags() (*z.Theme, bool, bool) {
+	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
+	dmp := flag.Bool("dump", false, "Dump widget hierarchy to stdout and exit")
+	dmpV := flag.Bool("dump-verbose", false, "Dump widget hierarchy with style details to stdout and exit")
 	flag.Parse()
+	var theme *z.Theme
 	switch *t {
 	case "tokyo":
-		return z.TokyoNightTheme()
+		theme = z.TokyoNightTheme()
 	case "nord":
-		return z.NordTheme()
+		theme = z.NordTheme()
 	case "gruvbox-dark":
-		return z.GruvboxDarkTheme()
+		theme = z.GruvboxDarkTheme()
 	case "gruvbox-light":
-		return z.GruvboxLightTheme()
+		theme = z.GruvboxLightTheme()
+	case "lipstick":
+		theme = z.LipstickTheme()
 	default:
-		return z.MidnightNeonTheme()
+		theme = z.MidnightNeonTheme()
 	}
+	return theme, *dmp, *dmpV
 }
 
 func main() {
-	createUI(parseTheme()).Run()
+	theme, dmp, dmpV := parseFlags()
+	ui := createUI(theme)
+	if dmp || dmpV {
+		ui.SetBounds(0, 0, 120, 40)
+		ui.Layout()
+		ui.Dump(os.Stdout, z.DumpOptions{Style: dmpV})
+		return
+	}
+	ui.Run()
 }
 
 // ── Shell ──────────────────────────────────────────────────────────────────────

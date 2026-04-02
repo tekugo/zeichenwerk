@@ -392,6 +392,14 @@ func (b *Builder) Spacer() *Builder {
 	return b
 }
 
+// Terminal creates a new Terminal widget with the specified id.
+// Terminal is a leaf widget (no matching End() call needed).
+func (b *Builder) Terminal(id string) *Builder {
+	w := NewTerminal(id, b.class)
+	b.Add(w)
+	return b
+}
+
 // Static creates a new static widget with the specified id and text.
 // The static widget is styled with theme styles for the text.
 func (b *Builder) Static(id, text string) *Builder {

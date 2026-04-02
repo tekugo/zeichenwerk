@@ -3,9 +3,11 @@ package zeichenwerk
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v3"
@@ -68,8 +70,9 @@ type UI struct {
 	dirty bool // Flag indicating if a screen redraw is needed due to state changes
 
 	// Event handling channels
-	events chan tcell.Event // Buffered channel for incoming tcell events (keyboard, mouse, resize)
-	quit   chan struct{}    // Channel for signaling graceful application shutdown
+	events   chan tcell.Event // Buffered channel for incoming tcell events (keyboard, mouse, resize)
+	quit     chan struct{}    // Channel for signaling graceful application shutdown
+	quitOnce sync.Once        // Guards the quit channel so Quit() is safe to call multiple times
 
 	// Rendering channels
 	redraw  chan Widget   // Buffered channel for triggering individual widget redraws (performance optimization)
@@ -177,7 +180,7 @@ func (ui *UI) NewBuilder() *Builder {
 	return NewBuilder(ui.renderer.theme)
 }
 
-// ---- Widget methods -------------------------------------------------------
+// ---- Event Handling -------------------------------------------------------
 
 // Handle processes tcell events and coordinates their handling throughout the
 // application. This is the main event processing method that handles keyboard
@@ -209,7 +212,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 				ui.Close()
 			}
 		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
-			close(ui.quit)
+			ui.Quit()
 		case tcell.KeyCtrlD:
 			ui.Log(ui, Debug, "Opening inspector")
 			animation := NewGrow("inspector-grow", "", false)
@@ -222,7 +225,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		case tcell.KeyRune:
 			switch event.Str() {
 			case "q", "Q":
-				close(ui.quit)
+				ui.Quit()
 			}
 		}
 
@@ -268,7 +271,7 @@ func (ui *UI) Handle(event tcell.Event) bool {
 	return true
 }
 
-// propagate sends an event up the widget hierarchy starting from the target widget.
+// dispatch sends an event up the widget hierarchy starting from the target widget.
 // This implements the event bubbling pattern where events are first handled by
 // the most specific widget (target), then by its parent, and so on up the chain
 // until either a widget handles the event or the root UI is reached.
@@ -535,6 +538,8 @@ func (ui *UI) ShowCursor() {
 	}
 }
 
+// ---- Loggging ------------------------------------------------------------
+
 // Log adds a structured log entry using the application's slog logger.
 // The log is routed to both the debug Text widget (human-readable) and the
 // TableLog (for tabular display). The level is given as a string (e.g., "debug",
@@ -638,18 +643,102 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 // This method is typically used to close popup dialogs, modal windows,
 // or other overlay widgets that were added as additional layers.
 // The base layer (main UI) cannot be closed using this method.
+// EvtClose is dispatched to the removed layer before it is discarded.
 func (ui *UI) Close() {
 	if len(ui.layers) > 1 {
+		top := ui.layers[len(ui.layers)-1]
 		ui.layers = ui.layers[:len(ui.layers)-1]
+		top.Dispatch(top, EvtClose)
 		ui.SetFocus("first")
 	}
 	ui.Refresh()
 }
 
-// Quit signals the application to exit cleanly by closing the quit channel.
+// Confirm shows a centered modal dialog with a message and OK/Cancel buttons.
+// onConfirm is called (then the dialog is closed) when the user activates OK;
+// onCancel when they activate Cancel or press Escape. Either callback may be nil.
+func (ui *UI) Confirm(title, message string, onConfirm, onCancel func()) {
+	if title == "" {
+		title = "Confirm"
+	}
+	b := ui.NewBuilder()
+	dialog := b.
+		Dialog("confirm-dialog", title).
+		Class("dialog").
+		Flex("confirm-body", false, "stretch", 1).
+		Static("confirm-msg", message).
+		Flex("confirm-buttons", true, "end", 2).
+		Button("confirm-ok", "OK").
+		Button("confirm-cancel", "Cancel").
+		End().
+		End().
+		Class("").
+		Container()
+
+	Find(dialog, "confirm-ok").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		ui.Close()
+		if onConfirm != nil {
+			onConfirm()
+		}
+		return true
+	})
+	Find(dialog, "confirm-cancel").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		ui.Close()
+		if onCancel != nil {
+			onCancel()
+		}
+		return true
+	})
+
+	ui.Popup(-1, -1, 0, 0, dialog)
+}
+
+// Prompt shows a centered modal dialog with a message, a text input, and
+// OK/Cancel buttons. onAccept is called with the input value when the user
+// confirms; onCancel when they cancel or press Escape. Either callback may be nil.
+func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func()) {
+	if title == "" {
+		title = "Prompt"
+	}
+	b := ui.NewBuilder()
+	dialog := b.
+		Dialog("prompt-dialog", title).
+		Class("dialog").
+		Flex("prompt-body", false, "stretch", 1).
+		Static("prompt-msg", message).
+		Input("prompt-input").Hint(0, 1).
+		Flex("prompt-buttons", true, "end", 2).
+		Button("prompt-ok", "OK").
+		Button("prompt-cancel", "Cancel").
+		End().
+		End().
+		Class("").
+		Container()
+
+	input := Find(dialog, "prompt-input").(*Input)
+	Find(dialog, "prompt-ok").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		text := input.Text()
+		ui.Close()
+		if onAccept != nil {
+			onAccept(text)
+		}
+		return true
+	})
+	Find(dialog, "prompt-cancel").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		ui.Close()
+		if onCancel != nil {
+			onCancel()
+		}
+		return true
+	})
+
+	ui.Popup(-1, -1, 0, 0, dialog)
+}
+
+// Quit signals the application to exit cleanly. Safe to call multiple times.
 // This is the programmatic equivalent of pressing Ctrl+C or Ctrl+Q.
 func (ui *UI) Quit() {
-	close(ui.quit)
+	ui.quitOnce.Do(func() { close(ui.quit) })
 }
 
 // ---- Run Loop -------------------------------------------------------------
@@ -756,4 +845,18 @@ func (ui *UI) SetTheme(theme *Theme) {
 //   - Theme: The currently active theme
 func (ui *UI) Theme() *Theme {
 	return ui.renderer.theme
+}
+
+// Dump writes a human- and LLM-readable text tree of the full UI state to w.
+// It prints a header line with the screen dimensions and layer count, followed
+// by the widget hierarchy of each layer. Use this to give an AI agent a
+// snapshot of the current interface without running the full event loop.
+func (ui *UI) Dump(w io.Writer, opts ...DumpOptions) {
+	fmt.Fprintf(w, "[UI] %dx%d layers=%d\n", ui.width, ui.height, len(ui.layers))
+	for i, layer := range ui.layers {
+		if i > 0 {
+			fmt.Fprintf(w, "  ── layer %d ──\n", i)
+		}
+		Dump(w, layer, opts...)
+	}
 }
