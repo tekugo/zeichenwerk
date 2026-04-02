@@ -71,4 +71,9 @@ type Screen interface {
 	//   - x: Horizontal offset to add to x-coordinates.
 	//   - y: Vertical offset to add to y-coordinates.
 	Translate(x, y int)
+
+	// SetUnderline sets the underline style and colour for subsequent Put calls.
+	// style: 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed.
+	// color: empty string = terminal default.
+	SetUnderline(style int, color string)
 }

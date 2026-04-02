@@ -40,9 +40,9 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("button").WithColors("$fg0", "$blue").WithBorder("none").WithPadding(0, 2),
 		NewStyle("button:focused").WithColors("$bg0", "$cyan"),
 		NewStyle("button:hovered").WithColors("$bg0", "$aqua"),
-		NewStyle("button.dialog").WithBorder("none"),
-		NewStyle("button.dialog:focused").WithBorder("none"),
-		NewStyle("button.dialog:hovered").WithBorder("none"),
+		NewStyle("button.dialog").WithColors("$fg1", "$bg2").WithBorder("none"),
+		NewStyle("button.dialog:focused").WithColors("$bg0", "$cyan").WithBorder("none"),
+		NewStyle("button.dialog:hovered").WithColors("$bg0", "$aqua").WithBorder("none"),
 		NewStyle("checkbox").WithColors("$fg1", "$bg0"),
 		NewStyle("checkbox:disabled").WithColors("$bg3", "$bg0"),
 		NewStyle("checkbox:focused").WithColors("$cyan", "$bg0"),
@@ -55,6 +55,7 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("dialog").WithColors("$fg1", "$bg2").WithBorder("round").WithPadding(1, 2),
 		NewStyle("dialog/title").WithColors("$bg0", "$blue").WithBorder("none").WithMargin(0).WithPadding(0, 1),
 		NewStyle("flex"),
+		NewStyle("flex.dialog").WithColors("$fg1", "$bg2"),
 		NewStyle("form"),
 		NewStyle("formgroup").WithColors("$fg1", "$bg1"),
 		NewStyle("formgroup:title").WithColors("$aqua", "$bg1"),
@@ -75,6 +76,7 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("rule"),
 		NewStyle("scanner").WithColors("$aqua", "$bg0"),
 		NewStyle("static").WithColors("$fg1", "").WithMargin(0).WithPadding(0),
+		NewStyle("static.dialog").WithColors("$fg1", "$bg2").WithMargin(0).WithPadding(0),
 		NewStyle("select").WithColors("$fg0", "$bg2").WithPadding(0, 1),
 		NewStyle("select:focused").WithColors("$bg0", "$cyan"),
 		NewStyle("styled").WithColors("$fg1", "$bg1"),
@@ -97,6 +99,8 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("tree/highlight:focused").WithColors("$bg0", "$cyan"),
 		NewStyle("tree/indent").WithColors("$fg3", ""),
 		NewStyle("viewport"),
+		NewStyle("terminal").WithColors("$fg0", "$bg0"),
+		NewStyle("terminal:focused").WithColors("$fg0", "$bg0"),
 	)
 
 	t.SetStrings(map[string]string{

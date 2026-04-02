@@ -206,6 +206,24 @@ go run ./cmd/compose
 stable. Widget-level test coverage and some layout edge cases are still being
 worked on.
 
+## AI Assistance
+
+This project was developed with the support of AI coding assistants —
+specifically Claude (Anthropic), StepFun-3.5-Flash, and Qwen-3.5 — for coding
+support, documentation drafting, and test creation.
+
+That said, all code was reviewed, tested, fine-tuned, and adjusted by me, and
+all significant design decisions were made by me. AI assistants are well-trained
+on GUI and web development patterns, but terminal UI is a niche where their
+experience is limited. The retained widget hierarchy, layout engine, scroll
+regions, ANSI terminal emulation, and theme system required substantial manual
+coding, debugging, and iteration that went well beyond what any assistant
+produced out of the box.
+
+At the same time, without the heavy lifting in coding, specification work, and
+documentation that AI agents made possible, a spare-time project of this scope
+simply would not be feasible for a single developer.
+
 ## License
 
 MIT © Thomas Rustemeyer

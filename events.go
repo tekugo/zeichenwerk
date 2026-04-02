@@ -36,4 +36,7 @@ const (
 	EvtSelect Event = "select"
 	// EvtShow is dispatched when a widget becomes visible.
 	EvtShow Event = "show"
+	// EvtClose is dispatched to a popup layer just before it is removed by
+	// UI.Close, giving widgets inside the dialog a chance to clean up state.
+	EvtClose Event = "close"
 )

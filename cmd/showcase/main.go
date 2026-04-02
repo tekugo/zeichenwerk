@@ -12,25 +12,35 @@ import (
 
 type navItem struct{ icon, name, desc string }
 
-func parseTheme() *Theme {
-	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+func parseFlags() (*Theme, bool) {
+	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
+	dbg := flag.Bool("debug", false, "Start in debug mode")
 	flag.Parse()
+	var theme *Theme
 	switch *t {
 	case "tokyo":
-		return TokyoNightTheme()
+		theme = TokyoNightTheme()
 	case "nord":
-		return NordTheme()
+		theme = NordTheme()
 	case "gruvbox-dark":
-		return GruvboxDarkTheme()
+		theme = GruvboxDarkTheme()
 	case "gruvbox-light":
-		return GruvboxLightTheme()
+		theme = GruvboxLightTheme()
+	case "lipstick":
+		theme = LipstickTheme()
 	default:
-		return MidnightNeonTheme()
+		theme = MidnightNeonTheme()
 	}
+	return theme, *dbg
 }
 
 func main() {
-	createUI(parseTheme()).Run()
+	theme, dbg := parseFlags()
+	ui := createUI(theme)
+	if dbg {
+		ui.Debug()
+	}
+	ui.Run()
 }
 
 // ── Shell ──────────────────────────────────────────────────────────────────────

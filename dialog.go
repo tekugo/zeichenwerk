@@ -35,6 +35,7 @@ func (d *Dialog) Add(widget Widget, params ...any) error {
 // Apply applies a theme style to the component.
 func (d *Dialog) Apply(theme *Theme) {
 	theme.Apply(d, d.Selector("dialog"))
+	theme.Apply(d, d.Selector("dialog/title"))
 }
 
 // Children returns the body widget slice (empty if no child has been set).
@@ -79,7 +80,9 @@ func (d *Dialog) Layout() error {
 		cx, cy, cw, ch := d.Content()
 		if d.title != "" {
 			style := d.Style("title")
-			cy = cy + style.Vertical() + 1
+			titleH := style.Vertical() + 1
+			cy += titleH
+			ch -= titleH
 		}
 		d.child.SetBounds(cx, cy, cw, ch)
 	}

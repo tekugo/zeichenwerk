@@ -39,11 +39,11 @@ This is a TUI component library based on `tcell/v3`. Key types:
 ### Architecture rules
 
 - All widgets embed `Component` and implement `Render(*Renderer)` and `Apply(*Theme)`
-- Every new widget MUST be registered in `Builder` (add a method) and in `UI.Apply` (theme hook)
+- Every new widget MUST be registered in `Builder` (add a method) and `compose/compose.go` (add a function)
 - Containers call `child.SetBounds` and `child.SetParent` during `Layout()`; never touch tcell directly
 - Rendering is top-down: `UI.Draw` → each layer → each container → each child
 - Events bubble from focused widget up through parents; return `true` from a handler to stop propagation
-- `Refresh()` queues a single-widget redraw; `UI.Refresh()` redraws everything
+- `Redraw(widget)` queues a single-widget redraw; call after any state change that affects rendering
 
 ### Selector format
 
@@ -54,59 +54,91 @@ Examples: `"button"`, `"button.primary"`, `"button#submit:focused"`, `"input/pla
 
 ```
 zeichenwerk/
-+- cmd/        # Command-line tools and demo applications
-|  +- demo/    # Demo showcasing all widgets
-+- doc/        # Documentation and design proposals
+├── *.go              # Core library (widgets, theme, renderer, …)
+├── cmd/
+│   ├── compose/      # Compose API demo
+│   ├── demo/         # Builder API demo (all widgets)
+│   └── showcase/     # Full interactive showcase
+├── compose/          # Functional composition API (Option-based)
+├── doc/              # Design proposals and reference docs
+├── spec/             # Widget specifications (written before implementation)
+└── .claude/
+    └── skills/
+        └── zeichenwerk/
+            ├── SKILL.md    # Claude Code skill — auto-loaded in this project
+            └── widgets.md  # Full widget reference for the skill
 ```
 
 ## Widget Reference
 
+For the full style-key, event, and method reference per widget see
+`.claude/skills/zeichenwerk/widgets.md`.
+
 ### Containers
 
-| Widget      | File            | Constructor                                                    | Key methods                                                                      |
-| ----------- | --------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `Flex`      | `flex.go`       | `NewFlex(id, class, horizontal bool, alignment, spacing int)`  | `Add(Widget)`                                                                    |
-| `Grid`      | `grid.go`       | `NewGrid(id, class, rows, cols int, lines bool)`               | `Add(x,y,w,h int, Widget)`, `Rows(…int)`, `Columns(…int)`, `Separator(x,y,type)` |
-| `Box`       | `box.go`        | `NewBox(id, class, title)`                                     | `Add(Widget)` — single child                                                     |
-| `Switcher`  | `switcher.go`   | `NewSwitcher(id, class)`                                       | `Add(Widget)`, `Show(index int)`                                                 |
-| `Viewport`  | `viewport.go`   | `NewViewport(id, class, title)`                                | `Add(Widget)` — scrollable single child; focusable, arrow keys scroll            |
-| `Form`      | `form.go`       | `NewForm(id, class, title, data any)`                          | `Add(Widget)` — binds a Go struct via reflection                                 |
-| `FormGroup` | `form-group.go` | `NewFormGroup(id, class, title, horizontal bool, spacing int)` | `Add(line int, label string, Widget)`                                            |
-| `Dialog`    | `dialog.go`     | `NewDialog(id, class, title)`                                  | `Add(Widget)` — single child; used as popup layer via `UI.Popup`                 |
-| `Grow`      | `grow.go`       | `NewGrow(id, class, horizontal bool)`                          | `Add(Widget)`, `Start(interval)` — animated reveal; wraps a single child         |
+| Widget      | File            | Constructor                                                    | Key methods                                                                       |
+| ----------- | --------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `Flex`      | `flex.go`       | `NewFlex(id, class, horizontal bool, alignment, spacing int)`  | `Add(Widget)`                                                                     |
+| `Grid`      | `grid.go`       | `NewGrid(id, class, rows, cols int, lines bool)`               | `Add(x,y,w,h int, Widget)`, `Rows(…int)`, `Columns(…int)`                         |
+| `Box`       | `box.go`        | `NewBox(id, class, title)`                                     | `Add(Widget)` — single child                                                      |
+| `Switcher`  | `switcher.go`   | `NewSwitcher(id, class)`                                       | `Add(Widget)`, `Select(any)` — dispatches `EvtShow`/`EvtHide` to panes            |
+| `Viewport`  | `viewport.go`   | `NewViewport(id, class, title)`                                | `Add(Widget)` — scrollable single child                                           |
+| `Form`      | `form.go`       | `NewForm(id, class, title, data any)`                          | binds a Go struct via reflection                                                  |
+| `FormGroup` | `form-group.go` | `NewFormGroup(id, class, title, horizontal bool, spacing int)` | `Add(line int, label string, Widget)`                                             |
+| `Collapsible` | `collapsible.go` | `NewCollapsible(id, class, title, expanded bool)`            | `Add(Widget)`, `Expand()`, `Collapse()`, `Toggle()`                               |
+| `Dialog`    | `dialog.go`     | `NewDialog(id, class, title)`                                  | `Add(Widget)` — single child; shown as popup via `UI.Popup`                       |
+| `Grow`      | `grow.go`       | `NewGrow(id, class, horizontal bool)`                          | `Add(Widget)`, `Start(interval)` — animated reveal                                |
 
 **Flex alignment values:** `"start"`, `"center"`, `"end"`, `"stretch"`
 
-**Grid sizing:** positive = fixed chars; negative = fractional unit; zero = auto (preferred size)
-
-**Grid separator constants:** `GridH` (horizontal line), `GridV` (vertical line), `GridB` (both)
+**Grid sizing:** positive = fixed chars; negative = fractional unit; zero = auto (preferred size).
+At least one row size and one column size MUST be negative for the Grid to fill available space.
 
 ### Input widgets
 
-| Widget     | File          | Constructor                                       | Events                                      | Key public methods                                                                                                  |
-| ---------- | ------------- | ------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `Button`   | `button.go`   | `NewButton(id, class, text)`                      | `"click"`                                   | `Click()`, `SetText(string)`                                                                                        |
-| `Checkbox` | `checkbox.go` | `NewCheckbox(id, class, text)`                    | `"change"` → `bool`                         | `Checked() bool`, `SetChecked(bool)`                                                                                |
-| `Input`    | `input.go`    | `NewInput(id, class, text?, placeholder?, mask?)` | `"change"` → `string`; `"enter"` → `string` | `Text() string`, `SetText(string)`, `SetMax(int)`, flags: `"masked"`, `"readonly"`                                  |
-| `Select`   | `select.go`   | `NewSelect(id, class, val, label, …)`             | `"change"` → `string` (value)               | `Select(value string)`, `Value() string` — alternating val/label args                                               |
-| `List`     | `list.go`     | `NewList(id, class, items…)`                      | `"select"` → `int`; `"activate"` → `int`    | `SetItems([]string)`, `Items() []string`, `Index() int`, `SetIndex(int)`, `Selection() []int`, `Disable(int)`       |
-| `Editor`   | `editor.go`   | `NewEditor(id, class)`                            | `"change"`                                  | `Text() string`, `SetText(string)`, `Lines() []string`, `SetNumbers(width int)`, `SetTab(n int)`, `SetSpaces(bool)` |
-| `Scanner`  | `scanner.go`  | `NewScanner(id, class, style)`                    | —                                           | `Start(interval)`, `Stop()` — scanning bar animation; styles: `"blocks"`, `"diamonds"`, `"circles"`                 |
+| Widget       | File            | Constructor                                         | Events                              | Key public methods                                                               |
+| ------------ | --------------- | --------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------- |
+| `Button`     | `button.go`     | `NewButton(id, class, text)`                        | `EvtActivate`                       | `Activate()`, `SetText(string)`                                                  |
+| `Checkbox`   | `checkbox.go`   | `NewCheckbox(id, class, text, checked bool)`        | `EvtChange(bool)`                   | `Checked() bool`, `Toggle()`, `Set(any) bool`                                    |
+| `Input`      | `input.go`      | `NewInput(id, class, params…)`                      | `EvtChange(string)`                 | `Text() string`, `SetText(string)`, `SetMask(string)`                            |
+| `Typeahead`  | `typeahead.go`  | `NewTypeahead(id, class, params…)`                  | `EvtChange(string)` `EvtAccept(string)` | All `Input` methods + `SetSuggest(func(string) []string)`                    |
+| `Select`     | `select.go`     | `NewSelect(id, class, val, label, …)`               | `EvtChange(string)`                 | `Select(string)`, `Value() string`                                               |
+| `List`       | `list.go`       | `NewList(id, class, items…)`                        | `EvtSelect(int)` `EvtActivate(int)` | `SetItems([]string)`, `Items() []string`, `Select(int)`, `Selected() int`        |
+| `Deck`       | `deck.go`       | `NewDeck(id, class, render ItemRender, itemHeight)` | `EvtSelect(int)` `EvtActivate(int)` | `SetItems([]any)`, `Select(int)`, `Selected() int` — itemHeight ≥ 1 or panics   |
+| `Editor`     | `editor.go`     | `NewEditor(id, class)`                              | `EvtChange`                         | `SetContent([]string)`, `Load(string)`, `Text() string`, `ShowLineNumbers(bool)` |
+
+**`ItemRender`** signature: `func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool)`
+`focused` is `true` when the Deck widget itself holds keyboard focus.
 
 ### Display widgets
 
-| Widget     | File          | Constructor                                                | Key public methods                                                                                                                             |
-| ---------- | ------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Static`   | `static.go`   | `NewStatic(id, class, text)`                               | `SetText(string)`, `SetAlignment("left"\|"center"\|"right")`                                                                                   |
-| `Text`     | `text.go`     | `NewText(id, class, lines []string, follow bool, max int)` | `Set([]string)`, `Add(string)`, `Clear()` — scrollable; `follow` auto-scrolls to bottom                                                        |
-| `Styled`   | `styled.go`   | `NewStyled(id, class, text)`                               | `SetText(string)` — inline markup: `**bold**`, `_italic_`, `__underline__`, `` `code` ``                                                       |
-| `Progress` | `progress.go` | `NewProgress(id, class, horizontal bool)`                  | `SetValue(int)`, `SetTotal(int)` — `total=0` = indeterminate/animated                                                                          |
-| `Spinner`  | `spinner.go`  | `NewSpinner(id, class, sequence string)`                   | `Start(interval)`, `Stop()` — use `Spinners["bar"]` etc. for built-in sequences                                                                |
-| `Digits`   | `digits.go`   | `NewDigits(id, class, text)`                               | `SetText(string)` — large ASCII-art numerals (0-9, A-F, `:`, `.`, `-`)                                                                         |
-| `Rule`     | `rule.go`     | `NewHRule(class, style)` / `NewVRule(class, style)`        | — visual divider line; `style` is a theme border name                                                                                          |
-| `Tabs`     | `tabs.go`     | `NewTabs(id, class)`                                       | `Add(title string)`, `Select(int)`, `Selected() int` — events: `"change"` → `int`, `"activate"` → `int`                                        |
-| `Table`    | `table.go`    | `NewTable(id, class, provider TableProvider)`              | `Set(TableProvider)` — events: `"select"` → `int, []string`; `"activate"` → `int, []string`                                                    |
-| `Canvas`   | `canvas.go`   | `NewCanvas(id, class, pages, width, height int)`           | `Set(x,y,ch,style)`, `Clear()`, `SetMode(string)` — vim-style modal editing; modes: `NORMAL`, `INSERT`, `DRAW`, `VISUAL`, `COMMAND`, `PRESENT` |
+| Widget      | File            | Constructor                                                | Key public methods                                                                   |
+| ----------- | --------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `Static`    | `static.go`     | `NewStatic(id, class, text)`                               | `SetText(string)`, `SetAlignment("left"\|"center"\|"right")`, `Set(any) bool`       |
+| `Text`      | `text.go`       | `NewText(id, class, lines []string, follow bool, max int)` | `Add(lines …string)`, `Clear()`, `Set(any) bool`                                     |
+| `Styled`    | `styled.go`     | `NewStyled(id, class, text)`                               | `SetText(string)` — markup: `**bold**`, `*italic*`, `__underline__`, `` `code` ``   |
+| `Progress`  | `progress.go`   | `NewProgress(id, class, horizontal bool)`                  | `SetValue(int)`, `SetTotal(int)` — `total=0` = indeterminate                        |
+| `Spinner`   | `spinner.go`    | `NewSpinner(id, class, sequence string)`                   | `Start(interval)`, `Stop()` — built-in: `Spinners["bar"]`, `Spinners["dots"]`, …    |
+| `Scanner`   | `scanner.go`    | `NewScanner(id, class, style)`                             | `Start(interval)`, `Stop()` — styles: `"blocks"`, `"diamonds"`, `"circles"`         |
+| `Digits`    | `digits.go`     | `NewDigits(id, class, text)`                               | `SetText(string)` — large ASCII-art numerals                                         |
+| `Tabs`      | `tabs.go`       | `NewTabs(id, class)`                                       | `Add(title string)`, `Select(int)`, `Selected() int`                                 |
+| `Table`     | `table.go`      | `NewTable(id, class, provider TableProvider)`              | `Set(TableProvider)` — events: `EvtSelect(int)`, `EvtActivate(row)`                  |
+| `Tree`      | `tree.go`       | `NewTree(id, class)`                                       | `Add(*TreeNode)`, `Selected() *TreeNode` — events: `EvtSelect`, `EvtActivate`, `EvtChange` |
+| `Canvas`    | `canvas.go`     | `NewCanvas(id, class, pages, width, height int)`           | `SetCell(x,y,ch,style)`, `Clear()`, `SetMode(string)` — modes: `NORMAL`, `INSERT`, … |
+| `Rule`      | `rule.go`       | `NewHRule(class, style)` / `NewVRule(class, style)`        | visual divider; `style` is a theme border name                                       |
+| `Terminal`  | `terminal.go`   | `NewTerminal(id, class)`                                   | `Write([]byte) (int, error)`, `Clear()`, `Resize(w, h int)`, `Title() string`        |
+
+**`Terminal`** implements `io.Writer` — pipe pty/subprocess output directly into it.
+`Write` is goroutine-safe. The buffer auto-resizes to the widget's content area on first render.
+Handles full VT100/ANSI: cursor, erase, SGR (16/256/true-colour, underline styles), alternate screen,
+scroll regions, OSC titles. See `.claude/skills/zeichenwerk/widgets.md` § Terminal for details.
+
+**`TreeNode`**: `NewTreeNode(label string, data …any)`, `Add(*TreeNode)`,
+`SetLoader(func(*TreeNode))` for lazy-loading children.
+`TreeFS` wraps `Tree` for filesystem browsing: `NewTreeFS(id, class, root string, hidden bool)`.
+
+**`TableProvider` interface**: `Columns() []Column`, `Length() int`, `Value(row, col int) string`.
+`NewArrayTableProvider(headers []string, rows [][]string)` — in-memory implementation.
 
 ### Custom / extension
 
@@ -116,33 +148,48 @@ zeichenwerk/
 | embed `Component` | `component.go` | Full custom widget; implement `Render(*Renderer)` and `Apply(*Theme)`     |
 | embed `Animation` | `animation.go` | Custom widget needs a timed render loop; embed and call `Start(interval)` |
 
-**TableProvider interface** (`table-provider.go`): `Columns() []TableColumn`, `Length() int`, `Str(row, col int) string`.
-`ArrayTableProvider` is the built-in in-memory implementation: `NewArrayTableProvider(headers []string, data [][]string)`.
-
 ### Utility functions (`helper.go`, `container.go`)
 
 ```go
-Find(container, id)         // Widget by ID (depth-first)
-FindAll[T](container)       // All widgets of type T
-FindAt(container, x, y)     // Widget at screen coordinates
-FindUI(widget)              // Walk up tree to root *UI
-Traverse(container, fn)     // Depth-first walk
+Find(container, id)               // Widget by ID (depth-first)
+FindAll[T](container)             // All widgets of type T
+FindAt(container, x, y)           // Widget at screen coordinates
+FindUI(widget)                    // Walk up tree to root *UI
+Traverse(container, fn)           // Depth-first walk
 
-OnKey(widget, func(Widget, *tcell.EventKey) bool)
-OnMouse(widget, func(Widget, *tcell.EventMouse) bool)
-Redraw(widget)              // Queue single-widget redraw from anywhere
+OnKey(widget, func(*tcell.EventKey) bool)
+OnMouse(widget, func(*tcell.EventMouse) bool)
+Redraw(widget)                    // Queue single-widget redraw from any goroutine
 Update(container, id, value any)  // Type-aware value setter (List, Static, Table, Text)
+Suggest(items []string)           // Returns a suggest func for Typeahead prefix matching
 ```
 
 ## Building a new widget — checklist
 
 1. Create `mywidget.go` with `type MyWidget struct { Component; ... }`
-2. Constructor: `NewMyWidget(id, class string, ...) *MyWidget` — call `SetFlag("focusable", true)` if interactive
+2. Constructor: `NewMyWidget(id, class string, ...) *MyWidget` — call `SetFlag(FlagFocusable, true)` if interactive
 3. Implement `Render(r *Renderer)` — call `c.Component.Render(r)` first for borders/bg
 4. Implement `Apply(theme *Theme)` — call `theme.Apply(w, w.Selector("mywidget"), states...)`
-5. Register in `Builder`: add `func (b *Builder) MyWidget(id string, ...) *Builder`
-6. Register in `UI.Apply`: add `case *MyWidget: w.Apply(theme)` so `SetTheme` works
-7. Add `doc.go` entry and export all public symbols with comments
+5. Register in `Builder` (`builder.go`): add `func (b *Builder) MyWidget(id string, ...) *Builder`
+6. Register in `compose/compose.go`: add `func MyWidget(id, class string, options ...Option) Option`
+7. Add theme style keys to all five theme files (`theme-*.go`)
+8. Add `doc.go` entry and export all public symbols with comments
+
+## Events
+
+All event constants are defined in `events.go`. Handler signature:
+`func(source Widget, event Event, data ...any) bool` — return `true` to stop propagation.
+
+| Constant     | Typical payload          |
+| ------------ | ------------------------ |
+| `EvtActivate`| `int` (index) or none    |
+| `EvtChange`  | varies by widget         |
+| `EvtSelect`  | `int` or `*TreeNode`     |
+| `EvtAccept`  | `string`                 |
+| `EvtShow`    | —                        |
+| `EvtHide`    | —                        |
+| `EvtMode`    | `string`                 |
+| `EvtMove`    | `x, y int`               |
 
 ## Clean Code
 

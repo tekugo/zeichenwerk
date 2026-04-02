@@ -15,7 +15,7 @@ import (
 type navItem struct{ icon, name, desc string }
 
 func parseTheme() *z.Theme {
-	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light")
+	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
 	flag.Parse()
 	switch *t {
 	case "tokyo":
@@ -26,6 +26,8 @@ func parseTheme() *z.Theme {
 		return z.GruvboxDarkTheme()
 	case "gruvbox-light":
 		return z.GruvboxLightTheme()
+	case "lipstick":
+		return z.LipstickTheme()
 	default:
 		return z.MidnightNeonTheme()
 	}
