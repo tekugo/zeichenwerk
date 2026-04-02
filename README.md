@@ -25,7 +25,7 @@ func main() {
             Flex("header", true, "center", 1).
                 Static("title", "My App").
             End().
-            Grid("content", 2, 2, false).Columns(20, -1).
+            Grid("content", 2, 2, false).Rows(-1).Columns(20, -1).Hint(0, -1).
                 Cell(0, 0, 1, 1).List("menu", "Item 1", "Item 2", "Item 3").
                 Cell(1, 0, 1, 1).Button("action", "Click Me").
             End().
@@ -33,6 +33,8 @@ func main() {
         Run()
 }
 ```
+
+Press `q` or `Ctrl-Q` to quit.
 
 ## Composition API
 
@@ -53,7 +55,7 @@ func main() {
             Flex("header", "", true, "center", 1,
                 Static("title", "", "My App"),
             ),
-            Grid("content", "", []int{0}, []int{20, -1}, false,
+            Grid("content", "", []int{-1}, []int{20, -1}, false, Hint(0, -1),
                 Cell(0, 0, 1, 1, List("menu", "", []string{"Item 1", "Item 2", "Item 3"})),
                 Cell(1, 0, 1, 1, Button("action", "", "Click Me")),
             ),
@@ -258,8 +260,9 @@ reference, selector format, event constants, and the builder checklist.
 A Claude Code skill is bundled at `.claude/skills/zeichenwerk/`. When you open
 this repository in Claude Code, the skill is loaded automatically — Claude gains
 knowledge of all widget constructors, style keys, event constants, the selector
-format, and both APIs without requiring additional context in the prompt.
-A detailed widget reference is included in `.claude/skills/zeichenwerk/widgets.md`.
+format, and both APIs without requiring additional context in the prompt. A
+detailed widget reference is included in
+`.claude/skills/zeichenwerk/widgets.md`.
 
 ## Development Status
 

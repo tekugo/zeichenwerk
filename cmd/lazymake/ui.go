@@ -38,7 +38,8 @@ func buildUI(theme *Theme, dir string) *UI {
 		End().
 		// ── Footer ──────────────────────────────────────────────────────────
 		Flex("footer", true, "center", 0).Hint(0, 1).
-			Static("footer-status", "● src/**/*.go").Hint(0, 1).
+			Scanner("watch-scanner", 3, "circles").
+			Static("footer-status", "").Hint(0, 1).
 			Spacer().Hint(-1, 1).
 			Shortcuts("footer-shortcuts", "r", "run", "w", "watch", "d", "dir", "m", "make", "j", "just", "c", "clear", "q", "quit").Padding(0, 1, 0, 0).
 		End()
@@ -67,11 +68,49 @@ func buildUI(theme *Theme, dir string) *UI {
 	cbMake.On(EvtChange, refilter)
 	cbJust.On(EvtChange, refilter)
 
+	scanner := Find(ui, "watch-scanner").(*Scanner)
+	shortcuts := Find(ui, "footer-shortcuts").(*Shortcuts)
+
 	runner := NewRunner(
 		Find(ui, "output").(*Terminal),
 		Find(ui, "footer-status").(*Static),
+		scanner,
 		dir,
 	)
+
+	cfg, _ := loadConfig(dir)
+	watcher := NewWatcher(runner, dir)
+
+	toggleWatch := func(target Target) {
+		if target.Runner == "" {
+			return
+		}
+		if watcher.IsWatching(target.Name) {
+			watcher.Stop(target.Name)
+			if watcher.Count() == 0 {
+				runner.SetWatchActive(false)
+			}
+			shortcuts.SetPairs("r", "run", "w", "watch", "d", "dir", "m", "make", "j", "just", "c", "clear", "q", "quit")
+		} else {
+			pattern := cfg.pattern(target.Name)
+			if pattern == "" {
+				ui.Prompt("Watch", "Glob pattern (e.g. **/*.go):", func(p string) {
+					if p == "" {
+						return
+					}
+					cfg.setPattern(dir, target.Name, p)
+					saveConfig(dir, cfg)
+					watcher.Start(target, p)
+					runner.SetWatchActive(true)
+					shortcuts.SetPairs("r", "run", "w", "stop", "d", "dir", "m", "make", "j", "just", "c", "clear", "q", "quit")
+				}, nil)
+			} else {
+				watcher.Start(target, pattern)
+				runner.SetWatchActive(true)
+				shortcuts.SetPairs("r", "run", "w", "stop", "d", "dir", "m", "make", "j", "just", "c", "clear", "q", "quit")
+			}
+		}
+	}
 
 	OnKey(deck, func(e *tcell.EventKey) bool {
 		if e.Key() != tcell.KeyRune {
@@ -87,6 +126,11 @@ func buildUI(theme *Theme, dir string) *UI {
 		case "r":
 			if idx := deck.Selected(); idx >= 0 {
 				runner.Enqueue(deck.Items()[idx].(Target))
+			}
+			return true
+		case "w":
+			if idx := deck.Selected(); idx >= 0 {
+				toggleWatch(deck.Items()[idx].(Target))
 			}
 			return true
 		case "c":
@@ -182,4 +226,3 @@ func renderTargetCard(theme *Theme) ItemRender {
 		}
 	}
 }
-

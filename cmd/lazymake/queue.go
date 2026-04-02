@@ -5,6 +5,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -44,32 +45,55 @@ type Runner struct {
 	queue   chan runRequest
 	term    *Terminal
 	status  *Static
+	scanner *Scanner
 	dir     string
 	busy    atomic.Bool
 	written atomic.Bool // true once anything has been written to term
+
+	// deduplication: tracks target names currently sitting in the queue
+	dedupMu sync.Mutex
+	inQueue map[string]bool
 }
 
 // NewRunner creates a Runner and starts the background drain goroutine.
-func NewRunner(term *Terminal, status *Static, dir string) *Runner {
+func NewRunner(term *Terminal, status *Static, scanner *Scanner, dir string) *Runner {
 	r := &Runner{
-		queue:  make(chan runRequest, 8),
-		term:   term,
-		status: status,
-		dir:    dir,
+		queue:   make(chan runRequest, 8),
+		term:    term,
+		status:  status,
+		scanner: scanner,
+		dir:     dir,
+		inQueue: make(map[string]bool),
 	}
 	go r.drain()
 	return r
 }
 
 // Enqueue adds t to the run queue. Silently drops the request if the queue
-// is full or t is a placeholder (empty Runner field).
+// is full, t is a placeholder (empty Runner field), or the same target is
+// already waiting in the queue (deduplication for watch mode).
 func (r *Runner) Enqueue(t Target) {
 	if t.Runner == "" {
 		return
 	}
+	r.dedupMu.Lock()
+	already := r.inQueue[t.Name]
+	if !already {
+		r.inQueue[t.Name] = true
+	}
+	r.dedupMu.Unlock()
+
+	if already {
+		return
+	}
+
 	select {
 	case r.queue <- runRequest{target: t}:
 	default:
+		// Queue full — remove the dedup entry so a future attempt can retry.
+		r.dedupMu.Lock()
+		delete(r.inQueue, t.Name)
+		r.dedupMu.Unlock()
 	}
 	r.updateStatus()
 }
@@ -80,9 +104,25 @@ func (r *Runner) ClearTerminal() {
 	r.written.Store(false)
 }
 
+// SetWatchActive controls the scanner animation in the footer.
+func (r *Runner) SetWatchActive(active bool) {
+	if r.scanner == nil {
+		return
+	}
+	if active {
+		r.scanner.Start(120 * time.Millisecond)
+	} else {
+		r.scanner.Stop()
+	}
+}
+
 // drain runs in a goroutine and processes requests one at a time.
 func (r *Runner) drain() {
 	for req := range r.queue {
+		r.dedupMu.Lock()
+		delete(r.inQueue, req.target.Name)
+		r.dedupMu.Unlock()
+
 		r.busy.Store(true)
 		r.updateStatus()
 		r.run(req)

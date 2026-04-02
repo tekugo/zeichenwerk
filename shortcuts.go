@@ -46,6 +46,16 @@ func NewShortcuts(id, class string, pairs ...string) *Shortcuts {
 	return s
 }
 
+// SetPairs replaces the key/label pairs and triggers a redraw. Pairs are
+// supplied as alternating key, label strings (same convention as NewShortcuts).
+func (s *Shortcuts) SetPairs(pairs ...string) {
+	s.pairs = make([]shortcutPair, 0, len(pairs)/2)
+	for i := 0; i+1 < len(pairs); i += 2 {
+		s.pairs = append(s.pairs, shortcutPair{key: pairs[i], label: pairs[i+1]})
+	}
+	Redraw(s)
+}
+
 // ---- Widget Methods ---------------------------------------------------------
 
 // Apply applies theme styles and caches the decoration strings.
