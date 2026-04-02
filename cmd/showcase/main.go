@@ -346,7 +346,7 @@ func userAdminScreen(b *Builder) {
 		Flex("ua-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
 		Static("ua-search-lbl", "Search:").Foreground("$gray").
 		Typeahead("ua-search", "", "name, email or role…").Hint(28, 1).
-		Spacer().Hint(-1, 0).Class("dialog").
+		Spacer().Hint(-1, 0).
 		Button("ua-btn-new", " + New User").
 		Button("ua-btn-del", " ✕ Delete").
 		Button("ua-btn-exp", " ↓ Export").
@@ -366,7 +366,7 @@ func userAdminScreen(b *Builder) {
 		End(). // Group("ua-group")
 		End(). // Form("ua-form")
 		Flex("ua-detail-btns", true, "end", 2).Padding(1).
-		Button("ua-save", " ✓ Save Changes").Class("dialog").
+		Button("ua-save", " ✓ Save Changes").
 		Button("ua-reset", " ↺ Reset").
 		Button("ua-deactivate", " ⊘ Deactivate").
 		End(). // Flex("ua-detail-btns")
@@ -624,7 +624,7 @@ func processScreen(b *Builder) {
 		Button("proc-kill", " ✕ Kill").
 		Button("proc-restart", " ↺ Restart").
 		Button("proc-detail", " ⬡ Details").
-		Button("proc-refresh", " ↻ Refresh").Class("dialog").
+		Button("proc-refresh", " ↻ Refresh").
 		End(). // Flex("proc-toolbar")
 		// Process table
 		Flex("proc-table-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
@@ -786,7 +786,7 @@ func dataEntryScreen(b *Builder) {
 		Flex("de-actions", true, "end", 2).
 		Button("de-btn-draft", " ↓ Save Draft").
 		Button("de-btn-cancel", " ✕ Cancel").
-		Button("de-btn-submit", " ✓ Submit Order").Class("dialog").
+		Button("de-btn-submit", " ✓ Submit Order").
 		End(). // Flex("de-actions")
 		Static("de-status", "").Foreground("$green").Padding(1, 0, 0, 0).
 		End(). // Flex("de-items-col")
