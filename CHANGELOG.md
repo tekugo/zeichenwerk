@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [2.0.0-beta.2] — 2026-04-02
+
 ### Added
 - **Terminal widget** — full VT100/ANSI terminal emulator widget (`terminal.go`)
   - `CellBuffer` with four parallel `[]uint32` slices for char, fg, bg, and underline colour (`cell-buffer.go`)
@@ -88,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TreeFS` filesystem tree helper
 - `AGENTS.md` and `doc/` reference documentation
 
-[Unreleased]: https://github.com/tekugo/zeichenwerk/compare/v2.0.0-beta.1...HEAD
+[Unreleased]: https://github.com/tekugo/zeichenwerk/compare/v2.0.0-beta.2...HEAD
+[2.0.0-beta.2]: https://github.com/tekugo/zeichenwerk/compare/v2.0.0-beta.1...v2.0.0-beta.2
 [2.0.0-beta.1]: https://github.com/tekugo/zeichenwerk/compare/v1.0.0...v2.0.0-beta.1
 [1.0.0]: https://github.com/tekugo/zeichenwerk/releases/tag/v1.0.0
