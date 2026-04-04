@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`Sparkline` widget** — compact time-series display using Unicode block characters
+  (`▁▂▃▄▅▆▇█`); height-adaptive with `h` content rows giving `h×8` discrete levels
+  per column (`sparkline.go`)
+  - `ScaleMode`: `Relative` (tallest visible bar = █, good for shape comparisons) or
+    `Absolute` (fixed `[Min, Max]` bracket, good for absolute magnitude)
+  - Ring-buffer data model via `SetCapacity(int)`; left-pads with spaces when series
+    is shorter than widget width
+  - Dual-colour threshold: `SetThreshold(float64)` switches bars at or above the
+    threshold to the `"sparkline/high"` style
+  - Gradient mode: `SetGradient(true)` blends the foreground colour smoothly from the
+    base colour (at the threshold) to the high colour (at the maximum value) instead
+    of a hard cutoff
+  - `"sparkline"` and `"sparkline/high"` style keys added to all five built-in themes
+  - `Builder.Sparkline(id)` wiring; demo panel in `cmd/demo`
 - **`Table` cell navigation mode** — `SetCellNav(true)` switches the table from
   row-select to cell-select mode; `←`/`→` move between columns, `Tab`/`Shift+Tab`
   advance through cells wrapping across rows, `Home`/`End` jump to first/last column

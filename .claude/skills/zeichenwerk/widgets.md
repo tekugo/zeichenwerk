@@ -258,6 +258,37 @@ Style key: `"rule"`. Events: none. Non-interactive.
 
 ---
 
+## Sparkline
+
+```go
+NewSparkline(id, class string) *Sparkline
+```
+
+Renders a sequence of `float64` values as a column of Unicode block characters
+(`▁▂▃▄▅▆▇█`). Height is determined by the widget's content area: `h` rows
+give `h×8` discrete levels per column.
+
+| Style key | When |
+|-----------|------|
+| `"sparkline"` | default bar colour |
+| `"sparkline/high"` | bars whose value is ≥ threshold |
+
+`ScaleMode` constants: `Relative` (tallest visible bar = █), `Absolute` (fixed min/max).
+
+Methods: `Append(float64)`, `SetValues([]float64)`, `Values() []float64`,
+`SetMode(ScaleMode)`, `SetMin(float64)`, `SetMax(float64)`,
+`SetThreshold(float64)` (0 = disabled), `SetGradient(bool)`,
+`SetCapacity(int)` (0 = unlimited ring buffer).
+
+**Gradient mode** (`SetGradient(true)`): instead of a hard colour cutoff at the
+threshold, the foreground interpolates linearly from the `"sparkline"` colour
+(at the threshold) to the `"sparkline/high"` colour (at the maximum value).
+Has no effect when threshold is 0.
+
+Events: none. Non-interactive (display only).
+
+---
+
 ## Select
 
 ```go

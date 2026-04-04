@@ -370,6 +370,15 @@ func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
 	return b
 }
 
+// Sparkline creates a new Sparkline widget for displaying time-series data as
+// a column of Unicode block characters. Configure scaling and data via the
+// returned *Sparkline after building.
+func (b *Builder) Sparkline(id string) *Builder {
+	s := NewSparkline(id, b.class)
+	b.Add(s)
+	return b
+}
+
 // Select creates a select dropdown.
 func (b *Builder) Select(id string, args ...string) *Builder {
 	s := NewSelect(id, b.class, args...)

@@ -68,6 +68,8 @@ func TokyoNightTheme() *Theme {
 		NewStyle("typeahead/suggestion:focused").WithColors("$fg1", "$blue"),
 		NewStyle("rule"),
 		NewStyle("scanner").WithColors("$cyan", "$bg0"),
+		NewStyle("sparkline").WithColors("$cyan", "$bg0"),
+		NewStyle("sparkline/high").WithColors("$orange", "$bg0"),
 		NewStyle("static").WithColors("$fg0", "$bg1").WithMargin(0).WithPadding(0),
 		NewStyle("static.dialog").WithColors("$fg0", "$bg2").WithMargin(0).WithPadding(0),
 		NewStyle("select").WithColors("$fg0", "$bg2").WithPadding(0, 1),

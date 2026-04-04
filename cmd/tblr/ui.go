@@ -134,10 +134,9 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 		if row < 0 || col < 0 {
 			return
 		}
+		current := tbl.Str(row, col)
 		x, y, w, ok := tblWidget.CellBounds(row, col)
 		if !ok {
-			// fall back to prompt
-			current := tbl.Str(row, col)
 			ui.Prompt("Edit Cell", fmt.Sprintf("[%d,%d]:", row+1, col+1), func(val string) {
 				tbl.SetCell(row, col, val)
 				tbl.RecalcWidths()
@@ -145,13 +144,15 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 				tblWidget.Refresh()
 				refreshStatus()
 			}, nil)
-			_ = current
 			return
 		}
-		current := tbl.Str(row, col)
-		inp := zw.NewInput("cell-edit", "", current)
-		wrapper := zw.NewFlex("cell-edit-wrap", "", true, "start", 0)
-		wrapper.Add(inp)
+
+		b := ui.NewBuilder()
+		b.Flex("cell-edit-wrap", true, "start", 0).
+			Input("cell-edit-input", current).Hint(w, 1)
+		wrapper := b.Container()
+		inp := zw.Find(wrapper, "cell-edit-input").(*zw.Input)
+		inp.End()
 
 		zw.OnKey(inp, func(e *tcell.EventKey) bool {
 			switch e.Key() {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Viewport", "Dialog", "Confirm", "Prompt").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Viewport", "Dialog", "Confirm", "Prompt").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -78,6 +79,7 @@ func createUI(theme *Theme) *UI {
 		With(grid).
 		With(progress).
 		With(scanner).
+		With(sparklineDemo).
 		With(dropdown).
 		With(spinner).
 		With(styled).
@@ -881,6 +883,114 @@ func viewport(builder *Builder) {
 		Add(custom()).
 		End().
 		End()
+}
+
+// Sparkline demo — shows all scale modes and multi-row rendering with live data.
+func sparklineDemo(builder *Builder) {
+	// Pre-seed each sparkline with 40 points so they aren't empty on first show.
+	seed := func(fn func(i int) float64) []float64 {
+		vs := make([]float64, 40)
+		for i := range vs {
+			vs[i] = fn(i)
+		}
+		return vs
+	}
+
+	sineNoise := func(i int) float64 {
+		return math.Sin(float64(i)*0.3) + rand.Float64()*0.3 - 0.15
+	}
+	sineAbs := func(i int) float64 {
+		return (math.Sin(float64(i)*0.2) + 1.0) / 2.0
+	}
+
+	builder.Flex("sparkline-demo", false, "stretch", 1).Padding(1, 2).
+		Static("sp-title", "Sparkline Widget Demo").Padding(0, 0, 1, 0).
+		Static("sp-desc", "Live data — each chart updates every 100 ms.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		// ---- Row 1: Relative scale h=1 ----
+		Static("sp-lbl-rel", "Relative scale (h=1) — shape follows data:").Padding(1, 0, 0, 0).
+		Sparkline("sp-rel").Hint(-1, 1).
+		// ---- Row 2: Absolute scale h=1 ----
+		Static("sp-lbl-abs", "Absolute scale (h=1, min=−1 max=+1):").Padding(1, 0, 0, 0).
+		Sparkline("sp-abs").Hint(-1, 1).
+		// ---- Row 3: Hard threshold h=2 ----
+		Static("sp-lbl-thr", "Hard threshold at 0.65 (h=2):").Padding(1, 0, 0, 0).
+		Sparkline("sp-thr").Hint(-1, 2).
+		// ---- Row 4: Gradient threshold h=2 ----
+		Static("sp-lbl-grad", "Gradient threshold at 0.65 (h=2):").Padding(1, 0, 0, 0).
+		Sparkline("sp-grad").Hint(-1, 2).
+		// ---- Row 5: Multi-row h=4 ----
+		Static("sp-lbl-multi", "Multi-row (h=4, 32 levels per column):").Padding(1, 0, 0, 0).
+		Sparkline("sp-multi").Hint(-1, 4).
+		End()
+
+	spRel := builder.Find("sp-rel").(*Sparkline)
+	spRel.SetValues(seed(sineNoise))
+
+	spAbs := builder.Find("sp-abs").(*Sparkline)
+	spAbs.SetMode(Absolute)
+	spAbs.SetMin(-1.0)
+	spAbs.SetMax(1.0)
+	spAbs.SetValues(seed(sineNoise))
+
+	spThr := builder.Find("sp-thr").(*Sparkline)
+	spThr.SetMode(Absolute)
+	spThr.SetMin(0.0)
+	spThr.SetMax(1.0)
+	spThr.SetThreshold(0.65)
+	spThr.SetValues(seed(sineAbs))
+
+	spGrad := builder.Find("sp-grad").(*Sparkline)
+	spGrad.SetMode(Absolute)
+	spGrad.SetMin(0.0)
+	spGrad.SetMax(1.0)
+	spGrad.SetThreshold(0.65)
+	spGrad.SetGradient(true)
+	spGrad.SetValues(seed(sineAbs))
+
+	spMulti := builder.Find("sp-multi").(*Sparkline)
+	spMulti.SetMode(Absolute)
+	spMulti.SetMin(-1.0)
+	spMulti.SetMax(1.0)
+	spMulti.SetValues(seed(sineNoise))
+
+	container := builder.Find("sparkline-demo").(Container)
+
+	var stop chan struct{}
+	var phase float64
+
+	container.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		stop = make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(100 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-stop:
+					return
+				case <-ticker.C:
+					v := math.Sin(phase)*0.8 + rand.Float64()*0.35 - 0.175
+					v01 := (math.Sin(phase*0.7) + 1.0) / 2.0
+					phase += 0.25
+
+					spRel.Append(v)
+					spAbs.Append(v)
+					spThr.Append(v01)
+					spGrad.Append(v01)
+					spMulti.Append(v)
+				}
+			}
+		}()
+		return true
+	})
+
+	container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		if stop != nil {
+			close(stop)
+			stop = nil
+		}
+		return true
+	})
 }
 
 // Table demo data generation
