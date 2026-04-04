@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     of a hard cutoff
   - `"sparkline"` and `"sparkline/high"` style keys added to all five built-in themes
   - `Builder.Sparkline(id)` wiring; demo panel in `cmd/demo`
+- **`Heatmap` widget** — colour-graded activity grid (`heatmap.go`); similar to
+  a GitHub contribution graph
+  - `NewHeatmap(id, class string, rows, cols int)` allocates a zeroed grid
+  - `SetValue(row, col int, v float64)`, `SetRow`, `SetAll` for data updates
+  - Cell background interpolates linearly between `"heatmap/zero"` and
+    `"heatmap/max"` background colours using `lerpColor`; foreground follows
+    the same gradient
+  - `SetRowLabels` / `SetColLabels` for optional axis headers
+  - `SetCellWidth(int)` — cells wider than 1 give square-ish cells on most terminals
+  - Style keys `"heatmap"`, `"heatmap/header"`, `"heatmap/zero"`, `"heatmap/mid"`,
+    `"heatmap/max"` added to all five built-in themes
+  - `Builder.Heatmap(id, rows, cols)` and `compose.Heatmap(id, class, rows, cols)` wiring
+  - Demo panel in `cmd/demo`
 - **`Table` cell navigation mode** — `SetCellNav(true)` switches the table from
   row-select to cell-select mode; `←`/`→` move between columns, `Tab`/`Shift+Tab`
   advance through cells wrapping across rows, `Home`/`End` jump to first/last column

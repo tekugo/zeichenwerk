@@ -379,6 +379,14 @@ func (b *Builder) Sparkline(id string) *Builder {
 	return b
 }
 
+// Heatmap creates a new Heatmap widget with the given dimensions. Configure
+// data, labels, and cell width via the returned *Heatmap after building.
+func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
+	h := NewHeatmap(id, b.class, rows, cols)
+	b.Add(h)
+	return b
+}
+
 // Select creates a select dropdown.
 func (b *Builder) Select(id string, args ...string) *Builder {
 	s := NewSelect(id, b.class, args...)

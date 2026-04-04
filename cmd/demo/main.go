@@ -65,7 +65,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Viewport", "Dialog", "Confirm", "Prompt").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -77,6 +77,7 @@ func createUI(theme *Theme) *UI {
 		With(editor).
 		With(form).
 		With(grid).
+		With(heatmapDemo).
 		With(progress).
 		With(scanner).
 		With(sparklineDemo).
@@ -131,7 +132,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 20:
+					case 22:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -153,7 +154,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 21:
+					case 23:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -166,7 +167,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 22:
+					case 24:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -179,6 +180,22 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
+					case 25:
+						d := ui.FileChooser("Open File", "Open", "file", "", false)
+						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+							if log, ok := Find(ui, "debug-log").(*Text); ok {
+								log.Add("File → " + data[0].(string))
+							}
+							return true
+						})
+					case 26:
+						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
+						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+							if log, ok := Find(ui, "debug-log").(*Text); ok {
+								log.Add("Dir → " + data[0].(string))
+							}
+							return true
+						})
 					}
 				}
 			}
@@ -984,6 +1001,81 @@ func sparklineDemo(builder *Builder) {
 		return true
 	})
 
+	container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		if stop != nil {
+			close(stop)
+			stop = nil
+		}
+		return true
+	})
+}
+
+// Heatmap demo — shows a 24×7 activity grid (hour × weekday) with live random data.
+func heatmapDemo(builder *Builder) {
+	const rows, cols = 24, 7
+
+	builder.Flex("heatmap-demo", false, "stretch", 1).Padding(1, 2).
+		Static("hm-title", "Heatmap Widget Demo").Padding(0, 0, 1, 0).
+		Heatmap("hm", rows, cols).Hint(-1, -1).
+		End()
+
+	hm := builder.Find("hm").(*Heatmap)
+	hm.SetCellWidth(2)
+	hm.SetColLabels([]string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"})
+	rowLabels := make([]string, rows)
+	for i := range rowLabels {
+		rowLabels[i] = fmt.Sprintf("%2dh", i)
+	}
+	hm.SetRowLabels(rowLabels)
+
+	// Seed with random-looking activity data that peaks during business hours.
+	rng := [4]uint64{0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344}
+	next := func() float64 {
+		x := rng[0] ^ rng[0]<<13
+		rng[0] = rng[1]
+		rng[1] = rng[2]
+		rng[2] = rng[3]
+		rng[3] = x ^ x>>7 ^ rng[3] ^ rng[3]>>19
+		return float64(rng[3]&0xffff) / 0xffff
+	}
+	data := make([][]float64, rows)
+	for r := range data {
+		data[r] = make([]float64, cols)
+		for c := range data[r] {
+			// Business hours (8–18) on weekdays (0–4) get higher baseline.
+			base := 0.1
+			if r >= 8 && r < 18 && c < 5 {
+				base = 0.5
+			}
+			data[r][c] = base + next()*0.5
+		}
+	}
+	hm.SetAll(data)
+
+	var stop chan struct{}
+	container := builder.Find("heatmap-demo").(Container)
+	container.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		stop = make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-stop:
+					return
+				case <-ticker.C:
+					r := int(next()*float64(rows)) % rows
+					c := int(next()*float64(cols)) % cols
+					base := 0.1
+					if r >= 8 && r < 18 && c < 5 {
+						base = 0.5
+					}
+					hm.SetValue(r, c, base+next()*0.5)
+				}
+			}
+		}()
+		return true
+	})
 	container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
 		if stop != nil {
 			close(stop)

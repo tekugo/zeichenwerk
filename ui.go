@@ -716,12 +716,22 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 		Container()
 
 	input := Find(dialog, "prompt-input").(*Input)
-	Find(dialog, "prompt-ok").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+	accept := func() {
 		text := input.Text()
 		ui.Close()
 		if onAccept != nil {
 			onAccept(text)
 		}
+	}
+	OnKey(input, func(e *tcell.EventKey) bool {
+		if e.Key() == tcell.KeyEnter {
+			accept()
+			return true
+		}
+		return false
+	})
+	Find(dialog, "prompt-ok").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		accept()
 		return true
 	})
 	Find(dialog, "prompt-cancel").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {

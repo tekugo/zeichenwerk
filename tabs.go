@@ -268,7 +268,6 @@ func (t *Tabs) Render(r *Renderer) {
 
 	cx := x
 	r.Set(normal.Foreground(), normal.Background(), normal.Font())
-	r.Repeat(x, y+1, 1, 0, 1, "\u2501")
 
 	for i, tab := range t.tabs {
 		tl := len([]rune(tab))
@@ -281,10 +280,10 @@ func (t *Tabs) Render(r *Renderer) {
 		}
 		if t.selected == i {
 			r.Set(line.Foreground(), line.Background(), line.Font())
-			r.Repeat(cx, y+1, 1, 0, min(tl+4, x+cx), "\u2501")
+			r.Repeat(cx, y+1, 1, 0, tl+4, "\u2501")
 			r.Set(normal.Foreground(), normal.Background(), normal.Font())
 		} else {
-			r.Repeat(cx, y+1, 1, 0, min(tl+4, x+cx), "\u2501")
+			r.Repeat(cx, y+1, 1, 0, tl+4, "\u2501")
 		}
 		cx = cx + tl + 4
 		if cx > x+w {
