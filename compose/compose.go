@@ -624,10 +624,10 @@ func Deck(id, class string, render z.ItemRender, itemHeight int, options ...Opti
 // Table adds a scrollable data-grid widget to the parent. provider supplies
 // the column headers and row data; use [zeichenwerk.NewArrayTableProvider]
 // for a simple static data source.
-func Table(id, class string, provider z.TableProvider, options ...Option) Option {
+func Table(id, class string, provider z.TableProvider, cellNav bool, options ...Option) Option {
 	return func(theme *z.Theme, widget z.Widget) {
 		if container, ok := widget.(z.Container); ok {
-			w := z.NewTable(id, class, provider)
+			w := z.NewTable(id, class, provider, cellNav)
 			w.Apply(theme)
 			container.Add(w)
 			for _, option := range options {

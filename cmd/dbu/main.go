@@ -69,7 +69,7 @@ func content(builder *Builder) {
 		Cell(1, 0, 1, 1).
 		Editor("sql").
 		Cell(1, 1, 1, 1).
-		Table("result", NewArrayTableProvider([]string{}, [][]string{})).
+		Table("result", NewArrayTableProvider([]string{}, [][]string{}), true).
 		Border("none").
 		Border("grid", "thin").
 		Border(":focused", "none").

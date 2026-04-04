@@ -318,9 +318,9 @@ All panes fill switcher bounds; only selected pane is visible and interactive.
 NewTable(id, class string, provider TableProvider) *Table
 
 type TableProvider interface {
-    Columns() []Column
-    Length() int
-    Value(row, column int) string
+    Columns() []TableColumn   // header + width per column
+    Length() int              // number of data rows
+    Str(row, column int) string
 }
 // Convenience constructor:
 NewArrayTableProvider(headers []string, rows [][]string)
@@ -335,10 +335,24 @@ NewArrayTableProvider(headers []string, rows [][]string)
 | `"table/header"` | header row |
 | `"table/highlight"` | highlighted row, unfocused |
 | `"table/highlight:focused"` | highlighted row, focused |
+| `"table/cell"` | focused cell in cell mode, unfocused |
+| `"table/cell:focused"` | focused cell in cell mode, focused |
 
-Events: `EvtSelect(int)`, `EvtActivate(row data)`.
-Keyboard: Up/Down rows · Left/Right scroll 1 char · Ctrl+Left/Right by column ·
-PgUp/PgDn · Home/End · Enter/Space activate.
+Events: `EvtSelect(row int, col int)` · `EvtActivate(row int, rowData []string)`.  
+`col` is `-1` in row mode, column index in cell mode.
+
+**Row mode keyboard** (default): `↑`/`↓` rows · `←`/`→` scroll 1 char ·
+`Ctrl+←`/`Ctrl+→` scroll by column · `PgUp`/`PgDn` · `Home`/`End` first/last row ·
+`Ctrl+Home`/`Ctrl+End` first/last row + reset scroll · `Enter` activate · `Space` select.
+
+**Cell mode keyboard** (`SetCellNav(true)`): `↑`/`↓` rows (same) · `←`/`→`
+prev/next column · `Ctrl+←`/`Ctrl+→` first/last column · `Home`/`End` first/last
+column in row · `Ctrl+Home`/`Ctrl+End` first/last row+column · `Tab`/`Shift+Tab`
+next/prev cell wrapping across rows · `Enter` activate · `Space` select.
+
+Methods: `Selected() (row, col int)` · `SetSelected(row, col int) bool` ·
+`CellNav() bool` · `SetCellNav(bool)` · `Offset() (x, y int)` · `SetOffset(x, y int)` ·
+`Set(provider)` · `Refresh()`.
 
 ---
 

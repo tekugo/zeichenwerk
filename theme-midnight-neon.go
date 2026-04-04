@@ -88,6 +88,8 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("table/header").WithColors("$aqua", "$bg0").WithFont("bold"),
 		NewStyle("table/highlight").WithColors("$bg0", "$fg2"),
 		NewStyle("table/highlight:focused").WithColors("$bg0", "$cyan"),
+		NewStyle("table/cell").WithColors("$fg0", "$bg3"),
+		NewStyle("table/cell:focused").WithColors("$bg0", "$aqua").WithFont("bold"),
 		NewStyle("tabs/highlight").WithColors("$bg0", "$orange"),
 		NewStyle("tabs/highlight-line").WithForeground("$orange"),
 		NewStyle("tabs/line:focused").WithForeground("$aqua"),

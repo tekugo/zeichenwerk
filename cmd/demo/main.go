@@ -654,7 +654,7 @@ func table(builder *Builder) {
 		"First name", "Last name", "Street address", "ZIP", "City", "State", "Country", "Phone", "E-Mail", "Date of Birth", "Age", "Place of Birth", "Income", "SSN", "Sex",
 	}
 	data := people(100)
-	builder.Table("table-demo", NewArrayTableProvider(headers, data)).Hint(0, -1)
+	builder.Table("table-demo", NewArrayTableProvider(headers, data), false).Hint(0, -1)
 }
 
 // Tabs demo

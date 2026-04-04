@@ -10,13 +10,14 @@ filtering side-effect on `EvtChange`.
 
 ```go
 type Filterable interface {
-    Filter(query string)
-    ResetFilter()
+    Filter(filter string)
 }
 ```
 
 `Filter` applies a case-insensitive substring match and updates the widget's
-visible content. `ResetFilter` restores the full, unfiltered content.
+visible content. An empty string resets the filter and restores the full,
+unfiltered content — the same behavior triggered when the user deletes the
+filter input.
 
 Both `List` and `Tree` implement this interface (see *Changes to existing
 widgets* below).
@@ -68,9 +69,9 @@ func NewFilter(id, class string) *Filter
 | Method | Description |
 |--------|-------------|
 | `Bind(w Filterable)` | Sets the bound widget; if `w` implements `Suggester` calls `SetSuggest(w.Suggest)`, otherwise calls `SetSuggest(nil)`; immediately calls `applyFilter()` |
-| `Unbind()` | Calls `bound.ResetFilter()`, `SetSuggest(nil)`, then sets `bound = nil` |
+| `Unbind()` | Calls `bound.Filter("")`, `SetSuggest(nil)`, then sets `bound = nil` |
 | `Bound() Filterable` | Returns the currently bound widget |
-| `Clear()` | Clears the input text and calls `bound.ResetFilter()` if bound (overrides `Typeahead.Clear`) |
+| `Clear()` | Clears the input text and calls `bound.Filter("")` if bound (overrides `Typeahead.Clear`) |
 
 `applyFilter()` is unexported:
 
@@ -79,12 +80,7 @@ func (f *Filter) applyFilter() {
     if f.bound == nil {
         return
     }
-    q := f.Text()
-    if q == "" {
-        f.bound.ResetFilter()
-    } else {
-        f.bound.Filter(q)
-    }
+    f.bound.Filter(f.Text())
 }
 ```
 
@@ -122,20 +118,13 @@ original []string  // unfiltered items (nil = no active filter)
 New methods:
 
 ```go
-func (l *List) Filter(query string)
-func (l *List) ResetFilter()
+func (l *List) Filter(filter string)
 func (l *List) Suggest(query string) []string
 ```
 
 `Filter`:
-1. If `original == nil`, save `l.items` as `original`.
-2. Build a filtered slice: items from `original` where `strings.Contains(strings.ToLower(item), strings.ToLower(query))`.
-3. Call `l.SetItems(filtered)`.
-
-`ResetFilter`:
-1. If `original == nil`, return.
-2. Call `l.SetItems(original)`.
-3. Set `original = nil`.
+- If `filter == ""`: if `original != nil`, call `l.SetItems(original)` and set `original = nil`; return.
+- Otherwise: if `original == nil`, save `l.items` as `original`. Build a filtered slice: items from `original` where `strings.Contains(strings.ToLower(item), strings.ToLower(filter))`. Call `l.SetItems(filtered)`.
 
 `Suggest`:
 1. Use `original` as the source if non-nil (unfiltered), otherwise `l.items`.
@@ -156,23 +145,20 @@ filterQuery string  // active query ("" = no filter)
 New methods:
 
 ```go
-func (t *Tree) Filter(query string)
-func (t *Tree) ResetFilter()
+func (t *Tree) Filter(filter string)
 func (t *Tree) Suggest(query string) []string
 ```
 
 `Filter`:
-1. Store `filterQuery = query`.
+1. Store `filterQuery = filter`.
 2. Call `rebuild()` — the flattening pass already walks all nodes.
-   During flattening, skip nodes whose text does not match `filterQuery`
-   (and have no matching descendants). A node is included if it matches OR
-   any of its descendants match (so the path to matching nodes stays visible).
-3. Matching nodes have their parents auto-expanded for this render; the
-   underlying `expanded` state is not mutated.
-
-`ResetFilter`:
-1. Set `filterQuery = ""`.
-2. Call `rebuild()`.
+   When `filterQuery == ""`, rebuild proceeds normally (no filtering).
+   Otherwise, during flattening, skip nodes whose text does not match
+   `filterQuery` (and have no matching descendants). A node is included if
+   it matches OR any of its descendants match (so the path to matching nodes
+   stays visible).
+3. When non-empty, matching nodes have their parents auto-expanded for this
+   render; the underlying `expanded` state is not mutated.
 
 `Suggest`:
 1. Walk all nodes (depth-first).
@@ -193,20 +179,21 @@ func (b *Builder) Filter(id string) *Builder
 2. **`filter.go`** — new file: define `Filter` struct, `NewFilter`, `Bind`,
    `Unbind`, `Bound`, `Clear`, `applyFilter`, `Apply`.
 
-3. **`list.go`** — add `original []string` field; implement `Filter`,
-   `ResetFilter`, and `Suggest`.
+3. **`list.go`** — add `original []string` field; implement `Filter` and
+   `Suggest`.
 
 4. **`tree.go`** — add `filterQuery string` field; extend `rebuild` to skip
-   non-matching subtrees; implement `Filter`, `ResetFilter`, and `Suggest`.
+   non-matching subtrees when `filterQuery != ""`; implement `Filter` and
+   `Suggest`.
 
 5. **`builder.go`** — add `Filter` method.
 
 6. **Tests** — `filter_test.go`
    - Typing in a bound Filter calls `Filter` on the List with the correct query.
-   - Clearing the Filter calls `ResetFilter` and restores original List items.
+   - Clearing the Filter calls `Filter("")` and restores original List items.
    - `Unbind` restores the List and detaches.
    - Tree filter exposes parent nodes of matching descendants.
-   - Empty query always calls `ResetFilter`, never `Filter("")`.
+   - `Filter("")` on List and Tree restores the full unfiltered content.
    - Ghost text appears when bound widget implements `Suggester` and query is a prefix of an item.
    - No ghost text when bound widget does not implement `Suggester`.
    - Accepting ghost text via Tab dispatches `EvtAccept` and updates the filter.

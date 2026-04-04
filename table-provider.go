@@ -1,10 +1,17 @@
 package zeichenwerk
 
+// Column alignment values for TableColumn.Alignment.
+const (
+	AlignLeft   = 0 // default
+	AlignCenter = 1
+	AlignRight  = 2
+)
+
 // TableColumn defines the structure and properties of a table column.
-// Each column has a header, width, and optional sorting/filtering capabilities.
 type TableColumn struct {
 	Header     string // Display text for the column header
 	Width      int    // Column width in characters (auto-calculated for ArrayTableProvider)
+	Alignment  int    // AlignLeft, AlignCenter, or AlignRight
 	Sortable   bool   // Whether this column supports sorting (not yet implemented)
 	Filterable bool   // Whether this column supports filtering (not yet implemented)
 }

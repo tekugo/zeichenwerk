@@ -452,8 +452,8 @@ func (b *Builder) Tab(name string) *Builder {
 }
 
 // Table creates a table widget with the passed data provider.
-func (b *Builder) Table(id string, provider TableProvider) *Builder {
-	table := NewTable(id, b.class, provider)
+func (b *Builder) Table(id string, provider TableProvider, cellNav bool) *Builder {
+	table := NewTable(id, b.class, provider, cellNav)
 	b.Add(table)
 	return b
 }

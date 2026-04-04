@@ -169,22 +169,22 @@ func createUI(explorer *HALExplorer) *UI {
 		End().
 		End().
 		Flex("links-tab", false, "stretch", 0).
-		Table("links-content", NewArrayTableProvider([]string{"Rel", "Href", "Templated", "Type", "Title"}, [][]string{})).
+		Table("links-content", NewArrayTableProvider([]string{"Rel", "Href", "Templated", "Type", "Title"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
 		End().
 		Flex("embedded-tab", false, "stretch", 0).
-		Table("embedded-content", NewArrayTableProvider([]string{"Relation", "Resource"}, [][]string{})).
+		Table("embedded-content", NewArrayTableProvider([]string{"Relation", "Resource"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
 		End().
 		Flex("headers-tab", false, "stretch", 0).
-		Table("headers-content", NewArrayTableProvider([]string{"Header", "Value"}, [][]string{})).
+		Table("headers-content", NewArrayTableProvider([]string{"Header", "Value"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
 		End().
 		Flex("properties-tab", false, "stretch", 0).
-		Table("properties-content", NewArrayTableProvider([]string{"Property", "Value"}, [][]string{})).
+		Table("properties-content", NewArrayTableProvider([]string{"Property", "Value"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
 		End().

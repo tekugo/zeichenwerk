@@ -1,0 +1,7 @@
+{
+  "targets": {
+    "build": {
+      "watch": "**/*.go"
+    }
+  }
+}

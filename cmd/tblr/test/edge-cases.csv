@@ -1,0 +1,7 @@
+Name,Notes,Value,Tags
+"Smith, John","Has a comma in name",42,"go,rust"
+"Line ""quoted""","Contains ""double quotes""",0,""
+Empty value,,100,none
+Ünïcödé Héro,Unicode in all the things,7,"café,naïve"
+,No name at all,999,
+"Trailing space ","  Leading space  ",3.14,"  padded  "

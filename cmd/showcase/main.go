@@ -266,7 +266,7 @@ func dashboardScreen(b *Builder) {
 		Cell(0, 0, 1, 1).
 		Flex("svc-pane", false, "stretch", 0).Border("", "round").
 		Static("svc-title", " Services").Font("bold").Foreground("$fg0").Background("$bg2").
-		Table("svc-table", svcTable).Hint(0, -1).
+		Table("svc-table", svcTable, false).Hint(0, -1).
 		End(). // Flex("svc-pane")
 		Cell(1, 0, 1, 1).
 		Flex("alerts-pane", false, "stretch", 0).Border("", "round").
@@ -356,7 +356,7 @@ func userAdminScreen(b *Builder) {
 		Cell(0, 0, 1, 1).
 		Flex("ua-list-pane", false, "stretch", 0).Border("", "round").
 		Static("ua-list-title", " Users").Font("bold").Background("$bg2").
-		Table("ua-table", NewArrayTableProvider(userHeaders, userData)).Hint(0, -1).
+		Table("ua-table", NewArrayTableProvider(userHeaders, userData), true).Hint(0, -1).
 		End(). // Flex("ua-list-pane")
 		Cell(1, 0, 1, 1).
 		Flex("ua-detail-pane", false, "stretch", 0).Border("", "round").
@@ -629,7 +629,7 @@ func processScreen(b *Builder) {
 		// Process table
 		Flex("proc-table-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
 		Static("proc-table-title", " Processes").Font("bold").Background("$bg2").
-		Table("proc-table", NewArrayTableProvider(procHeaders, procData)).Hint(0, -1).
+		Table("proc-table", NewArrayTableProvider(procHeaders, procData), false).Hint(0, -1).
 		End(). // Flex("proc-table-pane")
 		End()  // Flex("process-mgr")
 
@@ -637,7 +637,7 @@ func processScreen(b *Builder) {
 
 	b.Find("proc-kill").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		procTable := Find(container, "proc-table").(*Table)
-		row := procTable.GetSelectedRow()
+		row, _ := procTable.Selected()
 		if row >= 0 && row < len(procData) {
 			pid := procData[row][0]
 			name := strings.TrimSpace(procData[row][1])
@@ -753,7 +753,7 @@ func dataEntryScreen(b *Builder) {
 		Cell(1, 0, 1, 1).
 		Flex("de-items-col", false, "stretch", 0).Padding(0, 0, 0, 2).
 		Static("de-items-title", "Order Items").Font("bold").Foreground("$fg1").Padding(0, 0, 1, 0).
-		Table("de-items-table", NewArrayTableProvider(orderHeaders, orderData)).Hint(0, 8).
+		Table("de-items-table", NewArrayTableProvider(orderHeaders, orderData), false).Hint(0, 8).
 		Spacer().Hint(0, 1).
 		// Order summary box
 		Flex("de-summary", false, "stretch", 0).Border("", "round").Padding(1, 2).

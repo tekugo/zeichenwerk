@@ -1,44 +1,33 @@
 package zeichenwerk
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"strings"
 
-// Table represents a widget that displays tabular data with support for scrolling,
-// keyboard navigation, and customizable styling. It uses a TableProvider interface
-// to supply data, making it flexible for different data sources.
+	"github.com/gdamore/tcell/v3"
+)
+
+// Table displays tabular data with scrolling, keyboard navigation, and theming.
+// It uses a TableProvider to supply data. Supports row mode and cell navigation mode.
 type Table struct {
 	Component
-	provider         TableProvider // Data source implementing TableProvider interface
-	tableWidth       int           // Total table width across all columns (includes separators)
-	row, column      int           // Current highlight position (row index, column unused)
-	offsetX, offsetY int           // Scroll offsets for horizontal and vertical scrolling
-	grid             *Border       // Border characters for grid lines and intersections
-	inner, outer     bool          // Flags to control inner column/row separators and outer borders
+	provider         TableProvider
+	tableWidth       int
+	row, column      int
+	offsetX, offsetY int
+	grid             *Border
+	inner, outer     bool
+	cellNav          bool // false = row navigation mode, true = cell navigation mode
+	cellStyler       func(row, col int, highlight bool) *Style
 }
 
-// NewTable creates a new table widget with the specified ID and data provider.
-// The table is initialized with default grid styling and both inner and outer
-// borders enabled. The table is focusable by default to support keyboard navigation.
-//
-// Parameters:
-//   - id: Unique identAifier for the table widget
-//   - class: Style class
-//   - provider: TableProvider implementation that supplies the table data
-//
-// Returns:
-//   - *Table: Configured table widget ready for use
-//
-// Example:
-//
-//	headers := []string{"Name", "Age", "City"}
-//	data := [][]string{{"John", "25", "NYC"}, {"Jane", "30", "LA"}}
-//	provider := NewArrayTableProvider(headers, data)
-//	table := NewTable("my-table", provider)
-func NewTable(id, class string, provider TableProvider) *Table {
+// NewTable creates a new table widget with the given ID, class, and data provider.
+func NewTable(id, class string, provider TableProvider, cellNav bool) *Table {
 	table := &Table{
 		Component: Component{id: id, class: class},
 		grid:      &Border{InnerH: "-", InnerV: "|"},
 		inner:     true,
 		outer:     true,
+		cellNav:   cellNav,
 	}
 	table.SetFlag(FlagFocusable, true)
 	table.Set(provider)
@@ -46,28 +35,21 @@ func NewTable(id, class string, provider TableProvider) *Table {
 	return table
 }
 
-// Apply applies a theme's styles to the component.
+// Apply applies theme styles to the table and its sub-selectors.
 func (t *Table) Apply(theme *Theme) {
 	theme.Apply(t, t.Selector("table"), "disabled", "focused")
 	theme.Apply(t, t.Selector("table/grid"), "disabled", "focused")
 	theme.Apply(t, t.Selector("table/header"), "disabled", "focused")
 	theme.Apply(t, t.Selector("table/highlight"), "disabled", "focused")
+	theme.Apply(t, t.Selector("table/cell"), "disabled", "focused")
 }
 
-// Refresh updates the table.
+// Refresh triggers a redraw of the table.
 func (t *Table) Refresh() {
 	Redraw(t)
 }
 
-// Set updates the table's data provider and recalculates the total table width.
-// This method can be used to dynamically change the table's data source.
-// The table width is calculated as the sum of all column widths plus separators.
-//
-// Parameters:
-//   - provider: New TableProvider implementation to use for data
-//
-// Note: This method resets the table width calculation, so it should be called
-// whenever the column structure changes.
+// Set updates the data provider and recalculates the total table width.
 func (t *Table) Set(value any) bool {
 	provider, ok := value.(TableProvider)
 	if !ok {
@@ -83,16 +65,7 @@ func (t *Table) Set(value any) bool {
 	return true
 }
 
-// Hint returns the preferred size for the table widget.
-// The width includes all column widths plus separators, and the height
-// equals the number of data rows (excluding the header).
-//
-// Returns:
-//   - int: Preferred width (sum of column widths + separators)
-//   - int: Preferred height (number of data rows)
-//
-// Note: The actual rendered size may differ based on container constraints.
-// The hint helps layout containers determine optimal sizing.
+// Hint returns the preferred size of the table.
 func (t *Table) Hint() (int, int) {
 	if t.hwidth != 0 || t.hheight != 0 {
 		return t.hwidth, t.hheight
@@ -109,50 +82,60 @@ func (t *Table) Hint() (int, int) {
 	return w, h
 }
 
-// Handle processes keyboard events for table navigation.
-// Supports comprehensive keyboard navigation including row selection, scrolling,
-// and quick navigation shortcuts.
-//
-// Supported key bindings:
-//   - Down Arrow: Move to next row
-//   - Up Arrow: Move to previous row
-//   - Left Arrow: Scroll left one character
-//   - Right Arrow: Scroll right one character
-//   - Home: Jump to first row
-//   - End: Jump to last row
-//   - Page Up: Move up by visible page height
-//   - Page Down: Move down by visible page height
-//   - Ctrl+Left: Scroll left by one full column width
-//   - Ctrl+Right: Scroll right by one full column width
-//   - Ctrl+Home: Jump to first row and reset horizontal scroll
-//   - Ctrl+End: Jump to last row and reset horizontal scroll
-//   - Ctrl+Up: Jump to first row (alternative)
-//   - Ctrl+Down: Jump to last row (alternative)
-//   - Tab: Move to next column (horizontal navigation)
-//   - Shift+Tab: Move to previous column (horizontal navigation)
-//   - Enter: Emit 'activate' event with current row data
-//   - Space: Emit 'select' event with current row data
-//
-// Parameters:
-//   - evt: tcell.Event to process
-//
-// Returns:
-//   - bool: true if the event was handled, false otherwise
-//
-// The method automatically adjusts the viewport when navigating to ensure
-// the selected row remains visible.
+// Selected returns the current (row, col) selection.
+// In row mode col is always -1; in cell mode col is the active column index.
+func (t *Table) Selected() (int, int) {
+	if t.provider == nil || t.row < 0 || t.row >= t.provider.Length() {
+		return -1, -1
+	}
+	if t.cellNav {
+		return t.row, t.column
+	}
+	return t.row, -1
+}
+
+// SetSelected programmatically sets the selected row (and column in cell mode).
+// In row mode the col argument is ignored. Returns false if the row is out of range.
+func (t *Table) SetSelected(row, col int) bool {
+	if t.provider == nil || row < 0 || row >= t.provider.Length() {
+		return false
+	}
+	t.row = row
+	if t.cellNav {
+		cols := t.provider.Columns()
+		t.column = max(0, min(col, len(cols)-1))
+		t.adjust()
+		t.adjustCol()
+	} else {
+		t.adjust()
+	}
+	return true
+}
+
+// Offset returns the current horizontal and vertical scroll offsets.
+func (t *Table) Offset() (int, int) {
+	return t.offsetX, t.offsetY
+}
+
+// SetOffset sets the scroll offsets, clamping to valid ranges.
+func (t *Table) SetOffset(offsetX, offsetY int) {
+	t.offsetX = max(0, min(offsetX, max(0, t.tableWidth-t.width)))
+	t.offsetY = max(0, min(offsetY, max(0, t.provider.Length()-1)))
+	t.Refresh()
+}
+
 func (t *Table) handleKey(event *tcell.EventKey) bool {
 	_, _, _, h := t.Content()
-	pageSize := max(1, h-3) // Account for header and borders
+	pageSize := max(1, h-3)
+	columns := t.provider.Columns()
+	lastCol := max(0, len(columns)-1)
 
 	switch event.Key() {
 	case tcell.KeyDown:
 		if event.Modifiers()&tcell.ModCtrl != 0 {
-			// Ctrl+Down: Jump to last row
 			t.row = max(0, t.provider.Length()-1)
 			t.adjust()
 		} else {
-			// Regular down: Move to next row
 			if t.row < t.provider.Length()-1 {
 				t.row++
 				t.adjust()
@@ -161,11 +144,9 @@ func (t *Table) handleKey(event *tcell.EventKey) bool {
 		return true
 	case tcell.KeyUp:
 		if event.Modifiers()&tcell.ModCtrl != 0 {
-			// Ctrl+Up: Jump to first row
 			t.row = 0
 			t.adjust()
 		} else {
-			// Regular up: Move to previous row
 			if t.row > 0 {
 				t.row--
 				t.adjust()
@@ -173,71 +154,102 @@ func (t *Table) handleKey(event *tcell.EventKey) bool {
 		}
 		return true
 	case tcell.KeyLeft:
-		if event.Modifiers()&tcell.ModCtrl != 0 {
-			// Ctrl+Left: Scroll by full column width
-			t.scrollByColumn(-1)
-		} else if event.Modifiers()&tcell.ModShift != 0 {
-			// Shift+Left: Move to previous column
-			t.moveToColumn(-1)
+		if t.cellNav {
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.column = 0
+				t.adjustCol()
+			} else {
+				if t.column > 0 {
+					t.column--
+				}
+				t.adjustCol()
+			}
 		} else {
-			// Regular left: Scroll by single character
-			if t.offsetX > 0 {
-				t.offsetX--
-				t.Refresh()
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.scrollByColumn(-1)
+			} else {
+				if t.offsetX > 0 {
+					t.offsetX--
+					t.Refresh()
+				}
 			}
 		}
 		return true
 	case tcell.KeyRight:
-		if event.Modifiers()&tcell.ModCtrl != 0 {
-			// Ctrl+Right: Scroll by full column width
-			t.scrollByColumn(1)
-		} else if event.Modifiers()&tcell.ModShift != 0 {
-			// Shift+Right: Move to next column
-			t.moveToColumn(1)
+		if t.cellNav {
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.column = lastCol
+				t.adjustCol()
+			} else {
+				if t.column < lastCol {
+					t.column++
+				}
+				t.adjustCol()
+			}
 		} else {
-			// Regular right: Scroll by single character
-			if t.offsetX+t.width < t.tableWidth {
-				t.offsetX++
-				t.Refresh()
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.scrollByColumn(1)
+			} else {
+				if t.offsetX+t.width < t.tableWidth {
+					t.offsetX++
+					t.Refresh()
+				}
 			}
 		}
 		return true
 	case tcell.KeyHome:
-		if event.Modifiers()&tcell.ModCtrl != 0 {
-			// Ctrl+Home: First row and reset horizontal scroll
-			t.row = 0
-			t.offsetX = 0
-			t.adjust()
+		if t.cellNav {
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.row = 0
+				t.column = 0
+				t.offsetX = 0
+				t.adjust()
+			} else {
+				t.column = 0
+				t.adjustCol()
+			}
 		} else {
-			// Home: Jump to first row
-			t.row = 0
-			t.adjust()
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.row = 0
+				t.offsetX = 0
+				t.adjust()
+			} else {
+				t.row = 0
+				t.adjust()
+			}
 		}
 		return true
 	case tcell.KeyEnd:
-		if event.Modifiers()&tcell.ModCtrl != 0 {
-			// Ctrl+End: Last row and reset horizontal scroll
-			t.row = max(0, t.provider.Length()-1)
-			t.offsetX = 0
-			t.adjust()
+		if t.cellNav {
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.row = max(0, t.provider.Length()-1)
+				t.column = lastCol
+				t.offsetX = 0
+				t.adjust()
+			} else {
+				t.column = lastCol
+				t.adjustCol()
+			}
 		} else {
-			// End: Jump to last row
-			t.row = max(0, t.provider.Length()-1)
-			t.adjust()
+			if event.Modifiers()&tcell.ModCtrl != 0 {
+				t.row = max(0, t.provider.Length()-1)
+				t.offsetX = 0
+				t.adjust()
+			} else {
+				t.row = max(0, t.provider.Length()-1)
+				t.adjust()
+			}
 		}
 		return true
 	case tcell.KeyPgUp:
-		// Page Up: Move up by page size
 		t.row = max(0, t.row-pageSize)
 		t.adjust()
 		return true
 	case tcell.KeyPgDn:
-		// Page Down: Move down by page size
 		t.row = min(t.provider.Length()-1, t.row+pageSize)
 		t.adjust()
 		return true
 	case tcell.KeyEnter:
-		// Enter: Emit 'activate' event with current row data
 		if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
 			rowData := t.getCurrentRowData()
 			t.Dispatch(t, EvtActivate, t.row, rowData)
@@ -245,10 +257,12 @@ func (t *Table) handleKey(event *tcell.EventKey) bool {
 		return true
 	case tcell.KeyRune:
 		if event.Str() == " " {
-			// Space: Emit 'select' event with current row data
 			if t.provider.Length() > 0 && t.row >= 0 && t.row < t.provider.Length() {
-				rowData := t.getCurrentRowData()
-				t.Dispatch(t, EvtSelect, t.row, rowData)
+				col := -1
+				if t.cellNav {
+					col = t.column
+				}
+				t.Dispatch(t, EvtSelect, t.row, col)
 			}
 			return true
 		}
@@ -258,22 +272,10 @@ func (t *Table) handleKey(event *tcell.EventKey) bool {
 	}
 }
 
-// adjust ensures the currently selected row remains visible by updating
-// the vertical scroll offset when necessary. This method is called automatically
-// during navigation to maintain proper viewport positioning.
-//
-// The adjustment logic:
-//   - If all rows fit in the visible area, no adjustment is needed
-//   - If the selected row is above the visible area, scroll up to show it
-//   - If the selected row is below the visible area, scroll down to show it
-//
-// The method accounts for the header row (which takes 2 lines with separator)
-// when calculating visible content area.
+// adjust ensures the selected row is visible, scrolling vertically as needed.
 func (t *Table) adjust() {
-	// Get actual content height
 	_, _, _, h := t.Content()
 
-	// We do not need to adjust the offset, if all rows fit
 	if t.provider.Length() < h-2 {
 		t.Refresh()
 		return
@@ -287,11 +289,28 @@ func (t *Table) adjust() {
 	t.Refresh()
 }
 
-// scrollByColumn scrolls horizontally by full column widths rather than single characters.
-// This provides more efficient navigation when dealing with wide tables.
-//
-// Parameters:
-//   - direction: -1 to scroll left, +1 to scroll right
+// adjustCol ensures the selected column is visible, scrolling horizontally as needed.
+func (t *Table) adjustCol() {
+	columns := t.provider.Columns()
+	if t.column < 0 || t.column >= len(columns) {
+		t.Refresh()
+		return
+	}
+	colX := 0
+	for i := 0; i < t.column; i++ {
+		colX += columns[i].Width + 1
+	}
+	colW := columns[t.column].Width
+	_, _, w, _ := t.Content()
+	if colX < t.offsetX {
+		t.offsetX = colX
+	} else if colX+colW > t.offsetX+w {
+		t.offsetX = colX + colW - w
+	}
+	t.Refresh()
+}
+
+// scrollByColumn scrolls horizontally by one full column width.
 func (t *Table) scrollByColumn(direction int) {
 	columns := t.provider.Columns()
 	if len(columns) == 0 {
@@ -299,23 +318,22 @@ func (t *Table) scrollByColumn(direction int) {
 	}
 
 	if direction < 0 {
-		// Scroll left by one column
 		if t.offsetX > 0 {
-			// Find the column boundary to scroll to
+			// Walk column starts; keep the last one strictly before offsetX.
+			target := 0
 			currentPos := 0
 			for _, column := range columns {
-				if currentPos+column.Width+1 > t.offsetX {
-					t.offsetX = max(0, currentPos)
+				if currentPos >= t.offsetX {
 					break
 				}
+				target = currentPos
 				currentPos += column.Width + 1
 			}
+			t.offsetX = target
 			t.Refresh()
 		}
 	} else {
-		// Scroll right by one column
 		if t.offsetX+t.width < t.tableWidth {
-			// Find the next column boundary
 			currentPos := 0
 			for _, column := range columns {
 				if currentPos > t.offsetX {
@@ -329,64 +347,7 @@ func (t *Table) scrollByColumn(direction int) {
 	}
 }
 
-// moveToColumn implements horizontal navigation by moving the view to show specific columns.
-// This is used for Shift-Arrow horizontal navigation to jump between column boundaries.
-//
-// Parameters:
-//   - direction: -1 to move to previous column, +1 to move to next column
-func (t *Table) moveToColumn(direction int) {
-	columns := t.provider.Columns()
-	if len(columns) == 0 {
-		return
-	}
-
-	// Calculate current visible column range
-	visibleStart := t.offsetX
-	visibleEnd := t.offsetX + t.width
-
-	// Find current column index based on offset
-	currentPos := 0
-	currentColumn := 0
-	for i, column := range columns {
-		if currentPos <= visibleStart && currentPos+column.Width > visibleStart {
-			currentColumn = i
-			break
-		}
-		currentPos += column.Width + 1
-	}
-
-	// Calculate target column
-	targetColumn := currentColumn + direction
-	if targetColumn < 0 {
-		targetColumn = 0
-	} else if targetColumn >= len(columns) {
-		targetColumn = len(columns) - 1
-	}
-
-	// Calculate position for target column
-	targetPos := 0
-	for i := 0; i < targetColumn; i++ {
-		targetPos += columns[i].Width + 1
-	}
-
-	// Adjust offset to show the target column
-	if targetPos < visibleStart {
-		// Target column is to the left, scroll left
-		t.offsetX = targetPos
-	} else if targetPos+columns[targetColumn].Width > visibleEnd {
-		// Target column is to the right, scroll right
-		t.offsetX = min(t.tableWidth-t.width, targetPos+columns[targetColumn].Width-t.width)
-	}
-
-	t.Refresh()
-}
-
-// getCurrentRowData returns all column values for the currently selected row
-// as a slice of strings. This is useful for event handlers that need access
-// to the complete row data.
-//
-// Returns:
-//   - []string: Slice containing all column values for the current row
+// getCurrentRowData returns all column values for the currently selected row.
 func (t *Table) getCurrentRowData() []string {
 	if t.provider == nil || t.row < 0 || t.row >= t.provider.Length() {
 		return nil
@@ -400,53 +361,58 @@ func (t *Table) getCurrentRowData() []string {
 	return rowData
 }
 
-// GetSelectedRow returns the index of the currently selected row.
-//
-// Returns:
-//   - int: Zero-based index of the selected row, or -1 if no valid selection
-func (t *Table) GetSelectedRow() int {
-	if t.provider == nil || t.row < 0 || t.row >= t.provider.Length() {
-		return -1
+// SetCellStyler sets a per-cell style callback. fn receives the row, column, and
+// whether the cell is the focused/highlighted cell. Return nil to use the default
+// style. Set fn to nil to clear.
+func (t *Table) SetCellStyler(fn func(row, col int, highlight bool) *Style) {
+	t.cellStyler = fn
+}
+
+// CellBounds returns the screen-space position and width of cell (row, col).
+// ok is false when the cell is outside the visible viewport.
+func (t *Table) CellBounds(row, col int) (x, y, w int, ok bool) {
+	columns := t.provider.Columns()
+	if row < 0 || row >= t.provider.Length() || col < 0 || col >= len(columns) {
+		return 0, 0, 0, false
 	}
-	return t.row
-}
-
-// SetSelectedRow programmatically sets the selected row and adjusts the viewport.
-// This is useful for external navigation or search functionality.
-//
-// Parameters:
-//   - row: Zero-based row index to select
-//
-// Returns:
-//   - bool: true if the row was successfully selected, false if invalid
-func (t *Table) SetSelectedRow(row int) bool {
-	if t.provider == nil || row < 0 || row >= t.provider.Length() {
-		return false
+	cx, cy, cw, ch := t.Content()
+	visRow := row - t.offsetY
+	if visRow < 0 || visRow >= ch-2 {
+		return 0, 0, 0, false
 	}
-	t.row = row
-	t.adjust()
-	return true
+	colX := 0
+	for i := 0; i < col; i++ {
+		colX += columns[i].Width + 1
+	}
+	colW := columns[col].Width
+	screenX := cx - t.offsetX + colX
+	if screenX+colW <= cx || screenX >= cx+cw {
+		return 0, 0, 0, false
+	}
+	visX := max(screenX, cx)
+	visW := min(screenX+colW, cx+cw) - visX
+	if visW <= 0 {
+		return 0, 0, 0, false
+	}
+	return visX, cy + 2 + visRow, visW, true
 }
 
-// GetScrollOffset returns the current horizontal and vertical scroll offsets.
-//
-// Returns:
-//   - int: Horizontal scroll offset in characters
-//   - int: Vertical scroll offset in rows
-func (t *Table) GetScrollOffset() (int, int) {
-	return t.offsetX, t.offsetY
-}
-
-// SetScrollOffset programmatically sets the scroll offsets.
-// Useful for implementing custom scrolling behavior or restoring scroll position.
-//
-// Parameters:
-//   - offsetX: Horizontal scroll offset in characters
-//   - offsetY: Vertical scroll offset in rows
-func (t *Table) SetScrollOffset(offsetX, offsetY int) {
-	t.offsetX = max(0, min(offsetX, max(0, t.tableWidth-t.width)))
-	t.offsetY = max(0, min(offsetY, max(0, t.provider.Length()-1)))
-	t.Refresh()
+// cellText returns text padded to width runes according to alignment.
+func cellText(text string, width, alignment int) string {
+	runes := []rune(text)
+	if len(runes) >= width {
+		return string(runes[:width])
+	}
+	pad := width - len(runes)
+	switch alignment {
+	case AlignRight:
+		return strings.Repeat(" ", pad) + text
+	case AlignCenter:
+		left := pad / 2
+		return strings.Repeat(" ", left) + text + strings.Repeat(" ", pad-left)
+	default:
+		return text
+	}
 }
 
 func (t *Table) Render(r *Renderer) {
@@ -468,23 +434,19 @@ func (t *Table) Render(r *Renderer) {
 }
 
 func (t *Table) renderTableHeader(r *Renderer, x, y, w, h int, headerStyle, gridStyle *Style) {
-	rx := 0 // current render position
-	rw := w // remaining width
+	rx := 0
+	rw := w
 	columns := t.provider.Columns()
 	for i, column := range columns {
-		// If there is no room remaing, we stop rendering the header
 		if rw <= 0 {
 			break
 		}
-		// Check, if the column is visible on the left
 		if rx+column.Width < t.offsetX {
 			rx = rx + column.Width + 1
 			continue
 		}
-		// Do we need to render it partially?
 		r.Set(headerStyle.Foreground(), headerStyle.Background(), headerStyle.Font())
 
-		// cell/column x-position
 		cx := x - t.offsetX + rx
 		if rx < t.offsetX {
 			start := t.offsetX - rx
@@ -497,16 +459,13 @@ func (t *Table) renderTableHeader(r *Renderer, x, y, w, h int, headerStyle, grid
 			r.Repeat(cx+start, y+1, 1, 0, rcw, t.grid.InnerH)
 			rw += start
 		} else {
-			// We render either to complete column or use the remaining width
 			cw := min(rw, column.Width)
 			r.Text(cx, y, column.Header, cw)
 			r.Set(gridStyle.Foreground(), gridStyle.Background(), gridStyle.Font())
 			r.Repeat(cx, y+1, 1, 0, cw, t.grid.InnerH)
 		}
-		// Do we need to render the column separator?
 		if i < len(columns)-1 && rw > column.Width {
 			r.screen.Put(cx+column.Width, y+1, t.grid.InnerTopT)
-			// Bottom T is rendered with the header
 			if t.outer {
 				r.screen.Put(cx+column.Width, y+h, t.grid.BottomT)
 			}
@@ -515,12 +474,10 @@ func (t *Table) renderTableHeader(r *Renderer, x, y, w, h int, headerStyle, grid
 		rw = rw - column.Width - 1
 	}
 
-	// Draw the remaining header line
 	r.Set(gridStyle.Foreground(), gridStyle.Background(), gridStyle.Font())
 	if rx-t.offsetX < w {
 		r.Repeat(x-t.offsetX+rx-1, y+1, 1, 0, w+t.offsetX-rx+1, t.grid.InnerH)
 	}
-	// Draw the left and right T connectors
 	if t.outer {
 		r.screen.Put(x-1, y+1, t.grid.LeftT)
 		r.screen.Put(x+w, y+1, t.grid.RightT)
@@ -530,20 +487,11 @@ func (t *Table) renderTableHeader(r *Renderer, x, y, w, h int, headerStyle, grid
 func (t *Table) renderTableContent(r *Renderer, x, y, w, h int, gridStyle *Style) {
 	row := t.offsetY
 	columns := t.provider.Columns()
-	// Traverse all visible rows
-	for row < t.provider.Length() && row-t.offsetY < h {
-		// Determine row style
-		var style *Style
-		if row == t.row && t.Flag(FlagFocused) {
-			style = t.Style("highlight:focused")
-		} else if row == t.row {
-			style = t.Style("highlight")
-		} else {
-			style = t.Style()
-		}
+	focused := t.Flag(FlagFocused)
 
-		rx := 0 // render x position
-		rw := w // remaining width
+	for row < t.provider.Length() && row-t.offsetY < h {
+		rx := 0
+		rw := w
 		for i, column := range columns {
 			if rw <= 0 {
 				break
@@ -552,13 +500,38 @@ func (t *Table) renderTableContent(r *Renderer, x, y, w, h int, gridStyle *Style
 				rx = rx + column.Width + 1
 				continue
 			}
+
+			// Per-cell style: check styler first, then defaults.
+			highlight := row == t.row && (!t.cellNav || i == t.column)
+			var style *Style
+			if t.cellStyler != nil {
+				style = t.cellStyler(row, i, highlight)
+			}
+			if style == nil {
+				if t.cellNav && row == t.row && i == t.column {
+					if focused {
+						style = t.Style("cell:focused")
+					} else {
+						style = t.Style("cell")
+					}
+				} else if row == t.row {
+					if focused {
+						style = t.Style("highlight:focused")
+					} else {
+						style = t.Style("highlight")
+					}
+				} else {
+					style = t.Style()
+				}
+			}
+
 			r.Set(style.Foreground(), style.Background(), style.Font())
 			cx := x - t.offsetX + rx
 			cy := y - t.offsetY + row
 			if rx < t.offsetX {
 				start := t.offsetX - rx
 				rcw := min(column.Width-start, rw)
-				runes := []rune(t.provider.Str(row, i))
+				runes := []rune(cellText(t.provider.Str(row, i), column.Width, column.Alignment))
 				if start < len(runes) {
 					r.Text(cx+start, cy, string(runes[start:]), rcw)
 				} else {
@@ -567,12 +540,11 @@ func (t *Table) renderTableContent(r *Renderer, x, y, w, h int, gridStyle *Style
 				rw += start
 			} else {
 				cw := min(rw, column.Width)
-				r.Text(cx, cy, t.provider.Str(row, i), cw)
+				r.Text(cx, cy, cellText(t.provider.Str(row, i), column.Width, column.Alignment), cw)
 			}
 			if i < len(columns)-1 && t.inner && rw > column.Width {
-				if row != t.row {
-					r.Set(gridStyle.Foreground(), gridStyle.Background(), gridStyle.Font())
-				}
+				// Always render separator in grid style, never in cell/highlight colour
+				r.Set(gridStyle.Foreground(), gridStyle.Background(), gridStyle.Font())
 				r.screen.Put(cx+column.Width, cy, t.grid.InnerV)
 			}
 			rx = rx + column.Width + 1
@@ -580,6 +552,7 @@ func (t *Table) renderTableContent(r *Renderer, x, y, w, h int, gridStyle *Style
 		}
 		row++
 	}
+
 	// Fill remaining rows with empty grid lines
 	for row-t.offsetY < h {
 		rx := 0

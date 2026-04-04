@@ -98,6 +98,8 @@ func LipstickTheme() *Theme {
 		NewStyle("table/header").WithColors("$fuchsia", "$bg0").WithFont("bold"),
 		NewStyle("table/highlight").WithColors("$bg0", "$fg2"),
 		NewStyle("table/highlight:focused").WithColors("$bg0", "$fuchsia"),
+		NewStyle("table/cell").WithColors("$fg0", "$bg3"),
+		NewStyle("table/cell:focused").WithColors("$bg0", "$indigo").WithFont("bold"),
 		NewStyle("tabs/highlight").WithColors("$bg0", "$fg1"),
 		NewStyle("tabs/highlight-line").WithForeground("$fg2"),
 		NewStyle("tabs/line:focused").WithForeground("$indigo"),

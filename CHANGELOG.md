@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`Table` cell navigation mode** — `SetCellNav(true)` switches the table from
+  row-select to cell-select mode; `←`/`→` move between columns, `Tab`/`Shift+Tab`
+  advance through cells wrapping across rows, `Home`/`End` jump to first/last column
+  in the current row, `Ctrl+←`/`Ctrl+→` jump to first/last column
+- New style selectors `"table/cell"` and `"table/cell:focused"` for the focused cell
+  in cell navigation mode; all six built-in themes define these styles using a
+  secondary accent colour distinct from the row highlight
+- `"table/cell"` unfocused: `$fg0 on $bg3` (subtle elevation) across all themes
+- `"table/cell:focused"` per theme: Tokyo `$cyan`, Nord `$frost1`, Midnight Neon
+  `$aqua`, Lipstick `$indigo`, Gruvbox Dark `$orange`, Gruvbox Light `$yellow`
+
+### Changed
+- **`Table.Selected() (int, int)`** — replaces `GetSelectedRow() int`; returns
+  `(row, col)` where col is `-1` in row mode and the focused column index in cell mode
+- **`Table.SetSelected(row, col int) bool`** — replaces `SetSelectedRow(row int) bool`
+- **`Table.Offset() (int, int)`** — replaces `GetScrollOffset()`
+- **`Table.SetOffset(offsetX, offsetY int)`** — replaces `SetScrollOffset()`
+- **`EvtSelect` payload on `Table`** — now `(row int, col int)` instead of
+  `(row int, rowData []string)`; col is `-1` in row mode
+
 ---
 
 ## [2.0.0-beta.2] — 2026-04-02

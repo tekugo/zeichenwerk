@@ -279,7 +279,7 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 					Flex("svc-pane", "", false, "stretch", 0,
 						Border("", "round"),
 						Static("svc-title", "", " Services", Font("bold"), Fg("$fg0"), Bg("$bg2")),
-						Table("svc-table", "", svcTable, Hint(0, -1)),
+						Table("svc-table", "", svcTable, false, Hint(0, -1)),
 					),
 				),
 				Cell(1, 0, 1, 1,
@@ -378,7 +378,7 @@ func userAdminScreen(theme *z.Theme) z.Widget {
 					Flex("ua-list-pane", "", false, "stretch", 0,
 						Border("", "round"),
 						Static("ua-list-title", "", " Users", Font("bold"), Bg("$bg2")),
-						Table("ua-table", "", z.NewArrayTableProvider(userHeaders, userData), Hint(0, -1)),
+						Table("ua-table", "", z.NewArrayTableProvider(userHeaders, userData), true, Hint(0, -1)),
 					),
 				),
 				Cell(1, 0, 1, 1,
@@ -671,7 +671,7 @@ func processScreen(theme *z.Theme) z.Widget {
 			Flex("proc-table-pane", "", false, "stretch", 0,
 				Border("", "round"), Hint(0, -1),
 				Static("proc-table-title", "", " Processes", Font("bold"), Bg("$bg2")),
-				Table("proc-table", "", z.NewArrayTableProvider(procHeaders, procData), Hint(0, -1)),
+				Table("proc-table", "", z.NewArrayTableProvider(procHeaders, procData), false, Hint(0, -1)),
 			),
 		),
 	)
@@ -680,7 +680,7 @@ func processScreen(theme *z.Theme) z.Widget {
 
 	z.Find(container, "proc-kill").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		procTable := z.Find(container, "proc-table").(*z.Table)
-		row := procTable.GetSelectedRow()
+		row, _ := procTable.Selected()
 		if row >= 0 && row < len(procData) {
 			pid := procData[row][0]
 			name := strings.TrimSpace(procData[row][1])
@@ -790,7 +790,7 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 					Flex("de-items-col", "", false, "stretch", 0,
 						Padding(0, 0, 0, 2),
 						Static("de-items-title", "", "Order Items", Font("bold"), Fg("$fg1"), Padding(0, 0, 1, 0)),
-						Table("de-items-table", "", z.NewArrayTableProvider(orderHeaders, orderData), Hint(0, 8)),
+						Table("de-items-table", "", z.NewArrayTableProvider(orderHeaders, orderData), true, Hint(0, 8)),
 						Spacer("", Hint(0, 1)),
 						Flex("de-summary", "", false, "stretch", 0,
 							Border("", "round"), Padding(1, 2),
