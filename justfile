@@ -38,3 +38,13 @@ lazymake *args:
 # Remove build artifacts
 clean:
     rm -f coverage.out
+
+# Release: merge develop into main, tag, push, return to develop
+# Usage: just release 2.0.0
+release version:
+    git checkout main
+    git merge --no-ff develop -m "Release v{{version}}"
+    git tag v{{version}}
+    git push origin main
+    git push origin v{{version}}
+    git checkout develop
