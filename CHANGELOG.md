@@ -8,6 +8,31 @@ and this project adheres to
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`Styled` extended Markdown support**
+  - Horizontal rules (`---` / `***` / `___`) rendered as a `─` line
+  - Blockquotes (`> text`) rendered with a `│ ` left border; consecutive lines
+    merged into one block
+  - Nested lists — indent depth detected from leading spaces (2 per level);
+    bullet cycles `•` / `◦` / `▸` across depths for unordered lists
+  - Task lists (`- [ ] text` / `- [x] text`) rendered with `☐` / `☑` markers
+  - Theme style keys `"styled/bq"` and `"styled/hr"` added to all built-in
+    themes
+  - Demo updated with sections for all new block types
+
+### Fixed
+
+- `Styled` block styles with no explicit background/foreground now fall back to
+  the base `"styled"` style colours, preventing terminal-default background
+  bleeding through on rules and headings
+- `hr` and `h2` underline rules are one character shorter than the content
+  width, leaving a visible space before the scrollbar
+
+---
+
 ## v2.0.0-beta.4
 
 ### Added

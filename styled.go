@@ -19,13 +19,18 @@ const (
 )
 
 // Block is a parsed unit of styled text.
-// Type is one of "p", "h1", "h2", "h3", "ul", "ol", or "code".
-// For "ol" blocks, Index holds the 1-based item number.
+// Type is one of "p", "h1"–"h4", "ul", "ol", "code", "bq", or "hr".
+// Index holds the 1-based item number for "ol" blocks.
+// Depth holds the nesting level (0 = top) for "ul" and "ol" blocks.
+// Task and Done describe task-list items within "ul" blocks.
 type Block struct {
 	Type    string
 	Text    string
 	Content []Span
-	Index   int // 1-based item number for "ol"
+	Index   int  // 1-based item number for "ol"
+	Depth   int  // nesting depth for "ul" and "ol"
+	Task    bool // true if this is a task-list item (- [ ] / - [x])
+	Done    bool // true if the task is checked
 }
 
 // Span describes a contiguous run of text within a Block with a single inline
@@ -130,7 +135,7 @@ type segment struct {
 type line []segment
 
 // renderedLine is a laid-out terminal row together with its block kind
-// ("h1", "h2", "h3", "p", "ul", "ol", "pre", "code", or "" for blank lines).
+// ("h1"–"h4", "p", "ul", "ol", "pre", "code", "bq", "hr", or "" for blank lines).
 // The kind is used at render time to look up the appropriate theme style.
 type renderedLine struct {
 	kind string
@@ -269,10 +274,10 @@ func (s *Styled) SetText(text string) {
 }
 
 // Apply applies a theme's styles to the component, including per-element
-// styles for h1, h2, h3, p, ul, ol, pre, and code.
+// styles for h1–h4, p, ul, ol, pre, code, bq, and hr.
 func (s *Styled) Apply(theme *Theme) {
 	theme.Apply(s, s.Selector("styled"))
-	for _, part := range []string{"h1", "h2", "h3", "h4", "p", "ul", "ol", "pre", "code"} {
+	for _, part := range []string{"h1", "h2", "h3", "h4", "p", "ul", "ol", "pre", "code", "bq", "hr"} {
 		theme.Apply(s, "styled/"+part)
 	}
 	s.lastW = 0 // styles may affect rendering, force re-layout
@@ -292,11 +297,31 @@ func (s *Styled) ScrollBy(delta int) {
 	Redraw(s)
 }
 
+// isHR reports whether line is a Markdown horizontal rule (3+ dashes, stars,
+// or underscores, optionally separated by spaces, with nothing else on the line).
+func isHR(s string) bool {
+	s = strings.ReplaceAll(s, " ", "")
+	if len(s) < 3 {
+		return false
+	}
+	ch := s[0]
+	if ch != '-' && ch != '*' && ch != '_' {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] != ch {
+			return false
+		}
+	}
+	return true
+}
+
 // Parse re-parses s.text into blocks. Called automatically by SetText.
 func (s *Styled) Parse() {
 	s.blocks = nil
 	var cur *Block
-	olIndex := 0
+	// olIndex tracks per-depth ordered list counters (depth → next index).
+	olIndex := map[int]int{}
 
 	flush := func() {
 		if cur != nil {
@@ -319,7 +344,7 @@ func (s *Styled) Parse() {
 				flush()
 				cur = &Block{Type: "code"}
 			}
-			olIndex = 0
+			olIndex = map[int]int{}
 			continue
 		}
 		if cur != nil && cur.Type == "code" {
@@ -336,7 +361,7 @@ func (s *Styled) Parse() {
 			b := Block{Type: "h4", Text: strings.TrimPrefix(raw, "#### ")}
 			b.Parse()
 			s.blocks = append(s.blocks, b)
-			olIndex = 0
+			olIndex = map[int]int{}
 			continue
 		}
 		if strings.HasPrefix(raw, "### ") {
@@ -344,7 +369,7 @@ func (s *Styled) Parse() {
 			b := Block{Type: "h3", Text: strings.TrimPrefix(raw, "### ")}
 			b.Parse()
 			s.blocks = append(s.blocks, b)
-			olIndex = 0
+			olIndex = map[int]int{}
 			continue
 		}
 		if strings.HasPrefix(raw, "## ") {
@@ -352,7 +377,7 @@ func (s *Styled) Parse() {
 			b := Block{Type: "h2", Text: strings.TrimPrefix(raw, "## ")}
 			b.Parse()
 			s.blocks = append(s.blocks, b)
-			olIndex = 0
+			olIndex = map[int]int{}
 			continue
 		}
 		if strings.HasPrefix(raw, "# ") {
@@ -360,37 +385,69 @@ func (s *Styled) Parse() {
 			b := Block{Type: "h1", Text: strings.TrimPrefix(raw, "# ")}
 			b.Parse()
 			s.blocks = append(s.blocks, b)
-			olIndex = 0
+			olIndex = map[int]int{}
 			continue
 		}
 
-		// Unordered list
-		if strings.HasPrefix(raw, "- ") {
+		// Horizontal rule — must be checked before paragraph accumulation
+		if isHR(trimmed) {
 			flush()
-			b := Block{Type: "ul", Text: strings.TrimPrefix(raw, "- ")}
+			s.blocks = append(s.blocks, Block{Type: "hr"})
+			olIndex = map[int]int{}
+			continue
+		}
+
+		// Blockquote — accumulate consecutive "> " lines into one block
+		if strings.HasPrefix(trimmed, "> ") {
+			text := strings.TrimPrefix(trimmed, "> ")
+			if cur != nil && cur.Type == "bq" {
+				cur.Text += " " + text
+			} else {
+				flush()
+				cur = &Block{Type: "bq", Text: text}
+			}
+			continue
+		}
+
+		// List items — measure indent depth (2 spaces per level)
+		leading := len(raw) - len(strings.TrimLeft(raw, " \t"))
+		depth := leading / 2
+
+		// Unordered list (supports task list markers - [ ] and - [x])
+		if strings.HasPrefix(trimmed, "- ") {
+			flush()
+			text := strings.TrimPrefix(trimmed, "- ")
+			b := Block{Type: "ul", Depth: depth}
+			if strings.HasPrefix(text, "[ ] ") {
+				b.Task, b.Done, b.Text = true, false, strings.TrimPrefix(text, "[ ] ")
+			} else if strings.HasPrefix(text, "[x] ") || strings.HasPrefix(text, "[X] ") {
+				b.Task, b.Done, b.Text = true, true, text[4:]
+			} else {
+				b.Text = text
+			}
 			b.Parse()
 			s.blocks = append(s.blocks, b)
-			olIndex = 0
+			olIndex = map[int]int{}
 			continue
 		}
 
-		// Ordered list: "N. text"
-		if text, n, ok := parseOLPrefix(raw); ok {
+		// Ordered list: "N. text" (depth-aware counter)
+		if text, n, ok := parseOLPrefix(trimmed); ok {
 			flush()
 			if n == 1 {
-				olIndex = 0 // restart numbering
+				olIndex[depth] = 0
 			}
-			olIndex++
-			b := Block{Type: "ol", Text: text, Index: olIndex}
+			olIndex[depth]++
+			b := Block{Type: "ol", Text: text, Index: olIndex[depth], Depth: depth}
 			b.Parse()
 			s.blocks = append(s.blocks, b)
 			continue
 		}
-		olIndex = 0
 
 		// Blank line — flush current paragraph
 		if trimmed == "" {
 			flush()
+			olIndex = map[int]int{}
 			continue
 		}
 
@@ -438,7 +495,8 @@ func (s *Styled) layout(w int) {
 		if i > 0 {
 			prev := s.blocks[i-1]
 			sameList := (b.Type == "ul" && prev.Type == "ul") ||
-				(b.Type == "ol" && prev.Type == "ol")
+				(b.Type == "ol" && prev.Type == "ol") ||
+				(b.Type == "bq" && prev.Type == "bq")
 			if !sameList {
 				s.lines = append(s.lines, renderedLine{})
 			}
@@ -460,6 +518,10 @@ func (s *Styled) layout(w int) {
 			s.layoutOL(b, w)
 		case "code":
 			s.layoutCode(b, w)
+		case "bq":
+			s.layoutBQ(b, w)
+		case "hr":
+			s.layoutHR(b, w)
 		}
 	}
 }
@@ -504,7 +566,7 @@ func (s *Styled) layoutH2(b Block, w int) {
 	for _, wl := range wrapSpans(b.Content, b.Text, w) {
 		s.lines = append(s.lines, s.rl("h2", wl))
 	}
-	s.lines = append(s.lines, s.rl("h2", line{segment{strings.Repeat("─", w), 0}}))
+	s.lines = append(s.lines, s.rl("h2", line{segment{strings.Repeat("─", w-1), 0}}))
 }
 
 // layoutH3 renders a heading using the h3 theme style (typically bold+underline).
@@ -527,16 +589,42 @@ func (s *Styled) layoutP(b Block, w int) {
 	}
 }
 
+// ulBullet returns the bullet string for a given nesting depth.
+func ulBullet(depth int) string {
+	switch depth % 3 {
+	case 1:
+		return "◦ "
+	case 2:
+		return "▸ "
+	default:
+		return "• "
+	}
+}
+
 // layoutUL renders an unordered list item with a bullet and continuation indent.
+// Depth is reflected as extra leading spaces (2 per level).
+// Task-list items use ☐/☑ instead of a bullet.
 func (s *Styled) layoutUL(b Block, w int) {
-	const prefix = "• "
-	const indent = 2
+	margin := strings.Repeat("  ", b.Depth)
+	var bullet string
+	if b.Task {
+		if b.Done {
+			bullet = "☑ "
+		} else {
+			bullet = "☐ "
+		}
+	} else {
+		bullet = ulBullet(b.Depth)
+	}
+	prefix := margin + bullet
+	indent := utf8.RuneCountInString(prefix)
+	cont := margin + strings.Repeat(" ", utf8.RuneCountInString(bullet))
 	for i, wl := range wrapSpans(b.Content, b.Text, w-indent) {
 		var l line
 		if i == 0 {
 			l = append(l, segment{prefix, 0})
 		} else {
-			l = append(l, segment{"  ", 0})
+			l = append(l, segment{cont, 0})
 		}
 		l = append(l, wl...)
 		s.lines = append(s.lines, s.rl("ul", l))
@@ -544,19 +632,40 @@ func (s *Styled) layoutUL(b Block, w int) {
 }
 
 // layoutOL renders an ordered list item with its number and continuation indent.
+// Depth is reflected as extra leading spaces (2 per level).
 func (s *Styled) layoutOL(b Block, w int) {
-	prefix := fmt.Sprintf("%d. ", b.Index)
+	margin := strings.Repeat("  ", b.Depth)
+	num := fmt.Sprintf("%d. ", b.Index)
+	prefix := margin + num
 	indent := utf8.RuneCountInString(prefix)
+	cont := margin + strings.Repeat(" ", utf8.RuneCountInString(num))
 	for i, wl := range wrapSpans(b.Content, b.Text, w-indent) {
 		var l line
 		if i == 0 {
 			l = append(l, segment{prefix, 0})
 		} else {
-			l = append(l, segment{strings.Repeat(" ", indent), 0})
+			l = append(l, segment{cont, 0})
 		}
 		l = append(l, wl...)
 		s.lines = append(s.lines, s.rl("ol", l))
 	}
+}
+
+// layoutBQ renders a blockquote with a leading "│ " border.
+func (s *Styled) layoutBQ(b Block, w int) {
+	const prefix = "│ "
+	const indent = 2
+	for _, wl := range wrapSpans(b.Content, b.Text, w-indent) {
+		l := line{segment{prefix, 0}}
+		l = append(l, wl...)
+		s.lines = append(s.lines, s.rl("bq", l))
+	}
+}
+
+// layoutHR renders a horizontal rule. It is one character shorter than the
+// full content width to leave a visible gap before the scrollbar.
+func (s *Styled) layoutHR(_ Block, w int) {
+	s.lines = append(s.lines, s.rl("hr", line{segment{strings.Repeat("─", w-1), 0}}))
 }
 
 // layoutCode renders a code block verbatim, one source line per terminal row.
@@ -623,6 +732,12 @@ func (s *Styled) Render(r *Renderer) {
 		}
 		st := s.Style(rl.kind)
 		fg, bg := st.Foreground(), st.Background()
+		if bg == "" {
+			bg = base.Background()
+		}
+		if fg == "" {
+			fg = base.Foreground()
+		}
 		cx := x
 		for _, seg := range rl.segs {
 			font := st.Font()

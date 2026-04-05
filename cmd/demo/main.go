@@ -704,6 +704,41 @@ func NewStyled(id, class, text string) *Styled {
 
 H3 headings use __underlined bold__ text. Use them for sections within an h2 group.
 
+## Blockquotes
+
+> This is a blockquote. It is rendered with a left border and muted colours. Multiple lines are wrapped and joined into a single block.
+
+> A second blockquote, separated by a blank line.
+
+## Horizontal Rules
+
+Text above the rule.
+
+---
+
+Text below the rule.
+
+## Nested Lists
+
+- Top-level item
+  - Nested item (depth 1)
+  - Another nested item
+    - Deeply nested (depth 2)
+- Back at top level
+
+1. First step
+2. Second step
+   - Sub-point A
+   - Sub-point B
+3. Third step
+
+## Task Lists
+
+- [x] Design the API
+- [x] Write the parser
+- [ ] Add tests
+- [ ] Update documentation
+
 ## Scrolling
 
 Use **↑ ↓** to scroll one line, **PgUp PgDn** for page scrolling, and **Home End** to jump to the top or bottom.`

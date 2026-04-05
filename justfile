@@ -42,6 +42,7 @@ clean:
 # Release: merge develop into main, tag, push, return to develop
 # Usage: just release 2.0.0
 release version:
+    sed -i 's/## \[Unreleased\]/## v{{version}}/' CHANGELOG.md
     git checkout main
     git merge --no-ff develop -m "Release v{{version}}"
     git tag v{{version}}

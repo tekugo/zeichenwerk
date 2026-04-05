@@ -86,6 +86,8 @@ func TokyoNightTheme() *Theme {
 		NewStyle("styled/h4").WithFont("bold"),
 		NewStyle("styled/pre").WithBackground("$bg0"),
 		NewStyle("styled/code").WithForeground("$cyan"),
+		NewStyle("styled/bq").WithColors("$fg2", "$bg1"),
+		NewStyle("styled/hr").WithForeground("$fg3"),
 		NewStyle("switcher"),
 		NewStyle("table").WithColors("", "").WithBorder("thin $fg1"),
 		NewStyle("table:focused").WithBorder("double $fg0"),
