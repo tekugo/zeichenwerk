@@ -80,13 +80,8 @@ func (b *Button) Render(r *Renderer) {
 // Summary returns the button label for Dump output.
 func (b *Button) Summary() string { return b.text }
 
-func (b *Button) Set(value any) bool {
-	if text, ok := value.(string); ok {
-		b.text = text
-		return true
-	} else {
-		return false
-	}
+func (b *Button) Set(value string) {
+	b.text = value
 }
 
 // ---- Internal methods -----------------------------------------------------

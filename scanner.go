@@ -1,11 +1,5 @@
 package zeichenwerk
 
-import (
-	"fmt"
-	"math"
-	"strconv"
-	"strings"
-)
 
 type scannerChar struct {
 	ch     string  // Render character
@@ -195,31 +189,3 @@ func (s *Scanner) Render(r *Renderer) {
 	}
 }
 
-// dimColor takes a color string (hex #RRGGBB) and a factor (0-1)
-// and returns a dimmed version by reducing RGB brightness.
-func dimColor(hex string, factor float64) string {
-	if !strings.HasPrefix(hex, "#") || len(hex) != 7 {
-		return hex
-	}
-	r, g, b := parseHex(hex)
-	dr := uint8(math.Round(float64(r) * factor))
-	dg := uint8(math.Round(float64(g) * factor))
-	db := uint8(math.Round(float64(b) * factor))
-	return fmtHex(dr, dg, db)
-}
-
-// parseHex converts #RRGGBB to (r,g,b) uint8 values.
-func parseHex(hex string) (uint8, uint8, uint8) {
-	var r, g, b uint64
-	if len(hex) == 7 {
-		r, _ = strconv.ParseUint(hex[1:3], 16, 8)
-		g, _ = strconv.ParseUint(hex[3:5], 16, 8)
-		b, _ = strconv.ParseUint(hex[5:7], 16, 8)
-	}
-	return uint8(r), uint8(g), uint8(b)
-}
-
-// fmtHex converts (r,g,b) to #RRGGBB string.
-func fmtHex(r, g, b uint8) string {
-	return fmt.Sprintf("#%02x%02x%02x", r, g, b)
-}

@@ -91,7 +91,7 @@ func TestTypeahead_Right_AtEnd_Accepts(t *testing.T) {
 	ta.SetSuggest(func(text string) []string {
 		return []string{"hello world"}
 	})
-	ta.Input.SetText("hel")
+	ta.Input.Set("hel")
 	ta.Input.End()
 	ta.suggestion = "hello world"
 
@@ -107,7 +107,7 @@ func TestTypeahead_Right_AtEnd_Accepts(t *testing.T) {
 func TestTypeahead_Right_MidText_Propagates(t *testing.T) {
 	ta := NewTypeahead("ta", "")
 	ta.suggestion = "hello world"
-	ta.Input.SetText("hel")
+	ta.Input.Set("hel")
 	ta.pos = 1 // mid-text
 
 	consumed := ta.handleKey(newKey(tcell.KeyRight))
@@ -135,7 +135,7 @@ func TestTypeahead_Masked_SuppressesSuggestion(t *testing.T) {
 		return []string{"secret123"}
 	})
 	ta.SetMask("*")
-	ta.Input.SetText("sec")
+	ta.Input.Set("sec")
 	ta.suggestion = "secret123"
 
 	// Masking flag must be set for Render to suppress ghost text.

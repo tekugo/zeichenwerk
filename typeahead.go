@@ -114,7 +114,7 @@ func (t *Typeahead) SetSuggest(fn func(string) []string) {
 func (t *Typeahead) accept() {
 	accepted := t.suggestion
 	t.suggestion = ""
-	t.Input.SetText(accepted)
+	t.Input.Set(accepted)
 	t.Input.End()
 	t.Dispatch(t, EvtAccept, accepted)
 }

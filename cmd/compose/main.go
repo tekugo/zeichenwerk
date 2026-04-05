@@ -189,19 +189,19 @@ func createUI(theme *z.Theme) *z.UI {
 func dashboardScreen(theme *z.Theme) z.Widget {
 	cpuProg := z.NewProgress("dash-cpu-prog", "", true)
 	cpuProg.SetTotal(100)
-	cpuProg.SetValue(64)
+	cpuProg.Set(64)
 
 	memProg := z.NewProgress("dash-mem-prog", "", true)
 	memProg.SetTotal(100)
-	memProg.SetValue(41)
+	memProg.Set(41)
 
 	diskProg := z.NewProgress("dash-disk-prog", "", true)
 	diskProg.SetTotal(100)
-	diskProg.SetValue(78)
+	diskProg.Set(78)
 
 	netProg := z.NewProgress("dash-net-prog", "", true)
 	netProg.SetTotal(100)
-	netProg.SetValue(23)
+	netProg.Set(23)
 
 	svcHeaders := []string{"Service", "Status", "CPU", "Memory", "Uptime"}
 	svcData := [][]string{
@@ -405,13 +405,13 @@ func userAdminScreen(theme *z.Theme) z.Widget {
 	container := w.(z.Container)
 	z.Find(container, "ua-save").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		if lbl, ok := z.Find(container, "ua-detail-title").(*z.Static); ok {
-			lbl.SetText(fmt.Sprintf(" Edit User  ✓ Saved %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf(" Edit User  ✓ Saved %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
 	z.Find(container, "ua-reset").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		if lbl, ok := z.Find(container, "ua-detail-title").(*z.Static); ok {
-			lbl.SetText(" Edit User")
+			lbl.Set(" Edit User")
 		}
 		return true
 	})
@@ -685,14 +685,14 @@ func processScreen(theme *z.Theme) z.Widget {
 			pid := procData[row][0]
 			name := strings.TrimSpace(procData[row][1])
 			if lbl, ok := z.Find(container, "proc-summary").(*z.Static); ok {
-				lbl.SetText(fmt.Sprintf("Sent SIGTERM to %s (PID %s)", name, pid))
+				lbl.Set(fmt.Sprintf("Sent SIGTERM to %s (PID %s)", name, pid))
 			}
 		}
 		return true
 	})
 	z.Find(container, "proc-refresh").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		if lbl, ok := z.Find(container, "proc-summary").(*z.Static); ok {
-			lbl.SetText(fmt.Sprintf("14 processes  ·  refreshed %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf("14 processes  ·  refreshed %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
@@ -835,22 +835,22 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 
 	z.Find(container, "de-btn-submit").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		if lbl, ok := z.Find(container, "de-status").(*z.Static); ok {
-			lbl.SetText(fmt.Sprintf("✓  Order REF #2026-0099 submitted at %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf("✓  Order REF #2026-0099 submitted at %s", time.Now().Format("15:04:05")))
 		}
 		if title, ok := z.Find(container, "de-ref").(*z.Static); ok {
-			title.SetText("Submitted  ·  REF #2026-0099")
+			title.Set("Submitted  ·  REF #2026-0099")
 		}
 		return true
 	})
 	z.Find(container, "de-btn-draft").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		if lbl, ok := z.Find(container, "de-status").(*z.Static); ok {
-			lbl.SetText(fmt.Sprintf("Draft saved at %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf("Draft saved at %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
 	z.Find(container, "de-btn-cancel").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		if lbl, ok := z.Find(container, "de-status").(*z.Static); ok {
-			lbl.SetText("Changes discarded.")
+			lbl.Set("Changes discarded.")
 		}
 		return true
 	})
@@ -1012,7 +1012,7 @@ func codeEditorScreen(theme *z.Theme) z.Widget {
 	statusLbl := z.Find(container, "ce-status").(*z.Static)
 	mainEditor.On(z.EvtChange, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		cx, cy, _ := mainEditor.Cursor()
-		statusLbl.SetText(fmt.Sprintf("main.go — Ln %d, Col %d", cy+1, cx+1))
+		statusLbl.Set(fmt.Sprintf("main.go — Ln %d, Col %d", cy+1, cx+1))
 		return false
 	})
 

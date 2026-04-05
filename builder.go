@@ -285,7 +285,7 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 		input := NewInput(id, b.class, "", "", "*")
 		input.SetFlag(FlagMasked, true)
 		input.Apply(b.theme)
-		input.SetText(v.String())
+		input.Set(v.String())
 		return input
 	case "select":
 		o := strings.Split(options, ",")
@@ -296,7 +296,7 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 	default:
 		input := NewInput(id, b.class)
 		input.Apply(b.theme)
-		input.SetText(v.String())
+		input.Set(v.String())
 		return input
 	}
 }
@@ -367,6 +367,23 @@ func (b *Builder) Progress(id string, horizontal bool) *Builder {
 func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
 	scanner := NewScanner(id, b.class, width, charStyle)
 	b.Add(scanner)
+	return b
+}
+
+// Sparkline creates a new Sparkline widget for displaying time-series data as
+// a column of Unicode block characters. Configure scaling and data via the
+// returned *Sparkline after building.
+func (b *Builder) Sparkline(id string) *Builder {
+	s := NewSparkline(id, b.class)
+	b.Add(s)
+	return b
+}
+
+// Heatmap creates a new Heatmap widget with the given dimensions. Configure
+// data, labels, and cell width via the returned *Heatmap after building.
+func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
+	h := NewHeatmap(id, b.class, rows, cols)
+	b.Add(h)
 	return b
 }
 

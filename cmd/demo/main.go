@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Progress", "Scanner", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Viewport", "Dialog", "Confirm", "Prompt").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -76,8 +77,10 @@ func createUI(theme *Theme) *UI {
 		With(editor).
 		With(form).
 		With(grid).
+		With(heatmapDemo).
 		With(progress).
 		With(scanner).
+		With(sparklineDemo).
 		With(dropdown).
 		With(spinner).
 		With(styled).
@@ -86,6 +89,7 @@ func createUI(theme *Theme) *UI {
 		With(terminalDemo).
 		With(treeFSDemo).
 		With(typeaheadDemo).
+		With(valueDemo).
 		With(viewport).
 		End().
 		Cell(1, 1, 1, 1).
@@ -129,7 +133,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 20:
+					case 23:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -151,7 +155,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 21:
+					case 24:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -164,7 +168,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 22:
+					case 25:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -177,6 +181,22 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
+					case 26:
+						d := ui.FileChooser("Open File", "Open", "file", "", false)
+						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+							if log, ok := Find(ui, "debug-log").(*Text); ok {
+								log.Add("File → " + data[0].(string))
+							}
+							return true
+						})
+					case 27:
+						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
+						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+							if log, ok := Find(ui, "debug-log").(*Text); ok {
+								log.Add("Dir → " + data[0].(string))
+							}
+							return true
+						})
 					}
 				}
 			}
@@ -300,7 +320,7 @@ func checkbox(builder *Builder) {
 						case "cb5":
 							name = "Terms agreed"
 						}
-						label.SetText(fmt.Sprintf("%s: %v", name, checked))
+						label.Set(fmt.Sprintf("%s: %v", name, checked))
 					}
 				}
 				return true
@@ -347,7 +367,7 @@ func collapsibleDemo(builder *Builder) {
 						state = "expanded"
 					}
 					if label, ok := Find(container, "col-status").(*Static); ok {
-						label.SetText(fmt.Sprintf("%s: %s", id, state))
+						label.Set(fmt.Sprintf("%s: %s", id, state))
 					}
 				}
 				return true
@@ -557,25 +577,25 @@ func progress(builder *Builder) {
 	// Determinate: 25%
 	p25 := NewProgress("progress-25", "", true)
 	p25.SetTotal(100)
-	p25.SetValue(25)
+	p25.Set(25)
 	builder.Add(p25)
 	builder.Spacer().Size(0, 1)
 	// 50%
 	p50 := NewProgress("progress-50", "", true)
 	p50.SetTotal(100)
-	p50.SetValue(50)
+	p50.Set(50)
 	builder.Add(p50)
 	builder.Spacer().Size(0, 1)
 	// 75%
 	p75 := NewProgress("progress-75", "", true)
 	p75.SetTotal(100)
-	p75.SetValue(75)
+	p75.Set(75)
 	builder.Add(p75)
 	builder.Spacer().Size(0, 1)
 	// 100%
 	p100 := NewProgress("progress-full", "", true)
 	p100.SetTotal(100)
-	p100.SetValue(100)
+	p100.Set(100)
 	builder.Add(p100)
 	builder.End().
 		Static("progress-info", "Progress bars support determinate (with total>0) and indeterminate (total=0) modes. Use SetTotal/SetValue to control.").Padding(1, 0, 0, 0).
@@ -643,9 +663,58 @@ func spinner(builder *Builder) {
 	})
 }
 
+const styledDemoText = `# Styled Widget
+
+The **Styled** widget renders a subset of Markdown with word wrapping and inline styles. It supports all common block types shown below.
+
+## Inline Styles
+
+Plain text sits alongside *italic*, **bold**, __underlined__, ~~strikethrough~~ and ` + "`" + `inline code` + "`" + `. Styles can be **combined: *bold and italic* works** just fine.
+
+## Paragraphs
+
+Paragraphs are separated by blank lines and their text is word-wrapped to the available width. A very long paragraph like this one will wrap gracefully across as many rows as needed without truncating any content.
+
+## Unordered Lists
+
+- First item in the list
+- Second item, which is intentionally a bit longer to demonstrate that continuation lines are indented to align with the text rather than the bullet
+- Third item
+
+## Ordered Lists
+
+1. Download the archive
+2. Extract and ` + "`" + `cd` + "`" + ` into the directory
+3. Run ` + "`" + `go build ./...` + "`" + ` to compile
+4. Start the binary with your preferred flags
+
+## Code Block
+
+` + "```" + `
+func NewStyled(id, class, text string) *Styled {
+    s := &Styled{Component: Component{id: id, class: class}}
+    s.SetFlag(FlagFocusable, true)
+    s.Set(text)
+    OnKey(s, s.handleKey)
+    return s
+}
+` + "```" + `
+
+### Sub-heading (h3)
+
+H3 headings use __underlined bold__ text. Use them for sections within an h2 group.
+
+## Scrolling
+
+Use **↑ ↓** to scroll one line, **PgUp PgDn** for page scrolling, and **Home End** to jump to the top or bottom.`
+
 // Styled text demo
 func styled(builder *Builder) {
-	builder.Styled("styled-demo", "Styled *Text* __Widget__ **Demo**! ~~Not found~~ We are producing a very long text to test word wrapping functionality for the styled text widget and verify, that long lines are wrapped, if they are wider than the widget content area.").Padding(1)
+	builder.
+		Flex("styled-pane", false, "stretch", 0).Hint(0, -1).
+		Styled("styled-demo", styledDemoText).Hint(0, -1).
+		Shortcuts("styled-shortcuts", "↑↓", "scroll", "PgUp PgDn", "page", "Home End", "top/bottom").
+		End()
 }
 
 // Table demo
@@ -803,7 +872,7 @@ func typeaheadDemo(builder *Builder) {
 	langTA.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 		if s, ok := data[0].(string); ok {
 			if label, ok := Find(container, "ta-accepted").(*Static); ok {
-				label.SetText("Accepted: " + s)
+				label.Set("Accepted: " + s)
 			}
 		}
 		return true
@@ -814,7 +883,7 @@ func typeaheadDemo(builder *Builder) {
 	countryTA.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 		if s, ok := data[0].(string); ok {
 			if label, ok := Find(container, "ta-accepted").(*Static); ok {
-				label.SetText("Accepted: " + s)
+				label.Set("Accepted: " + s)
 			}
 		}
 		return true
@@ -848,10 +917,10 @@ func treeFSDemo(builder *Builder) {
 		}
 		tfs.SetRoot(parent)
 		if label, ok := Find(container, "tree-fs-path").(*Static); ok {
-			label.SetText(tfs.RootPath())
+			label.Set(tfs.RootPath())
 		}
 		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
-			label.SetText("")
+			label.Set("")
 		}
 		return true
 	})
@@ -866,10 +935,69 @@ func treeFSDemo(builder *Builder) {
 			return true
 		}
 		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
-			label.SetText(node.Data().(string))
+			label.Set(node.Data().(string))
 		}
 		return true
 	})
+}
+
+// Value demo — two groups of widgets sharing a reactive Value.
+func valueDemo(builder *Builder) {
+	builder.Flex("value-demo", false, "stretch", 1).Padding(1, 2).
+		Static("value-title", "Value Demo").Padding(0, 0, 1, 0).
+		Static("value-info", "Widgets sharing the same Value stay in sync automatically.").Padding(0, 0, 1, 0)
+
+	// --- Group 1: two checkboxes sharing a Value[bool] ---
+	builder.Static("value-bool-label", "Shared bool — toggle either checkbox:").Padding(0, 0, 0, 0)
+	cb1 := NewCheckbox("val-cb1", "", "Checkbox A", false)
+	cb2 := NewCheckbox("val-cb2", "", "Checkbox B", false)
+	boolVal := NewValue(false)
+	boolVal.Bind(cb1).Bind(cb2)
+	boolVal.Observe(cb1)
+	boolVal.Observe(cb2)
+	builder.Add(cb1)
+	builder.Add(cb2)
+
+	builder.Spacer().Size(0, 1)
+
+	// --- Group 2: Input and Digits sharing a Value[string] ---
+	builder.Static("value-str-label", "Shared string — type in the input to update Digits:").Padding(0, 0, 0, 0)
+	strInput := NewInput("val-str-input", "")
+	strInput.Set("12:34")
+	digits := NewDigits("val-digits", "", "12:34")
+	strVal := NewValue("12:34")
+	strVal.Bind(strInput).Bind(digits)
+	strVal.Observe(strInput)
+	builder.Add(strInput)
+	builder.Spacer().Size(0, 1)
+	builder.Flex("val-digits-row", true, "center", 0).
+		Add(digits).
+		End()
+
+	builder.Spacer().Size(0, 1)
+
+	// --- Group 3: Input and Progress sharing a Value[int] ---
+	builder.Static("value-int-label", "Shared int — type 0–100 in the input to move the progress bar:").Padding(0, 0, 0, 0)
+	intInput := NewInput("val-int-input", "")
+	intInput.Set("50")
+	prog := NewProgress("val-progress", "", true)
+	prog.SetTotal(100)
+	intVal := NewValue(50)
+	intVal.Bind(prog)
+	intVal.Observe(intInput, func(v any) (int, bool) {
+		s, ok := v.(string)
+		if !ok {
+			return 0, false
+		}
+		n := 0
+		_, err := fmt.Sscanf(s, "%d", &n)
+		return n, err == nil
+	})
+	builder.Add(intInput)
+	builder.Spacer().Size(0, 1)
+	builder.Add(prog)
+
+	builder.End()
 }
 
 func viewport(builder *Builder) {
@@ -881,6 +1009,189 @@ func viewport(builder *Builder) {
 		Add(custom()).
 		End().
 		End()
+}
+
+// Sparkline demo — shows all scale modes and multi-row rendering with live data.
+func sparklineDemo(builder *Builder) {
+	// Pre-seed each sparkline with 40 points so they aren't empty on first show.
+	seed := func(fn func(i int) float64) []float64 {
+		vs := make([]float64, 40)
+		for i := range vs {
+			vs[i] = fn(i)
+		}
+		return vs
+	}
+
+	sineNoise := func(i int) float64 {
+		return math.Sin(float64(i)*0.3) + rand.Float64()*0.3 - 0.15
+	}
+	sineAbs := func(i int) float64 {
+		return (math.Sin(float64(i)*0.2) + 1.0) / 2.0
+	}
+
+	builder.Flex("sparkline-demo", false, "stretch", 1).Padding(1, 2).
+		Static("sp-title", "Sparkline Widget Demo").Padding(0, 0, 1, 0).
+		Static("sp-desc", "Live data — each chart updates every 100 ms.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		// ---- Row 1: Relative scale h=1 ----
+		Static("sp-lbl-rel", "Relative scale (h=1) — shape follows data:").Padding(1, 0, 0, 0).
+		Sparkline("sp-rel").Hint(-1, 1).
+		// ---- Row 2: Absolute scale h=1 ----
+		Static("sp-lbl-abs", "Absolute scale (h=1, min=−1 max=+1):").Padding(1, 0, 0, 0).
+		Sparkline("sp-abs").Hint(-1, 1).
+		// ---- Row 3: Hard threshold h=2 ----
+		Static("sp-lbl-thr", "Hard threshold at 0.65 (h=2):").Padding(1, 0, 0, 0).
+		Sparkline("sp-thr").Hint(-1, 2).
+		// ---- Row 4: Gradient threshold h=2 ----
+		Static("sp-lbl-grad", "Gradient threshold at 0.65 (h=2):").Padding(1, 0, 0, 0).
+		Sparkline("sp-grad").Hint(-1, 2).
+		// ---- Row 5: Multi-row h=4 ----
+		Static("sp-lbl-multi", "Multi-row (h=4, 32 levels per column):").Padding(1, 0, 0, 0).
+		Sparkline("sp-multi").Hint(-1, 4).
+		End()
+
+	spRel := builder.Find("sp-rel").(*Sparkline)
+	spRel.SetValues(seed(sineNoise))
+
+	spAbs := builder.Find("sp-abs").(*Sparkline)
+	spAbs.SetMode(Absolute)
+	spAbs.SetMin(-1.0)
+	spAbs.SetMax(1.0)
+	spAbs.SetValues(seed(sineNoise))
+
+	spThr := builder.Find("sp-thr").(*Sparkline)
+	spThr.SetMode(Absolute)
+	spThr.SetMin(0.0)
+	spThr.SetMax(1.0)
+	spThr.SetThreshold(0.65)
+	spThr.SetValues(seed(sineAbs))
+
+	spGrad := builder.Find("sp-grad").(*Sparkline)
+	spGrad.SetMode(Absolute)
+	spGrad.SetMin(0.0)
+	spGrad.SetMax(1.0)
+	spGrad.SetThreshold(0.65)
+	spGrad.SetGradient(true)
+	spGrad.SetValues(seed(sineAbs))
+
+	spMulti := builder.Find("sp-multi").(*Sparkline)
+	spMulti.SetMode(Absolute)
+	spMulti.SetMin(-1.0)
+	spMulti.SetMax(1.0)
+	spMulti.SetValues(seed(sineNoise))
+
+	container := builder.Find("sparkline-demo").(Container)
+
+	var stop chan struct{}
+	var phase float64
+
+	container.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		stop = make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(100 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-stop:
+					return
+				case <-ticker.C:
+					v := math.Sin(phase)*0.8 + rand.Float64()*0.35 - 0.175
+					v01 := (math.Sin(phase*0.7) + 1.0) / 2.0
+					phase += 0.25
+
+					spRel.Append(v)
+					spAbs.Append(v)
+					spThr.Append(v01)
+					spGrad.Append(v01)
+					spMulti.Append(v)
+				}
+			}
+		}()
+		return true
+	})
+
+	container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		if stop != nil {
+			close(stop)
+			stop = nil
+		}
+		return true
+	})
+}
+
+// Heatmap demo — shows a 24×7 activity grid (hour × weekday) with live random data.
+func heatmapDemo(builder *Builder) {
+	const rows, cols = 24, 7
+
+	builder.Flex("heatmap-demo", false, "stretch", 1).Padding(1, 2).
+		Static("hm-title", "Heatmap Widget Demo").Padding(0, 0, 1, 0).
+		Heatmap("hm", rows, cols).Hint(-1, -1).
+		End()
+
+	hm := builder.Find("hm").(*Heatmap)
+	hm.SetCellWidth(2)
+	hm.SetColLabels([]string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"})
+	rowLabels := make([]string, rows)
+	for i := range rowLabels {
+		rowLabels[i] = fmt.Sprintf("%2dh", i)
+	}
+	hm.SetRowLabels(rowLabels)
+
+	// Seed with random-looking activity data that peaks during business hours.
+	rng := [4]uint64{0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344}
+	next := func() float64 {
+		x := rng[0] ^ rng[0]<<13
+		rng[0] = rng[1]
+		rng[1] = rng[2]
+		rng[2] = rng[3]
+		rng[3] = x ^ x>>7 ^ rng[3] ^ rng[3]>>19
+		return float64(rng[3]&0xffff) / 0xffff
+	}
+	data := make([][]float64, rows)
+	for r := range data {
+		data[r] = make([]float64, cols)
+		for c := range data[r] {
+			// Business hours (8–18) on weekdays (0–4) get higher baseline.
+			base := 0.1
+			if r >= 8 && r < 18 && c < 5 {
+				base = 0.5
+			}
+			data[r][c] = base + next()*0.5
+		}
+	}
+	hm.SetAll(data)
+
+	var stop chan struct{}
+	container := builder.Find("heatmap-demo").(Container)
+	container.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		stop = make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-stop:
+					return
+				case <-ticker.C:
+					r := int(next()*float64(rows)) % rows
+					c := int(next()*float64(cols)) % cols
+					base := 0.1
+					if r >= 8 && r < 18 && c < 5 {
+						base = 0.5
+					}
+					hm.SetValue(r, c, base+next()*0.5)
+				}
+			}
+		}()
+		return true
+	})
+	container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		if stop != nil {
+			close(stop)
+			stop = nil
+		}
+		return true
+	})
 }
 
 // Table demo data generation

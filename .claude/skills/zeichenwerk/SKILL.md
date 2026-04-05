@@ -131,6 +131,7 @@ widget.Flag(FlagFocused) // → bool
 | Progress | `NewProgress(id, class, horizontal)` | — |
 | Rule | `NewHRule(class, style)` / `NewVRule(class, style)` | — |
 | Select | `NewSelect(id, class, val,lbl,…)` | `EvtChange(string)` |
+| Sparkline | `NewSparkline(id, class)` | — |
 | Static | `NewStatic(id, class, text)` | — |
 | Styled | `NewStyled(id, class, text)` | — |
 | Switcher | `NewSwitcher(id, class)` | `EvtShow` `EvtHide` |

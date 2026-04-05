@@ -180,19 +180,19 @@ func dashboardScreen(b *Builder) {
 	// Pre-configure progress bars
 	cpuProg := NewProgress("dash-cpu-prog", "", true)
 	cpuProg.SetTotal(100)
-	cpuProg.SetValue(64)
+	cpuProg.Set(64)
 
 	memProg := NewProgress("dash-mem-prog", "", true)
 	memProg.SetTotal(100)
-	memProg.SetValue(41)
+	memProg.Set(41)
 
 	diskProg := NewProgress("dash-disk-prog", "", true)
 	diskProg.SetTotal(100)
-	diskProg.SetValue(78)
+	diskProg.Set(78)
 
 	netProg := NewProgress("dash-net-prog", "", true)
 	netProg.SetTotal(100)
-	netProg.SetValue(23)
+	netProg.Set(23)
 
 	// Service status table
 	svcHeaders := []string{"Service", "Status", "CPU", "Memory", "Uptime"}
@@ -377,13 +377,13 @@ func userAdminScreen(b *Builder) {
 	container := b.Find("user-admin").(Container)
 	b.Find("ua-save").On(EvtActivate, func(w Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "ua-detail-title").(*Static); ok {
-			lbl.SetText(fmt.Sprintf(" Edit User  ✓ Saved %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf(" Edit User  ✓ Saved %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
 	b.Find("ua-reset").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "ua-detail-title").(*Static); ok {
-			lbl.SetText(" Edit User")
+			lbl.Set(" Edit User")
 		}
 		return true
 	})
@@ -581,11 +581,11 @@ func processScreen(b *Builder) {
 	// Summary progress bars
 	cpuTotal := NewProgress("proc-cpu-total", "", true)
 	cpuTotal.SetTotal(100)
-	cpuTotal.SetValue(31) // sum of process CPUs
+	cpuTotal.Set(31) // sum of process CPUs
 
 	memTotal := NewProgress("proc-mem-total", "", true)
 	memTotal.SetTotal(100)
-	memTotal.SetValue(41)
+	memTotal.Set(41)
 
 	b.Flex("process-mgr", false, "stretch", 0).Padding(1, 2).
 		// Title
@@ -642,14 +642,14 @@ func processScreen(b *Builder) {
 			pid := procData[row][0]
 			name := strings.TrimSpace(procData[row][1])
 			if lbl, ok := Find(container, "proc-summary").(*Static); ok {
-				lbl.SetText(fmt.Sprintf("Sent SIGTERM to %s (PID %s)", name, pid))
+				lbl.Set(fmt.Sprintf("Sent SIGTERM to %s (PID %s)", name, pid))
 			}
 		}
 		return true
 	})
 	b.Find("proc-refresh").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "proc-summary").(*Static); ok {
-			lbl.SetText(fmt.Sprintf("14 processes  ·  refreshed %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf("14 processes  ·  refreshed %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
@@ -797,22 +797,22 @@ func dataEntryScreen(b *Builder) {
 
 	b.Find("de-btn-submit").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "de-status").(*Static); ok {
-			lbl.SetText(fmt.Sprintf("✓  Order REF #2026-0099 submitted at %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf("✓  Order REF #2026-0099 submitted at %s", time.Now().Format("15:04:05")))
 		}
 		if title, ok := Find(container, "de-ref").(*Static); ok {
-			title.SetText(fmt.Sprintf("Submitted  ·  REF #2026-0099"))
+			title.Set(fmt.Sprintf("Submitted  ·  REF #2026-0099"))
 		}
 		return true
 	})
 	b.Find("de-btn-draft").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "de-status").(*Static); ok {
-			lbl.SetText(fmt.Sprintf("Draft saved at %s", time.Now().Format("15:04:05")))
+			lbl.Set(fmt.Sprintf("Draft saved at %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
 	b.Find("de-btn-cancel").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
 		if lbl, ok := Find(container, "de-status").(*Static); ok {
-			lbl.SetText("Changes discarded.")
+			lbl.Set("Changes discarded.")
 		}
 		return true
 	})
@@ -968,7 +968,7 @@ func codeEditorScreen(b *Builder) {
 	statusLbl := Find(container, "ce-status").(*Static)
 	mainEditor.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool {
 		cx, cy, _ := mainEditor.Cursor()
-		statusLbl.SetText(fmt.Sprintf("main.go — Ln %d, Col %d", cy+1, cx+1))
+		statusLbl.Set(fmt.Sprintf("main.go — Ln %d, Col %d", cy+1, cx+1))
 		return false
 	})
 

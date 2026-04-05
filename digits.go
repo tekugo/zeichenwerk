@@ -176,18 +176,8 @@ func (d *Digits) Render(r *Renderer) {
 
 // ---- Setter ---------------------------------------------------------------
 
-// Set sets the digit text in a generic way.
-func (d *Digits) Set(value any) bool {
-	if text, ok := value.(string); ok {
-		d.SetText(text)
-		return true
-	} else {
-		return false
-	}
-}
-
-// SetText updates the displayed text and triggers a refresh.
-func (d *Digits) SetText(text string) {
-	d.Text = text
+// Set updates the displayed text and triggers a refresh.
+func (d *Digits) Set(value string) {
+	d.Text = value
 	d.Refresh()
 }

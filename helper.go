@@ -219,14 +219,14 @@ func WidgetType(widget Widget) string {
 }
 
 // Update updates the content of the widget identified by id within container.
-// The widget must implement the Setter interface; if it does not, the call
-// is silently ignored.
-func Update(container Container, id string, value any) {
+// The widget must implement Setter[T]; if it does not, the call is silently
+// ignored.
+func Update[T any](container Container, id string, value T) {
 	widget := Find(container, id)
 	if widget == nil {
 		return
 	}
-	if s, ok := widget.(Setter); ok {
+	if s, ok := widget.(Setter[T]); ok {
 		s.Set(value)
 	}
 }

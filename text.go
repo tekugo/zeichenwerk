@@ -83,14 +83,9 @@ func (t *Text) Clear() {
 //
 // Parameters:
 //   - content: New lines of text to replace all existing content
-func (t *Text) Set(value any) bool {
-	content, ok := value.([]string)
-	if !ok {
-		return false
-	}
-	t.content = content
+func (t *Text) Set(value []string) {
+	t.content = value
 	t.adjust()
-	return true
 }
 
 // adjust updates the scroll position and triggers a display refresh.

@@ -124,7 +124,8 @@ func (i *Input) SetMask(mask string) {
 //
 // This method is safe to call at any time and will maintain the widget's
 // internal consistency regardless of the current state.
-func (i *Input) SetText(text string) {
+// Set updates the input text without firing EvtChange.
+func (i *Input) Set(text string) {
 	if i.Flag(FlagReadonly) {
 		return
 	}
@@ -140,8 +141,7 @@ func (i *Input) SetText(text string) {
 		i.pos = len(runes)
 	}
 	i.adjust()
-
-	i.Dispatch(i, EvtChange, text)
+	i.Refresh()
 }
 
 // Text returns the current text content.

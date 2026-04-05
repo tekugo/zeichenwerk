@@ -652,6 +652,21 @@ func Scanner(id, class string, width int, style string, options ...Option) Optio
 	}
 }
 
+// Heatmap creates a Heatmap widget with the given dimensions. Configure data,
+// labels, and cell width via [zeichenwerk.Find] after construction.
+func Heatmap(id, class string, rows, cols int, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewHeatmap(id, class, rows, cols)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // ---- Layout Options -------------------------------------------------------
 
 // Cell wraps a single widget option for placement in a [Grid]. x and y are the
@@ -924,7 +939,7 @@ func Total(n int) Option {
 func Value(n int) Option {
 	return func(_ *z.Theme, widget z.Widget) {
 		if w, ok := widget.(*z.Progress); ok {
-			w.SetValue(n)
+			w.Set(n)
 		}
 	}
 }
