@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -45,9 +46,26 @@ func (recv *metricsReceiver) handleMetric(m *metricspb.Metric, resourceName stri
 		switch m.Name {
 		case "claude_code.token.usage":
 			tokenType := attrStr(dp.Attributes, "type")
-			recv.store.UpdateTokens(sessionID, name, tokenType, dp.GetAsInt(), ts)
+			tokens := dp.GetAsInt()
+			if tokens == 0 {
+				tokens = int64(dp.GetAsDouble())
+			}
+			recv.store.UpdateTokens(sessionID, name, tokenType, tokens, ts)
+			recv.store.Log.add(otlpEntry{
+				time:      ts,
+				session:   name,
+				metric:    m.Name,
+				tokenType: tokenType,
+				value:     fmt.Sprintf("%d", tokens),
+			})
 		case "claude_code.cost.usage":
 			recv.store.UpdateCost(sessionID, dp.GetAsDouble())
+			recv.store.Log.add(otlpEntry{
+				time:    ts,
+				session: name,
+				metric:  m.Name,
+				value:   fmt.Sprintf("$%.6f", dp.GetAsDouble()),
+			})
 		}
 	}
 }

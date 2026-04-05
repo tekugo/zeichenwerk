@@ -62,13 +62,9 @@ func (c *Checkbox) Refresh() {
 // ---- Setter ---------------------------------------------------------------
 
 // Set set's the checkbox value in a generic way.
-func (c *Checkbox) Set(value any) bool {
-	if checked, ok := value.(bool); ok {
-		c.SetFlag(FlagChecked, checked)
-		return true
-	} else {
-		return false
-	}
+func (c *Checkbox) Set(value bool) {
+	c.SetFlag(FlagChecked, value)
+	c.Refresh()
 }
 
 // ---- Summarizer -----------------------------------------------------------

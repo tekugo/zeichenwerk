@@ -102,7 +102,7 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 	})
 
 	refreshStatus := func() {
-		statusBar.SetText(statusText(state))
+		statusBar.Set(statusText(state))
 	}
 
 	// track cursor via EvtSelect

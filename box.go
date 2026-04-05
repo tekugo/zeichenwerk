@@ -90,14 +90,9 @@ func (b *Box) Render(r *Renderer) {
 // ---- Setter ---------------------------------------------------------------
 
 // Set sets the box value (title) in a generic way.
-func (b *Box) Set(value any) bool {
-	if title, ok := value.(string); ok {
-		b.Title = title
-		b.Refresh()
-		return true
-	} else {
-		return false
-	}
+func (b *Box) Set(value string) {
+	b.Title = value
+	b.Refresh()
 }
 
 // ---- Container Methods ----------------------------------------------------

@@ -939,7 +939,7 @@ func Total(n int) Option {
 func Value(n int) Option {
 	return func(_ *z.Theme, widget z.Widget) {
 		if w, ok := widget.(*z.Progress); ok {
-			w.SetValue(n)
+			w.Set(n)
 		}
 	}
 }

@@ -10,6 +10,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`Value[T]` reactive binding** — generic reactive value type (`value.go`)
+  - `NewValue[T](initial T)` — creates a reactive value with an initial value
+  - `Get()` / `Set(T)` — thread-safe read/write with subscriber notification
+  - `Bind(Setter[T])` — subscribes a widget setter; immediately syncs the current value
+  - `Observe(Widget, ...convert)` — listens to `EvtChange` on a widget and feeds updates
+    into the value; optional convert function enables e.g. `Value[int]` bound to an `Input`
+  - `Subscribe(func(T))` — low-level callback subscription
+  - `Derived[A, B](source, convert)` — derives a new `Value[B]` that mirrors a
+    `Value[A]` through a conversion function
+- **`Setter[T]` interface** — `type Setter[T any] interface { Set(T) }` (`setter.go`);
+  replaces the old untyped `Set(value any) bool` convention
+- **`Update[T]`** generic helper — finds a widget by ID and calls `Set(T)` if it
+  implements `Setter[T]` (`helper.go`)
+- **`Progress.Set(int)`** implements `Setter[int]`; replaces `SetValue`
+- **`Styled` widget** — minimal Markdown renderer (`styled.go`)
+  - Supported block types: `# h1` (box border), `## h2` (bottom rule), `### h3`
+    (bold+underline), `#### h4` (bold), paragraphs, `- ` unordered lists,
+    `1.` ordered lists, fenced code blocks
+  - Inline styles: `*italic*`, `**bold**`, `__underline__`, `~~strikethrough~~`, `` `code` ``
+  - Word-wrapping with correct punctuation attachment (no space before `,` `.` etc.)
+    and neutral space segments (spaces never inherit inline decoration)
+  - Keyboard scrolling: `↑`/`↓`, `PgUp`/`PgDn`, `Home`/`End`; scrollbar when content
+    overflows
+  - Content padding read from the `"styled"` style; scrollbar placed at raw widget
+    right edge (outside padding)
+  - Theme style keys: `"styled"`, `"styled/h1"` – `"styled/h4"`, `"styled/pre"`,
+    `"styled/code"` added to all built-in themes
+  - `NewStyled(id, class, text)` / `SetText(text)`; `Builder.Styled(id, text)` wiring
+  - Styled demo panel with all block types and scrolling in `cmd/demo`
+- **Value demo panel** in `cmd/demo` — demonstrates three reactive binding groups:
+  two `Checkbox` widgets sharing a `Value[bool]`; an `Input` and `Digits` sharing a
+  `Value[string]`; an `Input` and `Progress` sharing a `Value[int]` with a
+  string→int convert function
+
+### Changed
+- **`EvtChange` is no longer fired by programmatic setters** — all widget `Set` /
+  `SetText` methods update state silently; `EvtChange` is dispatched only from
+  user-interaction paths (key handlers, `Toggle`, `Insert`, etc.)
+- **Redundant named setters removed** — `Set(T)` is now the single canonical setter
+  on each widget; the following aliases were removed and all call sites updated:
+  - `Input.SetText` → `Input.Set`
+  - `Digits.SetText` → `Digits.Set`
+  - `Progress.SetValue` → `Progress.Set`
+  - `List.SetItems` → `List.Set` (spurious `EvtSelect` dispatch also removed)
+  - `Static.SetText` → `Static.Set`
+- **`Static.Set`** still accepts `any`; non-string values are formatted with
+  `fmt.Sprintf("%v", value)`
+- `"styled"` style gains `WithPadding(0, 1)` in all built-in themes
+
+### Fixed
+- `Progress.Set` now calls `Refresh()` so reactive bindings redraw immediately
 - **`Sparkline` widget** — compact time-series display using Unicode block characters
   (`▁▂▃▄▅▆▇█`); height-adaptive with `h` content rows giving `h×8` discrete levels
   per column (`sparkline.go`)

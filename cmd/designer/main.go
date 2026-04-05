@@ -28,7 +28,7 @@ func NewDesigner() *Designer {
 
 	designer.canvas.On(EvtMove, func(widget Widget, event Event, data ...any) bool {
 		x, y, _ := designer.canvas.Cursor()
-		designer.position.SetText(fmt.Sprintf(" %d:%d %s ", x, y, designer.canvas.Mode()))
+		designer.position.Set(fmt.Sprintf(" %d:%d %s ", x, y, designer.canvas.Mode()))
 		designer.position.SetHint(len(designer.position.Text), 1)
 		return true
 	})

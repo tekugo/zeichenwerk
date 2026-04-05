@@ -285,7 +285,7 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 		input := NewInput(id, b.class, "", "", "*")
 		input.SetFlag(FlagMasked, true)
 		input.Apply(b.theme)
-		input.SetText(v.String())
+		input.Set(v.String())
 		return input
 	case "select":
 		o := strings.Split(options, ",")
@@ -296,7 +296,7 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 	default:
 		input := NewInput(id, b.class)
 		input.Apply(b.theme)
-		input.SetText(v.String())
+		input.Set(v.String())
 		return input
 	}
 }

@@ -50,19 +50,14 @@ func (t *Table) Refresh() {
 }
 
 // Set updates the data provider and recalculates the total table width.
-func (t *Table) Set(value any) bool {
-	provider, ok := value.(TableProvider)
-	if !ok {
-		return false
-	}
-	t.provider = provider
+func (t *Table) Set(value TableProvider) {
+	t.provider = value
 	t.tableWidth = 0
-	columns := provider.Columns()
+	columns := value.Columns()
 	for _, column := range columns {
 		t.tableWidth += column.Width
 	}
 	t.tableWidth += len(columns) - 1
-	return true
 }
 
 // Hint returns the preferred size of the table.

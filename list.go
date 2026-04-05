@@ -101,25 +101,12 @@ func (l *List) Items() []string {
 	return l.items
 }
 
-// SetItems replaces all items in the list and resets the index to 0.
-func (l *List) SetItems(items []string) {
-	l.items = items
+// Set replaces all items in the list and resets the selection to the first item.
+func (l *List) Set(value []string) {
+	l.items = value
 	l.index = 0
 	l.offset = 0
 	l.Refresh()
-}
-
-// Set implements Setter. Accepts []string to replace the list items.
-func (l *List) Set(value any) bool {
-	items, ok := value.([]string)
-	if !ok {
-		return false
-	}
-	l.SetItems(items)
-	if len(items) > 0 {
-		l.Dispatch(l, EvtSelect, 0)
-	}
-	return true
 }
 
 // Select selects the item at the specified index.

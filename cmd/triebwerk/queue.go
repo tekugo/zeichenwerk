@@ -193,12 +193,12 @@ func (r *Runner) updateStatus() {
 	busy := r.busy.Load()
 	switch {
 	case busy && n > 0:
-		r.status.SetText(fmt.Sprintf("▶ running  [queue: %d]", n))
+		r.status.Set(fmt.Sprintf("▶ running  [queue: %d]", n))
 	case busy:
-		r.status.SetText("▶ running")
+		r.status.Set("▶ running")
 	case n > 0:
-		r.status.SetText(fmt.Sprintf("[queue: %d]", n))
+		r.status.Set(fmt.Sprintf("[queue: %d]", n))
 	default:
-		r.status.SetText("")
+		r.status.Set("")
 	}
 }

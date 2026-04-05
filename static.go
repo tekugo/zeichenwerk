@@ -69,34 +69,19 @@ func (s *Static) Summary() string {
 
 // ---- Setter ---------------------------------------------------------------
 
-// Set implements Setter. Accepts a string value; any other type is formatted
-// with fmt.Sprintf("%v", value).
-func (s *Static) Set(value any) bool {
+// Set updates the displayed text. Non-string values are formatted with
+// fmt.Sprintf("%v", value).
+func (s *Static) Set(value any) {
 	if str, ok := value.(string); ok {
-		s.SetText(str)
+		s.Text = str
 	} else {
-		s.SetText(fmt.Sprintf("%v", value))
+		s.Text = fmt.Sprintf("%v", value)
 	}
-	return true
-}
-
-// SetAlignment sets the text alignment for the label.
-// This controls how the text is positioned within the label's content area.
-//
-// Parameters:
-//   - align: The alignment mode ("left", "center", "right")
-func (s *Static) SetAlignment(align string) {
-	s.Alignment = align
 	s.Refresh()
 }
 
-// SetText updates the static's text content and triggers a refresh.
-// This is a convenience method for dynamically updating the static's
-// displayed text, commonly used for status updates or dynamic content.
-//
-// Parameters:
-//   - text: The new text content to display
-func (s *Static) SetText(text string) {
-	s.Text = text
+// SetAlignment sets the text alignment for the label.
+func (s *Static) SetAlignment(align string) {
+	s.Alignment = align
 	s.Refresh()
 }

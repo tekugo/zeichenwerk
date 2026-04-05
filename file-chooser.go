@@ -270,7 +270,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 			return false
 		}
 		ignoreInputChange = true
-		input.SetText(nd.path)
+		input.Set(nd.path)
 		ignoreInputChange = false
 		setInputError(false)
 		updateOK()
@@ -331,7 +331,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 				navigateTo(home)
 				return true
 			case "/":
-				input.SetText("/")
+				input.Set("/")
 				ui.Focus(input)
 				return true
 			}

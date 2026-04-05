@@ -202,7 +202,7 @@ func buildFormControl(control, id, class string, v reflect.Value, options string
 		w := NewInput(id, class, "", "", "*")
 		w.SetFlag(FlagMasked, true)
 		w.Apply(theme)
-		w.SetText(v.String())
+		w.Set(v.String())
 		return w
 	case "select":
 		o := strings.Split(options, ",")
@@ -213,7 +213,7 @@ func buildFormControl(control, id, class string, v reflect.Value, options string
 	default:
 		w := NewInput(id, class)
 		w.Apply(theme)
-		w.SetText(v.String())
+		w.Set(v.String())
 		return w
 	}
 }

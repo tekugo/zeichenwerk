@@ -28,7 +28,7 @@ func buildUI(theme *Theme, store *Store) *UI {
 	configLines := strings.Split(otlpConfig, "\n")
 
 	b.Flex("main", false, "stretch", 0).
-		Tabs("tabs", "Start", "Monitor", "Config", "About").
+		Tabs("tabs", "Start", "Monitor", "Log", "Config", "About").
 		Switcher("view", false).Hint(0, -1).
 		With(func(b *Builder) {
 			// Start pane — OTLP setup instructions shown before data arrives.
@@ -73,6 +73,12 @@ func buildUI(theme *Theme, store *Store) *UI {
 				Text("detail-list", nil, false, 500).
 				End().
 				End()
+		}).
+		With(func(b *Builder) {
+			// Log pane — raw OTLP event stream.
+			b.Flex("log-pane", false, "stretch", 0).Hint(0, -1).
+				Table("otlp-log", store.Log, false).Hint(0, -1).
+			End()
 		}).
 		With(func(b *Builder) {
 			// Config pane (placeholder).
@@ -148,10 +154,10 @@ func buildUI(theme *Theme, store *Store) *UI {
 	var currentItems []*SessionItem
 
 	updateDetail := func(item *SessionItem) {
-		valInput.SetText(formatTokens(item.InputTokens))
-		valOutput.SetText(formatTokens(item.OutputTokens))
-		valCache.SetText(formatTokens(item.CacheTokens))
-		valCost.SetText(fmt.Sprintf("$%.4f", item.TotalCost))
+		valInput.Set(formatTokens(item.InputTokens))
+		valOutput.Set(formatTokens(item.OutputTokens))
+		valCache.Set(formatTokens(item.CacheTokens))
+		valCost.Set(fmt.Sprintf("$%.4f", item.TotalCost))
 
 		vals := item.Sparkline.Values()
 		max := 1.0

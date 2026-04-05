@@ -30,7 +30,7 @@ type session struct {
 	lastSeen time.Time
 
 	mu        sync.Mutex
-	byType    map[string]int64 // latest cumulative tokens per type
+	byType    map[string]int64 // accumulated token deltas per type
 	totalCost float64          // accumulated cost across all calls
 	buckets   []bucket         // rolling 20-minute history
 	sparkline *Sparkline
@@ -47,7 +47,7 @@ func (s *session) status(timeout time.Duration) SessionStatus {
 	return StatusEnded
 }
 
-// totalTokens sums the latest cumulative values across all token types.
+// totalTokens sums accumulated token deltas across all token types.
 func (s *session) totalTokens() int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -58,17 +58,11 @@ func (s *session) totalTokens() int64 {
 	return total
 }
 
-// addTokens records a new cumulative token value for type and timestamp.
-// Returns the positive delta (0 if unchanged).
-func (s *session) addTokens(typ string, cumulative int64, ts time.Time) int64 {
+// addTokens accumulates a token delta for the given type and timestamp.
+func (s *session) addTokens(typ string, delta int64, ts time.Time) int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	last := s.byType[typ]
-	delta := cumulative - last
-	if delta < 0 {
-		delta = cumulative // counter was reset
-	}
-	s.byType[typ] = cumulative
+	s.byType[typ] += delta
 	s.lastSeen = ts
 	if delta > 0 {
 		s.addBucket(ts.Unix()/60, delta)
@@ -100,6 +94,75 @@ func (s *session) rebuildSparkline() {
 	s.sparkline.SetValues(vs)
 }
 
+// ---- OTLPLog ---------------------------------------------------------------
+
+// otlpEntry is one received OTLP data point.
+type otlpEntry struct {
+	time      time.Time
+	session   string
+	metric    string // e.g. "claude_code.token.usage"
+	tokenType string // attribute "type"; empty for cost metrics
+	value     string // formatted value
+}
+
+// OTLPLog is a thread-safe circular buffer of incoming OTLP entries that
+// implements TableProvider so it can be passed directly to a Table widget.
+type OTLPLog struct {
+	mu      sync.Mutex
+	entries []otlpEntry
+	size    int
+	start   int
+	count   int
+}
+
+func newOTLPLog(size int) *OTLPLog { return &OTLPLog{entries: make([]otlpEntry, size), size: size} }
+
+func (l *OTLPLog) add(e otlpEntry) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	idx := (l.start + l.count) % l.size
+	l.entries[idx] = e
+	if l.count < l.size {
+		l.count++
+	} else {
+		l.start = (l.start + 1) % l.size
+	}
+}
+
+var otlpLogColumns = []TableColumn{
+	{Header: "Time", Width: 8},
+	{Header: "Session", Width: 24},
+	{Header: "Metric", Width: 26},
+	{Header: "Type", Width: 12},
+	{Header: "Value", Width: 14},
+}
+
+func (l *OTLPLog) Columns() []TableColumn { return otlpLogColumns }
+
+func (l *OTLPLog) Length() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.count
+}
+
+func (l *OTLPLog) Str(row, col int) string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	e := l.entries[(l.start+l.count-row-1)%l.size] // newest first
+	switch col {
+	case 0:
+		return e.time.Format("15:04:05")
+	case 1:
+		return e.session
+	case 2:
+		return e.metric
+	case 3:
+		return e.tokenType
+	default:
+		return e.value
+	}
+}
+
 // ---- Store -----------------------------------------------------------------
 
 // Store is the in-memory session registry.
@@ -112,6 +175,8 @@ type Store struct {
 
 	gesamtBuckets []bucket
 	gesamtSp      *Sparkline
+
+	Log *OTLPLog
 }
 
 // newDeckSparkline creates a Relative-mode sparkline for deck cards.
@@ -125,6 +190,7 @@ func newStore(timeout time.Duration) *Store {
 		sessions:    make(map[string]*session),
 		idleTimeout: timeout,
 		gesamtSp:    newDeckSparkline("gesamt-sp"),
+		Log:         newOTLPLog(500),
 	}
 }
 
@@ -135,8 +201,8 @@ func (st *Store) SetOnChange(fn func()) {
 	st.mu.Unlock()
 }
 
-// UpdateTokens records a cumulative token count for a session.
-func (st *Store) UpdateTokens(sessionID, sessionName, tokenType string, cumulative int64, ts time.Time) {
+// UpdateTokens records a delta token count for a session.
+func (st *Store) UpdateTokens(sessionID, sessionName, tokenType string, delta int64, ts time.Time) {
 	st.mu.Lock()
 	s, ok := st.sessions[sessionID]
 	if !ok {
@@ -153,16 +219,16 @@ func (st *Store) UpdateTokens(sessionID, sessionName, tokenType string, cumulati
 	onChange := st.onChange
 	st.mu.Unlock()
 
-	delta := s.addTokens(tokenType, cumulative, ts)
-	if delta > 0 {
-		st.addGesamtBucket(ts.Unix()/60, delta)
+	added := s.addTokens(tokenType, delta, ts)
+	if added > 0 {
+		st.addGesamtBucket(ts.Unix()/60, added)
 	}
 	if onChange != nil {
 		onChange()
 	}
 }
 
-// UpdateCost records the latest cumulative cost for a session.
+// UpdateCost accumulates a cost delta for a session.
 func (st *Store) UpdateCost(sessionID string, cost float64) {
 	st.mu.RLock()
 	s := st.sessions[sessionID]
@@ -240,7 +306,7 @@ func (st *Store) Items() []*SessionItem {
 		s.mu.Lock()
 		inp := s.byType["input"]
 		out := s.byType["output"]
-		cache := s.byType["cache_read"] + s.byType["cache_write"]
+		cache := s.byType["cacheRead"] + s.byType["cacheCreation"]
 		s.mu.Unlock()
 		totalInput += inp
 		totalOutput += out
@@ -277,7 +343,7 @@ func (st *Store) Items() []*SessionItem {
 		s.mu.Lock()
 		inp := s.byType["input"]
 		out := s.byType["output"]
-		cache := s.byType["cache_read"] + s.byType["cache_write"]
+		cache := s.byType["cacheRead"] + s.byType["cacheCreation"]
 		s.mu.Unlock()
 		items = append(items, &SessionItem{
 			ID:           s.id,

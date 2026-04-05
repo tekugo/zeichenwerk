@@ -57,13 +57,9 @@ func (p *Progress) Apply(theme *Theme) {
 	theme.Apply(p, p.Selector("progress/bar"))
 }
 
-// SetValue sets the current progress value. The value is automatically clamped
-// to the range 0..total. In indeterminate mode (total==0), the value is ignored
-// but can be stored for internal use.
-//
-// Parameters:
-//   - value: The new progress value (will be clamped to 0-total)
-func (p *Progress) SetValue(value int) {
+// Set sets the current progress value, clamped to 0..total.
+// In indeterminate mode (total==0) the value is stored unclamped.
+func (p *Progress) Set(value int) {
 	if p.total == 0 {
 		// Indeterminate mode - store but don't clamp
 		p.value = value
@@ -76,6 +72,7 @@ func (p *Progress) SetValue(value int) {
 		value = p.total
 	}
 	p.value = value
+	p.Refresh()
 }
 
 // SetTotal sets the total amount of work. If total is 0, the progress enters
@@ -91,7 +88,7 @@ func (p *Progress) SetTotal(total int) {
 	}
 	p.total = total
 	// Reclamp current value to new total
-	p.SetValue(p.value)
+	p.Set(p.value)
 }
 
 // Percentage returns the current progress as a percentage (0.0 to 100.0).
@@ -109,7 +106,7 @@ func (p *Progress) Percentage() float64 {
 // Parameters:
 //   - amount: The amount to add to the current value
 func (p *Progress) Increment(amount int) {
-	p.SetValue(p.value + amount)
+	p.Set(p.value + amount)
 }
 
 // Info returns a human-readable description of the progress widget's configuration.

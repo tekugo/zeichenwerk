@@ -65,7 +65,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
@@ -89,6 +89,7 @@ func createUI(theme *Theme) *UI {
 		With(terminalDemo).
 		With(treeFSDemo).
 		With(typeaheadDemo).
+		With(valueDemo).
 		With(viewport).
 		End().
 		Cell(1, 1, 1, 1).
@@ -132,7 +133,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 22:
+					case 23:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -154,7 +155,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 23:
+					case 24:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -167,7 +168,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 24:
+					case 25:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -180,7 +181,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 25:
+					case 26:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -188,7 +189,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 26:
+					case 27:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -319,7 +320,7 @@ func checkbox(builder *Builder) {
 						case "cb5":
 							name = "Terms agreed"
 						}
-						label.SetText(fmt.Sprintf("%s: %v", name, checked))
+						label.Set(fmt.Sprintf("%s: %v", name, checked))
 					}
 				}
 				return true
@@ -366,7 +367,7 @@ func collapsibleDemo(builder *Builder) {
 						state = "expanded"
 					}
 					if label, ok := Find(container, "col-status").(*Static); ok {
-						label.SetText(fmt.Sprintf("%s: %s", id, state))
+						label.Set(fmt.Sprintf("%s: %s", id, state))
 					}
 				}
 				return true
@@ -576,25 +577,25 @@ func progress(builder *Builder) {
 	// Determinate: 25%
 	p25 := NewProgress("progress-25", "", true)
 	p25.SetTotal(100)
-	p25.SetValue(25)
+	p25.Set(25)
 	builder.Add(p25)
 	builder.Spacer().Size(0, 1)
 	// 50%
 	p50 := NewProgress("progress-50", "", true)
 	p50.SetTotal(100)
-	p50.SetValue(50)
+	p50.Set(50)
 	builder.Add(p50)
 	builder.Spacer().Size(0, 1)
 	// 75%
 	p75 := NewProgress("progress-75", "", true)
 	p75.SetTotal(100)
-	p75.SetValue(75)
+	p75.Set(75)
 	builder.Add(p75)
 	builder.Spacer().Size(0, 1)
 	// 100%
 	p100 := NewProgress("progress-full", "", true)
 	p100.SetTotal(100)
-	p100.SetValue(100)
+	p100.Set(100)
 	builder.Add(p100)
 	builder.End().
 		Static("progress-info", "Progress bars support determinate (with total>0) and indeterminate (total=0) modes. Use SetTotal/SetValue to control.").Padding(1, 0, 0, 0).
@@ -662,9 +663,58 @@ func spinner(builder *Builder) {
 	})
 }
 
+const styledDemoText = `# Styled Widget
+
+The **Styled** widget renders a subset of Markdown with word wrapping and inline styles. It supports all common block types shown below.
+
+## Inline Styles
+
+Plain text sits alongside *italic*, **bold**, __underlined__, ~~strikethrough~~ and ` + "`" + `inline code` + "`" + `. Styles can be **combined: *bold and italic* works** just fine.
+
+## Paragraphs
+
+Paragraphs are separated by blank lines and their text is word-wrapped to the available width. A very long paragraph like this one will wrap gracefully across as many rows as needed without truncating any content.
+
+## Unordered Lists
+
+- First item in the list
+- Second item, which is intentionally a bit longer to demonstrate that continuation lines are indented to align with the text rather than the bullet
+- Third item
+
+## Ordered Lists
+
+1. Download the archive
+2. Extract and ` + "`" + `cd` + "`" + ` into the directory
+3. Run ` + "`" + `go build ./...` + "`" + ` to compile
+4. Start the binary with your preferred flags
+
+## Code Block
+
+` + "```" + `
+func NewStyled(id, class, text string) *Styled {
+    s := &Styled{Component: Component{id: id, class: class}}
+    s.SetFlag(FlagFocusable, true)
+    s.Set(text)
+    OnKey(s, s.handleKey)
+    return s
+}
+` + "```" + `
+
+### Sub-heading (h3)
+
+H3 headings use __underlined bold__ text. Use them for sections within an h2 group.
+
+## Scrolling
+
+Use **↑ ↓** to scroll one line, **PgUp PgDn** for page scrolling, and **Home End** to jump to the top or bottom.`
+
 // Styled text demo
 func styled(builder *Builder) {
-	builder.Styled("styled-demo", "Styled *Text* __Widget__ **Demo**! ~~Not found~~ We are producing a very long text to test word wrapping functionality for the styled text widget and verify, that long lines are wrapped, if they are wider than the widget content area.").Padding(1)
+	builder.
+		Flex("styled-pane", false, "stretch", 0).Hint(0, -1).
+		Styled("styled-demo", styledDemoText).Hint(0, -1).
+		Shortcuts("styled-shortcuts", "↑↓", "scroll", "PgUp PgDn", "page", "Home End", "top/bottom").
+		End()
 }
 
 // Table demo
@@ -822,7 +872,7 @@ func typeaheadDemo(builder *Builder) {
 	langTA.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 		if s, ok := data[0].(string); ok {
 			if label, ok := Find(container, "ta-accepted").(*Static); ok {
-				label.SetText("Accepted: " + s)
+				label.Set("Accepted: " + s)
 			}
 		}
 		return true
@@ -833,7 +883,7 @@ func typeaheadDemo(builder *Builder) {
 	countryTA.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 		if s, ok := data[0].(string); ok {
 			if label, ok := Find(container, "ta-accepted").(*Static); ok {
-				label.SetText("Accepted: " + s)
+				label.Set("Accepted: " + s)
 			}
 		}
 		return true
@@ -867,10 +917,10 @@ func treeFSDemo(builder *Builder) {
 		}
 		tfs.SetRoot(parent)
 		if label, ok := Find(container, "tree-fs-path").(*Static); ok {
-			label.SetText(tfs.RootPath())
+			label.Set(tfs.RootPath())
 		}
 		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
-			label.SetText("")
+			label.Set("")
 		}
 		return true
 	})
@@ -885,10 +935,69 @@ func treeFSDemo(builder *Builder) {
 			return true
 		}
 		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
-			label.SetText(node.Data().(string))
+			label.Set(node.Data().(string))
 		}
 		return true
 	})
+}
+
+// Value demo — two groups of widgets sharing a reactive Value.
+func valueDemo(builder *Builder) {
+	builder.Flex("value-demo", false, "stretch", 1).Padding(1, 2).
+		Static("value-title", "Value Demo").Padding(0, 0, 1, 0).
+		Static("value-info", "Widgets sharing the same Value stay in sync automatically.").Padding(0, 0, 1, 0)
+
+	// --- Group 1: two checkboxes sharing a Value[bool] ---
+	builder.Static("value-bool-label", "Shared bool — toggle either checkbox:").Padding(0, 0, 0, 0)
+	cb1 := NewCheckbox("val-cb1", "", "Checkbox A", false)
+	cb2 := NewCheckbox("val-cb2", "", "Checkbox B", false)
+	boolVal := NewValue(false)
+	boolVal.Bind(cb1).Bind(cb2)
+	boolVal.Observe(cb1)
+	boolVal.Observe(cb2)
+	builder.Add(cb1)
+	builder.Add(cb2)
+
+	builder.Spacer().Size(0, 1)
+
+	// --- Group 2: Input and Digits sharing a Value[string] ---
+	builder.Static("value-str-label", "Shared string — type in the input to update Digits:").Padding(0, 0, 0, 0)
+	strInput := NewInput("val-str-input", "")
+	strInput.Set("12:34")
+	digits := NewDigits("val-digits", "", "12:34")
+	strVal := NewValue("12:34")
+	strVal.Bind(strInput).Bind(digits)
+	strVal.Observe(strInput)
+	builder.Add(strInput)
+	builder.Spacer().Size(0, 1)
+	builder.Flex("val-digits-row", true, "center", 0).
+		Add(digits).
+		End()
+
+	builder.Spacer().Size(0, 1)
+
+	// --- Group 3: Input and Progress sharing a Value[int] ---
+	builder.Static("value-int-label", "Shared int — type 0–100 in the input to move the progress bar:").Padding(0, 0, 0, 0)
+	intInput := NewInput("val-int-input", "")
+	intInput.Set("50")
+	prog := NewProgress("val-progress", "", true)
+	prog.SetTotal(100)
+	intVal := NewValue(50)
+	intVal.Bind(prog)
+	intVal.Observe(intInput, func(v any) (int, bool) {
+		s, ok := v.(string)
+		if !ok {
+			return 0, false
+		}
+		n := 0
+		_, err := fmt.Sscanf(s, "%d", &n)
+		return n, err == nil
+	})
+	builder.Add(intInput)
+	builder.Spacer().Size(0, 1)
+	builder.Add(prog)
+
+	builder.End()
 }
 
 func viewport(builder *Builder) {
