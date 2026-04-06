@@ -35,9 +35,9 @@ An optional extension of `Filterable`. When the bound widget also implements
 text appears as the user types.
 
 `Suggest` should return items (or node labels) that have `query` as a
-case-insensitive prefix. Because `Typeahead.updateHint` picks the first result
-that has the typed text as a case-sensitive prefix, returning only prefix
-matches avoids false negatives from case mismatches.
+case-insensitive prefix. Because `Typeahead.updateSuggestion` picks the first
+result that differs from the current input text, returning only prefix matches
+avoids false negatives from case mismatches.
 
 Both `List` and `Tree` implement this interface (see *Changes to existing
 widgets* below).
@@ -100,7 +100,7 @@ Inherits `Typeahead` events unchanged.
 
 ## Styling
 
-Inherits `"typeahead"` and `"typeahead/hint"` selectors fully. `Apply`
+Inherits `"typeahead"` and `"typeahead/suggestion"` selectors fully. `Apply`
 additionally registers `"filter"` for callers that want to style the filter
 field separately from plain inputs. Falls back to `"typeahead"` styles if
 `"filter"` is not defined.
@@ -123,15 +123,15 @@ func (l *List) Suggest(query string) []string
 ```
 
 `Filter`:
-- If `filter == ""`: if `original != nil`, call `l.SetItems(original)` and set `original = nil`; return.
-- Otherwise: if `original == nil`, save `l.items` as `original`. Build a filtered slice: items from `original` where `strings.Contains(strings.ToLower(item), strings.ToLower(filter))`. Call `l.SetItems(filtered)`.
+- If `filter == ""`: if `original != nil`, call `l.Set(original)` and set `original = nil`; return.
+- Otherwise: if `original == nil`, save `l.items` as `original`. Build a filtered slice: items from `original` where `strings.Contains(strings.ToLower(item), strings.ToLower(filter))`. Call `l.Set(filtered)`.
 
 `Suggest`:
 1. Use `original` as the source if non-nil (unfiltered), otherwise `l.items`.
 2. Return all items where `strings.HasPrefix(strings.ToLower(item), strings.ToLower(query))`.
 3. Return nil if no matches.
 
-`SetItems` is unchanged — it always replaces `l.items` and resets the index,
+`Set` is unchanged — it always replaces `l.items` and resets the index,
 which is correct for both filtered and unfiltered updates.
 
 ### `Tree`
@@ -171,6 +171,12 @@ func (t *Tree) Suggest(query string) []string
 func (b *Builder) Filter(id string) *Builder
 ```
 
+## Compose
+
+```go
+func Filter(id, class string, options ...Option) Option
+```
+
 ## Implementation plan
 
 1. **`filterable.go`** — new file: define `Filterable` and `Suggester`
@@ -188,7 +194,9 @@ func (b *Builder) Filter(id string) *Builder
 
 5. **`builder.go`** — add `Filter` method.
 
-6. **Tests** — `filter_test.go`
+6. **`compose/compose.go`** — add `Filter` function.
+
+7. **Tests** — `filter_test.go`
    - Typing in a bound Filter calls `Filter` on the List with the correct query.
    - Clearing the Filter calls `Filter("")` and restores original List items.
    - `Unbind` restores the List and detaches.

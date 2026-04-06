@@ -31,4 +31,10 @@ const (
 	// FlagFocusable is set. Useful for read-only or decorative interactive widgets
 	// that should not participate in keyboard navigation.
 	FlagSkip Flag = "skip"
+	// FlagVertical restricts a Viewport to vertical scrolling only. The child
+	// fills the viewport width; no horizontal scrollbar is shown.
+	FlagVertical Flag = "vertical"
+	// FlagHorizontal restricts a Viewport to horizontal scrolling only. The
+	// child fills the viewport height; no vertical scrollbar is shown.
+	FlagHorizontal Flag = "horizontal"
 )

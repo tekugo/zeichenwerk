@@ -12,6 +12,13 @@ and this project adheres to
 
 ### Added
 
+- **`Viewport` scroll-axis control** — `FlagVertical` and `FlagHorizontal` added
+  to restrict a viewport to a single scroll axis. When `FlagVertical` is set the
+  child fills the viewport width and only a vertical scrollbar is shown; when
+  `FlagHorizontal` is set the child fills the viewport height and only a
+  horizontal scrollbar is shown. Arrow keys for the inactive axis are ignored.
+  Default behaviour (both axes) is unchanged.
+
 - **`Styled` extended Markdown support**
   - Horizontal rules (`---` / `***` / `___`) rendered as a `─` line
   - Blockquotes (`> text`) rendered with a `│ ` left border; consecutive lines

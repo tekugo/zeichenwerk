@@ -3,6 +3,7 @@ package zeichenwerk
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v3"
@@ -45,7 +46,8 @@ type List struct {
 	Component
 
 	// ---- Core Data ----
-	items []string // Text items to display in the list (primary content)
+	items    []string // Text items to display in the list (primary content)
+	original []string // Unfiltered items saved while a filter is active (nil = no active filter)
 
 	// ---- Navigation State ----
 	index  int // Current highlight position (focused item index, -1 if none)
@@ -107,6 +109,55 @@ func (l *List) Set(value []string) {
 	l.index = 0
 	l.offset = 0
 	l.Refresh()
+}
+
+// Filter applies a case-insensitive substring match and updates the list's
+// visible content. An empty string clears the filter and restores the original
+// unfiltered items.
+func (l *List) Filter(filter string) {
+	if filter == "" {
+		if l.original != nil {
+			l.Set(l.original)
+			l.original = nil
+		}
+		return
+	}
+	if l.original == nil {
+		l.original = l.items
+	}
+	lower := strings.ToLower(filter)
+	var filtered []string
+	for _, item := range l.original {
+		if strings.Contains(strings.ToLower(item), lower) {
+			filtered = append(filtered, item)
+		}
+	}
+	l.Set(filtered)
+}
+
+// Suggest returns list items whose text has query as a case-insensitive prefix.
+// It searches the unfiltered items when a filter is active, so candidates are
+// not limited to the currently visible subset. Returns nil when nothing matches
+// or query is empty.
+func (l *List) Suggest(query string) []string {
+	if query == "" {
+		return nil
+	}
+	source := l.items
+	if l.original != nil {
+		source = l.original
+	}
+	lower := strings.ToLower(query)
+	var results []string
+	for _, item := range source {
+		if strings.HasPrefix(strings.ToLower(item), lower) {
+			results = append(results, item)
+		}
+	}
+	if len(results) == 0 {
+		return nil
+	}
+	return results
 }
 
 // Select selects the item at the specified index.

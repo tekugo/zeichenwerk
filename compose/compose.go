@@ -404,6 +404,20 @@ func Typeahead(id, class string, params []string, options ...Option) Option {
 	}
 }
 
+// Filter adds a filter input widget that can be bound to a List or Tree.
+func Filter(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewFilter(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Select adds a dropdown selection widget to the parent. args is a flat list
 // of alternating value/label pairs: []string{"key1", "Label 1", "key2", "Label 2", …}.
 func Select(id, class string, args []string, options ...Option) Option {

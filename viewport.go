@@ -5,6 +5,10 @@ import "github.com/gdamore/tcell/v3"
 // Viewport is a scrollable single-child container. The child widget is given
 // its full preferred size (from Hint) and the viewport shows a windowed view
 // into it with horizontal and vertical scrollbars when needed.
+//
+// Set FlagVertical to restrict scrolling to the vertical axis (child fills
+// viewport width). Set FlagHorizontal for horizontal-only scrolling (child
+// fills viewport height). Without either flag both axes scroll freely.
 type Viewport struct {
 	Component
 	Title  string // Optional title text to display in the border
@@ -51,12 +55,30 @@ func (v *Viewport) Children() []Widget {
 }
 
 // Layout positions the child at its full preferred size offset by the current
-// scroll position.
+// scroll position. For FlagVertical/FlagHorizontal the child is constrained
+// to fill the perpendicular axis so it never needs to scroll that direction.
 func (v *Viewport) Layout() error {
 	if v.child != nil {
-		cx, cy, _, _ := v.Content()
+		cx, cy, vw, vh := v.Content()
 		pw, ph := v.child.Hint()
-		v.child.SetBounds(cx-v.tx, cy-v.ty, pw, ph)
+		switch {
+		case v.Flag(FlagVertical):
+			// vertical only: child fills viewport width
+			iw := vw
+			if ph > vh {
+				iw-- // reserve right column for V-scrollbar
+			}
+			v.child.SetBounds(cx, cy-v.ty, iw, ph)
+		case v.Flag(FlagHorizontal):
+			// horizontal only: child fills viewport height
+			ih := vh
+			if pw > vw {
+				ih-- // reserve bottom row for H-scrollbar
+			}
+			v.child.SetBounds(cx-v.tx, cy, pw, ih)
+		default:
+			v.child.SetBounds(cx-v.tx, cy-v.ty, pw, ph)
+		}
 	}
 	return Layout(v)
 }
@@ -75,7 +97,9 @@ func (v *Viewport) handleKey(event *tcell.EventKey) bool {
 
 	switch event.Key() {
 	case tcell.KeyUp:
-		// Scroll up by one line
+		if v.Flag(FlagHorizontal) {
+			return false
+		}
 		if v.ty > 0 {
 			v.ty--
 			v.Layout()
@@ -84,7 +108,9 @@ func (v *Viewport) handleKey(event *tcell.EventKey) bool {
 		}
 
 	case tcell.KeyDown:
-		// Scroll down by one line
+		if v.Flag(FlagHorizontal) {
+			return false
+		}
 		if v.ty < maxTy {
 			v.ty++
 			v.Layout()
@@ -93,7 +119,9 @@ func (v *Viewport) handleKey(event *tcell.EventKey) bool {
 		}
 
 	case tcell.KeyLeft:
-		// Scroll left by one character
+		if v.Flag(FlagVertical) {
+			return false
+		}
 		if v.tx > 0 {
 			v.tx--
 			v.Layout()
@@ -102,7 +130,9 @@ func (v *Viewport) handleKey(event *tcell.EventKey) bool {
 		}
 
 	case tcell.KeyRight:
-		// Scroll right by one character
+		if v.Flag(FlagVertical) {
+			return false
+		}
 		if v.tx < maxTx {
 			v.tx++
 			v.Layout()
@@ -111,20 +141,32 @@ func (v *Viewport) handleKey(event *tcell.EventKey) bool {
 		}
 
 	case tcell.KeyHome:
-		// Reset to top-left corner
-		if v.tx > 0 || v.ty > 0 {
-			v.tx = 0
-			v.ty = 0
+		newTx, newTy := 0, 0
+		if v.Flag(FlagVertical) {
+			newTx = v.tx // don't touch horizontal
+		}
+		if v.Flag(FlagHorizontal) {
+			newTy = v.ty // don't touch vertical
+		}
+		if v.tx != newTx || v.ty != newTy {
+			v.tx = newTx
+			v.ty = newTy
 			v.Layout()
 			v.Refresh()
 			return true
 		}
 
 	case tcell.KeyEnd:
-		// Move to bottom-right corner
-		if v.tx < maxTx || v.ty < maxTy {
-			v.tx = maxTx
-			v.ty = maxTy
+		newTx, newTy := maxTx, maxTy
+		if v.Flag(FlagVertical) {
+			newTx = v.tx // don't touch horizontal
+		}
+		if v.Flag(FlagHorizontal) {
+			newTy = v.ty // don't touch vertical
+		}
+		if v.tx != newTx || v.ty != newTy {
+			v.tx = newTx
+			v.ty = newTy
 			v.Layout()
 			v.Refresh()
 			return true
@@ -154,27 +196,41 @@ func (v *Viewport) Render(r *Renderer) {
 
 	// ---- Scrollbar Necessity Calculation ----
 
-	// Calculate available width (iw) considering vertical scrollbar space
-	// Start with full width, reduce by 1 if vertical scrollbar is needed
-	iw := w
-	if ch > h {
-		iw--
+	var iw, ih int
+	switch {
+	case v.Flag(FlagVertical):
+		// Only vertical scrollbar; child fills full width
+		iw = w
+		if ch > h {
+			iw-- // reserve right column for V-scrollbar
+		}
+		ih = h
+	case v.Flag(FlagHorizontal):
+		// Only horizontal scrollbar; child fills full height
+		iw = w
+		ih = h
+		if cw > w {
+			ih-- // reserve bottom row for H-scrollbar
+		}
+	default:
+		// Both axes: calculate mutual scrollbar dependencies
+		iw = w
+		if ch > h {
+			iw--
+		}
+		ih = h
+		if cw > iw {
+			ih--
+		}
 	}
 
-	// Calculate available height (ih) considering horizontal scrollbar space
-	// Use adjusted width (iw) to account for vertical scrollbar space
-	ih := h
-	if cw > iw {
-		ih--
-	}
-
-	// Render vertical scrollbar if width was reduced (indicates necessity)
-	if iw < w {
+	// Render vertical scrollbar when content is taller than visible area
+	if !v.Flag(FlagHorizontal) && ch > h {
 		r.ScrollbarV(x+w-1, y, ih, v.ty, ch)
 	}
 
-	// Render horizontal scrollbar if height was reduced (indicates necessity)
-	if ih < h {
+	// Render horizontal scrollbar when content is wider than visible area
+	if !v.Flag(FlagVertical) && cw > iw {
 		r.ScrollbarH(x, y+h-1, iw, v.tx, cw)
 	}
 

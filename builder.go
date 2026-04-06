@@ -174,6 +174,13 @@ func (b *Builder) Editor(id string) *Builder {
 	return b
 }
 
+// Filter adds a filter input widget that can be bound to a List or Tree.
+func (b *Builder) Filter(id string) *Builder {
+	f := NewFilter(id, b.class)
+	b.Add(f)
+	return b
+}
+
 // Flex creates a new flex container widget for arranging child widgets.
 //
 // Parameters:

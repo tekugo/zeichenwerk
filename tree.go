@@ -1,6 +1,10 @@
 package zeichenwerk
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"strings"
+
+	"github.com/gdamore/tcell/v3"
+)
 
 // flatItem is an entry in the flattened visible-node list produced by rebuild.
 type flatItem struct {
@@ -15,11 +19,12 @@ type flatItem struct {
 // highlighting behave identically to List.
 type Tree struct {
 	Component
-	root      *TreeNode  // invisible root; its children are top-level items
-	flat      []flatItem // flattened ordered list of currently visible nodes
-	index     int        // highlighted position in flat (-1 if empty)
-	offset    int        // scroll offset (first visible row index in flat)
-	scrollbar bool       // whether to draw a vertical scrollbar
+	root        *TreeNode  // invisible root; its children are top-level items
+	flat        []flatItem // flattened ordered list of currently visible nodes
+	index       int        // highlighted position in flat (-1 if empty)
+	offset      int        // scroll offset (first visible row index in flat)
+	scrollbar   bool       // whether to draw a vertical scrollbar
+	filterQuery string     // active filter query ("" = no filter)
 }
 
 // NewTree creates a new Tree widget with the given id and CSS class.
@@ -455,8 +460,9 @@ func (t *Tree) moveTo(index int) {
 func (t *Tree) rebuild() {
 	selected := t.Selected()
 	t.flat = t.flat[:0]
-	for i, child := range t.root.children {
-		t.flattenNode(child, 0, nil, i == len(t.root.children)-1)
+	top := t.visibleTopLevel()
+	for i, child := range top {
+		t.flattenNode(child, 0, nil, i == len(top)-1)
 	}
 	t.clamp(selected)
 	Redraw(t)
@@ -465,8 +471,9 @@ func (t *Tree) rebuild() {
 // rebuildKeep rebuilds and tries to keep highlight on the given node.
 func (t *Tree) rebuildKeep(node *TreeNode) {
 	t.flat = t.flat[:0]
-	for i, child := range t.root.children {
-		t.flattenNode(child, 0, nil, i == len(t.root.children)-1)
+	top := t.visibleTopLevel()
+	for i, child := range top {
+		t.flattenNode(child, 0, nil, i == len(top)-1)
 	}
 	// Try to restore selection to node; fall back to previous index
 	t.index = -1
@@ -506,7 +513,14 @@ func (t *Tree) clamp(selected *TreeNode) {
 
 // flattenNode performs a depth-first traversal, adding visible nodes to flat.
 // parentTrunk is the trunk slice passed down from the parent level.
+// When a filterQuery is active, nodes whose subtrees contain no match are
+// skipped; parent nodes of matching descendants are auto-expanded for this
+// render without mutating their expanded state.
 func (t *Tree) flattenNode(node *TreeNode, depth int, parentTrunk []bool, isLast bool) {
+	if t.filterQuery != "" && !nodeMatchesSubtree(node, t.filterQuery) {
+		return
+	}
+
 	// Build trunk for this node's row
 	trunk := make([]bool, len(parentTrunk))
 	copy(trunk, parentTrunk)
@@ -518,15 +532,94 @@ func (t *Tree) flattenNode(node *TreeNode, depth int, parentTrunk []bool, isLast
 		trunk:  trunk,
 	})
 
-	if node.expanded && len(node.children) > 0 {
+	// During filtering, auto-expand every node that has matching descendants so
+	// the path to matches stays visible. The node's expanded state is not mutated.
+	shouldExpand := node.expanded || (t.filterQuery != "" && !node.Leaf())
+	if shouldExpand && len(node.children) > 0 {
 		// Trunk for children: inherit parent trunk + whether this node has more siblings
 		childTrunk := make([]bool, len(parentTrunk)+1)
 		copy(childTrunk, parentTrunk)
 		childTrunk[len(parentTrunk)] = !isLast // true = draw │ at this depth
-		for i, child := range node.children {
-			t.flattenNode(child, depth+1, childTrunk, i == len(node.children)-1)
+
+		// When filtering, compute the visible child set first so isLast is correct.
+		children := node.children
+		if t.filterQuery != "" {
+			var visible []*TreeNode
+			for _, c := range node.children {
+				if nodeMatchesSubtree(c, t.filterQuery) {
+					visible = append(visible, c)
+				}
+			}
+			children = visible
+		}
+		for i, child := range children {
+			t.flattenNode(child, depth+1, childTrunk, i == len(children)-1)
 		}
 	}
+}
+
+// visibleTopLevel returns the root's direct children that should be included in
+// the current flat list. When no filter is active the full children slice is
+// returned as-is. When a filter is active only children whose subtrees contain
+// at least one matching node are returned.
+func (t *Tree) visibleTopLevel() []*TreeNode {
+	if t.filterQuery == "" {
+		return t.root.children
+	}
+	var out []*TreeNode
+	for _, c := range t.root.children {
+		if nodeMatchesSubtree(c, t.filterQuery) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// Filter applies a case-insensitive substring match to the tree, showing only
+// nodes (and their ancestors) whose text contains filter. An empty string clears
+// the filter and restores the full tree view.
+func (t *Tree) Filter(filter string) {
+	t.filterQuery = filter
+	t.rebuild()
+}
+
+// Suggest returns node labels that have query as a case-insensitive prefix.
+// All nodes in the tree are searched depth-first regardless of their expanded
+// or filtered state. Returns nil when nothing matches or query is empty.
+func (t *Tree) Suggest(query string) []string {
+	if query == "" {
+		return nil
+	}
+	lower := strings.ToLower(query)
+	var results []string
+	var walk func(*TreeNode)
+	walk = func(n *TreeNode) {
+		for _, child := range n.children {
+			if strings.HasPrefix(strings.ToLower(child.text), lower) {
+				results = append(results, child.text)
+			}
+			walk(child)
+		}
+	}
+	walk(t.root)
+	if len(results) == 0 {
+		return nil
+	}
+	return results
+}
+
+// nodeMatchesSubtree reports whether node or any of its descendants have text
+// that contains query as a case-insensitive substring.
+func nodeMatchesSubtree(node *TreeNode, query string) bool {
+	if strings.Contains(strings.ToLower(node.text), strings.ToLower(query)) {
+		return true
+	}
+	for _, child := range node.children {
+		if nodeMatchesSubtree(child, query) {
+			return true
+		}
+	}
+	return false
 }
 
 // skip returns the next enabled index in direction (1 or -1), or -1/len(flat)

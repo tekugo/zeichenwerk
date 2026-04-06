@@ -103,6 +103,8 @@ OnMouse(widget, func(e *tcell.EventMouse) bool { … })
 | `FlagReadonly` | Prevents user edits |
 | `FlagSkip` | Excluded from Tab/Shift-Tab traversal |
 | `FlagChecked` | Checkbox checked state |
+| `FlagVertical` | Viewport: restrict to vertical scrolling only (child fills width) |
+| `FlagHorizontal` | Viewport: restrict to horizontal scrolling only (child fills height) |
 
 ```go
 widget.SetFlag(FlagDisabled, true)
