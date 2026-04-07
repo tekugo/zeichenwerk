@@ -133,6 +133,13 @@ func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	return b
 }
 
+// Combo creates a new combo box with a free-text input and a suggestion list.
+func (b *Builder) Combo(id string, items ...string) *Builder {
+	c := NewCombo(id, b.class, items)
+	b.Add(c)
+	return b
+}
+
 // Collapsible creates a new collapsible container with a clickable header.
 // The container is pushed onto the builder's stack; call End() to close it.
 func (b *Builder) Collapsible(id, title string, expanded bool) *Builder {

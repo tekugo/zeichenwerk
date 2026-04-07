@@ -518,6 +518,13 @@ func (l *List) Render(r *Renderer) {
 		}
 	}
 
+	// Clear rows below the last rendered item.
+	if len(items) < h {
+		style := l.Style()
+		r.Set(style.Foreground(), style.Background(), style.Font())
+		r.Fill(x, y+len(items), w, h-len(items), " ")
+	}
+
 	// Render scrollbar if needed
 	if l.scrollbar && len(l.items) > h {
 		style := l.Style()

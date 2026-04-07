@@ -418,6 +418,33 @@ func Filter(id, class string, options ...Option) Option {
 	}
 }
 
+// Combo adds a traditional combo box to the parent: a free-text [Typeahead]
+// input paired with a suggestion [List]. items is the initial suggestion set.
+//
+// The widget dispatches [EvtChange] (string) on every keystroke and
+// [EvtActivate] (string) when Enter is pressed. Because the [EvtActivate]
+// payload is a string rather than an int, use [On] instead of [OnActivate]
+// to register a confirmation handler:
+//
+//	Combo("search", "", history,
+//	    On(z.EvtActivate, func(_ z.Widget, _ z.Event, data ...any) bool {
+//	        fmt.Println("submitted:", data[0].(string))
+//	        return true
+//	    }),
+//	)
+func Combo(id, class string, items []string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewCombo(id, class, items)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Select adds a dropdown selection widget to the parent. args is a flat list
 // of alternating value/label pairs: []string{"key1", "Label 1", "key2", "Label 2", …}.
 func Select(id, class string, args []string, options ...Option) Option {

@@ -8,9 +8,48 @@ and this project adheres to
 
 ---
 
-## [Unreleased]
+## v2.0.0-beta.5
 
 ### Added
+
+- **`Combo` widget** — traditional combo box (`combo.go`)
+  - Collapsed single-line display of the current value with a `▼` indicator at
+    the right edge; popup opens automatically when the widget gains focus or
+    when `Enter` is pressed while focused
+  - Popup contains a `Typeahead` input (pre-filled with the current value) and a
+    filtered `List` of suggestions in a `Box > Flex` overlay
+  - `↓`/`↑` copy the highlighted list item into the input (`PgDn`/`PgUp` page
+    through); `Tab`/`→` accept ghost-text; `Enter` confirms; `Esc` dismisses
+  - `EvtChange` — dispatched on every keystroke while the popup is open (string)
+  - `EvtActivate` — dispatched with the confirmed string when `Enter` is pressed
+  - `NewCombo(id, class string, items []string)` / `Builder.Combo(id, items...)`
+    / `compose.Combo(id, class, items, options...)` wiring
+  - `"combo"` and `"combo:focused"` style keys added to all five built-in themes
+    (same palette as `"select"`)
+  - Combo demo panel added to `cmd/demo`
+
+- **`EvtFocus` and `EvtBlur` events** — dispatched by `UI.Focus` when a widget
+  gains or loses keyboard focus (`events.go`)
+  - `EvtFocus` is dispatched after `ui.focus` is updated so that handlers called
+    from within the event (e.g. opening a popup) see the correct focus state
+  - `UI.Close` restores focus to the widget that was focused before the popup
+    opened (saved on a `focusStack` in `UI.Popup`) without dispatching
+    `EvtFocus`, preventing widgets like `Combo` from immediately reopening their
+    popup
+
+- **`UI` focus stack** — `UI.Popup` pushes the current focus onto an internal
+  `focusStack`; `UI.Close` pops it and restores focus silently, replacing the
+  previous `SetFocus("first")` call that moved focus to an arbitrary widget
+
+- **Filter demo panel** added to `cmd/demo` — shows a `Filter` input bound to a
+  `List` of programming languages; typing filters in real time with ghost-text
+  prefix completion
+
+### Fixed
+
+- **`List` stale rows after filtering** — `Render` now fills rows below the last
+  visible item with the background style, clearing old content when the item
+  count shrinks
 
 - **`Viewport` scroll-axis control** — `FlagVertical` and `FlagHorizontal` added
   to restrict a viewport to a single scroll axis. When `FlagVertical` is set the
@@ -21,7 +60,7 @@ and this project adheres to
 
 - **`Styled` extended Markdown support**
   - Horizontal rules (`---` / `***` / `___`) rendered as a `─` line
-  - Blockquotes (`> text`) rendered with a `│ ` left border; consecutive lines
+  - Blockquotes (`> text`) rendered with a `│` left border; consecutive lines
     merged into one block
   - Nested lists — indent depth detected from leading spaces (2 per level);
     bullet cycles `•` / `◦` / `▸` across depths for unordered lists

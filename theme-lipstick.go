@@ -96,6 +96,8 @@ func LipstickTheme() *Theme {
 		NewStyle("static.dialog").WithColors("$fg0", "$bg2").WithMargin(0).WithPadding(0),
 		NewStyle("select").WithColors("$fg0", "$bg2").WithPadding(0, 1),
 		NewStyle("select:focused").WithColors("$bg0", "$fuchsia"),
+		NewStyle("combo").WithColors("$fg0", "$bg2").WithPadding(0, 1),
+		NewStyle("combo:focused").WithColors("$bg0", "$fuchsia"),
 		NewStyle("styled").WithColors("$fg0", "$bg1").WithPadding(0, 1),
 		NewStyle("styled/h1").WithFont("bold"),
 		NewStyle("styled/h2").WithFont("bold"),

@@ -13,11 +13,15 @@ const (
 	// EvtChange is dispatched when a widget's value or state changes
 	// (e.g. Checkbox toggled, Tree node expanded/collapsed).
 	EvtChange Event = "change"
+	// EvtBlur is dispatched when a widget loses keyboard focus.
+	EvtBlur Event = "blur"
 	// EvtClose is dispatched to a popup layer just before it is removed by
 	// UI.Close, giving widgets inside the dialog a chance to clean up state.
 	EvtClose Event = "close"
 	// EvtClick is dispatched on a single mouse button-1 click.
 	EvtEnter Event = "enter"
+	// EvtFocus is dispatched when a widget gains keyboard focus.
+	EvtFocus Event = "focus"
 	// EvtHide is dispatched when a widget becomes hidden.
 	EvtHide Event = "hide"
 	// EvtHover is dispatched while the mouse cursor is over a widget.

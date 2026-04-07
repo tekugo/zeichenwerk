@@ -1,27 +1,22 @@
 # Combo
 
-A filterable list widget that combines a text input with a list. The user types to
-narrow down items; navigation and activation work without leaving the input.
-Intended as the popup content for the `Select` widget.
+A traditional combo box: a single-line display of the current value that opens a popup on Enter. The popup contains a free-text [Typeahead] input and a filtered suggestion [List]. The user can type anything or pick an item from the list; either way the confirmed value is what gets submitted.
+
+Typical use case: search fields with a history or a set of common values.
+
+`Combo` is a standalone widget unrelated to `Select`. `Select` retains its current `Box + List` popup.
 
 ## Structure
 
 ```go
 type Combo struct {
     Component
-    input   *Typeahead // Filter text input with ghost-text completion (top row)
-    list    *List      // Filtered results (remaining rows)
-    all     []string   // Unfiltered source items
-    indices []int      // Maps filtered index → original index
+    value string   // Last confirmed value (shown in collapsed state)
+    items []string // Full (unfiltered) suggestion set
 }
 ```
 
-`indices` lets callers translate an activated filtered-list position back to the
-original item index (needed by `Select` to map into its `options` slice).
-
-The `Typeahead`'s suggest function is wired in the constructor to return the
-first item in `c.all` that has the query as a case-insensitive prefix, giving
-inline ghost-text completion as the user types.
+The collapsed widget is a single row that renders the current value. All input and list interaction lives in the popup.
 
 ## Constructor
 
@@ -29,119 +24,83 @@ inline ghost-text completion as the user types.
 func NewCombo(id, class string, items []string) *Combo
 ```
 
-- Creates a `Typeahead` (id `id+"-input"`) and a `List` (id `id+"-list"`) as
-  child widgets. Both are stored as fields; they are not added to a Container —
-  `Combo` renders them directly.
-- Wires the `Typeahead`'s suggest function to return the first item in `c.all`
-  that has the query as a case-insensitive prefix.
-- Registers key handlers on both sub-widgets (see Interaction below).
-- Sets `FlagFocusable` on `Combo`; the sub-widgets do **not** participate in
-  normal focus cycling — `Combo` manages them internally.
-- Calls `filter("")` to initialise `indices`.
+- Sets `FlagFocusable` on the widget.
+- Registers a key handler: `Enter` opens the popup.
 
 ## Layout & Rendering
 
-`Hint()` returns `(maxItemWidth+2, len(items)+1)` — one extra row for the input.
+`Hint()` returns `(maxItemWidth+2, 1)` — always a single row.
 
-`Render(r)` splits the content area:
-- Row 0: calls `input.SetBounds` and `input.Render(r)`
-- Rows 1…h: calls `list.SetBounds` and `list.Render(r)`
+`Render(r)` draws `c.value` in the content area.
 
-`Apply(theme)` delegates to both sub-widgets and applies the `"combo"` selector to
-itself for container-level styling.
+`Apply(theme)` applies the `"combo"` selector with `"disabled"`, `"focused"`, and `"hovered"` modifiers.
 
-`Cursor()` delegates to `input.Cursor()` so the terminal cursor sits in the input
-field while `Combo` is focused.
+## Popup
+
+Pressing `Enter` calls `popup()`, which builds the following widget tree and passes it to `ui.Popup`:
+
+```
+Box("combo-popup", "")
+  Flex("combo-popup-body", vertical=false, align="stretch", gap=0)
+    Typeahead("combo-popup-input", initialValue=c.value)  [Hint(0,1)]
+    List("combo-popup-list", items...)                    [Hint(0,-1)]
+```
+
+`ui.Popup` automatically focuses the first focusable widget (`combo-popup-input`).
+
+The popup is positioned below the Combo widget (`y = c.y + c.height`). If it would overflow the terminal height, it flips above (`y = c.y - popupH`). Width matches `c.width`; height is `min(len(items), 8) + 1`, minimum 3.
+
+After the popup is built:
+- `input.SetSuggest(list.Suggest)` — ghost-text from list prefix matching.
+- `OnChange(input, ...)` — calls `list.Filter(value)` and dispatches `EvtChange` on the Combo.
+- `OnKey(input, ...)` — handles navigation and confirmation (see Interaction).
 
 ## Interaction
 
-`Combo` owns a single `OnKey` handler that runs before the sub-widgets:
-
 | Key | Behaviour |
 |-----|-----------|
-| Printable rune / Backspace / Delete | Forward to `input`; after input processes it call `filter(input.Value())` |
-| `↓` | `list.Move(+1)` |
-| `↑` | `list.Move(-1)` |
-| `PgDn` | `list.PageDown()` |
-| `PgUp` | `list.PageUp()` |
-| `Home` | `list.First()` |
-| `End` | `list.Last()` |
-| `Enter` | If list is non-empty: dispatch `EvtActivate` with `indices[list.Selected()]` |
-| `Esc` | Return `false` — propagate to parent (popup close) |
+| `Enter` (collapsed) | Opens the popup |
+| Printable rune / Backspace / Delete | Handled by the `Typeahead` inside the popup |
+| `Tab` / `→` at end of text | Accept ghost-text suggestion (handled by `Typeahead`) |
+| `↓` | `list.Move(+1)` and copy highlighted item into input |
+| `↑` | `list.Move(-1)` and copy highlighted item into input |
+| `PgDn` | `list.PageDown()` and copy highlighted item into input |
+| `PgUp` | `list.PageUp()` and copy highlighted item into input |
+| `Enter` (in popup) | Set `c.value = input.Text()`, dispatch `EvtActivate`, close popup, restore focus to Combo |
+| `Esc` (in popup) | Close popup, restore focus to Combo |
 
-The `input` widget's own key handler is not registered; `Combo` forwards only the
-editing keys to keep full control.
-
-## Filtering
-
-```go
-func (c *Combo) filter(query string)
-```
-
-- Case-insensitive substring match against each item in `c.all`.
-- Rebuilds `c.indices` and calls `list.SetItems(filtered)`.
-- Resets list highlight to 0 after each filter update.
-- Empty query shows all items.
+Moving through the list with `↓`/`↑` copies the highlighted string into the input field via `comboPopupCopy`, matching the classic combo-box feel.
 
 ## Events
 
 | Event | Data | Description |
 |-------|------|-------------|
-| `"activate"` | `int` | Original index of the activated item |
-
-No `"select"` event — `Select` only needs to know when an item is confirmed.
+| `EvtChange` | `string` | Current input text, fired on every keystroke while popup is open |
+| `EvtActivate` | `string` | Confirmed value when `Enter` is pressed in the popup |
 
 ## Styling selectors
 
 | Selector | Applied to |
 |----------|-----------|
-| `"combo"` | `Combo` container background/border |
-| `"combo/input"` (via Input's own `"input"` selector) | Filter input |
-| `"combo/list"` (via List's own `"list"` selector) | Result list |
+| `"combo"` | Collapsed widget background / border |
+| `"popup"` | Popup container (applied via `ui.NewBuilder().Class("popup")`) |
+| `"typeahead"` / `"typeahead/suggestion"` | Filter input inside popup (via `Typeahead.Apply`) |
+| `"list"` / `"list/highlight"` | Suggestion list inside popup (via `List.Apply`) |
 
-Theme entries follow existing conventions; no new theme keys required.
+No new theme keys required.
 
-## Integration with `Select`
-
-`Select.popup()` replaces its `Box + List` construction with a `Combo`:
+## Builder
 
 ```go
-combo := NewCombo("select-combo", "popup", items)
-combo.Select(s.index)          // pre-highlight current value
-combo.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
-    s.index = data[0].(int)    // original index, already resolved by Combo
-    s.Dispatch(s, EvtChange, s.Value())
-    ui.Close()
-    ui.Focus(s)
-    return true
-})
-ui.Popup(s.x, s.y+s.height, s.width, 10, combo)
+func (b *Builder) Combo(id string, items ...string) *Builder
 ```
 
-A `Select(index int)` method on `Combo` pre-selects the highlighted item without
-filtering, mirroring `List.Select`.
+Creates a `NewCombo(id, b.class, items)`, calls `Apply`, and adds it to the current container.
 
-## Implementation Plan
+## compose/ API
 
-1. **`combo.go`** — new file
-   - Define `Combo` struct and `NewCombo`.
-   - Implement `filter`, `Select`, `Apply`, `Hint`, `Render`, `Cursor`, `handleKey`.
-   - Wire `Typeahead` suggest function and key handler in constructor.
+```go
+func Combo(id, class string, items []string, options ...Option) Option
+```
 
-2. **`builder.go`** — add `Combo` method
-   ```go
-   func (b *Builder) Combo(id string, items ...string) *Builder
-   ```
-
-3. **`select.go`** — update `popup()`
-   - Replace `Box + List` popup with `Combo`.
-   - Remove the now-redundant Escape key handler (Combo propagates Esc itself).
-
-4. **Theme** — verify `"combo"` selector resolves gracefully (inherits from base
-   style if not explicitly defined; no hard requirement on theme changes).
-
-5. **Tests** — `combo_test.go`
-   - `filter` narrows items and rebuilds `indices` correctly.
-   - Arrow keys delegate to list.
-   - `EvtActivate` carries the original index, not the filtered index.
-   - Empty query restores full list.
+Use `On(z.EvtActivate, ...)` to receive the confirmed string value (payload is `string`, not `int`).

@@ -79,8 +79,9 @@ type UI struct {
 	refresh chan struct{} // Buffered channel for triggering full screen redraws
 
 	// Widget state tracking
-	focus Widget // Currently focused widget that receives keyboard input and cursor positioning
-	hover Widget // Currently hovered widget for mouse interaction feedback and styling
+	focus      Widget   // Currently focused widget that receives keyboard input and cursor positioning
+	focusStack []Widget // Focus saved before each popup layer was opened; restored on Close
+	hover      Widget   // Currently hovered widget for mouse interaction feedback and styling
 
 	// Layer management
 	layers []Container // Stack of widget layers (base layer + popups/modals) for proper z-order rendering
@@ -432,11 +433,15 @@ func (ui *UI) ShowDebug() {
 func (ui *UI) Focus(widget Widget) {
 	if ui.focus != nil && ui.focus != widget {
 		ui.focus.SetFlag(FlagFocused, false)
+		ui.focus.Dispatch(ui.focus, EvtBlur)
 	}
 	if widget != nil {
 		widget.SetFlag(FlagFocused, true)
 	}
 	ui.focus = widget
+	if widget != nil {
+		widget.Dispatch(widget, EvtFocus)
+	}
 	ui.Refresh()
 }
 
@@ -634,6 +639,7 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 	popup.SetBounds(x, y, w, h)
 	popup.Layout()
 
+	ui.focusStack = append(ui.focusStack, ui.focus)
 	ui.layers = append(ui.layers, popup)
 	ui.SetFocus("first")
 	ui.Refresh()
@@ -649,7 +655,22 @@ func (ui *UI) Close() {
 		top := ui.layers[len(ui.layers)-1]
 		ui.layers = ui.layers[:len(ui.layers)-1]
 		top.Dispatch(top, EvtClose)
-		ui.SetFocus("first")
+		var prev Widget
+		if len(ui.focusStack) > 0 {
+			prev = ui.focusStack[len(ui.focusStack)-1]
+			ui.focusStack = ui.focusStack[:len(ui.focusStack)-1]
+		}
+		// Restore focus without dispatching EvtFocus — the widget that opened
+		// the popup (e.g. Combo) listens on EvtFocus to open it; re-dispatching
+		// here would cause it to reopen immediately.
+		if ui.focus != nil && ui.focus != prev {
+			ui.focus.SetFlag(FlagFocused, false)
+			ui.focus.Dispatch(ui.focus, EvtBlur)
+		}
+		if prev != nil {
+			prev.SetFlag(FlagFocused, true)
+		}
+		ui.focus = prev
 	}
 	ui.Refresh()
 }
