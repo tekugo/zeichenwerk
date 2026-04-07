@@ -86,6 +86,8 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("static.dialog").WithColors("$fg1", "$bg2").WithMargin(0).WithPadding(0),
 		NewStyle("select").WithColors("$fg0", "$bg2").WithPadding(0, 1),
 		NewStyle("select:focused").WithColors("$bg0", "$cyan"),
+		NewStyle("combo").WithColors("$fg0", "$bg2").WithPadding(0, 1),
+		NewStyle("combo:focused").WithColors("$bg0", "$cyan"),
 		NewStyle("styled").WithColors("$fg1", "$bg1").WithPadding(0, 1),
 		NewStyle("styled/h1").WithColors("$fg0", "$bg1").WithFont("bold"),
 		NewStyle("styled/h2").WithColors("$fg0", "$bg1").WithFont("bold"),

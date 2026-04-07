@@ -39,7 +39,7 @@ lazymake *args:
 clean:
     rm -f coverage.out
 
-# Release: merge develop into main, tag, push, return to develop
+# Release: merge develop into main, tag, push, return to develop, prepend new Unreleased section
 # Usage: just release 2.0.0
 release version:
     sed -i 's/## \[Unreleased\]/## v{{version}}/' CHANGELOG.md
@@ -49,3 +49,6 @@ release version:
     git push origin main
     git push origin v{{version}}
     git checkout develop
+    sed -i 's/## v{{version}}/## [Unreleased]\n\n---\n\n## v{{version}}/' CHANGELOG.md
+    git add CHANGELOG.md
+    git commit -m "chore: start [Unreleased] section after v{{version}}"

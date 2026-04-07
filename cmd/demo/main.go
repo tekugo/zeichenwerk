@@ -65,16 +65,18 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Deck", "Digits", "Editor", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
+		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(box).
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
+		With(comboDemo).
 		With(func(b *Builder) { deckDemo(b, theme) }).
 		With(digits).
 		With(editor).
+		With(filterDemo).
 		With(form).
 		With(grid).
 		With(heatmapDemo).
@@ -133,7 +135,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 23:
+					case 25:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -155,7 +157,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 24:
+					case 26:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -168,7 +170,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 25:
+					case 27:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -181,7 +183,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 26:
+					case 28:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -189,7 +191,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 27:
+					case 29:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -327,6 +329,40 @@ func checkbox(builder *Builder) {
 			})
 		}
 	}
+}
+
+// Combo demo
+func comboDemo(builder *Builder) {
+	history := []string{
+		"fix memory leak in renderer",
+		"add dark mode support",
+		"refactor event handling",
+		"update dependencies",
+		"fix race condition in UI loop",
+		"implement file chooser",
+		"add keyboard shortcuts",
+		"improve scroll performance",
+	}
+
+	builder.Flex("combo-demo", false, "start", 1).Padding(1, 2).
+		Static("combo-title", "Combo Widget Demo").Padding(0, 0, 1, 0).
+		Static("combo-desc", "Type freely or pick from the list. ↓↑ navigate, Tab/→ accepts ghost text, Enter confirms.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("", "Search:").
+		Combo("demo-combo", history...).
+		Static("combo-status", "").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+	combo := Find(container, "demo-combo").(*Combo)
+	combo.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
+		if s, ok := data[0].(string); ok {
+			if label, ok := Find(container, "combo-status").(*Static); ok {
+				label.Set("Submitted: " + s)
+			}
+		}
+		return true
+	})
 }
 
 // Collapsible demo
@@ -504,6 +540,25 @@ func editor(builder *Builder) {
 			editor.Load("This is a sample text.\nYou can edit me!\n\nPress Tab to insert tabs,\nBackspace to delete,\nand arrow keys to navigate.")
 		}
 	}
+}
+
+func filterDemo(builder *Builder) {
+	items := []string{
+		"Go", "Rust", "TypeScript", "Python", "Kotlin", "Swift", "Zig",
+		"C", "C++", "C#", "Java", "Scala", "Haskell", "Erlang", "Elixir",
+		"Ruby", "PHP", "Dart", "Lua", "Julia", "R", "MATLAB", "Clojure",
+	}
+	builder.Flex("filter-demo", false, "stretch", 1).Padding(1, 2).
+		Static("filter-title", "Filter Widget Demo").Padding(0, 0, 1, 0).
+		Static("filter-desc", "Type to filter the list below. Ghost text suggests the first prefix match.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Filter("demo-filter").
+		List("filter-list", items...).Hint(0, -1).
+		End()
+	container := builder.Container()
+	filter := Find(container, "demo-filter").(*Filter)
+	list := Find(container, "filter-list").(*List)
+	filter.Bind(list)
 }
 
 func form(builder *Builder) {
