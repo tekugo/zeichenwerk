@@ -8,7 +8,7 @@ and this project adheres to
 
 ---
 
-## [Unreleased]
+## v2.0.0-beta.5
 
 ### Added
 
@@ -33,8 +33,9 @@ and this project adheres to
   - `EvtFocus` is dispatched after `ui.focus` is updated so that handlers called
     from within the event (e.g. opening a popup) see the correct focus state
   - `UI.Close` restores focus to the widget that was focused before the popup
-    opened (saved on a `focusStack` in `UI.Popup`) without dispatching `EvtFocus`,
-    preventing widgets like `Combo` from immediately reopening their popup
+    opened (saved on a `focusStack` in `UI.Popup`) without dispatching
+    `EvtFocus`, preventing widgets like `Combo` from immediately reopening their
+    popup
 
 - **`UI` focus stack** — `UI.Popup` pushes the current focus onto an internal
   `focusStack`; `UI.Close` pops it and restores focus silently, replacing the
@@ -59,7 +60,7 @@ and this project adheres to
 
 - **`Styled` extended Markdown support**
   - Horizontal rules (`---` / `***` / `___`) rendered as a `─` line
-  - Blockquotes (`> text`) rendered with a `│ ` left border; consecutive lines
+  - Blockquotes (`> text`) rendered with a `│` left border; consecutive lines
     merged into one block
   - Nested lists — indent depth detected from leading spaces (2 per level);
     bullet cycles `•` / `◦` / `▸` across depths for unordered lists
