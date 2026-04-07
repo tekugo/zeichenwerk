@@ -43,6 +43,8 @@ clean:
 # Usage: just release 2.0.0
 release version:
     sed -i 's/## \[Unreleased\]/## v{{version}}/' CHANGELOG.md
+    git add CHANGELOG.md
+    git commit -m "chore: release v{{version}}"
     git checkout main
     git merge --no-ff develop -m "Release v{{version}}"
     git tag v{{version}}

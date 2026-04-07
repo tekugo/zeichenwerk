@@ -8,7 +8,7 @@ and this project adheres to
 
 ---
 
-## v2.0.0-beta.5
+## [Unreleased]
 
 ### Added
 
