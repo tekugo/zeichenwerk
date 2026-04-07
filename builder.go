@@ -384,6 +384,15 @@ func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
 	return b
 }
 
+// BarChart creates a new BarChart widget for displaying multi-series stacked
+// bar charts. Configure series, categories, and display options via the
+// returned *BarChart after building.
+func (b *Builder) BarChart(id string) *Builder {
+	bc := NewBarChart(id, b.class)
+	b.Add(bc)
+	return b
+}
+
 // Sparkline creates a new Sparkline widget for displaying time-series data as
 // a column of Unicode block characters. Configure scaling and data via the
 // returned *Sparkline after building.

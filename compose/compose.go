@@ -693,6 +693,22 @@ func Scanner(id, class string, width int, style string, options ...Option) Optio
 	}
 }
 
+// BarChart creates a BarChart widget for displaying multi-series stacked bar
+// charts. Configure series, categories, and display options via
+// [zeichenwerk.Find] after construction.
+func BarChart(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewBarChart(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Heatmap creates a Heatmap widget with the given dimensions. Configure data,
 // labels, and cell width via [zeichenwerk.Find] after construction.
 func Heatmap(id, class string, rows, cols int, options ...Option) Option {

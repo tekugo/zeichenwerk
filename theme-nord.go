@@ -91,6 +91,22 @@ func NordTheme() *Theme {
 		NewStyle("scanner").WithColors("$frost1", "$bg0"),
 		NewStyle("sparkline").WithColors("$frost1", "$bg0"),
 		NewStyle("sparkline/high").WithColors("$orange", "$bg0"),
+		NewStyle("bar-chart").WithColors("$fg0", "$bg0"),
+		NewStyle("bar-chart/s0").WithColors("$bg0", "$frost2"),
+		NewStyle("bar-chart/s1").WithColors("$bg0", "$green"),
+		NewStyle("bar-chart/s2").WithColors("$bg0", "$yellow"),
+		NewStyle("bar-chart/s3").WithColors("$bg0", "$red"),
+		NewStyle("bar-chart/s4").WithColors("$bg0", "$purple"),
+		NewStyle("bar-chart/s5").WithColors("$bg0", "$frost1"),
+		NewStyle("bar-chart/s6").WithColors("$bg0", "$orange"),
+		NewStyle("bar-chart/s7").WithColors("$bg0", "$frost3"),
+		NewStyle("bar-chart/axis").WithColors("$bg3", "$bg0"),
+		NewStyle("bar-chart/grid").WithColors("$bg2", "$bg0"),
+		NewStyle("bar-chart/label").WithColors("$fg2", "$bg0"),
+		NewStyle("bar-chart/label:focused").WithColors("$frost2", "$bg0").WithFont("bold"),
+		NewStyle("bar-chart/selection").WithColors("$bg0", "$fg2"),
+		NewStyle("bar-chart/value").WithColors("$fg0", "$bg0"),
+		NewStyle("bar-chart/legend").WithColors("$fg2", "$bg0"),
 		NewStyle("heatmap").WithColors("$fg0", "$bg0"),
 		NewStyle("heatmap/header").WithColors("$fg2", "$bg0"),
 		NewStyle("heatmap/zero").WithColors("$fg2", "$bg2"),
@@ -176,6 +192,15 @@ func NordTheme() *Theme {
 		"tree.branch":    "├─",
 		"tree.last":      "└─",
 		"tree.trunk":     "│ ",
+
+		// ---- Bar Chart ----
+		"bar-chart.corner": "└",
+		"bar-chart.hline":  "─",
+		"bar-chart.vline":  "│",
+		"bar-chart.tick-x": "┬",
+		"bar-chart.tick-y": "┤",
+		"bar-chart.grid":   "┄",
+		"bar-chart.swatch": "█",
 	})
 
 	return t

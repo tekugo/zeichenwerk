@@ -87,6 +87,22 @@ func LipstickTheme() *Theme {
 		NewStyle("scanner").WithColors("$cyan", "$bg0"),
 		NewStyle("sparkline").WithColors("$cyan", "$bg0"),
 		NewStyle("sparkline/high").WithColors("$yellow", "$bg0"),
+		NewStyle("bar-chart").WithColors("$fg0", "$bg0"),
+		NewStyle("bar-chart/s0").WithColors("$bg0", "$fuchsia"),
+		NewStyle("bar-chart/s1").WithColors("$bg0", "$green"),
+		NewStyle("bar-chart/s2").WithColors("$bg0", "$indigo"),
+		NewStyle("bar-chart/s3").WithColors("$bg0", "$yellow"),
+		NewStyle("bar-chart/s4").WithColors("$bg0", "$cyan"),
+		NewStyle("bar-chart/s5").WithColors("$bg0", "$pink"),
+		NewStyle("bar-chart/s6").WithColors("$bg0", "$red"),
+		NewStyle("bar-chart/s7").WithColors("$bg0", "$purple"),
+		NewStyle("bar-chart/axis").WithColors("$fg2", "$bg0"),
+		NewStyle("bar-chart/grid").WithColors("$bg3", "$bg0"),
+		NewStyle("bar-chart/label").WithColors("$fg1", "$bg0"),
+		NewStyle("bar-chart/label:focused").WithColors("$fuchsia", "$bg0").WithFont("bold"),
+		NewStyle("bar-chart/selection").WithColors("$bg0", "$fg2"),
+		NewStyle("bar-chart/value").WithColors("$fg0", "$bg0"),
+		NewStyle("bar-chart/legend").WithColors("$fg1", "$bg0"),
 		NewStyle("heatmap").WithColors("$fg0", "$bg0"),
 		NewStyle("heatmap/header").WithColors("$fg2", "$bg0"),
 		NewStyle("heatmap/zero").WithColors("$fg2", "$bg2"),
@@ -172,6 +188,15 @@ func LipstickTheme() *Theme {
 		"tree.branch":    "├─",
 		"tree.last":      "└─",
 		"tree.trunk":     "│ ",
+
+		// ---- Bar Chart ----
+		"bar-chart.corner": "└",
+		"bar-chart.hline":  "─",
+		"bar-chart.vline":  "│",
+		"bar-chart.tick-x": "┬",
+		"bar-chart.tick-y": "┤",
+		"bar-chart.grid":   "┄",
+		"bar-chart.swatch": "█",
 	})
 
 	return t

@@ -65,9 +65,10 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
+		List("navigation", "Bar Chart", "Box", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
+		With(barChartDemo).
 		With(box).
 		With(canvas).
 		With(checkbox).
@@ -135,7 +136,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 25:
+					case 26:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -157,7 +158,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 26:
+					case 27:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -170,7 +171,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 27:
+					case 28:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -183,7 +184,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 28:
+					case 29:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -191,7 +192,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 29:
+					case 30:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -1282,6 +1283,39 @@ func heatmapDemo(builder *Builder) {
 		}
 		return true
 	})
+}
+
+// barChartDemo demonstrates the BarChart widget with stacked series, a
+// category label row, y-axis, grid, and a legend. Two views are shown:
+// a vertical stacked bar chart and a horizontal variant below it.
+func barChartDemo(builder *Builder) {
+	categories := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+	series := []BarSeries{
+		{Label: "Revenue", Values: []float64{42, 55, 61, 49, 70, 88, 95, 83, 74, 66, 52, 78}},
+		{Label: "Costs", Values: []float64{30, 32, 35, 33, 38, 41, 44, 40, 37, 35, 30, 36}},
+		{Label: "Profit", Values: []float64{12, 23, 26, 16, 32, 47, 51, 43, 37, 31, 22, 42}},
+	}
+
+	builder.Flex("bar-chart-demo", false, "stretch", 1).Padding(1, 2).
+		Static("bc-title", "Bar Chart Widget Demo").Padding(0, 0, 1, 0).
+		Static("bc-desc", "Stacked bar chart with y-axis, grid, and legend. Use ←→ to navigate categories.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("bc-vert-label", "Vertical (stacked):").Padding(0, 0, 0, 0).
+		BarChart("bc-vert").Hint(-1, 16).
+		Static("bc-horiz-label", "Horizontal:").Padding(1, 0, 0, 0).
+		BarChart("bc-horiz").Hint(-1, 12).
+		End()
+
+	bcVert := builder.Find("bc-vert").(*BarChart)
+	bcVert.SetCategories(categories)
+	bcVert.SetSeries(series)
+	bcVert.SetShowValues(true)
+
+	bcHoriz := builder.Find("bc-horiz").(*BarChart)
+	bcHoriz.SetCategories(categories)
+	bcHoriz.SetSeries(series)
+	bcHoriz.SetHorizontal(true)
+	bcHoriz.SetShowValues(false)
 }
 
 // Table demo data generation
