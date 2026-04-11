@@ -3,7 +3,7 @@
 A floating fuzzy-search overlay that gives the user keyboard access to every
 registered action in the application. The caller registers named commands with
 optional keyboard shortcut hint strings; the palette is opened via
-`ui.Commands().Open()` or the convenience method `ui.OpenCommands()`. Typing
+`ui.Commands().Open()`. Typing
 narrows the list with a fuzzy match; Enter executes the focused command; Escape
 dismisses without action. Commands can optionally be organised into named
 groups, which appear as non-interactive section headers.
@@ -97,23 +97,6 @@ The first call allocates the instance; subsequent calls return the same pointer.
 The singleton is appropriate because an application has one canonical command
 registry, and it persists across open/close cycles so commands registered at
 startup remain available.
-
-```go
-func (ui *UI) OpenCommands()
-```
-
-Convenience shorthand for `ui.Commands().Open()`. Intended as a one-liner in
-keyboard shortcut handlers:
-
-```go
-OnKey(rootContainer, func(e *tcell.EventKey) bool {
-    if e.Key() == tcell.KeyCtrlK {
-        ui.OpenCommands()
-        return true
-    }
-    return false
-})
-```
 
 ---
 
@@ -335,7 +318,7 @@ stack. This ordering guarantees that:
 
 - `Action` may open a new popup without interfering with the closing animation
   of the commands palette.
-- `Action` may call `ui.OpenCommands()` to re-open the palette (e.g. for
+- `Action` may call `ui.Commands().Open()` to re-open the palette (e.g. for
   sub-command flows) without a reentrancy hazard.
 
 ---
@@ -383,7 +366,7 @@ cmds.RegisterGroup("View", "Split pane", "Ctrl+\\", func() { splitPane(ui) })
 // Bind Ctrl+K to open the palette
 OnKey(root, func(e *tcell.EventKey) bool {
     if e.Key() == tcell.KeyCtrlK {
-        ui.OpenCommands()
+        ui.Commands().Open()
         return true
     }
     return false
@@ -426,10 +409,9 @@ editor.On(EvtBlur, func(_ Widget, _ Event, _ ...any) bool {
    - Define unexported `commandsPanel` struct and its widget methods:
      `SetItems`, `Hint`, `Render`, `handleKey`, `handleMouse`.
 
-2. **`ui.go`** — add `Commands` accessor and `OpenCommands` shorthand
+2. **`ui.go`** — add `Commands` accessor
    - Add `commands *Commands` field to `UI`.
    - Implement `func (ui *UI) Commands() *Commands`.
-   - Implement `func (ui *UI) OpenCommands()`.
 
 3. **Theme** — add `"commands"`, `"commands/input"`, `"commands/item"`,
    `"commands/item:focused"`, `"commands/shortcut"`, `"commands/shortcut:focused"`,

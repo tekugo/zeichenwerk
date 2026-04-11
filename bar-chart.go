@@ -412,9 +412,9 @@ func (c *BarChart) renderVertical(r *Renderer) {
 					r.Put(barX+col, screenRow, string(barChartBlocks[idx]))
 				}
 			} else {
-				// Find the topmost series with content above stepBot.
+				// Find the series that contains this cell (lowest i where boundaries[i+1] > stepBot).
 				topSeries := -1
-				for i := len(c.series) - 1; i >= 0; i-- {
+				for i := range len(c.series) {
 					if boundaries[i+1] > stepBot {
 						topSeries = i
 						break

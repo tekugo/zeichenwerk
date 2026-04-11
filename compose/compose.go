@@ -278,6 +278,23 @@ func Grow(id, class string, horizontal bool, options ...Option) Option {
 	}
 }
 
+// CRT adds an animated CRT power-on/off container to the parent. It acts as
+// an invisible root wrapper during normal operation. Call [zeichenwerk.CRT.Start]
+// to begin the power-on animation after layout, and [zeichenwerk.CRT.PowerOff]
+// to play the shutdown animation (which calls the provided callback on completion).
+func CRT(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewCRT(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Switcher adds a multi-pane container that shows one child at a time to the
 // parent. Call Select on the retrieved [zeichenwerk.Switcher] to change the
 // active pane. Pair with [Tabs] for a tabbed-panel layout.
@@ -700,6 +717,21 @@ func BarChart(id, class string, options ...Option) Option {
 	return func(theme *z.Theme, widget z.Widget) {
 		if container, ok := widget.(z.Container); ok {
 			w := z.NewBarChart(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Breadcrumb creates a Breadcrumb path-indicator widget. Configure segments
+// and display options via [zeichenwerk.Find] after construction.
+func Breadcrumb(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewBreadcrumb(id, class)
 			w.Apply(theme)
 			container.Add(w)
 			for _, option := range options {

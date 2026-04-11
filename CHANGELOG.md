@@ -10,6 +10,33 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **`CRT` animated root container** — simulates a CRT monitor powering on and
+  off (`crt.go`)
+  - Power-on: content expands symmetrically from a horizontal centre line
+    outward until it fills the screen
+  - Power-off: content contracts back to a line, then calls a provided callback
+    (typically `ui.Quit`) — `PowerOff(interval, onDone)`
+  - During normal operation the container is an invisible pass-through wrapper
+    with zero rendering overhead
+  - Animation areas filled with Matrix-style green character rain: eight
+    brightness levels ramp from near-black far from the scan edge to `#00ff41`
+    right beside it; each column scrolls at its own speed via a multiplicative
+    hash, keeping the pattern irregular and non-repeating
+  - Pulsating `━` scanlines flank the expanding/contracting band edges,
+    alternating between `#00ff41` and `#88ffaa` each frame
+  - Child content is overlaid with a pulsating green phosphor tint throughout
+    the animation; the final four frames flicker between green and true colour
+    before settling into `crtPhaseIdle`
+  - `NewCRT(id, class string) *CRT` / `compose.CRT(id, class, options...)` API
+  - `Start(interval)` begins the power-on animation; safe to call before
+    `ui.Run`
+  - `PowerOff` interrupts an in-progress power-on cleanly via a
+    per-animation-run `done` channel handshake
+  - CRT animation wired into `cmd/compose`: power-on runs at startup, `q` /
+    `Q` / `Ctrl+C` / `Ctrl+Q` trigger the power-off animation before exit
+
 ---
 
 ## v2.0.0-beta.5

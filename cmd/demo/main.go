@@ -65,11 +65,12 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
 		With(box).
+		With(breadcrumbDemo).
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
@@ -1316,6 +1317,76 @@ func barChartDemo(builder *Builder) {
 	bcHoriz.SetSeries(series)
 	bcHoriz.SetHorizontal(true)
 	bcHoriz.SetShowValues(false)
+}
+
+// breadcrumbDemo demonstrates the Breadcrumb widget with Push/Pop controls
+// and an EvtActivate handler that truncates the path on segment click.
+func breadcrumbDemo(builder *Builder) {
+	path := []string{"Home", "Projects", "zeichenwerk", "cmd", "demo"}
+
+	builder.Flex("breadcrumb-demo", false, "stretch", 1).Padding(1, 2).
+		Static("bc-title", "Breadcrumb Widget Demo").Padding(0, 0, 1, 0).
+		Static("bc-desc", "Click a segment to navigate. ←→ to move, Enter to activate (truncates path).").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("bc-label", "Path:").Padding(0, 0, 0, 0).
+		Breadcrumb("bc").Hint(-1, 1).
+		Flex("bc-controls", true, "center", 2).Padding(1, 0, 0, 0).
+		Button("bc-push", "Push").
+		Button("bc-pop", "Pop").
+		Button("bc-reset", "Reset").
+		End().
+		Static("bc-status", "").Padding(1, 0, 0, 0).
+		End()
+
+	bc := builder.Find("bc").(*Breadcrumb)
+	bc.SetSegments(path)
+
+	status := builder.Find("bc-status").(*Static)
+
+	bc.On(EvtSelect, func(_ Widget, _ Event, data ...any) bool {
+		idx := data[0].(int)
+		segs := bc.Segments()
+		if idx < len(segs) {
+			status.Set(fmt.Sprintf("Selected: [%d] %s", idx, segs[idx]))
+		}
+		return true
+	})
+
+	bc.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
+		idx := data[0].(int)
+		bc.Truncate(idx)
+		segs := bc.Segments()
+		if idx < len(segs) {
+			status.Set(fmt.Sprintf("Activated: truncated to [%d] %s", idx, segs[idx]))
+		}
+		return true
+	})
+
+	pushBtn := builder.Find("bc-push").(*Button)
+	pushBtn.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		n := len(bc.Segments())
+		bc.Push(fmt.Sprintf("dir%d", n))
+		status.Set(fmt.Sprintf("Pushed: %d segments", len(bc.Segments())))
+		return true
+	})
+
+	popBtn := builder.Find("bc-pop").(*Button)
+	popBtn.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		seg := bc.Pop()
+		if seg != "" {
+			status.Set(fmt.Sprintf("Popped: %q", seg))
+		} else {
+			status.Set("Nothing to pop")
+		}
+		return true
+	})
+
+	resetBtn := builder.Find("bc-reset").(*Button)
+	resetBtn.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		bc.SetSegments(path)
+		status.Set("Reset")
+		return true
+	})
 }
 
 // Table demo data generation

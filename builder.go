@@ -402,6 +402,14 @@ func (b *Builder) Sparkline(id string) *Builder {
 	return b
 }
 
+// Breadcrumb creates a new Breadcrumb path-indicator widget. Configure
+// segments and display options via the returned *Breadcrumb after building.
+func (b *Builder) Breadcrumb(id string) *Builder {
+	bc := NewBreadcrumb(id, b.class)
+	b.Add(bc)
+	return b
+}
+
 // Heatmap creates a new Heatmap widget with the given dimensions. Configure
 // data, labels, and cell width via the returned *Heatmap after building.
 func (b *Builder) Heatmap(id string, rows, cols int) *Builder {

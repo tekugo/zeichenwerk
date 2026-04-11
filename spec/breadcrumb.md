@@ -42,10 +42,10 @@ type Breadcrumb struct {
     Component
     segments  []string // ordered list of path segments
     selected  int      // index of the focused segment (-1 = none)
-    firstVis  int      // index of the first segment shown (0 = no overflow)
+    first     int      // index of the first segment shown (0 = no overflow)
     // Characters read from theme strings in Apply.
-    chSep      string  // separator between segments, default " › "
-    chOverflow string  // collapse marker, default "…"
+    separator string   // separator between segments, default " › "
+    overflow  string   // collapse marker, default "…"
 }
 ```
 
@@ -59,8 +59,8 @@ func NewBreadcrumb(id, class string) *Breadcrumb
 
 Defaults:
 
-- `selected = -1`, `firstVis = 0`.
-- `chSep = " › "`, `chOverflow = "…"`.
+- `selected = -1`, `first = 0`.
+- `separator = " › "`, `overflow = "…"`.
 - Sets `FlagFocusable`.
 - Registers key and mouse handlers.
 
@@ -72,7 +72,7 @@ Defaults:
 
 | Method | Description |
 |--------|-------------|
-| `SetSegments(segs []string)` | Replaces all segments; resets `firstVis = 0`; clamps `selected`; calls `Refresh()` |
+| `SetSegments(segs []string)` | Replaces all segments; resets `first = 0`; clamps `selected`; calls `Refresh()` |
 | `Push(seg string)` | Appends one segment; calls `Refresh()` |
 | `Pop() string` | Removes and returns the last segment; clamps `selected`; calls `Refresh()` |
 | `Truncate(index int)` | Removes all segments after `index` (inclusive truncation at `index+1`); clamps `selected`; calls `Refresh()` |
@@ -118,13 +118,13 @@ where `runeLen` counts display columns (accounting for multi-byte runes).
 
 ## Overflow and visibility
 
-The breadcrumb always fits within its rendered width by adjusting `firstVis`.
+The breadcrumb always fits within its rendered width by adjusting `first`.
 The rule is applied at render time (not stored between renders) via
 `computeFirstVis`:
 
 ```
 computeFirstVis(availW int) int:
-    start = max(c.firstVis, 0)   // never move right on its own
+    start = max(c.first, 0)   // never move right on its own
     loop:
         width = renderWidth(start, availW)
         if width <= availW: return start
@@ -135,20 +135,20 @@ computeFirstVis(availW int) int:
 `renderWidth(start, availW)`:
 
 ```
-if start > 0: w = runeLen(chOverflow) + runeLen(chSep)
+if start > 0: w = runeLen(overflow) + runeLen(separator)
 else: w = 0
 for i, seg in segments[start:]:
     w += runeLen(seg)
-    if i < len(segments[start:])-1: w += runeLen(chSep)
+    if i < len(segments[start:])-1: w += runeLen(separator)
 return w
 ```
 
-`firstVis` is updated (never increased past `selected`) in `Select` to guarantee
+`first` is updated (never increased past `selected`) in `Select` to guarantee
 the newly focused segment is not hidden:
 
 ```go
-if index < c.firstVis {
-    c.firstVis = index
+if index < c.first {
+    c.first = index
 }
 ```
 
@@ -164,13 +164,13 @@ func (c *Breadcrumb) Render(r *Renderer)
 2. Obtain `(cx, cy, cw, _)` from `c.Content()`.
 3. Compute `start = computeFirstVis(cw)`.
 4. Draw the overflow prefix when `start > 0`:
-   - `chOverflow` with the `"breadcrumb/separator"` style.
-   - `chSep` with the `"breadcrumb/separator"` style.
+   - `overflow` with the `"breadcrumb/separator"` style.
+   - `separator` with the `"breadcrumb/separator"` style.
 5. For each segment `i` from `start` to `len(segments)-1`:
    - Choose style: `"breadcrumb/segment:focused"` when `i == selected`,
      otherwise `"breadcrumb/segment"`.
    - Draw the segment text, truncated to remaining width.
-   - If not the last segment: draw `chSep` with `"breadcrumb/separator"` style.
+   - If not the last segment: draw `separator` with `"breadcrumb/separator"` style.
 6. Stop drawing if the cursor x position reaches `cx + cw`.
 
 The render pass is strictly left-to-right; no wrapping occurs (the widget is
@@ -206,7 +206,7 @@ for i, seg in visibleSegments:
         Select(i)
         if i == previously selected: Dispatch(EvtActivate, i)
         break
-    segStart = segEnd + runeLen(chSep)
+    segStart = segEnd + runeLen(separator)
 ```
 
 The overflow marker is not clickable. Clicks on it or on separator text between
@@ -309,7 +309,7 @@ the path to that point, making the breadcrumb behave like a drill-up control.
    - `Hint()` returns correct natural width for a multi-segment path.
    - `computeFirstVis` collapses the minimum number of segments needed to fit.
    - `computeFirstVis` always leaves at least one segment visible.
-   - `Select` on a collapsed segment decreases `firstVis` to reveal it.
+   - `Select` on a collapsed segment decreases `first` to reveal it.
    - `Push` / `Pop` / `Truncate` clamp `selected` correctly.
    - `EvtActivate` fires on Enter and on a repeated click.
    - `EvtFocus` auto-selects the last segment when `selected == -1`.
