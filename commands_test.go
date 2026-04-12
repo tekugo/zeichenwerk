@@ -217,8 +217,8 @@ func TestFilterCommands_Groups_StableSortWithinGroup(t *testing.T) {
 
 func TestCommands_Register_Appends(t *testing.T) {
 	c := &Commands{}
-	cmd1 := c.Register("First", "", nil)
-	cmd2 := c.Register("Second", "Ctrl+S", nil)
+	cmd1 := c.Register("", "First", "", nil)
+	cmd2 := c.Register("", "Second", "Ctrl+S", nil)
 	if len(c.entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(c.entries))
 	}
@@ -229,7 +229,7 @@ func TestCommands_Register_Appends(t *testing.T) {
 
 func TestCommands_RegisterGroup_SetsGroup(t *testing.T) {
 	c := &Commands{}
-	cmd := c.RegisterGroup("MyGroup", "Do Thing", "Ctrl+D", nil)
+	cmd := c.Register("MyGroup", "Do Thing", "Ctrl+D", nil)
 	if cmd.Group != "MyGroup" {
 		t.Errorf("Group = %q; want %q", cmd.Group, "MyGroup")
 	}
@@ -237,9 +237,9 @@ func TestCommands_RegisterGroup_SetsGroup(t *testing.T) {
 
 func TestCommands_Unregister_RemovesFirst(t *testing.T) {
 	c := &Commands{}
-	c.Register("Alpha", "", nil)
-	c.Register("Beta", "", nil)
-	c.Register("Alpha", "", nil) // duplicate
+	c.Register("", "Alpha", "", nil)
+	c.Register("", "Beta", "", nil)
+	c.Register("", "Alpha", "", nil) // duplicate
 	ok := c.Unregister("Alpha")
 	if !ok {
 		t.Fatal("Unregister returned false; want true")
@@ -263,7 +263,7 @@ func TestCommands_Unregister_ReturnsFalseNotFound(t *testing.T) {
 
 func TestCommands_Unregister_NoOpWhenOpen(t *testing.T) {
 	c := &Commands{open: true}
-	c.Register("Foo", "", nil)
+	c.Register("", "Foo", "", nil)
 	ok := c.Unregister("Foo")
 	if ok {
 		t.Error("Unregister should be a no-op while the palette is open")
@@ -275,14 +275,14 @@ func TestCommands_Unregister_NoOpWhenOpen(t *testing.T) {
 
 func TestCommands_All_ReturnsSnapshot(t *testing.T) {
 	c := &Commands{}
-	c.Register("A", "", nil)
-	c.Register("B", "", nil)
+	c.Register("", "A", "", nil)
+	c.Register("", "B", "", nil)
 	snap := c.All()
 	if len(snap) != 2 {
 		t.Fatalf("All() len = %d; want 2", len(snap))
 	}
 	// Snapshot is independent of future mutations
-	c.Register("C", "", nil)
+	c.Register("", "C", "", nil)
 	if len(snap) != 2 {
 		t.Error("All() snapshot should not be affected by subsequent registrations")
 	}
@@ -328,9 +328,9 @@ func TestCommandsPanel_SetItems_AllHeaders_IndexMinusOne(t *testing.T) {
 func TestCommandsPanel_Move_SkipsHeaders(t *testing.T) {
 	p := makePanel()
 	p.SetItems([]rankedCommand{
-		{cmd: &Command{Name: "New File"}},   // 0
+		{cmd: &Command{Name: "New File"}},             // 0
 		{cmd: &Command{Name: "View"}, isHeader: true}, // 1
-		{cmd: &Command{Name: "Toggle"}},     // 2
+		{cmd: &Command{Name: "Toggle"}},               // 2
 	})
 	// Start at 0, move down — should skip header at 1, land on 2
 	p.move(+1)

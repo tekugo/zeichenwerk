@@ -4,6 +4,8 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+// ==== AI ===================================================================
+
 // runeCol holds a rune and its display-column width, indexed by display column.
 // For a wide (2-column) rune the first cell stores the rune; the second cell
 // has width == 0 and r == 0 (a sentinel meaning "second half of wide char").

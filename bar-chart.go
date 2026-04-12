@@ -8,6 +8,8 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+// ==== AI ===================================================================
+
 // barChartBlocks maps a [0, 8] integer to the Unicode block-fill character
 // that fills that many eighths of a cell from the bottom up.
 // 0 = space (empty), 8 = full block (█).

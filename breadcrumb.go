@@ -46,23 +46,45 @@ func NewBreadcrumb(id, class string) *Breadcrumb {
 	return c
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
+// ---- Widget Methods -------------------------------------------------------
 
-// SetSegments replaces all segments, resets first to 0, clamps selected, and redraws.
-func (c *Breadcrumb) SetSegments(segs []string) {
-	c.segments = segs
-	c.first = 0
-	if c.selected >= len(segs) {
-		c.selected = len(segs) - 1
+// Apply registers all breadcrumb style selectors and reads theme strings.
+func (c *Breadcrumb) Apply(theme *Theme) {
+	theme.Apply(c, c.Selector("breadcrumb"), "focused", "hovered", "disabled")
+	theme.Apply(c, c.Selector("breadcrumb/segment"), "focused")
+	theme.Apply(c, c.Selector("breadcrumb/separator"))
+	str := func(key, def string) string {
+		if s := theme.String(key); s != "" {
+			return s
+		}
+		return def
 	}
-	c.Refresh()
+	c.separator = str("breadcrumb.separator", " › ")
+	c.overflow = str("breadcrumb.overflow", "…")
 }
 
-// Push appends one segment and redraws.
-func (c *Breadcrumb) Push(seg string) {
-	c.segments = append(c.segments, seg)
-	c.Refresh()
+// Hint returns the natural width of all segments joined by the separator, plus
+// style overhead. Returns 0 (fill parent) width when no segments are set.
+// Height is always 1 plus style vertical overhead.
+func (c *Breadcrumb) Hint() (int, int) {
+	if c.hwidth != 0 || c.hheight != 0 {
+		return c.hwidth, c.hheight
+	}
+	n := len(c.segments)
+	if n == 0 {
+		return 0, 1 + c.Style().Vertical()
+	}
+	w := 0
+	sepW := utf8.RuneCountInString(c.separator)
+	for _, seg := range c.segments {
+		w += utf8.RuneCountInString(seg)
+	}
+	w += sepW * (n - 1)
+	w += c.Style().Horizontal()
+	return w, 1 + c.Style().Vertical()
 }
+
+// ---- Breadcrumb Methods ---------------------------------------------------
 
 // Pop removes and returns the last segment, clamps selected, and redraws.
 func (c *Breadcrumb) Pop() string {
@@ -77,6 +99,22 @@ func (c *Breadcrumb) Pop() string {
 	}
 	c.Refresh()
 	return seg
+}
+
+// Push appends one segment and redraws.
+func (c *Breadcrumb) Push(seg string) {
+	c.segments = append(c.segments, seg)
+	c.Refresh()
+}
+
+// SetSegments replaces all segments, resets first to 0, clamps selected, and redraws.
+func (c *Breadcrumb) SetSegments(segs []string) {
+	c.segments = segs
+	c.first = 0
+	if c.selected >= len(segs) {
+		c.selected = len(segs) - 1
+	}
+	c.Refresh()
 }
 
 // Truncate removes all segments after index (keeps segments[0..index] inclusive).
@@ -96,7 +134,7 @@ func (c *Breadcrumb) Truncate(index int) {
 // Segments returns the current segments slice.
 func (c *Breadcrumb) Segments() []string { return c.segments }
 
-// ── Navigation ────────────────────────────────────────────────────────────────
+// ---- Navigation -----------------------------------------------------------
 
 // Select focuses the segment at index, clamps to valid range, ensures it is
 // visible, and dispatches EvtSelect. No-op when already selected.
@@ -126,55 +164,40 @@ func (c *Breadcrumb) Select(index int) {
 // Selected returns the currently focused segment index, or -1 if none.
 func (c *Breadcrumb) Selected() int { return c.selected }
 
-// ── Display setters ───────────────────────────────────────────────────────────
-
-// SetSeparator overrides the separator string and redraws.
-func (c *Breadcrumb) SetSeparator(sep string) { c.separator = sep; c.Refresh() }
+// ---- Display Options ------------------------------------------------------
 
 // SetOverflow overrides the overflow marker and redraws.
-func (c *Breadcrumb) SetOverflow(marker string) { c.overflow = marker; c.Refresh() }
+func (c *Breadcrumb) SetOverflow(marker string) {
+	c.overflow = marker
+	c.Refresh()
+}
 
-// ── Theme / Apply ─────────────────────────────────────────────────────────────
+// SetSeparator overrides the separator string and redraws.
+func (c *Breadcrumb) SetSeparator(sep string) {
+	c.separator = sep
+	c.Refresh()
+}
 
-// Apply registers all breadcrumb style selectors and reads theme strings.
-func (c *Breadcrumb) Apply(theme *Theme) {
-	theme.Apply(c, c.Selector("breadcrumb"), "focused", "hovered", "disabled")
-	theme.Apply(c, c.Selector("breadcrumb/segment"), "focused")
-	theme.Apply(c, c.Selector("breadcrumb/separator"))
-	str := func(key, def string) string {
-		if s := theme.String(key); s != "" {
-			return s
+// ---- Overflow Helpers -----------------------------------------------------
+
+// computeFirst returns the smallest start index such that segments[start:]
+// (with overflow prefix if start > 0) fits within availW. At least one segment
+// is always shown.
+func (c *Breadcrumb) computeFirst(availW int) int {
+	start := c.first
+	if start < 0 {
+		start = 0
+	}
+	for {
+		if c.renderWidth(start) <= availW {
+			return start
 		}
-		return def
+		start++
+		if start >= len(c.segments)-1 {
+			return start
+		}
 	}
-	c.separator = str("breadcrumb.separator", " › ")
-	c.overflow = str("breadcrumb.overflow", "…")
 }
-
-// ── Hint ──────────────────────────────────────────────────────────────────────
-
-// Hint returns the natural width of all segments joined by the separator, plus
-// style overhead. Returns 0 (fill parent) width when no segments are set.
-// Height is always 1 plus style vertical overhead.
-func (c *Breadcrumb) Hint() (int, int) {
-	if c.hwidth != 0 || c.hheight != 0 {
-		return c.hwidth, c.hheight
-	}
-	n := len(c.segments)
-	if n == 0 {
-		return 0, 1 + c.Style().Vertical()
-	}
-	w := 0
-	sepW := utf8.RuneCountInString(c.separator)
-	for _, seg := range c.segments {
-		w += utf8.RuneCountInString(seg)
-	}
-	w += sepW * (n - 1)
-	w += c.Style().Horizontal()
-	return w, 1 + c.Style().Vertical()
-}
-
-// ── Overflow helpers ──────────────────────────────────────────────────────────
 
 // renderWidth returns the display width of segments[start:] with an optional
 // overflow prefix when start > 0.
@@ -194,26 +217,7 @@ func (c *Breadcrumb) renderWidth(start int) int {
 	return w
 }
 
-// computeFirstVis returns the smallest start index such that segments[start:]
-// (with overflow prefix if start > 0) fits within availW. At least one segment
-// is always shown.
-func (c *Breadcrumb) computeFirstVis(availW int) int {
-	start := c.first
-	if start < 0 {
-		start = 0
-	}
-	for {
-		if c.renderWidth(start) <= availW {
-			return start
-		}
-		start++
-		if start >= len(c.segments)-1 {
-			return start
-		}
-	}
-}
-
-// ── Render ────────────────────────────────────────────────────────────────────
+// ---- Rendering ------------------------------------------------------------
 
 // Render draws the breadcrumb.
 func (c *Breadcrumb) Render(r *Renderer) {
@@ -231,7 +235,7 @@ func (c *Breadcrumb) Render(r *Renderer) {
 	segFocS := c.Style("segment:focused")
 
 	sepW := utf8.RuneCountInString(c.separator)
-	start := c.computeFirstVis(cw)
+	start := c.computeFirst(cw)
 	x := cx
 
 	// Overflow prefix.
@@ -268,7 +272,7 @@ func (c *Breadcrumb) Render(r *Renderer) {
 	}
 }
 
-// ── Keyboard ──────────────────────────────────────────────────────────────────
+// ---- Event Handling -------------------------------------------------------
 
 func (c *Breadcrumb) handleKey(evt *tcell.EventKey) bool {
 	n := len(c.segments)
@@ -305,8 +309,6 @@ func (c *Breadcrumb) handleKey(evt *tcell.EventKey) bool {
 	return false
 }
 
-// ── Mouse ─────────────────────────────────────────────────────────────────────
-
 func (c *Breadcrumb) handleMouse(evt *tcell.EventMouse) bool {
 	if evt.Buttons() != tcell.Button1 {
 		return false
@@ -317,7 +319,7 @@ func (c *Breadcrumb) handleMouse(evt *tcell.EventMouse) bool {
 		return false
 	}
 
-	start := c.computeFirstVis(cw)
+	start := c.computeFirst(cw)
 	x := cx
 
 	// Overflow prefix is not clickable — skip past it.

@@ -2,6 +2,8 @@ package zeichenwerk
 
 import "fmt"
 
+// ==== AI ===================================================================
+
 // Heatmap renders a rows×cols grid of float64 values as a colour-graded matrix,
 // similar to a GitHub contribution graph. Cell colour interpolates from the
 // "heatmap/zero" background (no activity) to the "heatmap/max" background
@@ -123,8 +125,8 @@ func (h *Heatmap) renderColHeaders(r *Renderer, cx, cy, cw, lcw int, headerStyle
 // renderRow draws one data row: its optional label and all cells.
 func (h *Heatmap) renderRow(r *Renderer, row, rowY, cx, cw, lcw int,
 	headerStyle *Style, midFont string,
-	zeroFg, zeroBg, maxFg, maxBg string, maxVal float64) {
-
+	zeroFg, zeroBg, maxFg, maxBg string, maxVal float64,
+) {
 	if lcw > 0 {
 		r.Set(headerStyle.Foreground(), headerStyle.Background(), headerStyle.Font())
 		label := ""
@@ -158,7 +160,8 @@ func (h *Heatmap) renderRow(r *Renderer, row, rowY, cx, cw, lcw int,
 
 // cellColors returns the (fg, bg) pair for a cell value.
 func (h *Heatmap) cellColors(v, maxVal float64,
-	zeroFg, zeroBg, maxFg, maxBg string) (string, string) {
+	zeroFg, zeroBg, maxFg, maxBg string,
+) (string, string) {
 	if maxVal == 0 || v == 0 {
 		return zeroFg, zeroBg
 	}

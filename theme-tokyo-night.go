@@ -131,6 +131,8 @@ func TokyoNightTheme() *Theme {
 		NewStyle("tabs/highlight:focused").WithColors("$bg0", "$orange"),
 		NewStyle("tabs/highlight-line:focused").WithForeground("$orange"),
 		NewStyle("text"),
+		NewStyle("tiles").WithColors("$fg0", "$bg0"),
+		NewStyle("tiles:focused").WithBorder("round $blue"),
 		NewStyle("tree").WithColors("$fg0", "$bg0"),
 		NewStyle("tree/highlight").WithColors("$bg0", "$fg2"),
 		NewStyle("tree/highlight:focused").WithColors("$bg0", "$blue"),

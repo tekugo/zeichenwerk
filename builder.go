@@ -110,12 +110,29 @@ func (b *Builder) End() *Builder {
 
 // ---- Widgets --------------------------------------------------------------
 
+// BarChart creates a new BarChart widget for displaying multi-series stacked
+// bar charts. Configure series, categories, and display options via the
+// returned *BarChart after building.
+func (b *Builder) BarChart(id string) *Builder {
+	bc := NewBarChart(id, b.class)
+	b.Add(bc)
+	return b
+}
+
 // Box creates a new box widget with the specified id and display title.
 // The box is automatically styled with theme styles for the border and
 // the title.
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, b.class, title)
 	b.Add(box)
+	return b
+}
+
+// Breadcrumb creates a new Breadcrumb path-indicator widget. Configure
+// segments and display options via the returned *Breadcrumb after building.
+func (b *Builder) Breadcrumb(id string) *Builder {
+	bc := NewBreadcrumb(id, b.class)
+	b.Add(bc)
 	return b
 }
 
@@ -133,13 +150,6 @@ func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	return b
 }
 
-// Combo creates a new combo box with a free-text input and a suggestion list.
-func (b *Builder) Combo(id string, items ...string) *Builder {
-	c := NewCombo(id, b.class, items)
-	b.Add(c)
-	return b
-}
-
 // Collapsible creates a new collapsible container with a clickable header.
 // The container is pushed onto the builder's stack; call End() to close it.
 func (b *Builder) Collapsible(id, title string, expanded bool) *Builder {
@@ -148,10 +158,10 @@ func (b *Builder) Collapsible(id, title string, expanded bool) *Builder {
 	return b
 }
 
-// Dialog creates a new dialog with the specified id and title.
-func (b *Builder) Dialog(id, title string) *Builder {
-	d := NewDialog(id, b.class, title)
-	b.Add(d)
+// Combo creates a new combo box with a free-text input and a suggestion list.
+func (b *Builder) Combo(id string, items ...string) *Builder {
+	c := NewCombo(id, b.class, items)
+	b.Add(c)
 	return b
 }
 
@@ -164,6 +174,13 @@ func (b *Builder) Dialog(id, title string) *Builder {
 func (b *Builder) Deck(id string, render ItemRender, itemHeight int) *Builder {
 	deck := NewDeck(id, b.class, render, itemHeight)
 	b.Add(deck)
+	return b
+}
+
+// Dialog creates a new dialog with the specified id and title.
+func (b *Builder) Dialog(id, title string) *Builder {
+	d := NewDialog(id, b.class, title)
+	b.Add(d)
 	return b
 }
 
@@ -209,6 +226,25 @@ func (b *Builder) Form(id, title string, data any) *Builder {
 	return b
 }
 
+// Grid creates a new grid container widget for arranging widgets in a table
+// layout.
+//
+// Parameters:
+//   - id: unique identifier for the grid container
+//   - rows: number of rows in the grid
+//   - columns: number of columns in the grid
+//   - lines: whether to show grid lines
+//
+// Use Cell() to specify where subsequent widgets should be placed.
+// Initially all rows and columns are initialized to use fractional sizes
+// at one fraction each (i.e. -1). Sizes can be adjusted using the Rows
+// and Columns method.
+func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
+	grid := NewGrid(id, b.class, rows, columns, lines)
+	b.Add(grid)
+	return b
+}
+
 // Group creates a new form group within the nearest parent form. It automatically
 // generates form controls for struct fields tagged with the given group name.
 //
@@ -228,6 +264,257 @@ func (b *Builder) Group(id, title, name string, horizontal bool, spacing int) *B
 	}
 	return b
 }
+
+// Heatmap creates a new Heatmap widget with the given dimensions. Configure
+// data, labels, and cell width via the returned *Heatmap after building.
+func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
+	h := NewHeatmap(id, b.class, rows, cols)
+	b.Add(h)
+	return b
+}
+
+// HRule creates a horizontal rule.
+func (b *Builder) HRule(style string) *Builder {
+	rule := NewHRule(b.class, style)
+	b.Add(rule)
+	return b
+}
+
+// Input creates a new input widget for entering text.
+//
+// Parameters:
+//   - id: unique identifier for the input widget
+func (b *Builder) Input(id string, params ...string) *Builder {
+	input := NewInput(id, b.class, params...)
+	b.Add(input)
+	return b
+}
+
+// List creates a new list widget for displaying selectable items.
+//
+// Parameters:
+//   - id: unique identifier for the list widget
+//   - values: slice of strings to display as list items
+func (b *Builder) List(id string, values ...string) *Builder {
+	list := NewList(id, b.class, values)
+	b.Add(list)
+	return b
+}
+
+// Marquee creates a new scrolling text ticker widget.
+func (b *Builder) Marquee(id string) *Builder {
+	m := NewMarquee(id, b.class)
+	b.Add(m)
+	return b
+}
+
+// Progress creates a new progress widget for displaying progress indicators.
+// The progress is initially indeterminate (total=0). Use SetTotal and SetValue
+// to configure it after retrieval via Find.
+func (b *Builder) Progress(id string, horizontal bool) *Builder {
+	p := NewProgress(id, b.class, horizontal)
+	b.Add(p)
+	return b
+}
+
+// Scanner creates a new scanner widget for displaying a back-and-forth
+// scanning animation with a fading trail.
+//
+// Parameters:
+//   - id: unique identifier for the scanner widget
+//   - width: display width in characters (e.g., 8)
+//   - charStyle: character set style, either "blocks" or "diamonds"
+func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
+	scanner := NewScanner(id, b.class, width, charStyle)
+	b.Add(scanner)
+	return b
+}
+
+// Select creates a select dropdown.
+func (b *Builder) Select(id string, args ...string) *Builder {
+	s := NewSelect(id, b.class, args...)
+	b.Add(s)
+	return b
+}
+
+// Shimmer creates a new shimmer widget that displays text with a sweeping
+// highlight band animation.
+func (b *Builder) Shimmer(id string) *Builder {
+	sh := NewShimmer(id, b.class)
+	b.Add(sh)
+	return b
+}
+
+// Shortcuts adds a Shortcuts widget with the given alternating key/label pairs.
+func (b *Builder) Shortcuts(id string, pairs ...string) *Builder {
+	s := NewShortcuts(id, b.class, pairs...)
+	b.Add(s)
+	return b
+}
+
+// Spacer adds an unstyled Component that acts as flexible empty space in a
+// Flex layout. Use Size or Hint to set its preferred dimensions.
+func (b *Builder) Spacer() *Builder {
+	spacer := NewComponent("spacer", b.class)
+	b.Add(spacer)
+	return b
+}
+
+// Sparkline creates a new Sparkline widget for displaying time-series data as
+// a column of Unicode block characters. Configure scaling and data via the
+// returned *Sparkline after building.
+func (b *Builder) Sparkline(id string) *Builder {
+	s := NewSparkline(id, b.class)
+	b.Add(s)
+	return b
+}
+
+// Spinner creates a new spinner widget for animated spinners.
+func (b *Builder) Spinner(id string, sequence string) *Builder {
+	spinner := NewSpinner(id, b.class, sequence)
+	b.Add(spinner)
+	return b
+}
+
+// Static creates a new static widget with the specified id and text.
+// The static widget is styled with theme styles for the text.
+func (b *Builder) Static(id, text string) *Builder {
+	static := NewStatic(id, b.class, text)
+	b.Add(static)
+	return b
+}
+
+// Styled creates a new styled text widget with the specified id and text.
+// The styled widget is styled with theme styles for the text.
+func (b *Builder) Styled(id string, text string) *Builder {
+	styled := NewStyled(id, b.class, text)
+	b.Add(styled)
+	return b
+}
+
+// Switcher creates a content switcher container.
+// The switcher can be automatically connected to the last tabs component for
+// tab switching. If so, every pane should be accompanied by a Tab() call
+// with the tab title.
+func (b *Builder) Switcher(id string, connect bool) *Builder {
+	switcher := NewSwitcher(id, b.class)
+	b.Add(switcher)
+	if connect && b.tabs != nil {
+		b.tabs.On(EvtActivate, func(_ Widget, _ Event, params ...any) bool {
+			if len(params) > 0 {
+				if selected, ok := params[0].(int); ok {
+					switcher.Select(selected)
+				}
+			}
+			return true
+		})
+	}
+	return b
+}
+
+// Tab adds a new tab for a switcher, if a Tabs was added before.
+func (b *Builder) Tab(name string) *Builder {
+	if b.tabs != nil {
+		b.tabs.Add(name)
+	}
+	return b
+}
+
+// Table creates a table widget with the passed data provider.
+func (b *Builder) Table(id string, provider TableProvider, cellNav bool) *Builder {
+	table := NewTable(id, b.class, provider, cellNav)
+	b.Add(table)
+	return b
+}
+
+// Tabs creates a new tabs widget with the specified id and names.
+func (b *Builder) Tabs(id string, names ...string) *Builder {
+	tabs := NewTabs(id, b.class)
+	for _, name := range names {
+		tabs.Add(name)
+	}
+	b.Add(tabs)
+	b.tabs = tabs
+	return b
+}
+
+// Terminal creates a new Terminal widget with the specified id.
+// Terminal is a leaf widget (no matching End() call needed).
+func (b *Builder) Terminal(id string) *Builder {
+	w := NewTerminal(id, b.class)
+	b.Add(w)
+	return b
+}
+
+// Text creates a new text widget with the specified id and text.
+// The text widget is styled with theme styles for the text.
+func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
+	text := NewText(id, b.class, content, follow, max)
+	b.Add(text)
+	return b
+}
+
+// Tiles creates a new 2D grid widget where each item occupies a fixed
+// tileWidth × tileHeight cell.
+func (b *Builder) Tiles(id string, render ItemRender, tileWidth, tileHeight int) *Builder {
+	t := NewTiles(id, b.class, render, tileWidth, tileHeight)
+	b.Add(t)
+	return b
+}
+
+// Tree creates a new tree widget for displaying hierarchical data.
+func (b *Builder) Tree(id string) *Builder {
+	tree := NewTree(id, b.class)
+	b.Add(tree)
+	return b
+}
+
+// TreeFS creates a filesystem tree rooted at root. If dirsOnly is true only
+// directories are shown; files are hidden.
+func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
+	tfs := NewTreeFS(id, b.class, root, dirsOnly)
+	// Apply theme through TreeFS so the "tree-fs" selector is used, then add
+	// the embedded Tree (which holds all state and rendering) to the container.
+	tfs.Apply(b.theme)
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		top.Add(tfs.Tree)
+	}
+	b.current = tfs.Tree
+	return b
+}
+
+// Typeahead creates a new typeahead widget (a text input with inline ghost-text
+// suggestions). Params are identical to Input.
+func (b *Builder) Typeahead(id string, params ...string) *Builder {
+	t := NewTypeahead(id, b.class, params...)
+	b.Add(t)
+	return b
+}
+
+// Typewriter creates a new Typewriter animation widget that reveals text
+// character by character.
+func (b *Builder) Typewriter(id string) *Builder {
+	tw := NewTypewriter(id, b.class)
+	b.Add(tw)
+	return b
+}
+
+// Viewport adds a scrollable viewport
+func (b *Builder) Viewport(id, title string) *Builder {
+	viewport := NewViewport(id, b.class, title)
+	b.Add(viewport)
+	return b
+}
+
+// VRule adds a vertical rule.
+func (b *Builder) VRule(style string) *Builder {
+	rule := NewVRule(b.class, style)
+	b.Add(rule)
+	return b
+}
+
+// ---- Form Building --------------------------------------------------------
 
 // buildGroup builds the form group by adding all fields from the struct
 func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
@@ -313,283 +600,6 @@ func (b *Builder) buildFormControl(control, id string, v reflect.Value, options 
 		input.Set(v.String())
 		return input
 	}
-}
-
-// Grid creates a new grid container widget for arranging widgets in a table
-// layout.
-//
-// Parameters:
-//   - id: unique identifier for the grid container
-//   - rows: number of rows in the grid
-//   - columns: number of columns in the grid
-//   - lines: whether to show grid lines
-//
-// Use Cell() to specify where subsequent widgets should be placed.
-// Initially all rows and columns are initialized to use fractional sizes
-// at one fraction each (i.e. -1). Sizes can be adjusted using the Rows
-// and Columns method.
-func (b *Builder) Grid(id string, rows, columns int, lines bool) *Builder {
-	grid := NewGrid(id, b.class, rows, columns, lines)
-	b.Add(grid)
-	return b
-}
-
-// HRule creates a horizontal rule.
-func (b *Builder) HRule(style string) *Builder {
-	rule := NewHRule(b.class, style)
-	b.Add(rule)
-	return b
-}
-
-// Input creates a new input widget for entering text.
-//
-// Parameters:
-//   - id: unique identifier for the input widget
-func (b *Builder) Input(id string, params ...string) *Builder {
-	input := NewInput(id, b.class, params...)
-	b.Add(input)
-	return b
-}
-
-// List creates a new list widget for displaying selectable items.
-//
-// Parameters:
-//   - id: unique identifier for the list widget
-//   - values: slice of strings to display as list items
-func (b *Builder) List(id string, values ...string) *Builder {
-	list := NewList(id, b.class, values)
-	b.Add(list)
-	return b
-}
-
-// Marquee creates a new scrolling text ticker widget.
-func (b *Builder) Marquee(id string) *Builder {
-	m := NewMarquee(id, b.class)
-	b.Add(m)
-	return b
-}
-
-// Shimmer creates a new shimmer widget that displays text with a sweeping
-// highlight band animation.
-func (b *Builder) Shimmer(id string) *Builder {
-	sh := NewShimmer(id, b.class)
-	b.Add(sh)
-	return b
-}
-
-// Progress creates a new progress widget for displaying progress indicators.
-// The progress is initially indeterminate (total=0). Use SetTotal and SetValue
-// to configure it after retrieval via Find.
-func (b *Builder) Progress(id string, horizontal bool) *Builder {
-	p := NewProgress(id, b.class, horizontal)
-	b.Add(p)
-	return b
-}
-
-// Scanner creates a new scanner widget for displaying a back-and-forth
-// scanning animation with a fading trail.
-//
-// Parameters:
-//   - id: unique identifier for the scanner widget
-//   - width: display width in characters (e.g., 8)
-//   - charStyle: character set style, either "blocks" or "diamonds"
-func (b *Builder) Scanner(id string, width int, charStyle string) *Builder {
-	scanner := NewScanner(id, b.class, width, charStyle)
-	b.Add(scanner)
-	return b
-}
-
-// BarChart creates a new BarChart widget for displaying multi-series stacked
-// bar charts. Configure series, categories, and display options via the
-// returned *BarChart after building.
-func (b *Builder) BarChart(id string) *Builder {
-	bc := NewBarChart(id, b.class)
-	b.Add(bc)
-	return b
-}
-
-// Sparkline creates a new Sparkline widget for displaying time-series data as
-// a column of Unicode block characters. Configure scaling and data via the
-// returned *Sparkline after building.
-func (b *Builder) Sparkline(id string) *Builder {
-	s := NewSparkline(id, b.class)
-	b.Add(s)
-	return b
-}
-
-// Breadcrumb creates a new Breadcrumb path-indicator widget. Configure
-// segments and display options via the returned *Breadcrumb after building.
-func (b *Builder) Breadcrumb(id string) *Builder {
-	bc := NewBreadcrumb(id, b.class)
-	b.Add(bc)
-	return b
-}
-
-// Heatmap creates a new Heatmap widget with the given dimensions. Configure
-// data, labels, and cell width via the returned *Heatmap after building.
-func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
-	h := NewHeatmap(id, b.class, rows, cols)
-	b.Add(h)
-	return b
-}
-
-// Select creates a select dropdown.
-func (b *Builder) Select(id string, args ...string) *Builder {
-	s := NewSelect(id, b.class, args...)
-	b.Add(s)
-	return b
-}
-
-// Spinner creates a new spinner widget for animated spinners.
-func (b *Builder) Spinner(id string, sequence string) *Builder {
-	spinner := NewSpinner(id, b.class, sequence)
-	b.Add(spinner)
-	return b
-}
-
-// Shortcuts adds a Shortcuts widget with the given alternating key/label pairs.
-func (b *Builder) Shortcuts(id string, pairs ...string) *Builder {
-	s := NewShortcuts(id, b.class, pairs...)
-	b.Add(s)
-	return b
-}
-
-// Spacer adds an unstyled Component that acts as flexible empty space in a
-// Flex layout. Use Size or Hint to set its preferred dimensions.
-func (b *Builder) Spacer() *Builder {
-	spacer := NewComponent("spacer", b.class)
-	b.Add(spacer)
-	return b
-}
-
-// Terminal creates a new Terminal widget with the specified id.
-// Terminal is a leaf widget (no matching End() call needed).
-func (b *Builder) Terminal(id string) *Builder {
-	w := NewTerminal(id, b.class)
-	b.Add(w)
-	return b
-}
-
-// Static creates a new static widget with the specified id and text.
-// The static widget is styled with theme styles for the text.
-func (b *Builder) Static(id, text string) *Builder {
-	static := NewStatic(id, b.class, text)
-	b.Add(static)
-	return b
-}
-
-// Styled creates a new styled text widget with the specified id and text.
-// The styled widget is styled with theme styles for the text.
-func (b *Builder) Styled(id string, text string) *Builder {
-	styled := NewStyled(id, b.class, text)
-	b.Add(styled)
-	return b
-}
-
-// Switcher creates a content switcher container.
-// The switcher can be automatically connected to the last tabs component for
-// tab switching. If so, every pane should be accompanied by a Tab() call
-// with the tab title.
-func (b *Builder) Switcher(id string, connect bool) *Builder {
-	switcher := NewSwitcher(id, b.class)
-	b.Add(switcher)
-	if connect && b.tabs != nil {
-		b.tabs.On(EvtActivate, func(_ Widget, _ Event, params ...any) bool {
-			if len(params) > 0 {
-				if selected, ok := params[0].(int); ok {
-					switcher.Select(selected)
-				}
-			}
-			return true
-		})
-	}
-	return b
-}
-
-// Tab adds a new tab for a switcher, if a Tabs was added before.
-func (b *Builder) Tab(name string) *Builder {
-	if b.tabs != nil {
-		b.tabs.Add(name)
-	}
-	return b
-}
-
-// Table creates a table widget with the passed data provider.
-func (b *Builder) Table(id string, provider TableProvider, cellNav bool) *Builder {
-	table := NewTable(id, b.class, provider, cellNav)
-	b.Add(table)
-	return b
-}
-
-// Tabs creates a new tabs widget with the specified id and names.
-func (b *Builder) Tabs(id string, names ...string) *Builder {
-	tabs := NewTabs(id, b.class)
-	for _, name := range names {
-		tabs.Add(name)
-	}
-	b.Add(tabs)
-	b.tabs = tabs
-	return b
-}
-
-// Text creates a new text widget with the specified id and text.
-// The text widget is styled with theme styles for the text.
-func (b *Builder) Text(id string, content []string, follow bool, max int) *Builder {
-	text := NewText(id, b.class, content, follow, max)
-	b.Add(text)
-	return b
-}
-
-// Tree creates a new tree widget for displaying hierarchical data.
-func (b *Builder) Tree(id string) *Builder {
-	tree := NewTree(id, b.class)
-	b.Add(tree)
-	return b
-}
-
-// TreeFS creates a filesystem tree rooted at root. If dirsOnly is true only
-// directories are shown; files are hidden.
-func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
-	tfs := NewTreeFS(id, b.class, root, dirsOnly)
-	// Apply theme through TreeFS so the "tree-fs" selector is used, then add
-	// the embedded Tree (which holds all state and rendering) to the container.
-	tfs.Apply(b.theme)
-	if len(b.stack) > 0 {
-		top := b.stack.Peek()
-		top.Add(tfs.Tree)
-	}
-	b.current = tfs.Tree
-	return b
-}
-
-// Typeahead creates a new typeahead widget (a text input with inline ghost-text
-// suggestions). Params are identical to Input.
-func (b *Builder) Typeahead(id string, params ...string) *Builder {
-	t := NewTypeahead(id, b.class, params...)
-	b.Add(t)
-	return b
-}
-
-// Typewriter creates a new Typewriter animation widget that reveals text
-// character by character.
-func (b *Builder) Typewriter(id string) *Builder {
-	tw := NewTypewriter(id, b.class)
-	b.Add(tw)
-	return b
-}
-
-// Viewport adds a scrollable viewport
-func (b *Builder) Viewport(id, title string) *Builder {
-	viewport := NewViewport(id, b.class, title)
-	b.Add(viewport)
-	return b
-}
-
-// VRule adds a vertical rule.
-func (b *Builder) VRule(style string) *Builder {
-	rule := NewVRule(b.class, style)
-	b.Add(rule)
-	return b
 }
 
 // ---- Widget Manipulation --------------------------------------------------

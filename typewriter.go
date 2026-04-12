@@ -6,6 +6,8 @@ import (
 	"unicode/utf8"
 )
 
+// ==== AI ===================================================================
+
 // Typewriter is an animated widget that reveals text character by character,
 // optionally blinking a cursor during and after the reveal, and can repeat
 // indefinitely or fire a completion event when done.

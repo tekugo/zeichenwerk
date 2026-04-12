@@ -66,7 +66,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
@@ -94,6 +94,7 @@ func createUI(theme *Theme) *UI {
 		With(table).
 		With(tabs).
 		With(terminalDemo).
+		With(tilesDemo).
 		With(treeFSDemo).
 		With(typeaheadDemo).
 		With(typewriterDemo).
@@ -152,7 +153,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 31:
+					case 32:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -174,7 +175,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 32:
+					case 33:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -187,7 +188,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 33:
+					case 34:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -200,7 +201,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 34:
+					case 35:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -208,7 +209,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 35:
+					case 36:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -216,7 +217,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 36:
+					case 37:
 						d := ui.FileChooser("Save As", "Save", "save", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							path := data[0].(string)
@@ -1117,6 +1118,67 @@ func typeaheadDemo(builder *Builder) {
 	})
 }
 
+func tilesDemo(builder *Builder) {
+	type card struct {
+		name  string
+		icon  string
+		color string
+	}
+	cards := []card{
+		{"Dashboard", "◈", "$blue"},
+		{"Analytics", "▦", "$green"},
+		{"Reports", "▤", "$yellow"},
+		{"Settings", "⚙", "$fg2"},
+		{"Users", "◉", "$blue"},
+		{"Billing", "◎", "$orange"},
+		{"Security", "◆", "$red"},
+		{"Integrations", "⬡", "$cyan"},
+		{"Logs", "≡", "$fg2"},
+		{"API Keys", "◆", "$purple"},
+		{"Webhooks", "◈", "$blue"},
+		{"Audit Trail", "▤", "$yellow"},
+	}
+	items := make([]any, len(cards))
+	for i, c := range cards {
+		items[i] = c
+	}
+
+	// tileWidth=14, tileHeight=4: row 0 blank, row 1 icon, row 2 name, row 3 blank.
+	renderCard := func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
+		c := data.(card)
+		bg := "$bg2"
+		fg := "$fg1"
+		if selected && focused {
+			bg = "$blue"
+			fg = "$bg0"
+		} else if selected {
+			bg = "$bg3"
+			fg = "$fg0"
+		}
+		r.Set(fg, bg, "")
+		r.Fill(x, y, w, h, " ")
+		// Icon on row 1, centred horizontally.
+		iconX := x + max(0, (w-1)/2)
+		r.Set(c.color, bg, "bold")
+		r.Put(iconX, y+1, c.icon)
+		// Name on row 2, centred horizontally.
+		nameRunes := []rune(c.name)
+		nameX := x + max(0, (w-len(nameRunes))/2)
+		r.Set(fg, bg, "")
+		r.Text(nameX, y+2, c.name, w-(nameX-x))
+	}
+
+	// No vertical padding on the outer Flex — every row counts.
+	builder.Flex("tiles-demo", false, "stretch", 0).Padding(0, 2).
+		Static("tiles-title", "Tiles  ←→↑↓ navigate · Enter activate").Padding(0, 0, 0, 0).
+		Tiles("tiles-grid", renderCard, 14, 4).Hint(-1, -1).
+		End()
+
+	pane := builder.Find("tiles-demo").(Container)
+	grid := Find(pane, "tiles-grid").(*Tiles)
+	grid.SetItems(items)
+}
+
 func treeFSDemo(builder *Builder) {
 	var tfs *TreeFS
 
@@ -1650,14 +1712,14 @@ func registerCommandsDemo(ui *UI) {
 		}
 	}
 	cmds := ui.Commands()
-	cmds.RegisterGroup("File", "New File",  "Ctrl+N", func() { logMsg("New File") })
-	cmds.RegisterGroup("File", "Open File", "Ctrl+O", func() { logMsg("Open File") })
-	cmds.RegisterGroup("File", "Save File", "Ctrl+S", func() { logMsg("Save File") })
-	cmds.RegisterGroup("File", "Close File", "",      func() { logMsg("Close File") })
-	cmds.RegisterGroup("View", "Toggle Theme",  "",      func() { logMsg("Toggle Theme") })
-	cmds.RegisterGroup("View", "Split Pane",    "Ctrl+\\", func() { logMsg("Split Pane") })
-	cmds.RegisterGroup("View", "Toggle Sidebar", "",     func() { logMsg("Toggle Sidebar") })
-	cmds.RegisterGroup("Navigation", "Go to Line",   "Ctrl+G", func() { logMsg("Go to Line") })
-	cmds.RegisterGroup("Navigation", "Find in Files", "Ctrl+F", func() { logMsg("Find in Files") })
-	cmds.RegisterGroup("Navigation", "Go to Symbol",  "Ctrl+R", func() { logMsg("Go to Symbol") })
+	cmds.Register("File", "New File", "Ctrl+N", func() { logMsg("New File") })
+	cmds.Register("File", "Open File", "Ctrl+O", func() { logMsg("Open File") })
+	cmds.Register("File", "Save File", "Ctrl+S", func() { logMsg("Save File") })
+	cmds.Register("File", "Close File", "", func() { logMsg("Close File") })
+	cmds.Register("View", "Toggle Theme", "", func() { logMsg("Toggle Theme") })
+	cmds.Register("View", "Split Pane", "Ctrl+\\", func() { logMsg("Split Pane") })
+	cmds.Register("View", "Toggle Sidebar", "", func() { logMsg("Toggle Sidebar") })
+	cmds.Register("Navigation", "Go to Line", "Ctrl+G", func() { logMsg("Go to Line") })
+	cmds.Register("Navigation", "Find in Files", "Ctrl+F", func() { logMsg("Find in Files") })
+	cmds.Register("Navigation", "Go to Symbol", "Ctrl+R", func() { logMsg("Go to Symbol") })
 }

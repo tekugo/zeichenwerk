@@ -16,6 +16,8 @@ func NewCustom(id, class string, fn func(Widget, *Renderer)) *Custom {
 	}
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Apply applies a theme style to the component.
 func (c *Custom) Apply(theme *Theme) {
 	theme.Apply(c, c.Selector("custom"), "disbled", "focused", "hovered")

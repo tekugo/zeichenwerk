@@ -216,7 +216,7 @@ func TestBreadcrumb_ComputeFirstVis_AllFit(t *testing.T) {
 	bc.overflow = "…"    // 1 char
 	bc.SetSegments([]string{"a", "b", "c"})
 	// "a / b / c" = 1+3+1+3+1 = 9
-	start := bc.computeFirstVis(20)
+	start := bc.computeFirst(20)
 	if start != 0 {
 		t.Errorf("computeFirstVis(20) = %d; want 0", start)
 	}
@@ -228,7 +228,7 @@ func TestBreadcrumb_ComputeFirstVis_Collapses(t *testing.T) {
 	bc.overflow = "…"    // 1 char
 	bc.SetSegments([]string{"Home", "Projects", "zeichenwerk", "spec"})
 	// Test with width just enough for last 2: "… / zeichenwerk / spec" = 1+3+11+3+4 = 22
-	start := bc.computeFirstVis(22)
+	start := bc.computeFirst(22)
 	if start != 2 {
 		t.Errorf("computeFirstVis(22) = %d; want 2", start)
 	}
@@ -240,7 +240,7 @@ func TestBreadcrumb_ComputeFirstVis_AtLeastOne(t *testing.T) {
 	bc.overflow = "…"
 	bc.SetSegments([]string{"very-long-segment-one", "very-long-segment-two", "very-long-segment-three"})
 	// Width too narrow to fit anything properly — should still show the last segment.
-	start := bc.computeFirstVis(3)
+	start := bc.computeFirst(3)
 	if start != len(bc.segments)-1 {
 		t.Errorf("computeFirstVis(3) = %d; want %d (last segment)", start, len(bc.segments)-1)
 	}

@@ -2,6 +2,8 @@ package zeichenwerk
 
 import "unicode/utf8"
 
+// ==== AI ===================================================================
+
 // shortcutPair holds a single key/label hint pair.
 type shortcutPair struct {
 	key   string

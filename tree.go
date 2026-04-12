@@ -6,6 +6,8 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+// ==== AI ===================================================================
+
 // flatItem is an entry in the flattened visible-node list produced by rebuild.
 type flatItem struct {
 	node   *TreeNode

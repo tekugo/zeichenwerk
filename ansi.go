@@ -5,6 +5,8 @@ import (
 	"unicode/utf8"
 )
 
+// ==== AI ===================================================================
+
 // AnsiHandler receives parsed terminal sequences from AnsiParser.
 // All methods are called synchronously from within Feed().
 type AnsiHandler interface {
@@ -37,7 +39,7 @@ type AnsiHandler interface {
 type parserState uint8
 
 const (
-	stGround   parserState = iota
+	stGround parserState = iota
 	stEscape
 	stEscInter
 	stCsiEntry
@@ -53,12 +55,12 @@ const maxParams = 16
 // It contains no I/O and has no external dependencies beyond the standard library.
 type AnsiParser struct {
 	state    parserState
-	params   []int          // parameter accumulator
-	cur      int            // digit accumulator for current parameter
-	hasDigit bool           // whether cur contains a digit
-	inSub    bool           // true when accumulating a sub-parameter (after ':')
-	subMajor int            // major value saved when ':' was seen
-	inter    byte           // intermediate byte, 0 if none
+	params   []int // parameter accumulator
+	cur      int   // digit accumulator for current parameter
+	hasDigit bool  // whether cur contains a digit
+	inSub    bool  // true when accumulating a sub-parameter (after ':')
+	subMajor int   // major value saved when ':' was seen
+	inter    byte  // intermediate byte, 0 if none
 	oscBuf   strings.Builder
 	utf8buf  [4]byte // partial UTF-8 byte accumulator
 	utf8len  int     // bytes accumulated so far

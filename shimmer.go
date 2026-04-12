@@ -7,6 +7,8 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+// ==== AI ===================================================================
+
 // Shimmer is an Animation-driven widget that displays text with a highlight
 // band sweeping continuously from left to right. Characters inside the band
 // are blended toward an accent colour; characters outside use the base style.

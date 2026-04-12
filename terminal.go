@@ -6,14 +6,16 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+// ==== AI ===================================================================
+
 // termCursor holds the current cursor state.
 type termCursor struct {
-	x, y  int        // 0-based column and row
-	fg    Color      // current foreground colour
-	bg    Color      // current background colour
-	ul    Color      // current underline colour
-	attrs uint32     // packed char word bits 21-31 (attrs + ul_style)
-	wrap  bool       // deferred-wrap: next Print moves to next line first
+	x, y  int         // 0-based column and row
+	fg    Color       // current foreground colour
+	bg    Color       // current background colour
+	ul    Color       // current underline colour
+	attrs uint32      // packed char word bits 21-31 (attrs + ul_style)
+	wrap  bool        // deferred-wrap: next Print moves to next line first
 	saved *termCursor // single DECSC/SCOSC save slot; nil if nothing saved
 }
 

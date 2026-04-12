@@ -137,8 +137,10 @@ widget.Flag(FlagFocused) // → bool
 | List | `NewList(id, class, items)` | `EvtSelect` `EvtActivate` |
 | Progress | `NewProgress(id, class, horizontal)` | — |
 | Rule | `NewHRule(class, style)` / `NewVRule(class, style)` | — |
+| Marquee | `NewMarquee(id, class)` | — |
 | Scanner | `NewScanner(id, class, width, style)` | — |
 | Select | `NewSelect(id, class, val,lbl,…)` | `EvtChange(string)` |
+| Shimmer | `NewShimmer(id, class)` | — |
 | Sparkline | `NewSparkline(id, class)` | — |
 | Spinner | `NewSpinner(id, class, sequence)` | — |
 | Static | `NewStatic(id, class, text)` | — |
@@ -232,9 +234,9 @@ The `"commands/group"` style also colours the separator line between input and l
 
 ## Animation widgets
 
-`Scanner`, `Spinner`, and `Typewriter` all embed `Animation`. Start and stop
-them explicitly; pair with `EvtShow`/`EvtHide` on the enclosing container
-so they only run when visible:
+`Scanner`, `Spinner`, `Typewriter`, `Marquee`, and `Shimmer` all embed
+`Animation`. Start and stop them explicitly; pair with `EvtShow`/`EvtHide`
+on the enclosing container so they only run when visible:
 
 ```go
 container.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {

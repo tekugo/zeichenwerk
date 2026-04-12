@@ -43,15 +43,6 @@ func NewButton(id, class, text string) *Button {
 
 // ---- Widget Methods -------------------------------------------------------
 
-// Hint returns the natural size of the button derived from its label text.
-// If hwidth or hheight has been set explicitly, both are returned as-is.
-func (b *Button) Hint() (int, int) {
-	if b.hwidth != 0 || b.hheight != 0 {
-		return b.hwidth, b.hheight
-	}
-	return utf8.RuneCountInString(b.text), 1
-}
-
 // Activate programmatically triggers the button's action handler.
 func (b *Button) Activate() {
 	b.Dispatch(b, EvtActivate, 0)
@@ -60,6 +51,15 @@ func (b *Button) Activate() {
 // Apply applies a theme style to the component.
 func (b *Button) Apply(theme *Theme) {
 	theme.Apply(b, b.Selector("button"), "disabled", "focused", "hovered", "pressed")
+}
+
+// Hint returns the natural size of the button derived from its label text.
+// If hwidth or hheight has been set explicitly, both are returned as-is.
+func (b *Button) Hint() (int, int) {
+	if b.hwidth != 0 || b.hheight != 0 {
+		return b.hwidth, b.hheight
+	}
+	return utf8.RuneCountInString(b.text), 1
 }
 
 func (b *Button) Refresh() {

@@ -5,13 +5,15 @@ import (
 	"time"
 )
 
+// ==== AI ===================================================================
+
 // crtPhase represents the current lifecycle state of the CRT container.
 type crtPhase int
 
 const (
 	crtPhaseOn   crtPhase = iota // power-on animation running
-	crtPhaseIdle                  // fully on — child renders normally
-	crtPhaseOff                   // power-off animation running
+	crtPhaseIdle                 // fully on — child renders normally
+	crtPhaseOff                  // power-off animation running
 )
 
 // crtFadeDuration is the number of frames a row takes to fade from green to
@@ -175,7 +177,7 @@ func (c *CRT) renderCRTEffect(r *Renderer, phase crtPhase, step, pulse, end int)
 	}
 
 	clipY := c.y + (c.height-bandH)/2
-	topEnd := clipY       // top matrix area:    [c.y, topEnd)
+	topEnd := clipY              // top matrix area:    [c.y, topEnd)
 	bottomStart := clipY + bandH // bottom matrix area: [bottomStart, c.y+c.height)
 
 	// Matrix rain: brighter near each scanline, darker toward screen edges.

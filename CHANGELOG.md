@@ -12,6 +12,31 @@ and this project adheres to
 
 ### Added
 
+- **`Shimmer` widget** — sweeping highlight band animation (`shimmer.go`)
+  - A band of accent colour sweeps left-to-right across the text on every tick;
+    useful for loading placeholders and skeleton screens
+  - Multi-line text supported — band sweeps the same column on every row
+    simultaneously
+  - Two intensity modes selectable via `SetGradient(bool)`:
+    - *Stepped* (default): linear edge ramp + flat bright core
+    - *Cosine gradient*: smooth bell curve, softer organic glow
+  - `SetBandWidth(n int)` — core highlight width in columns (minimum 1)
+  - `SetEdgeWidth(n int)` — fade columns on each side; 0 = hard edge
+  - `"shimmer"` and `"shimmer/band"` style selectors added to all five
+    built-in themes; base uses `$fg2` (dimmed) for high contrast against
+    the accent band colour
+  - `Builder.Shimmer(id)` method added
+  - Demo panel added to `cmd/demo` (three rows: stepped, cosine gradient,
+    multi-line gradient); stops/starts with switcher visibility via
+    `EvtShow`/`EvtHide`
+
+- **`Marquee` widget** — continuously scrolling text ticker (`marquee.go`)
+  - Scrolls text wider than the widget from right to left; pauses on hover
+  - `SetText(string)`, `SetSpeed(int)`, `SetGap(int)` — wide-char safe
+  - `"marquee"` style selector added to all five built-in themes
+  - `Builder.Marquee(id)` method added
+  - Demo panel added to `cmd/demo`
+
 - **`Typewriter` widget** — character-by-character animated text reveal
   (`typewriter.go`)
   - Three-phase animation: revealing → dwell (cursor blink) → done

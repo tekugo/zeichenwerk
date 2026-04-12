@@ -138,6 +138,8 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("tabs/highlight:focused").WithColors("$bg0", "$cyan"),
 		NewStyle("tabs/highlight-line:focused").WithForeground("$cyan"),
 		NewStyle("text"),
+		NewStyle("tiles").WithColors("$fg1", "$bg0"),
+		NewStyle("tiles:focused").WithBorder("round $cyan"),
 		NewStyle("tree").WithColors("$fg1", "$bg0"),
 		NewStyle("tree/highlight").WithColors("$bg0", "$fg2"),
 		NewStyle("tree/highlight:focused").WithColors("$bg0", "$cyan"),

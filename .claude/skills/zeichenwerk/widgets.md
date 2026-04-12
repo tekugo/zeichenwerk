@@ -695,6 +695,59 @@ Tab or Right-arrow at end-of-text accepts suggestion.
 
 ---
 
+## Marquee
+
+```go
+NewMarquee(id, class string) *Marquee
+```
+
+Continuously scrolling single-row text ticker. Text wider than the widget
+scrolls left; pauses when `FlagHovered` is set. Embeds `Animation`.
+Does **not** set `FlagFocusable` — display only.
+
+Style key: `"marquee"`. Events: none.
+
+Methods: `SetText(string)`, `Text() string`,
+`SetSpeed(int)` (columns per tick, min 1), `SetGap(int)` (blank columns after text before loop).
+`Start(time.Duration)`, `Stop()`, `Running() bool`.
+
+---
+
+## Shimmer
+
+```go
+NewShimmer(id, class string) *Shimmer
+```
+
+Sweeping highlight band animation. A band of accent colour moves left-to-right
+across the text each tick, blending from base to band colour and back.
+Multi-line text is supported — the band sweeps the same column on all rows.
+Embeds `Animation`. Does **not** set `FlagFocusable` — display only.
+
+Defaults: `bandWidth=6`, `edgeWidth=3`, gradient off.
+
+| Style key | Purpose |
+|-----------|---------|
+| `"shimmer"` | base text colour and background |
+| `"shimmer/band"` | foreground at full band intensity (bg ignored) |
+
+Events: none.
+
+Methods: `SetText(string)`, `Text() string`,
+`SetBandWidth(int)` (core width in cols, min 1),
+`SetEdgeWidth(int)` (fade cols per side; 0 = hard edge),
+`SetGradient(bool)` (false = stepped linear ramp; true = smooth cosine bell).
+`Start(time.Duration)`, `Stop()`, `Running() bool`.
+
+```go
+sh := NewShimmer("status", "")
+sh.SetText("Analysing codebase…")
+sh.SetBandWidth(10).SetEdgeWidth(5).SetGradient(true)
+sh.Start(40 * time.Millisecond)
+```
+
+---
+
 ## Typewriter
 
 ```go
