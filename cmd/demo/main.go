@@ -66,7 +66,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
@@ -83,10 +83,12 @@ func createUI(theme *Theme) *UI {
 		With(form).
 		With(grid).
 		With(heatmapDemo).
+		With(marqueeDemo).
 		With(progress).
 		With(scanner).
 		With(sparklineDemo).
 		With(dropdown).
+		With(shimmerDemo).
 		With(spinner).
 		With(styled).
 		With(table).
@@ -150,7 +152,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 29:
+					case 31:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -172,7 +174,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 30:
+					case 32:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -185,7 +187,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 31:
+					case 33:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -198,7 +200,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 32:
+					case 34:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -206,11 +208,30 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 33:
+					case 35:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
 								log.Add("Dir → " + data[0].(string))
+							}
+							return true
+						})
+					case 36:
+						d := ui.FileChooser("Save As", "Save", "save", "", false)
+						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+							path := data[0].(string)
+							save := func() {
+								if log, ok := Find(ui, "debug-log").(*Text); ok {
+									log.Add("Save As → " + path)
+								}
+							}
+							if _, err := os.Stat(path); err == nil {
+								ui.Confirm("Overwrite?",
+									filepath.Base(path)+" already exists. Overwrite?",
+									save, nil,
+								)
+							} else {
+								save()
 							}
 							return true
 						})
@@ -636,6 +657,107 @@ func grid(builder *Builder) {
 }
 
 // Progress demo
+func marqueeDemo(builder *Builder) {
+	builder.Flex("marquee-demo", false, "stretch", 1).Padding(1, 2).
+		Static("marquee-title", "Marquee Widget Demo").Padding(0, 0, 1, 0).
+		Static("marquee-desc", "Text wider than the widget scrolls continuously. Hover to pause.").Padding(0, 0, 1, 0).
+		Marquee("marquee-ticker").Hint(-1, 1).
+		Spacer().Hint(-1, 0).
+		Flex("marquee-controls", true, "center", 4).Padding(1, 0, 0, 0).
+		Checkbox("marquee-running", "Running", true).
+		End().
+		End()
+
+	pane := builder.Find("marquee-demo").(Container)
+	m := Find(pane, "marquee-ticker").(*Marquee)
+	m.SetText("Status: All systems operational.  CPU 4%  MEM 1.2 GB  NET ↑ 0.8 MB/s ↓ 2.1 MB/s  DISK 42%  TEMP 38°C  UPTIME 14d 7h")
+
+	Find(pane, "marquee-running").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			if v {
+				m.Start(80 * time.Millisecond)
+			} else {
+				m.Stop()
+			}
+		}
+		return true
+	})
+
+	pane.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		m.Start(80 * time.Millisecond)
+		return true
+	})
+
+	pane.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		m.Stop()
+		return true
+	})
+}
+
+func shimmerDemo(builder *Builder) {
+	builder.Flex("shimmer-demo", false, "stretch", 1).Padding(1, 2).
+		Static("shimmer-title", "Shimmer Widget Demo").Padding(0, 0, 1, 0).
+		Static("shimmer-stepped-label", "Stepped edge:").Padding(0, 0, 0, 0).
+		Shimmer("shimmer-stepped").Hint(-1, 1).
+		Spacer().Size(0, 1).
+		Static("shimmer-gradient-label", "Cosine gradient:").Padding(0, 0, 0, 0).
+		Shimmer("shimmer-gradient").Hint(-1, 1).
+		Spacer().Size(0, 1).
+		Static("shimmer-multi-label", "Multi-line (gradient):").Padding(0, 0, 0, 0).
+		Shimmer("shimmer-multi").Hint(-1, 3).
+		Spacer().Hint(-1, 0).
+		Flex("shimmer-controls", true, "center", 4).Padding(1, 0, 0, 0).
+		Checkbox("shimmer-running", "Running", true).
+		End().
+		End()
+
+	pane := builder.Find("shimmer-demo").(Container)
+
+	s1 := Find(pane, "shimmer-stepped").(*Shimmer)
+	s1.SetText("Analysing codebase…  Status: all systems operational.")
+	s1.SetBandWidth(10).SetEdgeWidth(5)
+
+	s2 := Find(pane, "shimmer-gradient").(*Shimmer)
+	s2.SetText("Analysing codebase…  Status: all systems operational.")
+	s2.SetBandWidth(10).SetEdgeWidth(5).SetGradient(true)
+
+	s3 := Find(pane, "shimmer-multi").(*Shimmer)
+	s3.SetText("Searching for references…\nProcessing matched files…\nUpdating cross-references…")
+	s3.SetBandWidth(10).SetEdgeWidth(5).SetGradient(true)
+
+	start := func() {
+		s1.Start(40 * time.Millisecond)
+		s2.Start(40 * time.Millisecond)
+		s3.Start(40 * time.Millisecond)
+	}
+	stop := func() {
+		s1.Stop()
+		s2.Stop()
+		s3.Stop()
+	}
+
+	Find(pane, "shimmer-running").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			if v {
+				start()
+			} else {
+				stop()
+			}
+		}
+		return true
+	})
+
+	pane.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		start()
+		return true
+	})
+
+	pane.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		stop()
+		return true
+	})
+}
+
 func progress(builder *Builder) {
 	builder.Flex("progress-demo", false, "stretch", 1).Padding(1).
 		Static("progress-title", "Progress Widget Demo").Padding(0, 0, 1, 0).

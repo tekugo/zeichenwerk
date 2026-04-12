@@ -362,6 +362,21 @@ func (b *Builder) List(id string, values ...string) *Builder {
 	return b
 }
 
+// Marquee creates a new scrolling text ticker widget.
+func (b *Builder) Marquee(id string) *Builder {
+	m := NewMarquee(id, b.class)
+	b.Add(m)
+	return b
+}
+
+// Shimmer creates a new shimmer widget that displays text with a sweeping
+// highlight band animation.
+func (b *Builder) Shimmer(id string) *Builder {
+	sh := NewShimmer(id, b.class)
+	b.Add(sh)
+	return b
+}
+
 // Progress creates a new progress widget for displaying progress indicators.
 // The progress is initially indeterminate (total=0). Use SetTotal and SetValue
 // to configure it after retrieval via Find.
