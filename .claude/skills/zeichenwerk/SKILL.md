@@ -117,23 +117,30 @@ widget.Flag(FlagFocused) // → bool
 
 | Widget | Constructor | Key events |
 |--------|-------------|------------|
+| BarChart | `NewBarChart(id, class)` | `EvtSelect` `EvtActivate` |
 | Box | `NewBox(id, class, title)` | — |
+| Breadcrumb | `NewBreadcrumb(id, class)` | `EvtSelect` `EvtActivate` |
 | Button | `NewButton(id, class, text)` | `EvtActivate` |
 | Canvas | `NewCanvas(id, class, pages, w, h)` | `EvtChange` `EvtMove` `EvtMode` |
 | Checkbox | `NewCheckbox(id, class, text, checked)` | `EvtChange(bool)` |
 | Collapsible | `NewCollapsible(id, class, title, expanded)` | `EvtChange(bool)` |
+| Combo | `NewCombo(id, class, items)` | `EvtChange(string)` `EvtActivate(string)` |
+| CRT | `NewCRT(id, class)` | — |
 | Deck | `NewDeck(id, class, render, itemHeight)` | `EvtSelect` `EvtActivate` |
 | Dialog | `NewDialog(id, class, title)` | — |
 | Editor | `NewEditor(id, class)` | `EvtChange` |
 | Flex | `NewFlex(id, class, horizontal, alignment, spacing)` | — |
 | Form | `NewForm(id, class, title, data)` | — |
 | Grid | `NewGrid(id, class, rows, cols, lines)` | — |
+| Heatmap | `NewHeatmap(id, class, rows, cols)` | — |
 | Input | `NewInput(id, class, params…)` | `EvtChange(string)` |
 | List | `NewList(id, class, items)` | `EvtSelect` `EvtActivate` |
 | Progress | `NewProgress(id, class, horizontal)` | — |
 | Rule | `NewHRule(class, style)` / `NewVRule(class, style)` | — |
+| Scanner | `NewScanner(id, class, width, style)` | — |
 | Select | `NewSelect(id, class, val,lbl,…)` | `EvtChange(string)` |
 | Sparkline | `NewSparkline(id, class)` | — |
+| Spinner | `NewSpinner(id, class, sequence)` | — |
 | Static | `NewStatic(id, class, text)` | — |
 | Styled | `NewStyled(id, class, text)` | — |
 | Switcher | `NewSwitcher(id, class)` | `EvtShow` `EvtHide` |
@@ -143,6 +150,7 @@ widget.Flag(FlagFocused) // → bool
 | Text | `NewText(id, class, lines, follow, max)` | — |
 | Tree | `NewTree(id, class)` | `EvtSelect` `EvtActivate` `EvtChange` |
 | Typeahead | `NewTypeahead(id, class, params…)` | `EvtChange` `EvtAccept` |
+| Typewriter | `NewTypewriter(id, class)` | `EvtChange` `EvtActivate` |
 | Viewport | `NewViewport(id, class, title)` | — |
 
 ---
@@ -200,6 +208,61 @@ Design widget sizes and content lengths defensively.
 ui := builder.Build()
 btn := Find(ui, "my-button").(*Button)
 btn.On(EvtActivate, handler)
+```
+
+---
+
+## Commands palette
+
+```go
+// Accessed via the UI, not constructed directly:
+cmds := ui.Commands()
+cmds.Register("Save", "ctrl+s", func() { /* … */ })
+cmds.RegisterGroup("File", "Open", "ctrl+o", func() { /* … */ })
+cmds.SetMaxItems(8)   // visible rows before scrolling
+cmds.SetWidth(60)     // palette width in columns
+cmds.Open()           // show palette; Esc or action closes it
+```
+
+Style keys: `"commands"` `"commands/input"` `"commands/item"` `"commands/item:focused"`
+`"commands/shortcut"` `"commands/shortcut:focused"` `"commands/group"`.
+The `"commands/group"` style also colours the separator line between input and list.
+
+---
+
+## Animation widgets
+
+`Scanner`, `Spinner`, and `Typewriter` all embed `Animation`. Start and stop
+them explicitly; pair with `EvtShow`/`EvtHide` on the enclosing container
+so they only run when visible:
+
+```go
+container.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+    tw.Start(30 * time.Millisecond)
+    return true
+})
+container.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+    tw.Stop()
+    return true
+})
+```
+
+`Spinners` is a `map[string]string` of built-in sequences:
+`"bar"` `"dots"` `"dot"` `"arrow"` `"circle"` `"bounce"` `"braille"`.
+
+---
+
+## CRT container
+
+`CRT` wraps any single child and plays a power-on / power-off animation.
+During normal operation it is a zero-overhead pass-through container.
+
+```go
+crt := NewCRT("root", "")
+crt.Add(myRootWidget)
+crt.Start(16 * time.Millisecond)   // power-on animation
+// …
+crt.PowerOff(16*time.Millisecond, ui.Quit)
 ```
 
 ---
