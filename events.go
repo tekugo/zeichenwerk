@@ -15,10 +15,12 @@ const (
 	EvtChange Event = "change"
 	// EvtBlur is dispatched when a widget loses keyboard focus.
 	EvtBlur Event = "blur"
+	// EvtClick is dispatched on a single mouse button-1 click.
+	EvtClick Event = "click"
 	// EvtClose is dispatched to a popup layer just before it is removed by
 	// UI.Close, giving widgets inside the dialog a chance to clean up state.
 	EvtClose Event = "close"
-	// EvtClick is dispatched on a single mouse button-1 click.
+	// EvtEnter is dispatched if the Enter key is pressed.
 	EvtEnter Event = "enter"
 	// EvtFocus is dispatched when a widget gains keyboard focus.
 	EvtFocus Event = "focus"

@@ -18,6 +18,44 @@ This file is referenced by [SKILL.md](SKILL.md).
 
 ---
 
+## BarChart
+
+```go
+type BarSeries struct {
+    Label  string
+    Values []float64  // one per category, all >= 0
+}
+
+NewBarChart(id, class string) *BarChart
+```
+
+| Style key | When |
+|-----------|------|
+| `"bar-chart"` | always |
+| `"bar-chart/s0"` … `"bar-chart/s7"` | series colours (s0 = bottom of stack) |
+| `"bar-chart/axis"` | axis lines |
+| `"bar-chart/grid"` | grid lines |
+| `"bar-chart/label"` | category labels, unfocused |
+| `"bar-chart/label:focused"` | focused category label |
+| `"bar-chart/selection"` | selected category background |
+| `"bar-chart/value"` | value labels above bars |
+| `"bar-chart/legend"` | legend text |
+
+Theme strings: `"bar-chart.corner"` `"bar-chart.hline"` `"bar-chart.vline"`
+`"bar-chart.tick-x"` `"bar-chart.tick-y"` `"bar-chart.grid"` `"bar-chart.swatch"`.
+
+Events: `EvtSelect(int)` — focused category changed · `EvtActivate(int)` — Enter or double-click.
+
+Methods: `SetSeries([]BarSeries)`, `AddSeries(BarSeries)`, `SetCategories([]string)`,
+`Series() []BarSeries`, `Categories() []string`,
+`SetMode(ScaleMode)` (`Relative`/`Absolute`), `SetMax(float64)`,
+`SetHorizontal(bool)`, `SetShowAxis(bool)`, `SetShowGrid(bool)`,
+`SetShowValues(bool)`, `SetLegend(bool)`,
+`SetBarWidth(int)`, `SetBarGap(int)`, `SetTicks(int)`,
+`Select(int)`, `Selected() int`.
+
+---
+
 ## Box
 
 ```go
@@ -47,6 +85,28 @@ NewButton(id, class, text string) *Button
 | `"button.dialog"` / `"button.dialog:focused"` / `"button.dialog:hovered"` | inside dialog |
 
 Events: `EvtActivate` (payload `0`). Methods: `Activate()`, `Set(any) bool`.
+
+---
+
+## Breadcrumb
+
+```go
+NewBreadcrumb(id, class string) *Breadcrumb
+```
+
+| Style key | When |
+|-----------|------|
+| `"breadcrumb"` | always |
+| `"breadcrumb/segment"` | individual segment, unfocused |
+| `"breadcrumb/segment:focused"` | focused/selected segment |
+| `"breadcrumb/separator"` | separator between segments |
+
+Theme strings: `"breadcrumb.separator"` (default `" › "`) · `"breadcrumb.overflow"` (default `"…"`).
+
+Events: `EvtSelect(int)` — focused segment index · `EvtActivate(int)` — Enter or click.
+
+Methods: `SetSegments([]string)`, `Select(int)`, `Selected() int`,
+`SetSeparator(string)`, `SetOverflow(string)`.
 
 ---
 
@@ -80,6 +140,24 @@ Events: `EvtChange(bool)`. Methods: `Toggle()`, `Set(any) bool`.
 
 ---
 
+## Combo
+
+```go
+NewCombo(id, class string, items []string) *Combo
+```
+
+Collapsed single-line display with a dropdown popup (Typeahead + List).
+Opens on focus or Enter; Esc closes without confirming.
+
+| Style key | When |
+|-----------|------|
+| `"combo"` | always |
+| `"combo:focused"` | focused |
+
+Events: `EvtChange(string)` — every keystroke in popup · `EvtActivate(string)` — confirmed value.
+
+---
+
 ## Collapsible
 
 ```go
@@ -97,6 +175,20 @@ Theme strings: `"collapsible.expanded"`, `"collapsible.collapsed"`.
 Events: `EvtChange(bool)`.
 Methods: `Add(Widget) error`, `Expand()`, `Collapse()`, `Toggle()`, `Expanded() bool`.
 Single child only.
+
+---
+
+## CRT
+
+```go
+NewCRT(id, class string) *CRT
+```
+
+Animated root container that simulates a CRT monitor powering on/off.
+During normal operation it is a zero-overhead pass-through wrapper.
+
+`Add(Widget) error` — single child. `Start(interval)` — power-on animation.
+`PowerOff(interval, onDone func())` — power-off animation, then calls `onDone`.
 
 ---
 
@@ -191,6 +283,28 @@ Style key: `"grid"`. Events: none.
 `Add(Widget, x, y, colspan, rowspan int) error`.
 `Columns(sizes ...int)`, `Rows(sizes ...int)` — positive=fixed, negative=fractional, zero=auto.
 `Builder.Columns()`/`Rows()` log warning and no-op outside a Grid context.
+
+---
+
+## Heatmap
+
+```go
+NewHeatmap(id, class string, rows, cols int) *Heatmap
+```
+
+| Style key | When |
+|-----------|------|
+| `"heatmap"` | always |
+| `"heatmap/header"` | column label row |
+| `"heatmap/zero"` | cells with value 0 |
+| `"heatmap/mid"` | cells with intermediate values |
+| `"heatmap/max"` | cells at or near maximum |
+
+Events: none. Display only.
+
+Methods: `SetValue(row, col int, v float64)`, `SetRow(row int, vs []float64)`,
+`SetAll(vs [][]float64)`, `Value(row, col int) float64`,
+`SetRowLabels([]string)`, `SetColLabels([]string)`, `SetCellWidth(int)`.
 
 ---
 
@@ -289,6 +403,18 @@ Events: none. Non-interactive (display only).
 
 ---
 
+## Scanner
+
+```go
+NewScanner(id, class string, width int, style string) *Scanner
+// style: one of "blocks", "circles", "diamonds"
+```
+
+Animated back-and-forth scanning bar with a fading trail. Embeds `Animation`;
+call `Start(interval)` / `Stop()`. Style key: `"scanner"`. Events: none.
+
+---
+
 ## Select
 
 ```go
@@ -304,6 +430,26 @@ NewSelect(id, class string, args ...string) *Select
 Theme string: `"select.dropdown"` — dropdown indicator glyph.
 Events: `EvtChange(string)` — selected value.
 Methods: `Select(string)`, `Value() string`, `Text() string`.
+
+---
+
+## Spinner
+
+```go
+NewSpinner(id, class string, sequence string) *Spinner
+```
+
+Cycling single-character animation. `sequence` is a space-separated list of
+glyphs, e.g. `Spinners["braille"]`. Embeds `Animation`; call `Start(interval)` / `Stop()`.
+
+```go
+// Built-in sequences (Spinners map):
+// "bar"     "dots"   "dot"   "arrow"
+// "circle"  "bounce" "braille"
+sp := NewSpinner("sp", "", Spinners["braille"])
+```
+
+Style key: `"spinner"`. Events: none.
 
 ---
 
@@ -549,6 +695,83 @@ Tab or Right-arrow at end-of-text accepts suggestion.
 
 ---
 
+## Marquee
+
+```go
+NewMarquee(id, class string) *Marquee
+```
+
+Continuously scrolling single-row text ticker. Text wider than the widget
+scrolls left; pauses when `FlagHovered` is set. Embeds `Animation`.
+Does **not** set `FlagFocusable` — display only.
+
+Style key: `"marquee"`. Events: none.
+
+Methods: `SetText(string)`, `Text() string`,
+`SetSpeed(int)` (columns per tick, min 1), `SetGap(int)` (blank columns after text before loop).
+`Start(time.Duration)`, `Stop()`, `Running() bool`.
+
+---
+
+## Shimmer
+
+```go
+NewShimmer(id, class string) *Shimmer
+```
+
+Sweeping highlight band animation. A band of accent colour moves left-to-right
+across the text each tick, blending from base to band colour and back.
+Multi-line text is supported — the band sweeps the same column on all rows.
+Embeds `Animation`. Does **not** set `FlagFocusable` — display only.
+
+Defaults: `bandWidth=6`, `edgeWidth=3`, gradient off.
+
+| Style key | Purpose |
+|-----------|---------|
+| `"shimmer"` | base text colour and background |
+| `"shimmer/band"` | foreground at full band intensity (bg ignored) |
+
+Events: none.
+
+Methods: `SetText(string)`, `Text() string`,
+`SetBandWidth(int)` (core width in cols, min 1),
+`SetEdgeWidth(int)` (fade cols per side; 0 = hard edge),
+`SetGradient(bool)` (false = stepped linear ramp; true = smooth cosine bell).
+`Start(time.Duration)`, `Stop()`, `Running() bool`.
+
+```go
+sh := NewShimmer("status", "")
+sh.SetText("Analysing codebase…")
+sh.SetBandWidth(10).SetEdgeWidth(5).SetGradient(true)
+sh.Start(40 * time.Millisecond)
+```
+
+---
+
+## Typewriter
+
+```go
+NewTypewriter(id, class string) *Typewriter
+```
+
+Animated character-by-character text reveal with optional blinking cursor.
+Embeds `Animation`. Does **not** set `FlagFocusable` — display only.
+
+| Style key | When |
+|-----------|------|
+| `"typewriter"` | text background and colour |
+| `"typewriter/cursor"` | cursor character |
+
+Theme string: `"typewriter.cursor"` (default `"▌"`).
+
+Events: `EvtChange(bool=true)` — reveal complete · `EvtActivate(bool=true)` — animation done (`repeat=false`).
+
+Methods: `SetText(string)`, `Text() string`,
+`SetRate(int)`, `SetCursor(bool)`, `SetDwell(time.Duration)`, `SetRepeat(bool)`,
+`Reset()`, `Start(time.Duration)`, `Stop()`, `Running() bool`.
+
+---
+
 ## Viewport
 
 ```go
@@ -563,13 +786,25 @@ Style key: `"viewport"`. Events: none.
 ## Theme strings — complete list
 
 ```
-collapsible.expanded        collapsible.collapsed
+bar-chart.corner    bar-chart.hline    bar-chart.vline
+bar-chart.tick-x    bar-chart.tick-y   bar-chart.grid    bar-chart.swatch
+
+breadcrumb.separator    breadcrumb.overflow
+
+collapsible.expanded    collapsible.collapsed
+
 progress.h.prefix           progress.h.suffix
 progress.h.start.filled     progress.h.middle.filled    progress.h.end.filled
 progress.h.start.empty      progress.h.middle.empty     progress.h.end.empty
 progress.v.prefix           progress.v.suffix
 progress.v.start.filled     progress.v.middle.filled    progress.v.end.filled
 progress.v.start.empty      progress.v.middle.empty     progress.v.end.empty
+
 select.dropdown
+
+shortcuts.prefix    shortcuts.separator    shortcuts.suffix
+
 tree.expanded   tree.collapsed   tree.branch   tree.last   tree.trunk
+
+typewriter.cursor
 ```

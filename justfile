@@ -42,6 +42,7 @@ clean:
 # Release: merge develop into main, tag, push, return to develop, prepend new Unreleased section
 # Usage: just release 2.0.0
 release version:
+    go test ./...
     sed -i 's/## \[Unreleased\]/## v{{version}}/' CHANGELOG.md
     git add CHANGELOG.md
     git commit -m "chore: release v{{version}}"

@@ -352,21 +352,6 @@ func (c *Component) SetParent(parent Container) {
 	c.parent = parent
 }
 
-// State returns the current widget state based on the set flags.
-func (c *Component) State() string {
-	switch {
-	case c.Flag(FlagDisabled):
-		return string(FlagDisabled)
-	case c.Flag(FlagPressed):
-		return string(FlagPressed)
-	case c.Flag(FlagFocused):
-		return string(FlagFocused)
-	case c.Flag(FlagHovered):
-		return string(FlagHovered)
-	}
-	return ""
-}
-
 // SetStyle applies the given style configuration to the widget for a
 // specific selector. The style controls visual appearance including colors,
 // borders, margins, and padding. Selectors allow different styles for
@@ -384,6 +369,21 @@ func (c *Component) SetStyle(selector string, style *Style) {
 	} else {
 		c.styles[selector] = style
 	}
+}
+
+// State returns the current widget state based on the set flags.
+func (c *Component) State() string {
+	switch {
+	case c.Flag(FlagDisabled):
+		return string(FlagDisabled)
+	case c.Flag(FlagPressed):
+		return string(FlagPressed)
+	case c.Flag(FlagFocused):
+		return string(FlagFocused)
+	case c.Flag(FlagHovered):
+		return string(FlagHovered)
+	}
+	return ""
 }
 
 // Style returns the style for the specified selector.

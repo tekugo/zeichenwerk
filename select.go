@@ -7,6 +7,8 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+// ==== AI ===================================================================
+
 // option represents a single option in the select widget.
 type option struct {
 	value string

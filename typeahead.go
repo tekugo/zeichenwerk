@@ -4,6 +4,8 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+// ==== AI ===================================================================
+
 // Typeahead is a single-line text input that shows an inline ghost-text
 // suggestion after the cursor. The suggestion is provided by a caller-supplied
 // callback and accepted with Tab or → at end-of-text.

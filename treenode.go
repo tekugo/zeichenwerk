@@ -1,5 +1,7 @@
 package zeichenwerk
 
+// ==== AI ===================================================================
+
 // NodeLoader is called the first time a node is expanded. It receives the node
 // and is expected to call node.Add for each child. It is never called again
 // after the first expansion — set a new loader via SetLoader to re-trigger.

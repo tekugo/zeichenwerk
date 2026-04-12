@@ -111,22 +111,16 @@ go get github.com/tekugo/zeichenwerk
 
 ## Widgets
 
-| Category    | Widgets                               |
-| ----------- | ------------------------------------- |
-| Containers  | Box, Flex, Grid, Form, Switcher, Tabs |
-| Interaction | Button, Checkbox, Input, Select       |
-| Display     | Collapsible, Deck, List, Table        |
-| Overlay     | Dialog + Containers                   |
-| Animation   | Animation, Grow, Scanner, Spinner     |
-
-Also includes:
-
-- Multi-line text editor/area
-- Inspector for introspection and debugging
-- Included structured logging
-- Canvas, which will be used for a TUI designer
-- Forms created from and bound to Go structs
-- Styled text display with inline markup and word wrapping
+| Category    | Widgets                                                      |
+| ----------- | ------------------------------------------------------------ |
+| Containers  | Box, Flex, Grid, Form, Switcher, Tabs, Viewport              |
+| Interaction | Button, Checkbox, Combo, Input, Select, Typeahead            |
+| Navigation  | Breadcrumb, Collapsible, List, Tree                          |
+| Display     | Bar Chart, Deck, Digits, Heatmap, Sparkline, Table, Text     |
+| Text        | Editor, Rule, Static, Styled, Typewriter                     |
+| Animation   | CRT, Scanner, Spinner                                        |
+| Overlay     | Commands palette, Dialog, and container-based popups         |
+| Other       | Canvas, Terminal (ANSI/VT emulator)                          |
 
 ## Features
 
@@ -149,8 +143,11 @@ theme.Set("button#submit", NewStyle("green", "black", "bold"))
 
 Built-in themes:
 
-- `TokyoNightTheme()` - Dark theme with purple/blue accents
-- more to follow
+- `TokyoNightTheme()` — dark, blue/purple accents
+- `GruvboxDarkTheme()` / `GruvboxLightTheme()` — retro warm palette
+- `NordTheme()` — arctic blue-grey
+- `MidnightNeonTheme()` — near-black with electric cyan/magenta
+- `LipstickTheme()` — Charm-inspired fuchsia and indigo
 
 ### Focus Navigation
 
@@ -180,13 +177,13 @@ UI (root)
 
 ## Demo
 
-Explore the showcase for examples of all widgets using the builder API:
+Explore all widgets interactively with the builder-API demo:
 
 ```bash
-go run ./cmd/showcase
+go run ./cmd/demo
 ```
 
-Or the same showcase rewritten with the composition API:
+Or the composition-API showcase:
 
 ```bash
 go run ./cmd/compose
@@ -226,14 +223,13 @@ zeichenwerk.Dump(os.Stdout, someContainer)
 ui.Dump(os.Stdout, zeichenwerk.DumpOptions{Style: true})
 ```
 
-All three demo binaries support `-dump` and `-dump-verbose` flags that lay out
+Both demo binaries support `-dump` and `-dump-verbose` flags that lay out
 the UI at a fixed 120×40 size, print the hierarchy, and exit — no terminal
 required:
 
 ```bash
-go run ./cmd/showcase -dump
-go run ./cmd/showcase -dump-verbose
 go run ./cmd/demo -dump
+go run ./cmd/demo -dump-verbose
 go run ./cmd/compose -dump
 ```
 
@@ -266,9 +262,10 @@ detailed widget reference is included in
 
 ## Development Status
 
-**Active development** - Core features are implemented. Widget interface is
-stable. Widget-level test coverage and some layout edge cases are still being
-worked on.
+**Active development** — Core API and widget set are stable. Test coverage
+is growing (bar chart, breadcrumb, button, checkbox, input, list, progress,
+select, switcher, table, tabs, text, viewport, and more are unit-tested).
+Some layout edge cases and advanced widgets are still being refined.
 
 ## AI Assistance
 

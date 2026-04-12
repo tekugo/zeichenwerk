@@ -6,6 +6,8 @@ import (
 	"sort"
 )
 
+// ==== AI ===================================================================
+
 // TreeFS is a Tree widget pre-wired for filesystem navigation. It loads
 // directory contents lazily — children are read from disk the first time a
 // node is expanded. Directories are always shown; files are shown only when

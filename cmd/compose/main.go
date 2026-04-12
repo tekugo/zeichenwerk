@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gdamore/tcell/v3"
 	z "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/compose"
 )
@@ -47,6 +48,25 @@ func main() {
 		ui.Dump(os.Stdout, z.DumpOptions{Style: dmpV})
 		return
 	}
+
+	crt := z.Find(ui, "crt").(*z.CRT)
+
+	// Intercept quit shortcuts so the power-off animation plays before exit.
+	z.OnKey(crt, func(e *tcell.EventKey) bool {
+		switch e.Key() {
+		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
+			crt.PowerOff(20*time.Millisecond, ui.Quit)
+			return true
+		case tcell.KeyRune:
+			if s := e.Str(); s == "q" || s == "Q" {
+				crt.PowerOff(20*time.Millisecond, ui.Quit)
+				return true
+			}
+		}
+		return false
+	})
+
+	crt.Start(20 * time.Millisecond)
 	ui.Run()
 }
 
@@ -91,6 +111,7 @@ func createUI(theme *z.Theme) *z.UI {
 	}
 
 	ui := UI(theme,
+		CRT("crt", "",
 		Flex("root", "", false, "stretch", 0,
 			// ── Header ──────────────────────────────────────────────────────────
 			Flex("header", "", true, "center", 0,
@@ -145,6 +166,7 @@ func createUI(theme *z.Theme) *z.UI {
 				Spacer("", Hint(-1, 0)),
 				Static("footer-brand", "", "Zeichenwerk v2.0 ◈", Fg("$gray")),
 			),
+		),
 		),
 	)
 

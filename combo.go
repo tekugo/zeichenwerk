@@ -43,6 +43,8 @@ func NewCombo(id, class string, items []string) *Combo {
 	return c
 }
 
+// ---- Widget Methods ------------------------------------------------------
+
 // Apply applies theme styles to the Combo.
 func (c *Combo) Apply(theme *Theme) {
 	theme.Apply(c, c.Selector("combo"), "disabled", "focused", "hovered")
@@ -76,15 +78,19 @@ func (c *Combo) Render(r *Renderer) {
 	r.Text(cx+cw-1, cy, "▼", 1)
 }
 
-// Value returns the last confirmed value.
-func (c *Combo) Value() string {
-	return c.value
-}
+// ---- Combo Methods --------------------------------------------------------
 
 // SetItems replaces the suggestion list.
 func (c *Combo) SetItems(items []string) {
 	c.items = items
 }
+
+// Value returns the last confirmed value.
+func (c *Combo) Value() string {
+	return c.value
+}
+
+// ---- Internal Methods -----------------------------------------------------
 
 // popup opens a floating input+list panel below the Combo.
 func (c *Combo) popup() {

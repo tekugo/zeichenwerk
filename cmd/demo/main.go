@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk"
 )
 
@@ -65,10 +66,12 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Box", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
+		With(barChartDemo).
 		With(box).
+		With(breadcrumbDemo).
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
@@ -80,19 +83,24 @@ func createUI(theme *Theme) *UI {
 		With(form).
 		With(grid).
 		With(heatmapDemo).
+		With(marqueeDemo).
 		With(progress).
 		With(scanner).
 		With(sparklineDemo).
 		With(dropdown).
+		With(shimmerDemo).
 		With(spinner).
 		With(styled).
 		With(table).
 		With(tabs).
 		With(terminalDemo).
+		With(tilesDemo).
 		With(treeFSDemo).
 		With(typeaheadDemo).
+		With(typewriterDemo).
 		With(valueDemo).
 		With(viewport).
+		With(commandsDemo).
 		End().
 		Cell(1, 1, 1, 1).
 		Flex("debug-log-pane", false, "stretch", 0).Hint(0, 10).
@@ -127,6 +135,16 @@ func createUI(theme *Theme) *UI {
 		return true
 	})
 
+	// Register demo commands and bind Ctrl+K globally.
+	registerCommandsDemo(ui)
+	OnKey(Find(ui, "main"), func(e *tcell.EventKey) bool {
+		if e.Key() == tcell.KeyCtrlK {
+			ui.Commands().Open()
+			return true
+		}
+		return false
+	})
+
 	switcher := Find(ui, "switcher").(*Switcher)
 	Find(ui, "navigation").On(EvtActivate, func(_ Widget, event Event, data ...any) bool {
 		if len(data) == 1 {
@@ -135,7 +153,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 25:
+					case 32:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -157,7 +175,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 26:
+					case 33:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -170,7 +188,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 27:
+					case 34:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -183,7 +201,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 28:
+					case 35:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -191,11 +209,30 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 29:
+					case 36:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
 								log.Add("Dir → " + data[0].(string))
+							}
+							return true
+						})
+					case 37:
+						d := ui.FileChooser("Save As", "Save", "save", "", false)
+						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
+							path := data[0].(string)
+							save := func() {
+								if log, ok := Find(ui, "debug-log").(*Text); ok {
+									log.Add("Save As → " + path)
+								}
+							}
+							if _, err := os.Stat(path); err == nil {
+								ui.Confirm("Overwrite?",
+									filepath.Base(path)+" already exists. Overwrite?",
+									save, nil,
+								)
+							} else {
+								save()
 							}
 							return true
 						})
@@ -621,6 +658,107 @@ func grid(builder *Builder) {
 }
 
 // Progress demo
+func marqueeDemo(builder *Builder) {
+	builder.Flex("marquee-demo", false, "stretch", 1).Padding(1, 2).
+		Static("marquee-title", "Marquee Widget Demo").Padding(0, 0, 1, 0).
+		Static("marquee-desc", "Text wider than the widget scrolls continuously. Hover to pause.").Padding(0, 0, 1, 0).
+		Marquee("marquee-ticker").Hint(-1, 1).
+		Spacer().Hint(-1, 0).
+		Flex("marquee-controls", true, "center", 4).Padding(1, 0, 0, 0).
+		Checkbox("marquee-running", "Running", true).
+		End().
+		End()
+
+	pane := builder.Find("marquee-demo").(Container)
+	m := Find(pane, "marquee-ticker").(*Marquee)
+	m.SetText("Status: All systems operational.  CPU 4%  MEM 1.2 GB  NET ↑ 0.8 MB/s ↓ 2.1 MB/s  DISK 42%  TEMP 38°C  UPTIME 14d 7h")
+
+	Find(pane, "marquee-running").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			if v {
+				m.Start(80 * time.Millisecond)
+			} else {
+				m.Stop()
+			}
+		}
+		return true
+	})
+
+	pane.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		m.Start(80 * time.Millisecond)
+		return true
+	})
+
+	pane.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		m.Stop()
+		return true
+	})
+}
+
+func shimmerDemo(builder *Builder) {
+	builder.Flex("shimmer-demo", false, "stretch", 1).Padding(1, 2).
+		Static("shimmer-title", "Shimmer Widget Demo").Padding(0, 0, 1, 0).
+		Static("shimmer-stepped-label", "Stepped edge:").Padding(0, 0, 0, 0).
+		Shimmer("shimmer-stepped").Hint(-1, 1).
+		Spacer().Size(0, 1).
+		Static("shimmer-gradient-label", "Cosine gradient:").Padding(0, 0, 0, 0).
+		Shimmer("shimmer-gradient").Hint(-1, 1).
+		Spacer().Size(0, 1).
+		Static("shimmer-multi-label", "Multi-line (gradient):").Padding(0, 0, 0, 0).
+		Shimmer("shimmer-multi").Hint(-1, 3).
+		Spacer().Hint(-1, 0).
+		Flex("shimmer-controls", true, "center", 4).Padding(1, 0, 0, 0).
+		Checkbox("shimmer-running", "Running", true).
+		End().
+		End()
+
+	pane := builder.Find("shimmer-demo").(Container)
+
+	s1 := Find(pane, "shimmer-stepped").(*Shimmer)
+	s1.SetText("Analysing codebase…  Status: all systems operational.")
+	s1.SetBandWidth(10).SetEdgeWidth(5)
+
+	s2 := Find(pane, "shimmer-gradient").(*Shimmer)
+	s2.SetText("Analysing codebase…  Status: all systems operational.")
+	s2.SetBandWidth(10).SetEdgeWidth(5).SetGradient(true)
+
+	s3 := Find(pane, "shimmer-multi").(*Shimmer)
+	s3.SetText("Searching for references…\nProcessing matched files…\nUpdating cross-references…")
+	s3.SetBandWidth(10).SetEdgeWidth(5).SetGradient(true)
+
+	start := func() {
+		s1.Start(40 * time.Millisecond)
+		s2.Start(40 * time.Millisecond)
+		s3.Start(40 * time.Millisecond)
+	}
+	stop := func() {
+		s1.Stop()
+		s2.Stop()
+		s3.Stop()
+	}
+
+	Find(pane, "shimmer-running").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			if v {
+				start()
+			} else {
+				stop()
+			}
+		}
+		return true
+	})
+
+	pane.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		start()
+		return true
+	})
+
+	pane.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		stop()
+		return true
+	})
+}
+
 func progress(builder *Builder) {
 	builder.Flex("progress-demo", false, "stretch", 1).Padding(1).
 		Static("progress-title", "Progress Widget Demo").Padding(0, 0, 1, 0).
@@ -980,6 +1118,67 @@ func typeaheadDemo(builder *Builder) {
 	})
 }
 
+func tilesDemo(builder *Builder) {
+	type card struct {
+		name  string
+		icon  string
+		color string
+	}
+	cards := []card{
+		{"Dashboard", "◈", "$blue"},
+		{"Analytics", "▦", "$green"},
+		{"Reports", "▤", "$yellow"},
+		{"Settings", "⚙", "$fg2"},
+		{"Users", "◉", "$blue"},
+		{"Billing", "◎", "$orange"},
+		{"Security", "◆", "$red"},
+		{"Integrations", "⬡", "$cyan"},
+		{"Logs", "≡", "$fg2"},
+		{"API Keys", "◆", "$purple"},
+		{"Webhooks", "◈", "$blue"},
+		{"Audit Trail", "▤", "$yellow"},
+	}
+	items := make([]any, len(cards))
+	for i, c := range cards {
+		items[i] = c
+	}
+
+	// tileWidth=14, tileHeight=4: row 0 blank, row 1 icon, row 2 name, row 3 blank.
+	renderCard := func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
+		c := data.(card)
+		bg := "$bg2"
+		fg := "$fg1"
+		if selected && focused {
+			bg = "$blue"
+			fg = "$bg0"
+		} else if selected {
+			bg = "$bg3"
+			fg = "$fg0"
+		}
+		r.Set(fg, bg, "")
+		r.Fill(x, y, w, h, " ")
+		// Icon on row 1, centred horizontally.
+		iconX := x + max(0, (w-1)/2)
+		r.Set(c.color, bg, "bold")
+		r.Put(iconX, y+1, c.icon)
+		// Name on row 2, centred horizontally.
+		nameRunes := []rune(c.name)
+		nameX := x + max(0, (w-len(nameRunes))/2)
+		r.Set(fg, bg, "")
+		r.Text(nameX, y+2, c.name, w-(nameX-x))
+	}
+
+	// No vertical padding on the outer Flex — every row counts.
+	builder.Flex("tiles-demo", false, "stretch", 0).Padding(0, 2).
+		Static("tiles-title", "Tiles  ←→↑↓ navigate · Enter activate").Padding(0, 0, 0, 0).
+		Tiles("tiles-grid", renderCard, 14, 4).Hint(-1, -1).
+		End()
+
+	pane := builder.Find("tiles-demo").(Container)
+	grid := Find(pane, "tiles-grid").(*Tiles)
+	grid.SetItems(items)
+}
+
 func treeFSDemo(builder *Builder) {
 	var tfs *TreeFS
 
@@ -1027,6 +1226,77 @@ func treeFSDemo(builder *Builder) {
 		if label, ok := Find(container, "tree-fs-selected").(*Static); ok {
 			label.Set(node.Data().(string))
 		}
+		return true
+	})
+}
+
+// Typewriter demo — animated character-by-character reveal.
+func typewriterDemo(builder *Builder) {
+	phrases := []string{
+		"Initialising subsystems…",
+		"Loading configuration…",
+		"Connecting to services…",
+		"All systems operational.",
+	}
+	idx := 0
+
+	builder.Flex("tw-demo", false, "stretch", 1).Padding(1, 2).
+		Static("tw-title", "Typewriter Widget Demo").Padding(0, 0, 1, 0).
+		Static("tw-desc", "Text is revealed character by character with a blinking cursor.").Padding(0, 0, 1, 0).
+		Typewriter("tw").
+		Spacer().Hint(-1, 0).
+		Flex("tw-controls", true, "center", 4).Padding(1, 0, 0, 0).
+		Checkbox("tw-repeat", "Repeat", false).
+		Checkbox("tw-cursor", "Show cursor", true).
+		Button("tw-restart", "Restart").
+		End().
+		End()
+
+	pane := builder.Find("tw-demo").(Container)
+
+	tw := Find(pane, "tw").(*Typewriter)
+	tw.SetText(phrases[idx])
+
+	startNext := func() {
+		idx = (idx + 1) % len(phrases)
+		tw.SetText(phrases[idx])
+		tw.Start(30 * time.Millisecond)
+	}
+
+	tw.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		startNext()
+		return true
+	})
+
+	Find(pane, "tw-repeat").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			tw.SetRepeat(v)
+		}
+		return true
+	})
+
+	Find(pane, "tw-cursor").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			tw.SetCursor(v)
+		}
+		return true
+	})
+
+	Find(pane, "tw-restart").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		tw.Stop()
+		tw.Reset()
+		tw.Start(30 * time.Millisecond)
+		return true
+	})
+
+	pane.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		tw.Reset()
+		tw.Start(30 * time.Millisecond)
+		return true
+	})
+
+	pane.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		tw.Stop()
 		return true
 	})
 }
@@ -1284,6 +1554,109 @@ func heatmapDemo(builder *Builder) {
 	})
 }
 
+// barChartDemo demonstrates the BarChart widget with stacked series, a
+// category label row, y-axis, grid, and a legend. Two views are shown:
+// a vertical stacked bar chart and a horizontal variant below it.
+func barChartDemo(builder *Builder) {
+	categories := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+	series := []BarSeries{
+		{Label: "Revenue", Values: []float64{42, 55, 61, 49, 70, 88, 95, 83, 74, 66, 52, 78}},
+		{Label: "Costs", Values: []float64{30, 32, 35, 33, 38, 41, 44, 40, 37, 35, 30, 36}},
+		{Label: "Profit", Values: []float64{12, 23, 26, 16, 32, 47, 51, 43, 37, 31, 22, 42}},
+	}
+
+	builder.Flex("bar-chart-demo", false, "stretch", 1).Padding(1, 2).
+		Static("bc-title", "Bar Chart Widget Demo").Padding(0, 0, 1, 0).
+		Static("bc-desc", "Stacked bar chart with y-axis, grid, and legend. Use ←→ to navigate categories.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("bc-vert-label", "Vertical (stacked):").Padding(0, 0, 0, 0).
+		BarChart("bc-vert").Hint(-1, 16).
+		Static("bc-horiz-label", "Horizontal:").Padding(1, 0, 0, 0).
+		BarChart("bc-horiz").Hint(-1, 12).
+		End()
+
+	bcVert := builder.Find("bc-vert").(*BarChart)
+	bcVert.SetCategories(categories)
+	bcVert.SetSeries(series)
+	bcVert.SetShowValues(true)
+
+	bcHoriz := builder.Find("bc-horiz").(*BarChart)
+	bcHoriz.SetCategories(categories)
+	bcHoriz.SetSeries(series)
+	bcHoriz.SetHorizontal(true)
+	bcHoriz.SetShowValues(false)
+}
+
+// breadcrumbDemo demonstrates the Breadcrumb widget with Push/Pop controls
+// and an EvtActivate handler that truncates the path on segment click.
+func breadcrumbDemo(builder *Builder) {
+	path := []string{"Home", "Projects", "zeichenwerk", "cmd", "demo"}
+
+	builder.Flex("breadcrumb-demo", false, "stretch", 1).Padding(1, 2).
+		Static("bc-title", "Breadcrumb Widget Demo").Padding(0, 0, 1, 0).
+		Static("bc-desc", "Click a segment to navigate. ←→ to move, Enter to activate (truncates path).").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("bc-label", "Path:").Padding(0, 0, 0, 0).
+		Breadcrumb("bc").Hint(-1, 1).
+		Flex("bc-controls", true, "center", 2).Padding(1, 0, 0, 0).
+		Button("bc-push", "Push").
+		Button("bc-pop", "Pop").
+		Button("bc-reset", "Reset").
+		End().
+		Static("bc-status", "").Padding(1, 0, 0, 0).
+		End()
+
+	bc := builder.Find("bc").(*Breadcrumb)
+	bc.SetSegments(path)
+
+	status := builder.Find("bc-status").(*Static)
+
+	bc.On(EvtSelect, func(_ Widget, _ Event, data ...any) bool {
+		idx := data[0].(int)
+		segs := bc.Segments()
+		if idx < len(segs) {
+			status.Set(fmt.Sprintf("Selected: [%d] %s", idx, segs[idx]))
+		}
+		return true
+	})
+
+	bc.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
+		idx := data[0].(int)
+		bc.Truncate(idx)
+		segs := bc.Segments()
+		if idx < len(segs) {
+			status.Set(fmt.Sprintf("Activated: truncated to [%d] %s", idx, segs[idx]))
+		}
+		return true
+	})
+
+	pushBtn := builder.Find("bc-push").(*Button)
+	pushBtn.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		n := len(bc.Segments())
+		bc.Push(fmt.Sprintf("dir%d", n))
+		status.Set(fmt.Sprintf("Pushed: %d segments", len(bc.Segments())))
+		return true
+	})
+
+	popBtn := builder.Find("bc-pop").(*Button)
+	popBtn.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		seg := bc.Pop()
+		if seg != "" {
+			status.Set(fmt.Sprintf("Popped: %q", seg))
+		} else {
+			status.Set("Nothing to pop")
+		}
+		return true
+	})
+
+	resetBtn := builder.Find("bc-reset").(*Button)
+	resetBtn.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		bc.SetSegments(path)
+		status.Set("Reset")
+		return true
+	})
+}
+
 // Table demo data generation
 func people(n int) [][]string {
 	firstNames := []string{"John", "Jane", "Michael", "Emily", "David", "Sophia", "James", "Olivia", "Daniel", "Ava", "Liam", "Emma", "Noah", "Isabella", "Ethan", "Mia", "Lucas", "Charlotte", "Mason", "Amelia"}
@@ -1312,4 +1685,41 @@ func people(n int) [][]string {
 		result[i] = []string{first, last, street, zip, city, state, "USA", phone, email, birth, fmt.Sprintf("%d", age), pob, fmt.Sprintf("$%d", income), ssn, sex}
 	}
 	return result
+}
+
+// commandsDemo builds the Commands Palette demo pane.
+// Commands are registered separately in registerCommandsDemo (called after Build).
+// Bind Ctrl+K anywhere in the app to open the palette.
+func commandsDemo(b *Builder) {
+	b.Flex("commands-demo", false, "stretch", 1).Padding(1).
+		Static("commands-title", "Commands Palette").Padding(0, 0, 1, 0).
+		HRule("thin").
+		Static("commands-instructions",
+			"Press Ctrl+K to open the commands palette.\n\n"+
+				"Start typing to fuzzy-filter commands.\n"+
+				"Use ↑↓ to navigate, Enter to execute, Esc to dismiss.\n\n"+
+				"Registered groups: File · View · Navigation\n"+
+				"Commands that modify visible state log output to the debug pane.").
+		End()
+}
+
+// registerCommandsDemo registers representative commands on the UI's Commands
+// singleton and is called once after Build() so the UI reference is available.
+func registerCommandsDemo(ui *UI) {
+	logMsg := func(msg string) {
+		if t, ok := Find(ui, "debug-log").(*Text); ok {
+			t.Add("Commands → " + msg)
+		}
+	}
+	cmds := ui.Commands()
+	cmds.Register("File", "New File", "Ctrl+N", func() { logMsg("New File") })
+	cmds.Register("File", "Open File", "Ctrl+O", func() { logMsg("Open File") })
+	cmds.Register("File", "Save File", "Ctrl+S", func() { logMsg("Save File") })
+	cmds.Register("File", "Close File", "", func() { logMsg("Close File") })
+	cmds.Register("View", "Toggle Theme", "", func() { logMsg("Toggle Theme") })
+	cmds.Register("View", "Split Pane", "Ctrl+\\", func() { logMsg("Split Pane") })
+	cmds.Register("View", "Toggle Sidebar", "", func() { logMsg("Toggle Sidebar") })
+	cmds.Register("Navigation", "Go to Line", "Ctrl+G", func() { logMsg("Go to Line") })
+	cmds.Register("Navigation", "Find in Files", "Ctrl+F", func() { logMsg("Find in Files") })
+	cmds.Register("Navigation", "Go to Symbol", "Ctrl+R", func() { logMsg("Go to Symbol") })
 }

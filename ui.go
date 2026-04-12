@@ -98,6 +98,9 @@ type UI struct {
 	// Rendering system
 	renderer *Renderer    // Renderer instance responsible for drawing widgets to the terminal
 	screen   tcell.Screen // The terminal screen interface for low-level cell manipulation and event polling
+
+	// Commands palette
+	commands *Commands // lazy singleton; allocated on first call to Commands()
 }
 
 // parseLevel converts a Level to slog.Level.
@@ -764,6 +767,15 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 	})
 
 	ui.Popup(-1, -1, 0, 0, dialog)
+}
+
+// Commands returns the application's command palette singleton. The instance
+// is allocated on the first call and reused on subsequent calls.
+func (ui *UI) Commands() *Commands {
+	if ui.commands == nil {
+		ui.commands = newCommands(ui)
+	}
+	return ui.commands
 }
 
 // Quit signals the application to exit cleanly. Safe to call multiple times.

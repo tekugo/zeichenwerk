@@ -1,5 +1,7 @@
 package zeichenwerk
 
+// ==== AI ===================================================================
+
 // Filter is a standalone input widget that progressively filters a bound [List]
 // or [Tree] as the user types. It embeds [Typeahead] and adds a Bind/Unbind
 // mechanism plus the filtering side-effect on every EvtChange.

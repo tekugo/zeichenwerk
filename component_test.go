@@ -91,33 +91,180 @@ func TestComponent_Dispatch_On(t *testing.T) {
 }
 
 func TestComponent_Content(t *testing.T) {
-	c := &Component{
-		x:      0,
-		y:      0,
-		width:  100,
-		height: 100,
-	}
-	// No style
+	c := &Component{x: 0, y: 0, width: 100, height: 100}
 	cx, cy, cw, ch := c.Content()
 	if cx != 0 || cy != 0 || cw != 100 || ch != 100 {
 		t.Errorf("Content() no style = %d,%d %dx%d; want 0,0 100x100", cx, cy, cw, ch)
 	}
+}
 
-	// With style (margin 5, border 1 (implicit if names imply it, but we set explicit usually, here just assuming Style logic works as mocked or real))
-	// Actually we depend on Style implementation. Let's assume Style logic is correct and just test we call it.
-	// We need to inject a style into the component manually or via a public method if one existed to set style directly,
-	// but currently only internal map access or maybe via Style() which creates default.
-	// SetStyle is not in the Interface, nor in the component (wait, previous code didn't have SetStyle method expoyted on Component?
-	// Wait, base-widget had SetStyle. I missed SetStyle in Component!
-	// Let me check my implementation of Component again. I don't recall implementing SetStyle public method.
-	// The interface doesn't REQUIRE SetStyle?
-	// Let me check Widget interface again.
-	// Widget interface:
-	// ...
-	// Dispatch, On, ...
-	// It does NOT have SetStyle.
-	// However, how do we set styles then? BaseWidget had SetStyle. Conceptually widgets should have it?
-	// The prompt asked to implement missing Widget methods. If SetStyle is not in Widget interface, strict compliance doesn't require it.
-	// BUT, practically, we need it.
-	// For now, I will test Content() with default style which is 0 insets.
+// ── Parent / child wiring ─────────────────────────────────────────────────────
+
+func TestComponent_SetParent_Parent(t *testing.T) {
+	parent := NewSwitcher("parent", "") // Switcher implements Container
+	child := NewComponent("child", "")
+	child.SetParent(parent)
+	if child.Parent() != parent {
+		t.Error("Parent() should return the set parent")
+	}
+}
+
+func TestComponent_SetParent_Nil_ClearsParent(t *testing.T) {
+	parent := NewSwitcher("p", "")
+	child := NewComponent("c", "")
+	child.SetParent(parent)
+	child.SetParent(nil)
+	if child.Parent() != nil {
+		t.Error("Parent() should be nil after SetParent(nil)")
+	}
+}
+
+// ── State priority ────────────────────────────────────────────────────────────
+
+func TestComponent_State_Disabled_Wins(t *testing.T) {
+	c := NewComponent("c", "")
+	c.SetFlag(FlagDisabled, true)
+	c.SetFlag(FlagFocused, true)
+	c.SetFlag(FlagHovered, true)
+	if c.State() != string(FlagDisabled) {
+		t.Errorf("State() = %q; want %q (disabled beats all)", c.State(), string(FlagDisabled))
+	}
+}
+
+func TestComponent_State_Pressed_BeforesFocused(t *testing.T) {
+	c := NewComponent("c", "")
+	c.SetFlag(FlagPressed, true)
+	c.SetFlag(FlagFocused, true)
+	if c.State() != string(FlagPressed) {
+		t.Errorf("State() = %q; want %q", c.State(), string(FlagPressed))
+	}
+}
+
+func TestComponent_State_Empty_WhenNoFlags(t *testing.T) {
+	c := NewComponent("c", "")
+	if c.State() != "" {
+		t.Errorf("State() = %q; want empty when no flags set", c.State())
+	}
+}
+
+// ── Style fallback chain ──────────────────────────────────────────────────────
+
+func TestComponent_Style_ExactMatch(t *testing.T) {
+	c := NewComponent("c", "")
+	s := NewStyle("").WithColors("red", "blue")
+	c.SetStyle("header:focused", s)
+	got := c.Style("header:focused")
+	if got != s {
+		t.Error("Style() should return exact match for registered selector")
+	}
+}
+
+func TestComponent_Style_FallsBackToPart(t *testing.T) {
+	c := NewComponent("c", "")
+	s := NewStyle("").WithColors("red", "blue")
+	c.SetStyle("header", s)
+	got := c.Style("header:focused")
+	if got != s {
+		t.Error("Style(\"header:focused\") should fall back to \"header\" when exact not found")
+	}
+}
+
+func TestComponent_Style_FallsBackToState(t *testing.T) {
+	c := NewComponent("c", "")
+	s := NewStyle("").WithColors("red", "blue")
+	c.SetStyle(":focused", s)
+	got := c.Style("header:focused")
+	if got != s {
+		t.Error("Style(\"header:focused\") should fall back to \":focused\" when part not found")
+	}
+}
+
+func TestComponent_Style_FallsBackToDefault(t *testing.T) {
+	c := NewComponent("c", "")
+	got := c.Style("unknown:state")
+	if got == nil {
+		t.Error("Style() should never return nil — falls back to default")
+	}
+}
+
+// ── SetStyle / Styles ─────────────────────────────────────────────────────────
+
+func TestComponent_SetStyle_Styles(t *testing.T) {
+	c := NewComponent("c", "")
+	c.SetStyle("", NewStyle("").WithColors("white", "black"))
+	c.SetStyle(":focused", NewStyle("").WithColors("black", "white"))
+	styles := c.Styles()
+	if len(styles) != 2 {
+		t.Errorf("Styles() len = %d; want 2", len(styles))
+	}
+}
+
+func TestComponent_SetStyle_Nil_Removes(t *testing.T) {
+	c := NewComponent("c", "")
+	c.SetStyle("test", NewStyle(""))
+	c.SetStyle("test", nil)
+	styles := c.Styles()
+	for _, s := range styles {
+		if s == "test" {
+			t.Error("nil SetStyle should remove the selector")
+		}
+	}
+}
+
+// ── Selector ─────────────────────────────────────────────────────────────────
+
+func TestComponent_Selector_TypeOnly(t *testing.T) {
+	c := NewComponent("", "")
+	if c.Selector("button") != "button" {
+		t.Errorf("Selector() = %q; want %q", c.Selector("button"), "button")
+	}
+}
+
+func TestComponent_Selector_WithClass(t *testing.T) {
+	c := NewComponent("", "primary")
+	if c.Selector("button") != "button.primary" {
+		t.Errorf("Selector() = %q; want %q", c.Selector("button"), "button.primary")
+	}
+}
+
+func TestComponent_Selector_WithID(t *testing.T) {
+	c := NewComponent("submit", "")
+	if c.Selector("button") != "button#submit" {
+		t.Errorf("Selector() = %q; want %q", c.Selector("button"), "button#submit")
+	}
+}
+
+func TestComponent_Selector_WithClassAndID(t *testing.T) {
+	c := NewComponent("submit", "primary")
+	got := c.Selector("button")
+	want := "button.primary#submit"
+	if got != want {
+		t.Errorf("Selector() = %q; want %q", got, want)
+	}
+}
+
+// ── FlagHidden prevents Render ────────────────────────────────────────────────
+
+func TestComponent_FlagHidden_SkipsBackgroundFill(t *testing.T) {
+	c := NewComponent("c", "")
+	c.SetBounds(0, 0, 5, 1)
+	c.SetStyle("", NewStyle("").WithColors("white", "black")) // background set → would Fill with " "
+
+	cs := newCellScreen()
+	r := NewRenderer(cs, NewTheme())
+
+	// Without hidden: background fill should write spaces
+	c.Render(r)
+	if cs.Get(0, 0) != " " {
+		t.Errorf("visible component with background should fill with space; got %q", cs.Get(0, 0))
+	}
+
+	// With hidden: nothing written
+	cs2 := newCellScreen()
+	r2 := NewRenderer(cs2, NewTheme())
+	c.SetFlag(FlagHidden, true)
+	c.Render(r2)
+	if cs2.Get(0, 0) != "" {
+		t.Errorf("hidden component should not fill background; got %q at (0,0)", cs2.Get(0, 0))
+	}
 }

@@ -32,33 +32,12 @@ func NewCollapsible(id, class, title string, expanded bool) *Collapsible {
 	return c
 }
 
-// Add sets the single child widget. Calling Add again replaces any existing
-// child. The child is hidden immediately when the collapsible is collapsed.
-func (c *Collapsible) Add(widget Widget, params ...any) error {
-	if widget == nil {
-		return ErrChildIsNil
-	}
-	if c.child != nil {
-		c.child.SetParent(nil)
-	}
-	c.child = widget
-	c.child.SetParent(c)
-	c.child.SetFlag(FlagHidden, !c.expanded)
-	return nil
-}
+// ---- Widget Methods -------------------------------------------------------
 
 // Apply applies the collapsible and header styles from the theme.
 func (c *Collapsible) Apply(theme *Theme) {
 	theme.Apply(c, c.Selector("collapsible"), "focused", "hovered")
 	theme.Apply(c, c.Selector("collapsible/header"), "focused", "hovered")
-}
-
-// Children returns a slice containing the child widget, or an empty slice.
-func (c *Collapsible) Children() []Widget {
-	if c.child == nil {
-		return []Widget{}
-	}
-	return []Widget{c.child}
 }
 
 // Hint returns the preferred content size.
@@ -83,15 +62,6 @@ func (c *Collapsible) Hint() (int, int) {
 		return childW, 1 + childH
 	}
 	return childW, 1
-}
-
-// Layout positions the child within the body area (below the header row).
-func (c *Collapsible) Layout() error {
-	cx, cy, cw, ch := c.Content()
-	if c.expanded && c.child != nil {
-		c.child.SetBounds(cx, cy+1, cw, ch-1)
-	}
-	return Layout(c)
 }
 
 // Render draws the collapsible: background/border, header row, and (if
@@ -120,15 +90,41 @@ func (c *Collapsible) Render(r *Renderer) {
 	}
 }
 
-// Expand shows the body. No-op if already expanded.
-func (c *Collapsible) Expand() {
-	c.expanded = true
-	if c.child != nil {
-		c.child.SetFlag(FlagHidden, false)
+// ---- Container Methods ----------------------------------------------------
+
+// Add sets the single child widget. Calling Add again replaces any existing
+// child. The child is hidden immediately when the collapsible is collapsed.
+func (c *Collapsible) Add(widget Widget, params ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
 	}
-	Relayout(c)
-	c.Dispatch(c, EvtChange, c.expanded)
+	if c.child != nil {
+		c.child.SetParent(nil)
+	}
+	c.child = widget
+	c.child.SetParent(c)
+	c.child.SetFlag(FlagHidden, !c.expanded)
+	return nil
 }
+
+// Children returns a slice containing the child widget, or an empty slice.
+func (c *Collapsible) Children() []Widget {
+	if c.child == nil {
+		return []Widget{}
+	}
+	return []Widget{c.child}
+}
+
+// Layout positions the child within the body area (below the header row).
+func (c *Collapsible) Layout() error {
+	cx, cy, cw, ch := c.Content()
+	if c.expanded && c.child != nil {
+		c.child.SetBounds(cx, cy+1, cw, ch-1)
+	}
+	return Layout(c)
+}
+
+// ---- Collapsible Methods --------------------------------------------------
 
 // Collapse hides the body. No-op if already collapsed.
 // If focus lives inside the child subtree it is moved to the Collapsible so
@@ -147,6 +143,32 @@ func (c *Collapsible) Collapse() {
 	c.Dispatch(c, EvtChange, c.expanded)
 }
 
+// Expand shows the body. No-op if already expanded.
+func (c *Collapsible) Expand() {
+	c.expanded = true
+	if c.child != nil {
+		c.child.SetFlag(FlagHidden, false)
+	}
+	Relayout(c)
+	c.Dispatch(c, EvtChange, c.expanded)
+}
+
+// Expanded reports whether the body is currently visible.
+func (c *Collapsible) Expanded() bool {
+	return c.expanded
+}
+
+// Toggle switches between expanded and collapsed states.
+func (c *Collapsible) Toggle() {
+	if c.expanded {
+		c.Collapse()
+	} else {
+		c.Expand()
+	}
+}
+
+// ---- Internal Methods -----------------------------------------------------
+
 // focusedIn reports whether widget or any of its descendants carries FlagFocused.
 func focusedIn(widget Widget) bool {
 	if widget.Flag(FlagFocused) {
@@ -160,20 +182,6 @@ func focusedIn(widget Widget) bool {
 		}
 	}
 	return false
-}
-
-// Toggle switches between expanded and collapsed states.
-func (c *Collapsible) Toggle() {
-	if c.expanded {
-		c.Collapse()
-	} else {
-		c.Expand()
-	}
-}
-
-// Expanded reports whether the body is currently visible.
-func (c *Collapsible) Expanded() bool {
-	return c.expanded
 }
 
 func (c *Collapsible) handleKey(ev *tcell.EventKey) bool {

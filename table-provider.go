@@ -77,8 +77,8 @@ func NewArrayTableProvider(headers []string, data [][]string) *ArrayTableProvide
 	for i, header := range headers {
 		column := TableColumn{Header: header, Width: len([]rune(header))}
 		for j := range len(data) {
-			if len(data[j][i]) > column.Width {
-				column.Width = len([]rune(data[j][i]))
+			if w := len([]rune(data[j][i])); w > column.Width {
+				column.Width = w
 			}
 		}
 		table.columns[i] = column

@@ -58,6 +58,8 @@ func NewEditor(id, class string) *Editor {
 	return e
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Apply applies a theme style to the component.
 func (e *Editor) Apply(theme *Theme) {
 	theme.Apply(e, e.Selector("editor"))
@@ -108,6 +110,28 @@ func (e *Editor) Refresh() {
 	Redraw(e)
 }
 
+// ---- Editor Methods -------------------------------------------------------
+
+// Load sets the editor content from a single string (lines separated by \n).
+func (e *Editor) Load(text string) {
+	lines := strings.Split(text, "\n")
+	e.SetContent(lines)
+}
+
+// Lines returns the editor content as a slice of strings.
+func (e *Editor) Lines() []string {
+	lines := make([]string, len(e.content))
+	for i, buf := range e.content {
+		lines[i] = buf.String()
+	}
+	return lines
+}
+
+// SetAutoIndent configures auto-indentation.
+func (e *Editor) SetAutoIndent(auto bool) {
+	e.indent = auto
+}
+
 // SetContent replaces all editor content with the provided lines.
 func (e *Editor) SetContent(lines []string) {
 	e.content = make([]*GapBuffer, len(lines))
@@ -127,24 +151,14 @@ func (e *Editor) SetContent(lines []string) {
 	e.Refresh()
 }
 
-// Load sets the editor content from a single string (lines separated by \n).
-func (e *Editor) Load(text string) {
-	lines := strings.Split(text, "\n")
-	e.SetContent(lines)
-}
-
-// Lines returns the editor content as a slice of strings.
-func (e *Editor) Lines() []string {
-	lines := make([]string, len(e.content))
-	for i, buf := range e.content {
-		lines[i] = buf.String()
+// SetReadOnly configures read-only mode.
+func (e *Editor) SetReadOnly(ro bool) {
+	e.disabled = ro
+	if ro {
+		e.SetFlag(FlagDisabled, true)
+	} else {
+		e.SetFlag(FlagDisabled, false)
 	}
-	return lines
-}
-
-// Text returns the editor content as a single string with newlines.
-func (e *Editor) Text() string {
-	return strings.Join(e.Lines(), "\n")
 }
 
 // SetTabWidth configures tab width.
@@ -153,11 +167,6 @@ func (e *Editor) SetTabWidth(width int) {
 		e.tab = width
 	}
 	e.Refresh()
-}
-
-// UseSpaces configures whether to insert spaces instead of tabs.
-func (e *Editor) UseSpaces(useSpaces bool) {
-	e.spaces = useSpaces
 }
 
 // ShowLineNumbers enables or disables line numbers.
@@ -170,19 +179,14 @@ func (e *Editor) ShowLineNumbers(show bool) {
 	e.Refresh()
 }
 
-// SetAutoIndent configures auto-indentation.
-func (e *Editor) SetAutoIndent(auto bool) {
-	e.indent = auto
+// Text returns the editor content as a single string with newlines.
+func (e *Editor) Text() string {
+	return strings.Join(e.Lines(), "\n")
 }
 
-// SetReadOnly configures read-only mode.
-func (e *Editor) SetReadOnly(ro bool) {
-	e.disabled = ro
-	if ro {
-		e.SetFlag(FlagDisabled, true)
-	} else {
-		e.SetFlag(FlagDisabled, false)
-	}
+// UseSpaces configures whether to insert spaces instead of tabs.
+func (e *Editor) UseSpaces(useSpaces bool) {
+	e.spaces = useSpaces
 }
 
 // ---- Selection ------------------------------------------------------------
@@ -294,6 +298,8 @@ func (e *Editor) DeleteSelection() {
 	e.Refresh()
 }
 
+// ---- Cut/Copy/Paste -------------------------------------------------------
+
 // Copy copies the selection to the internal (and optionally system) clipboard.
 // No-op when no selection is active.
 func (e *Editor) Copy() {
@@ -395,6 +401,36 @@ func systemPaste() (string, error) {
 
 // ---- Movement -------------------------------------------------------------
 
+func (e *Editor) DocumentEnd() {
+	lastLine := len(e.content) - 1
+	lastCol := e.content[lastLine].Length()
+	e.MoveTo(lastLine, lastCol)
+}
+
+func (e *Editor) DocumentHome() {
+	e.MoveTo(0, 0)
+}
+
+func (e *Editor) Down() {
+	e.ClearSelection()
+	if e.line < len(e.content)-1 {
+		e.line++
+		lineLen := e.content[e.line].Length()
+		if e.column > lineLen {
+			e.column = lineLen
+		}
+		e.adjustViewport()
+		e.Refresh()
+	}
+}
+
+func (e *Editor) End() {
+	e.ClearSelection()
+	e.column = e.content[e.line].Length()
+	e.adjustViewport()
+	e.Refresh()
+}
+
 func (e *Editor) Left() {
 	if e.HasSelection() {
 		startLine, startCol, _, _, _ := e.selectionBounds()
@@ -415,6 +451,49 @@ func (e *Editor) Left() {
 		e.adjustViewport()
 		e.Refresh()
 	}
+}
+
+func (e *Editor) Home() {
+	e.ClearSelection()
+	e.column = 0
+	e.adjustViewport()
+	e.Refresh()
+}
+
+// MoveTo moves the cursor to the specified line and column.
+func (e *Editor) MoveTo(line, column int) {
+	e.ClearSelection()
+	if line < 0 {
+		line = 0
+	} else if line >= len(e.content) {
+		line = len(e.content) - 1
+	}
+	lineLen := e.content[line].Length()
+	if column < 0 {
+		column = 0
+	} else if column > lineLen {
+		column = lineLen
+	}
+	e.line = line
+	e.column = column
+	e.adjustViewport()
+	e.Refresh()
+}
+
+func (e *Editor) PageDown() {
+	e.ClearSelection()
+	_, _, _, h := e.Content()
+	target := min(e.line+h, len(e.content)-1)
+	e.MoveTo(target, e.column)
+	e.Refresh()
+}
+
+func (e *Editor) PageUp() {
+	e.ClearSelection()
+	_, _, _, h := e.Content()
+	target := max(e.line-h, 0)
+	e.MoveTo(target, e.column)
+	e.Refresh()
 }
 
 func (e *Editor) Right() {
@@ -451,79 +530,6 @@ func (e *Editor) Up() {
 		e.adjustViewport()
 		e.Refresh()
 	}
-}
-
-func (e *Editor) Down() {
-	e.ClearSelection()
-	if e.line < len(e.content)-1 {
-		e.line++
-		lineLen := e.content[e.line].Length()
-		if e.column > lineLen {
-			e.column = lineLen
-		}
-		e.adjustViewport()
-		e.Refresh()
-	}
-}
-
-func (e *Editor) Home() {
-	e.ClearSelection()
-	e.column = 0
-	e.adjustViewport()
-	e.Refresh()
-}
-
-func (e *Editor) End() {
-	e.ClearSelection()
-	e.column = e.content[e.line].Length()
-	e.adjustViewport()
-	e.Refresh()
-}
-
-func (e *Editor) PageUp() {
-	e.ClearSelection()
-	_, _, _, h := e.Content()
-	target := max(e.line-h, 0)
-	e.MoveTo(target, e.column)
-	e.Refresh()
-}
-
-func (e *Editor) PageDown() {
-	e.ClearSelection()
-	_, _, _, h := e.Content()
-	target := min(e.line+h, len(e.content)-1)
-	e.MoveTo(target, e.column)
-	e.Refresh()
-}
-
-func (e *Editor) DocumentHome() {
-	e.MoveTo(0, 0)
-}
-
-func (e *Editor) DocumentEnd() {
-	lastLine := len(e.content) - 1
-	lastCol := e.content[lastLine].Length()
-	e.MoveTo(lastLine, lastCol)
-}
-
-// MoveTo moves the cursor to the specified line and column.
-func (e *Editor) MoveTo(line, column int) {
-	e.ClearSelection()
-	if line < 0 {
-		line = 0
-	} else if line >= len(e.content) {
-		line = len(e.content) - 1
-	}
-	lineLen := e.content[line].Length()
-	if column < 0 {
-		column = 0
-	} else if column > lineLen {
-		column = lineLen
-	}
-	e.line = line
-	e.column = column
-	e.adjustViewport()
-	e.Refresh()
 }
 
 // ---- Shift-Movement (selection extension) ---------------------------------
@@ -618,35 +624,6 @@ func (e *Editor) ShiftEnd() {
 }
 
 // ---- Editing --------------------------------------------------------------
-
-func (e *Editor) Insert(ch rune) {
-	if e.disabled {
-		return
-	}
-	if e.HasSelection() {
-		e.DeleteSelection()
-	}
-
-	// Handle tab character
-	if ch == '\t' {
-		if e.spaces {
-			e.insertTabAsSpaces()
-		} else {
-			e.content[e.line].Move(e.column)
-			e.content[e.line].Insert(ch)
-			e.column++
-		}
-	} else {
-		e.content[e.line].Move(e.column)
-		e.content[e.line].Insert(ch)
-		e.column++
-	}
-
-	e.updateLongestLine()
-	e.adjustViewport()
-	e.Dispatch(e, EvtChange)
-	e.Refresh()
-}
 
 func (e *Editor) Delete() {
 	if e.disabled {
@@ -757,6 +734,35 @@ func (e *Editor) Enter() {
 		e.column = len([]rune(indent))
 	} else {
 		e.column = 0
+	}
+
+	e.updateLongestLine()
+	e.adjustViewport()
+	e.Dispatch(e, EvtChange)
+	e.Refresh()
+}
+
+func (e *Editor) Insert(ch rune) {
+	if e.disabled {
+		return
+	}
+	if e.HasSelection() {
+		e.DeleteSelection()
+	}
+
+	// Handle tab character
+	if ch == '\t' {
+		if e.spaces {
+			e.insertTabAsSpaces()
+		} else {
+			e.content[e.line].Move(e.column)
+			e.content[e.line].Insert(ch)
+			e.column++
+		}
+	} else {
+		e.content[e.line].Move(e.column)
+		e.content[e.line].Insert(ch)
+		e.column++
 	}
 
 	e.updateLongestLine()

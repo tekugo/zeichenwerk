@@ -8,6 +8,98 @@ and this project adheres to
 
 ---
 
+## v2.0.0-beta.6
+
+### Added
+
+- **`Shimmer` widget** — sweeping highlight band animation (`shimmer.go`)
+  - A band of accent colour sweeps left-to-right across the text on every tick;
+    useful for loading placeholders and skeleton screens
+  - Multi-line text supported — band sweeps the same column on every row
+    simultaneously
+  - Two intensity modes selectable via `SetGradient(bool)`:
+    - *Stepped* (default): linear edge ramp + flat bright core
+    - *Cosine gradient*: smooth bell curve, softer organic glow
+  - `SetBandWidth(n int)` — core highlight width in columns (minimum 1)
+  - `SetEdgeWidth(n int)` — fade columns on each side; 0 = hard edge
+  - `"shimmer"` and `"shimmer/band"` style selectors added to all five
+    built-in themes; base uses `$fg2` (dimmed) for high contrast against
+    the accent band colour
+  - `Builder.Shimmer(id)` method added
+  - Demo panel added to `cmd/demo` (three rows: stepped, cosine gradient,
+    multi-line gradient); stops/starts with switcher visibility via
+    `EvtShow`/`EvtHide`
+
+- **`Marquee` widget** — continuously scrolling text ticker (`marquee.go`)
+  - Scrolls text wider than the widget from right to left; pauses on hover
+  - `SetText(string)`, `SetSpeed(int)`, `SetGap(int)` — wide-char safe
+  - `"marquee"` style selector added to all five built-in themes
+  - `Builder.Marquee(id)` method added
+  - Demo panel added to `cmd/demo`
+
+- **`Typewriter` widget** — character-by-character animated text reveal
+  (`typewriter.go`)
+  - Three-phase animation: revealing → dwell (cursor blink) → done
+  - `SetText(s string)` replaces content and resets the reveal state;
+    multi-line text (embedded `\n`) is supported
+  - `SetRate(n int)` — runes revealed per tick, clamped to minimum 1
+  - `SetDwell(d time.Duration)` — how long the cursor blinks after the
+    last character is shown before the animation stops or loops
+  - `SetRepeat(v bool)` — continuous looping mode
+  - `SetCursor(v bool)` — show or hide the blinking cursor
+  - `Reset()` — rewinds to the start without changing text
+  - `EvtChange` fired when reveal completes (all runes shown, before dwell)
+  - `EvtActivate` fired when dwell expires and `repeat = false`
+  - `"typewriter"` and `"typewriter/cursor"` style selectors added to all
+    five built-in themes; `"typewriter.cursor"` string key controls the
+    cursor character (default `▌`)
+  - `Builder.Typewriter(id)` method added
+  - Demo panel added to `cmd/demo` (stops/starts with switcher visibility
+    via `EvtShow`/`EvtHide`)
+
+- **Commands palette separator** — a `─` rule is now drawn between the
+  filter input and the command list; `"commands/group"` style colours are
+  used for the separator
+
+### Fixed
+
+- **Commands palette layout** — the filter input inherited `border="round"`
+  from its parent `"commands"` style, causing two blank lines between the
+  input and list and the list overflowing the bottom border; fixed by adding
+  explicit `WithBorder("none")` to `"commands/input"` in all five themes
+
+- **Demo dialog case numbers** — the `Dialog`, `Confirm`, `Prompt`,
+  `File Chooser`, and `Dir Chooser` entries in `cmd/demo` were mapped to
+  wrong switch-case indices after the Commands and Typewriter panels were
+  added; corrected to match their actual positions in the navigation list
+
+- **`CRT` animated root container** — simulates a CRT monitor powering on and
+  off (`crt.go`)
+  - Power-on: content expands symmetrically from a horizontal centre line
+    outward until it fills the screen
+  - Power-off: content contracts back to a line, then calls a provided callback
+    (typically `ui.Quit`) — `PowerOff(interval, onDone)`
+  - During normal operation the container is an invisible pass-through wrapper
+    with zero rendering overhead
+  - Animation areas filled with Matrix-style green character rain: eight
+    brightness levels ramp from near-black far from the scan edge to `#00ff41`
+    right beside it; each column scrolls at its own speed via a multiplicative
+    hash, keeping the pattern irregular and non-repeating
+  - Pulsating `━` scanlines flank the expanding/contracting band edges,
+    alternating between `#00ff41` and `#88ffaa` each frame
+  - Child content is overlaid with a pulsating green phosphor tint throughout
+    the animation; the final four frames flicker between green and true colour
+    before settling into `crtPhaseIdle`
+  - `NewCRT(id, class string) *CRT` / `compose.CRT(id, class, options...)` API
+  - `Start(interval)` begins the power-on animation; safe to call before
+    `ui.Run`
+  - `PowerOff` interrupts an in-progress power-on cleanly via a
+    per-animation-run `done` channel handshake
+  - CRT animation wired into `cmd/compose`: power-on runs at startup, `q` /
+    `Q` / `Ctrl+C` / `Ctrl+Q` trigger the power-off animation before exit
+
+---
+
 ## v2.0.0-beta.5
 
 ### Added

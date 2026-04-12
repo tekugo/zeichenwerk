@@ -6,6 +6,8 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+// ==== AI ===================================================================
+
 // ItemRender is the render function type for Deck slots. It is called once per
 // visible slot with the renderer, slot bounds, item index, the data item,
 // whether the slot is the currently highlighted item, and whether the Deck

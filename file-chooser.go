@@ -9,6 +9,8 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+// ==== AI ===================================================================
+
 // fcNodeData is the opaque data attached to every tree node in the FileChooser.
 type fcNodeData struct {
 	path  string
@@ -24,9 +26,12 @@ type fcNodeData struct {
 // label is the confirm button text — e.g. "Open", "Save", or "Select".
 //
 // mode controls what can be selected:
-//   - "dir"  — directories only (files are visible but not selectable)
 //   - "file" — files only (directories are navigable but not selectable)
+//   - "dir"  — directories only (files are visible but not selectable)
 //   - "any"  — both files and directories are selectable
+//   - "save" — save-as mode: the path need not exist; only the parent
+//     directory must be a valid existing directory. The caller is
+//     responsible for overwrite confirmation in the EvtAccept handler.
 //
 // initial is the starting path. If empty, os.Getwd() is used.
 //
@@ -59,14 +64,14 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 		Dialog("fc-dialog", title).
 		Class("dialog").
 		Flex("fc-body", false, "stretch", 1).
-			Typeahead("fc-input", initial).Hint(0, 1).
-			Tree("fc-tree").Hint(0, -1).
-			Flex("fc-footer", true, "center", 0).Hint(0, 1).
-				Checkbox("fc-hidden", "show hidden", hidden).
-				Spacer().Hint(-1, 0).
-				Button("fc-ok", label).
-				Button("fc-cancel", "Cancel").
-			End().
+		Typeahead("fc-input", initial).Hint(0, 1).
+		Tree("fc-tree").Hint(0, -1).
+		Flex("fc-footer", true, "center", 0).Hint(0, 1).
+		Checkbox("fc-hidden", "show hidden", hidden).
+		Spacer().Hint(-1, 0).
+		Button("fc-ok", label).
+		Button("fc-cancel", "Cancel").
+		End().
 		End().
 		Class("").
 		Container()
@@ -136,9 +141,27 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 			return nd.isDir
 		case "file":
 			return !nd.isDir
+		case "save":
+			return true // both dirs and files are "selectable" for prefill purposes
 		default: // "any"
 			return true
 		}
+	}
+
+	// isSaveable reports whether text is a valid save-as destination:
+	// the parent directory must exist and the base name must be non-empty
+	// and not a bare dot or dot-dot component.
+	isSaveable := func(text string) bool {
+		if text == "" || strings.HasSuffix(text, "/") {
+			return false
+		}
+		path := filepath.Clean(text)
+		base := filepath.Base(path)
+		if base == "." || base == ".." {
+			return false
+		}
+		info, err := os.Stat(filepath.Dir(path))
+		return err == nil && info.IsDir()
 	}
 
 	setInputError := func(bad bool) {
@@ -151,11 +174,15 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	}
 
 	updateOK := func() {
-		node := tree.Selected()
 		var ok bool
-		if node != nil {
-			if nd, valid := node.Data().(fcNodeData); valid {
-				ok = isSelectable(nd)
+		if mode == "save" {
+			ok = isSaveable(input.Text())
+		} else {
+			node := tree.Selected()
+			if node != nil {
+				if nd, valid := node.Data().(fcNodeData); valid {
+					ok = isSelectable(nd)
+				}
 			}
 		}
 		okBtn.SetFlag(FlagDisabled, !ok)
@@ -270,7 +297,12 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 			return false
 		}
 		ignoreInputChange = true
-		input.Set(nd.path)
+		if mode == "save" && nd.isDir {
+			// Set input to "dir/" so the user types a filename directly after it.
+			input.Set(nd.path + "/")
+		} else {
+			input.Set(nd.path)
+		}
 		ignoreInputChange = false
 		setInputError(false)
 		updateOK()
@@ -283,6 +315,16 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 			return true
 		}
 		typed := input.Text()
+		if mode == "save" {
+			ok := isSaveable(typed)
+			setInputError(!ok)
+			if ok {
+				// Navigate the tree to the parent directory so the context is visible.
+				navigateTo(filepath.Dir(filepath.Clean(typed)))
+			}
+			updateOK()
+			return true
+		}
 		if typed == "" {
 			setInputError(true)
 			okBtn.SetFlag(FlagDisabled, true)
@@ -314,7 +356,24 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 				return false
 			}
 			nd, ok := node.Data().(fcNodeData)
-			if ok && isSelectable(nd) {
+			if !ok {
+				return false
+			}
+			if mode == "save" {
+				if nd.isDir {
+					// Let the tree expand/collapse the directory normally.
+					return false
+				}
+				// File node: prefill the input with this path and hand focus
+				// to the input so the user can edit the filename.
+				ignoreInputChange = true
+				input.Set(nd.path)
+				ignoreInputChange = false
+				updateOK()
+				ui.Focus(input)
+				return true
+			}
+			if isSelectable(nd) {
 				confirm()
 				return true
 			}

@@ -1,5 +1,7 @@
 package zeichenwerk
 
+// ==== AI ===================================================================
+
 // sparklineBlocks is the ordered set of Unicode block-fill characters used to
 // draw bar columns, from one-eighth height (▁) to full height (█).
 var sparklineBlocks = []rune{'▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'}
