@@ -12,6 +12,42 @@ and this project adheres to
 
 ### Added
 
+- **`Typewriter` widget** — character-by-character animated text reveal
+  (`typewriter.go`)
+  - Three-phase animation: revealing → dwell (cursor blink) → done
+  - `SetText(s string)` replaces content and resets the reveal state;
+    multi-line text (embedded `\n`) is supported
+  - `SetRate(n int)` — runes revealed per tick, clamped to minimum 1
+  - `SetDwell(d time.Duration)` — how long the cursor blinks after the
+    last character is shown before the animation stops or loops
+  - `SetRepeat(v bool)` — continuous looping mode
+  - `SetCursor(v bool)` — show or hide the blinking cursor
+  - `Reset()` — rewinds to the start without changing text
+  - `EvtChange` fired when reveal completes (all runes shown, before dwell)
+  - `EvtActivate` fired when dwell expires and `repeat = false`
+  - `"typewriter"` and `"typewriter/cursor"` style selectors added to all
+    five built-in themes; `"typewriter.cursor"` string key controls the
+    cursor character (default `▌`)
+  - `Builder.Typewriter(id)` method added
+  - Demo panel added to `cmd/demo` (stops/starts with switcher visibility
+    via `EvtShow`/`EvtHide`)
+
+- **Commands palette separator** — a `─` rule is now drawn between the
+  filter input and the command list; `"commands/group"` style colours are
+  used for the separator
+
+### Fixed
+
+- **Commands palette layout** — the filter input inherited `border="round"`
+  from its parent `"commands"` style, causing two blank lines between the
+  input and list and the list overflowing the bottom border; fixed by adding
+  explicit `WithBorder("none")` to `"commands/input"` in all five themes
+
+- **Demo dialog case numbers** — the `Dialog`, `Confirm`, `Prompt`,
+  `File Chooser`, and `Dir Chooser` entries in `cmd/demo` were mapped to
+  wrong switch-case indices after the Commands and Typewriter panels were
+  added; corrected to match their actual positions in the navigation list
+
 - **`CRT` animated root container** — simulates a CRT monitor powering on and
   off (`crt.go`)
   - Power-on: content expands symmetrically from a horizontal centre line

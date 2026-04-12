@@ -91,6 +91,8 @@ func GruvboxDarkTheme() *Theme {
 		NewStyle("scanner").WithColors("$aqua", "$bg0"),
 		NewStyle("sparkline").WithColors("$aqua", "$bg0"),
 		NewStyle("sparkline/high").WithColors("$orange", "$bg0"),
+		NewStyle("typewriter").WithColors("$fg0", "$bg0"),
+		NewStyle("typewriter/cursor").WithColors("$yellow", "$bg0"),
 		NewStyle("bar-chart").WithColors("$fg1", "$bg0"),
 		NewStyle("bar-chart/s0").WithColors("$blue", "$bg0"),
 		NewStyle("bar-chart/s1").WithColors("$green", "$bg0"),
@@ -157,6 +159,13 @@ func GruvboxDarkTheme() *Theme {
 		NewStyle("shortcuts").WithColors("$fg2", "$bg0"),
 		NewStyle("shortcuts/key").WithForeground("$yellow").WithFont("bold"),
 		NewStyle("shortcuts/label").WithForeground("$fg1"),
+		NewStyle("commands").WithColors("$fg0", "$bg2").WithBorder("round").WithPadding(0, 0),
+		NewStyle("commands/input").WithColors("$fg0", "$bg1").WithBorder("none").WithCursor("*bar"),
+		NewStyle("commands/item").WithColors("$fg1", "$bg2"),
+		NewStyle("commands/item:focused").WithColors("$bg0", "$yellow").WithFont("bold"),
+		NewStyle("commands/shortcut").WithColors("$fg4", "$bg2"),
+		NewStyle("commands/shortcut:focused").WithColors("$bg1", "$yellow"),
+		NewStyle("commands/group").WithColors("$fg4", "$bg2").WithFont("bold"),
 	)
 
 	t.SetStrings(map[string]string{
@@ -209,6 +218,9 @@ func GruvboxDarkTheme() *Theme {
 		// ---- Breadcrumb ----
 		"breadcrumb.separator": " › ",
 		"breadcrumb.overflow":  "…",
+
+		// ---- Typewriter ----
+		"typewriter.cursor": "▌",
 	})
 
 	return t
@@ -304,6 +316,8 @@ func GruvboxLightTheme() *Theme {
 		NewStyle("scanner").WithColors("$aqua", "$bg0"),
 		NewStyle("sparkline").WithColors("$aqua", "$bg0"),
 		NewStyle("sparkline/high").WithColors("$orange", "$bg0"),
+		NewStyle("typewriter").WithColors("$fg0", "$bg0"),
+		NewStyle("typewriter/cursor").WithColors("$orange", "$bg0"),
 		NewStyle("bar-chart").WithColors("$fg1", "$bg0"),
 		NewStyle("bar-chart/s0").WithColors("$blue_dim", "$fg0"),
 		NewStyle("bar-chart/s1").WithColors("$green_dim", "$fg0"),
@@ -370,6 +384,13 @@ func GruvboxLightTheme() *Theme {
 		NewStyle("shortcuts").WithColors("$fg2", "$bg0"),
 		NewStyle("shortcuts/key").WithForeground("$blue").WithFont("bold"),
 		NewStyle("shortcuts/label").WithForeground("$fg1"),
+		NewStyle("commands").WithColors("$fg0", "$bg2").WithBorder("round").WithPadding(0, 0),
+		NewStyle("commands/input").WithColors("$fg0", "$bg1").WithBorder("none").WithCursor("*bar"),
+		NewStyle("commands/item").WithColors("$fg1", "$bg2"),
+		NewStyle("commands/item:focused").WithColors("$bg0", "$orange").WithFont("bold"),
+		NewStyle("commands/shortcut").WithColors("$fg4", "$bg2"),
+		NewStyle("commands/shortcut:focused").WithColors("$bg1", "$orange"),
+		NewStyle("commands/group").WithColors("$fg4", "$bg2").WithFont("bold"),
 	)
 
 	t.SetStrings(map[string]string{
@@ -422,6 +443,9 @@ func GruvboxLightTheme() *Theme {
 		// ---- Breadcrumb ----
 		"breadcrumb.separator": " › ",
 		"breadcrumb.overflow":  "…",
+
+		// ---- Typewriter ----
+		"typewriter.cursor": "▌",
 	})
 
 	return t

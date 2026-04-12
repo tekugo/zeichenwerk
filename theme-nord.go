@@ -90,6 +90,8 @@ func NordTheme() *Theme {
 		NewStyle("rule"),
 		NewStyle("scanner").WithColors("$frost1", "$bg0"),
 		NewStyle("sparkline").WithColors("$frost1", "$bg0"),
+		NewStyle("typewriter").WithColors("$fg0", "$bg0"),
+		NewStyle("typewriter/cursor").WithColors("$frost2", "$bg0"),
 		NewStyle("sparkline/high").WithColors("$orange", "$bg0"),
 		NewStyle("bar-chart").WithColors("$fg0", "$bg0"),
 		NewStyle("bar-chart/s0").WithColors("$frost2", "$bg0"),
@@ -157,6 +159,13 @@ func NordTheme() *Theme {
 		NewStyle("shortcuts").WithColors("$fg2", "$bg0"),
 		NewStyle("shortcuts/key").WithForeground("$cyan").WithFont("bold"),
 		NewStyle("shortcuts/label").WithForeground("$fg1"),
+		NewStyle("commands").WithColors("$fg0", "$bg2").WithBorder("round").WithPadding(0, 0),
+		NewStyle("commands/input").WithColors("$fg0", "$bg3").WithBorder("none").WithCursor("*bar"),
+		NewStyle("commands/item").WithColors("$fg2", "$bg2"),
+		NewStyle("commands/item:focused").WithColors("$bg0", "$frost2").WithFont("bold"),
+		NewStyle("commands/shortcut").WithColors("$frost3", "$bg2"),
+		NewStyle("commands/shortcut:focused").WithColors("$bg1", "$frost2"),
+		NewStyle("commands/group").WithColors("$frost3", "$bg2").WithFont("bold"),
 	)
 
 	t.SetStrings(map[string]string{
@@ -209,6 +218,9 @@ func NordTheme() *Theme {
 		// ---- Breadcrumb ----
 		"breadcrumb.separator": " › ",
 		"breadcrumb.overflow":  "…",
+
+		// ---- Typewriter ----
+		"typewriter.cursor": "▌",
 	})
 
 	return t

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk"
 )
 
@@ -65,7 +66,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Value", "Viewport", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Progress", "Scanner", "Sparkline", "Select", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
@@ -93,8 +94,10 @@ func createUI(theme *Theme) *UI {
 		With(terminalDemo).
 		With(treeFSDemo).
 		With(typeaheadDemo).
+		With(typewriterDemo).
 		With(valueDemo).
 		With(viewport).
+		With(commandsDemo).
 		End().
 		Cell(1, 1, 1, 1).
 		Flex("debug-log-pane", false, "stretch", 0).Hint(0, 10).
@@ -129,6 +132,16 @@ func createUI(theme *Theme) *UI {
 		return true
 	})
 
+	// Register demo commands and bind Ctrl+K globally.
+	registerCommandsDemo(ui)
+	OnKey(Find(ui, "main"), func(e *tcell.EventKey) bool {
+		if e.Key() == tcell.KeyCtrlK {
+			ui.Commands().Open()
+			return true
+		}
+		return false
+	})
+
 	switcher := Find(ui, "switcher").(*Switcher)
 	Find(ui, "navigation").On(EvtActivate, func(_ Widget, event Event, data ...any) bool {
 		if len(data) == 1 {
@@ -137,7 +150,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 26:
+					case 29:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -159,7 +172,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 27:
+					case 30:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -172,7 +185,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 28:
+					case 31:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -185,7 +198,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 29:
+					case 32:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -193,7 +206,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 30:
+					case 33:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -1033,6 +1046,77 @@ func treeFSDemo(builder *Builder) {
 	})
 }
 
+// Typewriter demo — animated character-by-character reveal.
+func typewriterDemo(builder *Builder) {
+	phrases := []string{
+		"Initialising subsystems…",
+		"Loading configuration…",
+		"Connecting to services…",
+		"All systems operational.",
+	}
+	idx := 0
+
+	builder.Flex("tw-demo", false, "stretch", 1).Padding(1, 2).
+		Static("tw-title", "Typewriter Widget Demo").Padding(0, 0, 1, 0).
+		Static("tw-desc", "Text is revealed character by character with a blinking cursor.").Padding(0, 0, 1, 0).
+		Typewriter("tw").
+		Spacer().Hint(-1, 0).
+		Flex("tw-controls", true, "center", 4).Padding(1, 0, 0, 0).
+		Checkbox("tw-repeat", "Repeat", false).
+		Checkbox("tw-cursor", "Show cursor", true).
+		Button("tw-restart", "Restart").
+		End().
+		End()
+
+	pane := builder.Find("tw-demo").(Container)
+
+	tw := Find(pane, "tw").(*Typewriter)
+	tw.SetText(phrases[idx])
+
+	startNext := func() {
+		idx = (idx + 1) % len(phrases)
+		tw.SetText(phrases[idx])
+		tw.Start(30 * time.Millisecond)
+	}
+
+	tw.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		startNext()
+		return true
+	})
+
+	Find(pane, "tw-repeat").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			tw.SetRepeat(v)
+		}
+		return true
+	})
+
+	Find(pane, "tw-cursor").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+		if v, ok := data[0].(bool); ok {
+			tw.SetCursor(v)
+		}
+		return true
+	})
+
+	Find(pane, "tw-restart").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		tw.Stop()
+		tw.Reset()
+		tw.Start(30 * time.Millisecond)
+		return true
+	})
+
+	pane.On(EvtShow, func(_ Widget, _ Event, _ ...any) bool {
+		tw.Reset()
+		tw.Start(30 * time.Millisecond)
+		return true
+	})
+
+	pane.On(EvtHide, func(_ Widget, _ Event, _ ...any) bool {
+		tw.Stop()
+		return true
+	})
+}
+
 // Value demo — two groups of widgets sharing a reactive Value.
 func valueDemo(builder *Builder) {
 	builder.Flex("value-demo", false, "stretch", 1).Padding(1, 2).
@@ -1417,4 +1501,41 @@ func people(n int) [][]string {
 		result[i] = []string{first, last, street, zip, city, state, "USA", phone, email, birth, fmt.Sprintf("%d", age), pob, fmt.Sprintf("$%d", income), ssn, sex}
 	}
 	return result
+}
+
+// commandsDemo builds the Commands Palette demo pane.
+// Commands are registered separately in registerCommandsDemo (called after Build).
+// Bind Ctrl+K anywhere in the app to open the palette.
+func commandsDemo(b *Builder) {
+	b.Flex("commands-demo", false, "stretch", 1).Padding(1).
+		Static("commands-title", "Commands Palette").Padding(0, 0, 1, 0).
+		HRule("thin").
+		Static("commands-instructions",
+			"Press Ctrl+K to open the commands palette.\n\n"+
+				"Start typing to fuzzy-filter commands.\n"+
+				"Use ↑↓ to navigate, Enter to execute, Esc to dismiss.\n\n"+
+				"Registered groups: File · View · Navigation\n"+
+				"Commands that modify visible state log output to the debug pane.").
+		End()
+}
+
+// registerCommandsDemo registers representative commands on the UI's Commands
+// singleton and is called once after Build() so the UI reference is available.
+func registerCommandsDemo(ui *UI) {
+	logMsg := func(msg string) {
+		if t, ok := Find(ui, "debug-log").(*Text); ok {
+			t.Add("Commands → " + msg)
+		}
+	}
+	cmds := ui.Commands()
+	cmds.RegisterGroup("File", "New File",  "Ctrl+N", func() { logMsg("New File") })
+	cmds.RegisterGroup("File", "Open File", "Ctrl+O", func() { logMsg("Open File") })
+	cmds.RegisterGroup("File", "Save File", "Ctrl+S", func() { logMsg("Save File") })
+	cmds.RegisterGroup("File", "Close File", "",      func() { logMsg("Close File") })
+	cmds.RegisterGroup("View", "Toggle Theme",  "",      func() { logMsg("Toggle Theme") })
+	cmds.RegisterGroup("View", "Split Pane",    "Ctrl+\\", func() { logMsg("Split Pane") })
+	cmds.RegisterGroup("View", "Toggle Sidebar", "",     func() { logMsg("Toggle Sidebar") })
+	cmds.RegisterGroup("Navigation", "Go to Line",   "Ctrl+G", func() { logMsg("Go to Line") })
+	cmds.RegisterGroup("Navigation", "Find in Files", "Ctrl+F", func() { logMsg("Find in Files") })
+	cmds.RegisterGroup("Navigation", "Go to Symbol",  "Ctrl+R", func() { logMsg("Go to Symbol") })
 }

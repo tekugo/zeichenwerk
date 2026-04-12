@@ -76,6 +76,8 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("rule"),
 		NewStyle("scanner").WithColors("$aqua", "$bg0"),
 		NewStyle("sparkline").WithColors("$aqua", "$bg0"),
+		NewStyle("typewriter").WithColors("$fg0", "$bg0"),
+		NewStyle("typewriter/cursor").WithColors("$cyan", "$bg0"),
 		NewStyle("sparkline/high").WithColors("$orange", "$bg0"),
 		NewStyle("bar-chart").WithColors("$fg0", "$bg0"),
 		NewStyle("bar-chart/s0").WithColors("$cyan", "$bg0"),
@@ -143,6 +145,13 @@ func MidnightNeonTheme() *Theme {
 		NewStyle("shortcuts").WithColors("$fg2", "$bg0"),
 		NewStyle("shortcuts/key").WithForeground("$cyan").WithFont("bold"),
 		NewStyle("shortcuts/label").WithForeground("$fg1"),
+		NewStyle("commands").WithColors("$fg0", "$bg2").WithBorder("round").WithPadding(0, 0),
+		NewStyle("commands/input").WithColors("$fg0", "$bg3").WithBorder("none").WithCursor("*bar"),
+		NewStyle("commands/item").WithColors("$fg1", "$bg2"),
+		NewStyle("commands/item:focused").WithColors("$bg0", "$cyan").WithFont("bold"),
+		NewStyle("commands/shortcut").WithColors("$fg3", "$bg2"),
+		NewStyle("commands/shortcut:focused").WithColors("$bg1", "$cyan"),
+		NewStyle("commands/group").WithColors("$fg3", "$bg2").WithFont("bold"),
 	)
 
 	t.SetStrings(map[string]string{
@@ -195,6 +204,9 @@ func MidnightNeonTheme() *Theme {
 		// ---- Breadcrumb ----
 		"breadcrumb.separator": " › ",
 		"breadcrumb.overflow":  "…",
+
+		// ---- Typewriter ----
+		"typewriter.cursor": "▌",
 	})
 
 	return t

@@ -555,6 +555,14 @@ func (b *Builder) Typeahead(id string, params ...string) *Builder {
 	return b
 }
 
+// Typewriter creates a new Typewriter animation widget that reveals text
+// character by character.
+func (b *Builder) Typewriter(id string) *Builder {
+	tw := NewTypewriter(id, b.class)
+	b.Add(tw)
+	return b
+}
+
 // Viewport adds a scrollable viewport
 func (b *Builder) Viewport(id, title string) *Builder {
 	viewport := NewViewport(id, b.class, title)

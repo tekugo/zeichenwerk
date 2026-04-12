@@ -86,6 +86,8 @@ func LipstickTheme() *Theme {
 		NewStyle("rule"),
 		NewStyle("scanner").WithColors("$cyan", "$bg0"),
 		NewStyle("sparkline").WithColors("$cyan", "$bg0"),
+		NewStyle("typewriter").WithColors("$fg0", "$bg0"),
+		NewStyle("typewriter/cursor").WithColors("$fuchsia", "$bg0"),
 		NewStyle("sparkline/high").WithColors("$yellow", "$bg0"),
 		NewStyle("bar-chart").WithColors("$fg0", "$bg0"),
 		NewStyle("bar-chart/s0").WithColors("$fuchsia", "$bg0"),
@@ -153,6 +155,13 @@ func LipstickTheme() *Theme {
 		NewStyle("shortcuts").WithColors("$fg2", "$bg0"),
 		NewStyle("shortcuts/key").WithForeground("$fuchsia").WithFont("bold"),
 		NewStyle("shortcuts/label").WithForeground("$fg1"),
+		NewStyle("commands").WithColors("$fg0", "$bg2").WithBorder("round").WithPadding(0, 0),
+		NewStyle("commands/input").WithColors("$fg0", "$bg3").WithBorder("none").WithCursor("*bar"),
+		NewStyle("commands/item").WithColors("$fg1", "$bg2"),
+		NewStyle("commands/item:focused").WithColors("$bg0", "$fuchsia").WithFont("bold"),
+		NewStyle("commands/shortcut").WithColors("$fg2", "$bg2"),
+		NewStyle("commands/shortcut:focused").WithColors("$bg1", "$fuchsia"),
+		NewStyle("commands/group").WithColors("$fg2", "$bg2").WithFont("bold"),
 	)
 
 	t.SetStrings(map[string]string{
@@ -205,6 +214,9 @@ func LipstickTheme() *Theme {
 		// ---- Breadcrumb ----
 		"breadcrumb.separator": " › ",
 		"breadcrumb.overflow":  "…",
+
+		// ---- Typewriter ----
+		"typewriter.cursor": "▌",
 	})
 
 	return t
