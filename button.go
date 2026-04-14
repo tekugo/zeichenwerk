@@ -43,6 +43,9 @@ func NewButton(id, class, text string) *Button {
 
 // ---- Widget Methods -------------------------------------------------------
 
+// Text returns the button's label text.
+func (b *Button) Text() string { return b.text }
+
 // Activate programmatically triggers the button's action handler.
 func (b *Button) Activate() {
 	b.Dispatch(b, EvtActivate, 0)

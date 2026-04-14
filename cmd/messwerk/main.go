@@ -39,7 +39,8 @@ func main() {
 
 	ui := buildUI(theme, store)
 
-	// Ticker to keep status dots fresh even when no new data arrives.
+	// Ticker: keeps status dots fresh and advances sparkline windows
+	// even when no telemetry is arriving.
 	stop := make(chan struct{})
 	go func() {
 		t := time.NewTicker(15 * time.Second)
@@ -47,12 +48,7 @@ func main() {
 		for {
 			select {
 			case <-t.C:
-				store.mu.RLock()
-				fn := store.onChange
-				store.mu.RUnlock()
-				if fn != nil {
-					fn()
-				}
+				store.Tick(time.Now())
 			case <-stop:
 				return
 			}

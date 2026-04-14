@@ -93,6 +93,15 @@ func (f *Flex) Children() []Widget {
 
 // ---- Summarizer -----------------------------------------------------------
 
+// Horizontal returns the flex container's orientation.
+func (f *Flex) Horizontal() bool { return f.horizontal }
+
+// Alignment returns the child alignment setting.
+func (f *Flex) Alignment() string { return f.alignment }
+
+// Spacing returns the gap between children.
+func (f *Flex) Spacing() int { return f.spacing }
+
 // Summary returns direction and alignment for Dump output.
 func (f *Flex) Summary() string {
 	dir := "vertical"

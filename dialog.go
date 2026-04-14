@@ -22,6 +22,9 @@ func NewDialog(id, class, title string) *Dialog {
 
 // ---- Widget Methods -------------------------------------------------------
 
+// GetTitle returns the dialog's title.
+func (d *Dialog) GetTitle() string { return d.title }
+
 // Apply applies a theme style to the component.
 func (d *Dialog) Apply(theme *Theme) {
 	theme.Apply(d, d.Selector("dialog"))

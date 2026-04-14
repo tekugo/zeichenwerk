@@ -173,22 +173,6 @@ builder.Accordion("settings", "").
 End()
 ```
 
-### Breadcrumb
-
-A horizontal path indicator:
-
-```
-Home › Projects › zeichenwerk › spec
-```
-
-Each segment is a clickable widget; the focused segment is highlighted.
-When the total width exceeds the available space, leading segments are collapsed
-to `…` from the left. Dispatches `EvtActivate(int)` with the clicked segment
-index. Useful for file browsers, settings hierarchies, and drill-down views.
-
-Selectors: `"breadcrumb"`, `"breadcrumb/segment"`,
-`"breadcrumb/segment:focused"`, `"breadcrumb/separator"`.
-
 ### Drawer
 
 A panel that slides in from a screen edge (`Grow` animation) and overlays the
@@ -217,16 +201,6 @@ with intra-line highlighting of the changed words.
 Selectors: `"diff"`, `"diff/added"`, `"diff/removed"`, `"diff/hunk"`,
 `"diff/context"`, `"diff/line-number"`, `"diff/changed-word"`.
 
-### Marquee
-
-An `Animation`-driven single-row scrolling text ticker. Content wider than the
-widget scrolls continuously left at a configurable speed (characters per tick).
-Pauses on hover; resumes on mouse leave. A gap of spaces separates the end of
-the text from the looping start. Useful for status feeds, event logs, and
-terminal dashboards where a line of live information should always be visible.
-
-Selectors: `"marquee"`.
-
 ### Clock
 
 A live display built on the existing `Digits` widget. Shows the current time
@@ -241,46 +215,6 @@ Selectors: `"clock"`, `"clock/digits"`, `"clock/separator"`.
 ---
 
 ## Animation and effects
-
-### Typewriter
-
-Reveals its text content character by character at a configurable rate,
-optionally followed by a blinking cursor `▌`. Uses `Animation` for the
-tick-based reveal. When the full text is shown the cursor blinks for a
-configurable dwell period, then the animation stops (or loops if `repeat` is
-set). Suitable for onboarding flows, help text, and terminal-style prompts.
-
-```go
-tw := NewTypewriter("intro", "").
-    SetText("Initialising subsystems…").
-    SetRate(2).          // characters per tick
-    SetCursor(true).     // show blinking cursor
-    SetDwell(1500 * time.Millisecond)
-tw.Start(20 * time.Millisecond)
-```
-
-Selectors: `"typewriter"`, `"typewriter/cursor"`.
-
-### Shimmer
-
-A single-line (or multi-line) widget that displays text with an animated
-highlight band sweeping left to right — the "working" effect used in tools like
-Claude Code to signal activity. Characters in the band are rendered in a bright
-accent color; characters outside it use the base style. The band position and
-width are driven by `Animation`. Suitable for progress labels, loading
-placeholders, and skeleton screens.
-
-The band wraps continuously while the animation is running. Calling `Stop()`
-freezes the text in its base style.
-
-```go
-sh := NewShimmer("status", "").
-    SetText("Analysing codebase…").
-    SetBandWidth(8)
-sh.Start(30 * time.Millisecond)
-```
-
-Selectors: `"shimmer"`, `"shimmer/band"` (the highlighted region).
 
 ### Glitter
 
@@ -308,23 +242,6 @@ not by sub-part selectors.
 ---
 
 ## Compound widgets
-
-### Command palette
-
-A floating fuzzy-search overlay combining `Filter` + `Deck` inside a `Dialog`.
-The caller registers named commands with optional keyboard shortcut strings
-displayed on the right of each entry. Typing narrows the list; Enter executes
-the focused command; `Esc` dismisses without action. Invoked via
-`ui.OpenCommandPalette()` — a single keyboard shortcut can be bound to this.
-
-```go
-ui.RegisterCommand("Open file",   "Ctrl+O", openFileHandler)
-ui.RegisterCommand("Split pane",  "Ctrl+\\", splitHandler)
-ui.RegisterCommand("Toggle theme","",        toggleTheme)
-```
-
-Selectors: `"command-palette"`, `"command-palette/item"`,
-`"command-palette/item:focused"`, `"command-palette/shortcut"`.
 
 ### Kanban column
 

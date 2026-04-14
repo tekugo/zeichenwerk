@@ -104,6 +104,30 @@ func NewGrid(id, class string, rows, columns int, lines bool) *Grid {
 	return &grid
 }
 
+// RowSizes returns a copy of the row size configuration.
+func (g *Grid) RowSizes() []int { return append([]int(nil), g.rows...) }
+
+// ColSizes returns a copy of the column size configuration.
+func (g *Grid) ColSizes() []int { return append([]int(nil), g.columns...) }
+
+// Lines returns whether grid lines are drawn between cells.
+func (g *Grid) Lines() bool { return g.lines }
+
+// GridCell holds a child widget with its cell position and span.
+type GridCell struct {
+	X, Y, W, H int
+	Widget      Widget
+}
+
+// GridCells returns the position and span of every child in the grid.
+func (g *Grid) GridCells() []GridCell {
+	out := make([]GridCell, len(g.cells))
+	for i, c := range g.cells {
+		out[i] = GridCell{c.x, c.y, c.w, c.h, c.content}
+	}
+	return out
+}
+
 // Apply applies a theme's styles to the component.
 func (g *Grid) Apply(theme *Theme) {
 	theme.Apply(g, g.Selector("grid"))

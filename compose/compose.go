@@ -756,6 +756,127 @@ func Heatmap(id, class string, rows, cols int, options ...Option) Option {
 	}
 }
 
+// Marquee adds a horizontally scrolling text widget to the parent. Start the
+// animation explicitly with Start and stop it with Stop.
+func Marquee(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewMarquee(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Shimmer adds an animated shimmer (loading placeholder) widget to the parent.
+// Start the animation explicitly with Start and stop it with Stop.
+func Shimmer(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewShimmer(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Sparkline adds a sparkline chart widget to the parent. Supply data and
+// configure the scale mode imperatively via the returned *Sparkline.
+func Sparkline(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewSparkline(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Tiles adds a tile-grid widget to the parent. render is called for every
+// visible tile; tileWidth and tileHeight are the fixed cell dimensions of each
+// tile. Populate the widget with [Items] or by calling SetItems imperatively.
+func Tiles(id, class string, render z.ItemRender, tileWidth, tileHeight int, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewTiles(id, class, render, tileWidth, tileHeight)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Typewriter adds an animated typewriter text widget to the parent. Start the
+// animation explicitly with Start and stop it with Stop.
+func Typewriter(id, class string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewTypewriter(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Custom adds a widget whose rendering is handled entirely by fn to the
+// parent. fn receives the widget and the renderer on every draw call.
+func Custom(id, class string, fn func(z.Widget, *z.Renderer), options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewCustom(id, class, fn)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Shortcuts adds a keyboard-shortcut legend widget to the parent. pairs is a
+// flat list of alternating key and label strings, e.g. "↑↓", "navigate", "q", "quit".
+func Shortcuts(id, class string, pairs []string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewShortcuts(id, class, pairs...)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// TreeFS adds a file-system tree widget to the parent. root is the directory
+// to display; dirsOnly restricts the listing to directories.
+func TreeFS(id, class, root string, dirsOnly bool, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewTreeFS(id, class, root, dirsOnly)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // ---- Layout Options -------------------------------------------------------
 
 // Cell wraps a single widget option for placement in a [Grid]. x and y are the

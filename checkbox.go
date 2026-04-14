@@ -67,6 +67,9 @@ func (c *Checkbox) Set(value bool) {
 	c.Refresh()
 }
 
+// Label returns the checkbox's label text.
+func (c *Checkbox) Label() string { return c.text }
+
 // ---- Summarizer -----------------------------------------------------------
 
 // Summary returns label and checked state for Dump output.

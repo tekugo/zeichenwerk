@@ -90,6 +90,12 @@ func (c *Collapsible) Render(r *Renderer) {
 	}
 }
 
+// GetTitle returns the collapsible's header label.
+func (c *Collapsible) GetTitle() string { return c.title }
+
+// IsExpanded returns whether the collapsible is currently expanded.
+func (c *Collapsible) IsExpanded() bool { return c.expanded }
+
 // ---- Container Methods ----------------------------------------------------
 
 // Add sets the single child widget. Calling Add again replaces any existing
