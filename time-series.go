@@ -1,6 +1,9 @@
 package zeichenwerk
 
-import "time"
+import (
+	"iter"
+	"time"
+)
 
 // Number is the type constraint for TimeSeries values.
 type Number interface {
@@ -34,6 +37,30 @@ func NewTimeSeries[T Number](start time.Time, interval time.Duration, size int, 
 	}
 }
 
+// All returns an iterator over all slots, oldest-first, yielding each slot's
+// start time and value. Use as: for t, v := range ts.All() { ... }
+func (ts *TimeSeries[T]) All() iter.Seq2[time.Time, T] {
+	return func(yield func(time.Time, T) bool) {
+		for i := range len(ts.buf) {
+			t := ts.start.Add(time.Duration(i) * ts.interval)
+			if !yield(t, ts.buf[ts.bufIndex(i)]) {
+				return
+			}
+		}
+	}
+}
+
+// Get returns the value of the slot covering t.
+// Returns the zero value and false if t is out of range.
+func (ts *TimeSeries[T]) Get(t time.Time) (T, bool) {
+	i, ok := ts.slotIndex(t)
+	if !ok {
+		var zero T
+		return zero, false
+	}
+	return ts.buf[ts.bufIndex(i)], true
+}
+
 // Add accumulates value into the slot that covers t.
 // When auto is enabled and t >= End(), the window is shifted forward first
 // so that t lands in the last slot.
@@ -48,6 +75,29 @@ func (ts *TimeSeries[T]) Add(t time.Time, value T) {
 	}
 	ts.buf[ts.bufIndex(i)] += value
 }
+
+// Clear resets all slot values to zero without changing the window position.
+func (ts *TimeSeries[T]) Clear() {
+	clear(ts.buf)
+}
+
+// End returns the exclusive end time of the window (Start + Size×Interval).
+func (ts *TimeSeries[T]) End() time.Time {
+	return ts.start.Add(time.Duration(len(ts.buf)) * ts.interval)
+}
+
+// Floats returns the slot values as []float64, oldest-first.
+// Convenient for passing directly to Sparkline.SetValues.
+func (ts *TimeSeries[T]) Floats() []float64 {
+	out := make([]float64, len(ts.buf))
+	for i := range len(ts.buf) {
+		out[i] = float64(ts.buf[ts.bufIndex(i)])
+	}
+	return out
+}
+
+// Interval returns the slot width.
+func (ts *TimeSeries[T]) Interval() time.Duration { return ts.interval }
 
 // Set replaces the value of the slot that covers t.
 // When auto is enabled and t >= End(), the window is shifted forward first
@@ -87,6 +137,18 @@ func (ts *TimeSeries[T]) Shift(d time.Duration) {
 	ts.start = ts.start.Add(time.Duration(n) * ts.interval)
 }
 
+// Size returns the fixed number of slots.
+func (ts *TimeSeries[T]) Size() int { return len(ts.buf) }
+
+// Start returns the start time of the oldest slot.
+func (ts *TimeSeries[T]) Start() time.Time { return ts.start }
+
+// Touch shifts the window forward until t falls within [Start, End), if needed.
+// If t is already inside the window or before Start, it is a no-op.
+func (ts *TimeSeries[T]) Touch(t time.Time) {
+	ts.maybeShift(t)
+}
+
 // Values returns the slot values as a new slice, oldest-first.
 func (ts *TimeSeries[T]) Values() []T {
 	out := make([]T, len(ts.buf))
@@ -95,30 +157,6 @@ func (ts *TimeSeries[T]) Values() []T {
 	}
 	return out
 }
-
-// Floats returns the slot values as []float64, oldest-first.
-// Convenient for passing directly to Sparkline.SetValues.
-func (ts *TimeSeries[T]) Floats() []float64 {
-	out := make([]float64, len(ts.buf))
-	for i := range len(ts.buf) {
-		out[i] = float64(ts.buf[ts.bufIndex(i)])
-	}
-	return out
-}
-
-// Start returns the start time of the oldest slot.
-func (ts *TimeSeries[T]) Start() time.Time { return ts.start }
-
-// End returns the exclusive end time of the window (Start + Size×Interval).
-func (ts *TimeSeries[T]) End() time.Time {
-	return ts.start.Add(time.Duration(len(ts.buf)) * ts.interval)
-}
-
-// Size returns the fixed number of slots.
-func (ts *TimeSeries[T]) Size() int { return len(ts.buf) }
-
-// Interval returns the slot width.
-func (ts *TimeSeries[T]) Interval() time.Duration { return ts.interval }
 
 // ---- Internal Helpers -----------------------------------------------------
 

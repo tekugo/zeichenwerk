@@ -178,6 +178,33 @@ func TestRingBufferOrdering(t *testing.T) {
 	}
 }
 
+func TestRingBufferClear(t *testing.T) {
+	rb := NewRingBuffer[int](3)
+	rb.Add(1)
+	rb.Add(2)
+	rb.Add(3)
+
+	rb.Clear()
+
+	if rb.Length() != 0 {
+		t.Errorf("Length() after Clear = %d, want 0", rb.Length())
+	}
+	for i := range rb.size {
+		if rb.buf[i] != 0 {
+			t.Errorf("buf[%d] = %d, want 0 after Clear", i, rb.buf[i])
+		}
+	}
+
+	// Buffer should be usable after Clear.
+	rb.Add(99)
+	if rb.Length() != 1 {
+		t.Errorf("Length() after Add post-Clear = %d, want 1", rb.Length())
+	}
+	if got := rb.Get(0); got != 99 {
+		t.Errorf("Get(0) after Add post-Clear = %d, want 99", got)
+	}
+}
+
 func BenchmarkRingBufferAdd(b *testing.B) {
 	rb := NewRingBuffer[int](256)
 	for i := 0; i < b.N; i++ {

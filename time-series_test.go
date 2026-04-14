@@ -273,6 +273,131 @@ func TestTimeSeriesEndToEnd(t *testing.T) {
 	}
 }
 
+func TestTimeSeriesGet(t *testing.T) {
+	ts := NewTimeSeries[int](base, minute, 3, false)
+	ts.Add(base, 10)
+	ts.Add(base.Add(2*minute), 30)
+
+	if v, ok := ts.Get(base); !ok || v != 10 {
+		t.Errorf("Get(base) = %d, %v; want 10, true", v, ok)
+	}
+	if v, ok := ts.Get(base.Add(2*minute)); !ok || v != 30 {
+		t.Errorf("Get(base+2m) = %d, %v; want 30, true", v, ok)
+	}
+	// Mid-interval timestamp should map to the same slot.
+	if v, ok := ts.Get(base.Add(30 * time.Second)); !ok || v != 10 {
+		t.Errorf("Get(base+30s) = %d, %v; want 10, true", v, ok)
+	}
+	// Out of range.
+	if _, ok := ts.Get(base.Add(-minute)); ok {
+		t.Error("Get before Start should return false")
+	}
+	if _, ok := ts.Get(base.Add(10 * minute)); ok {
+		t.Error("Get after End should return false")
+	}
+}
+
+func TestTimeSeriesAll(t *testing.T) {
+	ts := NewTimeSeries[int](base, minute, 3, false)
+	ts.Add(base, 1)
+	ts.Add(base.Add(minute), 2)
+	ts.Add(base.Add(2*minute), 3)
+
+	var times []time.Time
+	var vals []int
+	for t, v := range ts.All() {
+		times = append(times, t)
+		vals = append(vals, v)
+	}
+
+	if len(vals) != 3 {
+		t.Fatalf("All() yielded %d entries, want 3", len(vals))
+	}
+	for i, want := range []int{1, 2, 3} {
+		if vals[i] != want {
+			t.Errorf("All() value[%d] = %d, want %d", i, vals[i], want)
+		}
+		wantTime := base.Add(time.Duration(i) * minute)
+		if !times[i].Equal(wantTime) {
+			t.Errorf("All() time[%d] = %v, want %v", i, times[i], wantTime)
+		}
+	}
+}
+
+func TestTimeSeriesAllEarlyExit(t *testing.T) {
+	ts := NewTimeSeries[int](base, minute, 5, false)
+	for i := range 5 {
+		ts.Add(base.Add(time.Duration(i)*minute), i+1)
+	}
+
+	var count int
+	for range ts.All() {
+		count++
+		if count == 2 {
+			break
+		}
+	}
+	if count != 2 {
+		t.Errorf("early exit yielded %d entries, want 2", count)
+	}
+}
+
+func TestTimeSeriesTouch(t *testing.T) {
+	ts := NewTimeSeries[int](base, minute, 3, false)
+	ts.Add(base, 1)
+	ts.Add(base.Add(minute), 2)
+
+	// Touch within window — no shift.
+	ts.Touch(base.Add(minute))
+	if !ts.Start().Equal(base) {
+		t.Errorf("Touch within window shifted Start to %v", ts.Start())
+	}
+
+	// Touch before Start — no shift.
+	ts.Touch(base.Add(-minute))
+	if !ts.Start().Equal(base) {
+		t.Errorf("Touch before Start shifted Start to %v", ts.Start())
+	}
+
+	// Touch beyond End — shifts window so t is the last slot.
+	future := base.Add(4 * minute) // 1 beyond end (end = base+3min)
+	ts.Touch(future)
+	wantStart := future.Add(-2 * minute)
+	if !ts.Start().Equal(wantStart) {
+		t.Errorf("Touch beyond End: Start = %v, want %v", ts.Start(), wantStart)
+	}
+	// Previous data in slots that fell off should be gone.
+	if ts.Values()[0] != 0 {
+		t.Errorf("slot 0 after Touch = %d, want 0", ts.Values()[0])
+	}
+}
+
+func TestTimeSeriesClear(t *testing.T) {
+	ts := NewTimeSeries[int](base, minute, 3, false)
+	ts.Add(base, 1)
+	ts.Add(base.Add(minute), 2)
+	ts.Add(base.Add(2*minute), 3)
+
+	ts.Clear()
+
+	for i, v := range ts.Values() {
+		if v != 0 {
+			t.Errorf("slot %d = %d, want 0 after Clear", i, v)
+		}
+	}
+
+	// Window position should be unchanged.
+	if !ts.Start().Equal(base) {
+		t.Errorf("Start() changed after Clear: %v", ts.Start())
+	}
+
+	// Buffer should be usable after Clear.
+	ts.Add(base.Add(minute), 99)
+	if ts.Values()[1] != 99 {
+		t.Errorf("slot 1 after Add post-Clear = %d, want 99", ts.Values()[1])
+	}
+}
+
 func TestTimeSeriesMultipleShifts(t *testing.T) {
 	// Shifting in multiple small steps should equal one large shift.
 	ts1 := NewTimeSeries[int](base, minute, 4, false)

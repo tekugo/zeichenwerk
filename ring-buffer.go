@@ -40,6 +40,16 @@ func (rb *RingBuffer[T]) Get(index int) T {
 	return rb.buf[(rb.size+rb.start-1-index)%rb.size]
 }
 
+// Clear resets all values to zero and empties the buffer.
+func (rb *RingBuffer[T]) Clear() {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+
+	clear(rb.buf)
+	rb.start = 0
+	rb.count = 0
+}
+
 // Length returns the fill of the ring-buffer up to size.
 func (rb *RingBuffer[T]) Length() int {
 	rb.mu.Lock()
