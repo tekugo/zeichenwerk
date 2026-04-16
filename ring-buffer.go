@@ -29,6 +29,23 @@ func (rb *RingBuffer[T]) Add(value T) {
 	}
 }
 
+// Clear resets all values to zero and empties the buffer.
+func (rb *RingBuffer[T]) Clear() {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+
+	clear(rb.buf)
+	rb.start = 0
+	rb.count = 0
+}
+
+// Fill returns the current fill of the ring buffer up to size.
+func (rb *RingBuffer[T]) Fill() int {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+	return rb.count
+}
+
 // Get returns the n-th latest entry starting with 0.
 // Get is not synchronized, so if there is adding in progress, it might
 // not return the latest entry.
@@ -40,19 +57,7 @@ func (rb *RingBuffer[T]) Get(index int) T {
 	return rb.buf[(rb.size+rb.start-1-index)%rb.size]
 }
 
-// Clear resets all values to zero and empties the buffer.
-func (rb *RingBuffer[T]) Clear() {
-	rb.mu.Lock()
-	defer rb.mu.Unlock()
-
-	clear(rb.buf)
-	rb.start = 0
-	rb.count = 0
-}
-
-// Length returns the fill of the ring-buffer up to size.
-func (rb *RingBuffer[T]) Length() int {
-	rb.mu.Lock()
-	defer rb.mu.Unlock()
-	return rb.count
+// Length returns the size of the ring buffer.
+func (rb *RingBuffer[T]) Size() int {
+	return rb.size
 }

@@ -22,8 +22,8 @@ func TestBarChart_Defaults(t *testing.T) {
 	if bc.selected != -1 {
 		t.Errorf("selected = %d; want -1", bc.selected)
 	}
-	if bc.mode != Relative {
-		t.Errorf("mode = %v; want Relative", bc.mode)
+	if bc.absolute {
+		t.Error("absolute should be false by default")
 	}
 	if !bc.showAxis {
 		t.Error("showAxis should be true by default")
@@ -179,7 +179,7 @@ func TestBarChart_EffectiveMax_Relative(t *testing.T) {
 
 func TestBarChart_EffectiveMax_Absolute(t *testing.T) {
 	bc := NewBarChart("bc", "")
-	bc.SetMode(Absolute)
+	bc.SetAbsolute(true)
 	bc.SetMax(200)
 	bc.SetCategories([]string{"A"})
 	bc.SetSeries([]BarSeries{{Values: []float64{50}}})

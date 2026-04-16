@@ -16,8 +16,8 @@ func TestNewRingBuffer(t *testing.T) {
 	if len(rb.buf) != 5 {
 		t.Errorf("buffer len = %d, want 5", len(rb.buf))
 	}
-	if rb.Length() != 0 {
-		t.Errorf("Length() = %d, want 0", rb.Length())
+	if rb.Fill() != 0 {
+		t.Errorf("Length() = %d, want 0", rb.Fill())
 	}
 }
 
@@ -25,20 +25,20 @@ func TestRingBufferAdd(t *testing.T) {
 	rb := NewRingBuffer[int](3)
 
 	rb.Add(10)
-	if rb.Length() != 1 {
-		t.Errorf("after 1 add: Length() = %d, want 1", rb.Length())
+	if rb.Fill() != 1 {
+		t.Errorf("after 1 add: Length() = %d, want 1", rb.Fill())
 	}
 
 	rb.Add(20)
 	rb.Add(30)
-	if rb.Length() != 3 {
-		t.Errorf("after 3 adds: Length() = %d, want 3", rb.Length())
+	if rb.Fill() != 3 {
+		t.Errorf("after 3 adds: Length() = %d, want 3", rb.Fill())
 	}
 
 	// Overflow: count must not exceed size
 	rb.Add(40)
-	if rb.Length() != 3 {
-		t.Errorf("after overflow: Length() = %d, want 3", rb.Length())
+	if rb.Fill() != 3 {
+		t.Errorf("after overflow: Length() = %d, want 3", rb.Fill())
 	}
 }
 
@@ -108,15 +108,15 @@ func TestRingBufferLength(t *testing.T) {
 
 	for i := 1; i <= 4; i++ {
 		rb.Add(i)
-		if rb.Length() != i {
-			t.Errorf("after %d adds: Length() = %d, want %d", i, rb.Length(), i)
+		if rb.Fill() != i {
+			t.Errorf("after %d adds: Length() = %d, want %d", i, rb.Fill(), i)
 		}
 	}
 
 	// Adding beyond capacity keeps length at size
 	rb.Add(99)
-	if rb.Length() != 4 {
-		t.Errorf("after overflow: Length() = %d, want 4", rb.Length())
+	if rb.Fill() != 4 {
+		t.Errorf("after overflow: Length() = %d, want 4", rb.Fill())
 	}
 }
 
@@ -139,8 +139,8 @@ func TestRingBufferConcurrentAdd(t *testing.T) {
 	}
 	wg.Wait()
 
-	if rb.Length() != size {
-		t.Errorf("after concurrent adds: Length() = %d, want %d", rb.Length(), size)
+	if rb.Fill() != size {
+		t.Errorf("after concurrent adds: Length() = %d, want %d", rb.Fill(), size)
 	}
 }
 
@@ -155,8 +155,8 @@ func TestRingBufferSize1(t *testing.T) {
 	if got := rb.Get(0); got != "second" {
 		t.Errorf("after overflow Get(0) = %q, want %q", got, "second")
 	}
-	if rb.Length() != 1 {
-		t.Errorf("Length() = %d, want 1", rb.Length())
+	if rb.Fill() != 1 {
+		t.Errorf("Length() = %d, want 1", rb.Fill())
 	}
 }
 
@@ -186,8 +186,8 @@ func TestRingBufferClear(t *testing.T) {
 
 	rb.Clear()
 
-	if rb.Length() != 0 {
-		t.Errorf("Length() after Clear = %d, want 0", rb.Length())
+	if rb.Fill() != 0 {
+		t.Errorf("Length() after Clear = %d, want 0", rb.Fill())
 	}
 	for i := range rb.size {
 		if rb.buf[i] != 0 {
@@ -197,8 +197,8 @@ func TestRingBufferClear(t *testing.T) {
 
 	// Buffer should be usable after Clear.
 	rb.Add(99)
-	if rb.Length() != 1 {
-		t.Errorf("Length() after Add post-Clear = %d, want 1", rb.Length())
+	if rb.Fill() != 1 {
+		t.Errorf("Length() after Add post-Clear = %d, want 1", rb.Fill())
 	}
 	if got := rb.Get(0); got != 99 {
 		t.Errorf("Get(0) after Add post-Clear = %d, want 99", got)

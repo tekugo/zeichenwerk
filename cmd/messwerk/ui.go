@@ -2,562 +2,406 @@ package main
 
 import (
 	"fmt"
-	"os/exec"
-	"runtime"
-	"strings"
 	"time"
 
-	. "github.com/tekugo/zeichenwerk"
+	z "github.com/tekugo/zeichenwerk"
+	. "github.com/tekugo/zeichenwerk/compose"
 )
 
-const otlpConfig = `{
+var info = `
+# Configuring Claude Code for OTLP
+
+Messwerk receives Claude Code telemetry over **OTLP/gRPC** and displays token usage, cost, and activity in real time.
+
+## Quick start
+
+Add the following to your Claude Code settings.json (user, project, or local scope):
+
+` + "```" + `
+{
   "env": {
     "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
     "OTEL_METRICS_EXPORTER": "otlp",
-    "OTEL_LOGS_EXPORTER": "otlp",
     "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
-    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
-    "OTEL_METRIC_EXPORT_INTERVAL": "10000",
-    "OTEL_LOGS_EXPORT_INTERVAL": "5000"
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317"
   }
-}`
-
-// sparkCache holds per-session sparkline widgets in the UI layer so no
-// Sparkline state leaks into the data model.
-type sparkCache struct {
-	total  *Sparkline
-	input  *Sparkline
-	output *Sparkline
 }
+` + "```" + `
 
-func newSparkCache(id string) sparkCache {
-	return sparkCache{
-		total:  NewSparkline(id+"-total", ""),
-		input:  NewSparkline(id+"-input", ""),
-		output: NewSparkline(id+"-output", ""),
-	}
-}
+Then start messwerk before launching Claude Code:
 
-func (sc sparkCache) update(buckets []Bucket) {
-	sc.total.SetValues(sparkVals(buckets, func(v MetricValues) float64 {
-		return float64(v.InputTokens + v.OutputTokens + v.CacheReadTokens + v.CacheCreationTokens)
-	}))
-	sc.input.SetValues(sparkVals(buckets, func(v MetricValues) float64 {
-		return float64(v.InputTokens)
-	}))
-	sc.output.SetValues(sparkVals(buckets, func(v MetricValues) float64 {
-		return float64(v.OutputTokens)
-	}))
-}
+` + "```" + `sh
+messwerk
+` + "```" + ` 
 
-func sparkVals(buckets []Bucket, fn func(MetricValues) float64) []float64 {
-	vs := make([]float64, len(buckets))
-	for i, b := range buckets {
-		vs[i] = fn(b.MetricValues)
-	}
-	return vs
-}
+## Variables
 
-// buildUI constructs the messwerk TUI and wires the store's onChange callback.
-func buildUI(theme *Theme, store *Store) *UI {
-	b := NewBuilder(theme)
-	configLines := strings.Split(otlpConfig, "\n")
+| Variable | Value | Purpose |
+|---|---|---|
+| CLAUDE_CODE_ENABLE_TELEMETRY | 1 | Enables telemetry collection |
+| OTEL_METRICS_EXPORTER | otlp | Routes metrics to the OTLP exporter |
+| OTEL_EXPORTER_OTLP_PROTOCOL | grpc | Uses gRPC transport |
+| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4317 | Messwerk's listen address |
 
-	// UI-layer sparkline cache — declared before the builder so makeItemRender
-	// can close over it. The map is mutated in refresh(); map reference
-	// semantics mean the render closure always sees current entries.
-	sparks := map[string]sparkCache{}
+## Options
 
-	b.Flex("main", false, "stretch", 0).
-		Tabs("tabs", "Start", "Monitor", "Log", "Sessions", "About").
-		Switcher("view", false).Hint(0, -1).
-		With(func(b *Builder) {
-			// ── Start pane ────────────────────────────────────────────────────
-			b.Flex("start-pane", false, "stretch", 0).Hint(0, -1).Padding(3, 6).
-				Static("info-heading", "Waiting for telemetry data").
-				Static("info-desc", "Add this to ~/.claude/settings.json to enable OTLP export to messwerk:").
-				Text("info-config", configLines, false, 0).Hint(0, len(configLines)).
-				Button("copy-btn", "Copy config to clipboard").
-			End()
-		}).
-		With(func(b *Builder) {
-			// ── Monitor pane ──────────────────────────────────────────────────
-			b.Grid("nav-grid", 1, 2, false).Hint(0, -1).
-				Rows(-1).
-				Columns(42, -1).
-				// Left column: session list
-				Cell(0, 0, 1, 1).Deck("nav", makeItemRender(theme, sparks), 4).
-				// Right column: session dashboard
-				Cell(1, 0, 1, 1).Flex("detail", false, "stretch", 0).
-				// Header bar
-				Flex("detail-hdr", true, "center", 2).Background("$bg1").Padding(0, 1).
-				Static("detail-icon", "◈").Font("bold").Foreground("$cyan").Padding(0, 1, 0, 0).
-				Static("detail-name", "Select a session").Font("bold").Foreground("$fg0").
-				Spacer().Hint(-1, 0).
-				Static("detail-status", "").Foreground("$gray").
-				End().
-				HRule("thin").
-				// KPI cards — big-number current-window metrics
-				Flex("kpi-row", true, "start", 1).Padding(0, 0, 1, 0).
-				Flex("kpi-in", false, "start", 0).Border("", "round").Padding(0, 2).
-				Static("kpi-in-lbl", "Input Tokens").Foreground("$gray").
-				Digits("kpi-in-val", "0000").Foreground("$cyan").
-				Static("kpi-in-sub", "per window").Foreground("$gray").
-				End().
-				Flex("kpi-out", false, "start", 0).Border("", "round").Padding(0, 2).
-				Static("kpi-out-lbl", "Output Tokens").Foreground("$gray").
-				Digits("kpi-out-val", "0000").Foreground("$green").
-				Static("kpi-out-sub", "per window").Foreground("$gray").
-				End().
-				Flex("kpi-cost", false, "start", 0).Border("", "round").Padding(0, 2).
-				Static("kpi-cost-lbl", "Cost").Foreground("$gray").
-				Digits("kpi-cost-val", "0.00").Foreground("$yellow").
-				Static("kpi-cost-sub", "USD / window").Foreground("$gray").
-				End().
-				Spacer().Hint(-1, 0).
-				End().
-				// Sparkline pane
-				Flex("spark-pane", false, "stretch", 0).Border("", "round").Hint(0, 8).
-				Static("spark-title", " Token Activity  ·  2 min buckets").Font("bold").Foreground("$fg0").Background("$bg2").
-				Sparkline("detail-spark").Hint(0, 5).
-				End().
-				// Session details pane
-				Flex("info-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
-				Static("info-title", " Session Details").Font("bold").Foreground("$fg0").Background("$bg2").
-				Text("detail-info", nil, false, 100).Padding(0, 1).Hint(0, -1).
-				End().
-				End(). // Flex("detail")
-				End()  // Grid("nav-grid")
-		}).
-		With(func(b *Builder) {
-			// ── Log pane ──────────────────────────────────────────────────────
-			b.Flex("log-pane", false, "stretch", 0).Hint(0, -1).
-				Table("otlp-log", store.Log, false).Hint(0, -1).
-			End()
-		}).
-		With(func(b *Builder) {
-			// ── Sessions pane — aggregate view + session list ─────────────────
-			b.Flex("sessions-pane", false, "stretch", 0).Hint(0, -1).Padding(1, 2).
-				Flex("total-hdr", true, "center", 2).Padding(0, 0, 1, 0).
-				Static("total-title", "All Sessions").Font("bold").Foreground("$cyan").
-				Spacer().Hint(-1, 0).
-				Static("total-subtitle", "Aggregated totals").Foreground("$gray").
-				End().
-				HRule("thin").Padding(0, 0, 1, 0).
-				// Aggregate KPI row
-				Flex("total-kpi-row", true, "start", 1).Padding(0, 0, 1, 0).
-				Flex("tot-in", false, "start", 0).Border("", "round").Padding(0, 2).
-				Static("tot-in-lbl", "Input Tokens").Foreground("$gray").
-				Static("val-tot-input", "—").Font("bold").Foreground("$cyan").
-				End().
-				Flex("tot-out", false, "start", 0).Border("", "round").Padding(0, 2).
-				Static("tot-out-lbl", "Output Tokens").Foreground("$gray").
-				Static("val-tot-output", "—").Font("bold").Foreground("$green").
-				End().
-				Flex("tot-cst", false, "start", 0).Border("", "round").Padding(0, 2).
-				Static("tot-cost-lbl", "Total Cost").Foreground("$gray").
-				Static("val-tot-cost", "—").Font("bold").Foreground("$yellow").
-				End().
-				Flex("tot-act", false, "start", 0).Border("", "round").Padding(0, 2).
-				Static("tot-act-lbl", "Active Time").Foreground("$gray").
-				Static("val-tot-active", "—").Font("bold").Foreground("$magenta").
-				End().
-				Spacer().Hint(-1, 0).
-				End().
-				// Session list
-				Flex("sess-list-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
-				Static("sess-list-title", " Sessions").Font("bold").Foreground("$fg0").Background("$bg2").
-				Text("session-list", nil, false, 500).Padding(0, 1).Hint(0, -1).
-				End().
-			End()
-		}).
-		With(func(b *Builder) {
-			// ── About pane ────────────────────────────────────────────────────
-			b.Flex("about-pane", false, "stretch", 0).Hint(0, -1).Padding(3, 6).
-				Static("about-placeholder", "About — coming soon").
-			End()
-		}).
-		End().
-		Shortcuts("footer", "↑↓", "navigate", "←→", "switch tabs", "q", "quit").
-		End()
+**Custom port** — if 4317 is already in use, start messwerk on a different port and update the endpoint accordingly:
 
-	ui := b.Build()
+` + "```" + `sh
+messwerk -port 4318
+` + "```" + ` 
 
-	tabs    := Find(ui, "tabs").(*Tabs)
-	viewSw  := Find(ui, "view").(*Switcher)
-	deck    := Find(ui, "nav").(*Deck)
-	copyBtn := Find(ui, "copy-btn").(*Button)
+` + "```" + `json
+"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318"
+` + "```" + `
 
-	// Monitor detail widgets
-	detailName   := Find(ui, "detail-name").(*Static)
-	detailStatus := Find(ui, "detail-status").(*Static)
-	digInput     := Find(ui, "kpi-in-val").(*Digits)
-	digOutput    := Find(ui, "kpi-out-val").(*Digits)
-	digCost      := Find(ui, "kpi-cost-val").(*Digits)
-	detailSpark  := Find(ui, "detail-spark").(*Sparkline)
-	detailInfo   := Find(ui, "detail-info").(*Text)
-	detailSpark.SetMode(Absolute)
-	detailSpark.SetMin(0)
+**Faster updates** — by default Claude Code exports metrics every 60 seconds. For a more responsive display during development, reduce the interval:
 
-	// Sessions tab widgets
-	valTotInput  := Find(ui, "val-tot-input").(*Static)
-	valTotOutput := Find(ui, "val-tot-output").(*Static)
-	valTotCost   := Find(ui, "val-tot-cost").(*Static)
-	valTotActive := Find(ui, "val-tot-active").(*Static)
-	sessionList  := Find(ui, "session-list").(*Text)
+` + "```" + `json
+"OTEL_METRIC_EXPORT_INTERVAL": "10000"
+` + "```" + ` 
+`
 
-	var currentTab int
+func buildUI(theme *z.Theme, store *Store) *z.UI {
+	mp := &metricsProvider{}
+	lp := &logProvider{}
 
-	switchToTab := func(idx int) {
-		currentTab = idx
-		viewSw.Select(idx)
-	}
-	tabs.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
-		if len(data) > 0 {
-			if idx, ok := data[0].(int); ok {
-				switchToTab(idx)
-			}
-		}
-		return true
-	})
-	tabs.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
-		if len(data) > 0 {
-			if idx, ok := data[0].(int); ok {
-				switchToTab(idx)
-			}
-		}
+	ui := UI(theme,
+		Flex("main", "", false, "stretch", 0,
+			Flex("header", "", true, "stretch", 0,
+				Static("title", "", " messwerk  ·  Claude Code OTLP Monitor", Hint(-1, 1), Font("bold")),
+				Clock("clock", "", time.Second, time.DateTime, "  "),
+			),
+			Grid("grid", "", []int{-1}, []int{41, -1}, true, Hint(0, -1),
+				Cell(0, 1, 1, 1,
+					Deck("sessions", "", deckRenderer(theme, store), 5),
+				),
+				Cell(1, 1, 1, 1,
+					Switcher("content", "",
+						Flex("info-panel", "", false, "stretch", 1, Padding(1),
+							Flex("info-buttons", "", true, "strech", 0,
+								Spacer("", Hint(-1, 0)),
+								Button("info-copy", "", "Copy to Clipboard"),
+							),
+							Styled("info-text", "", info, Hint(0, -1), Padding(1, 2)),
+						),
+						Grid("all", "", []int{0, 0, 0, -1}, []int{26, 0, -1}, false, Border("none"), Padding(1, 2),
+							Cell(0, 0, 1, 1, Card("total-input", "", "Input",
+								Digits("total-input-value", "", "0", Flag(z.FlagRight, true), Fg("$blue")),
+								Static("total-input-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(1, 0, 2, 1, Card("total-input-sparkline-card", "", "", Margin(0, 0, 0, 2),
+								Sparkline("total-input-sparkline", "", Hint(30, 3), Fg("$blue")),
+								Static("total-input-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
+							)),
+							Cell(0, 1, 1, 1, Card("total-output", "", "Output",
+								Digits("total-output-value", "", "0", Flag(z.FlagRight, true), Fg("$green")),
+								Static("totla-output-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(1, 1, 2, 1, Card("total-output-sparkline-card", "", "", Margin(0, 0, 0, 2),
+								Sparkline("total-output-sparkline", "", Hint(30, 3), Fg("$green")),
+								Static("total-output-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
+							)),
+							Cell(0, 2, 1, 1, Card("total-cost", "", "Cost",
+								Digits("total-cost-value", "", "0.00", Flag(z.FlagRight, true), Fg("$cyan")),
+								Static("total-cost-footer", "", "US$", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(1, 2, 2, 1, Card("total-cost-sparkline-card", "", "", Margin(0, 0, 0, 2),
+								Sparkline("total-cost-sparkline", "", Hint(30, 3), Fg("$cyan")),
+								Static("total-cost-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
+							)),
+						),
+						Grid("session", "", []int{0, 0, 0, 0, 0, -1}, []int{26, 26, -1}, false, Border("none"), Padding(1, 2),
+							// Row 0: Session header
+							Cell(0, 0, 3, 1, Card("session-header", "", "",
+								Flex("session-header-row", "", true, "center", 2,
+									Static("session-id", "", "–", Hint(19, 1), Font("bold"), Fg("$cyan")),
+									Spacer("", Hint(-1, 0)),
+									Static("session-start-label", "", "started", Fg("$gray")),
+									Static("session-start", "", "–", Hint(8, 1)),
+									Static("session-duration-label", "", "duration", Fg("$gray")),
+									Static("session-duration", "", "–", Hint(7, 1)),
+									Static("session-model", "", "–", Hint(20, 1), Fg("$blue")),
+									Static("session-os", "", "–", Hint(14, 1), Fg("$gray")),
+								),
+							)),
+							// Row 1: Stats
+							Cell(0, 1, 1, 1, Card("session-cache-card", "", "Cache",
+								Progress("session-cache-bar", "", true, Margin(1)),
+								Static("session-cache-label", "", "–", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(1, 1, 1, 1, Card("session-accept-card", "", "Edits", Margin(0, 0, 0, 2),
+								Progress("session-accept-bar", "", true, Margin(1)),
+								Static("session-accept-label", "", "–", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(2, 1, 1, 1, Card("session-lines-card", "", "Lines", Margin(0, 0, 0, 2),
+								Flex("session-lines-row", "", true, "center", 1,
+									Static("session-lines-added", "", "+0", Fg("$green")),
+									Spacer("", Hint(-1, 0)),
+									Static("session-lines-removed", "", "-0", Fg("$red")),
+								),
+							)),
+							// Rows 2–4: Metrics + sparklines
+							Cell(0, 2, 1, 1, Card("session-input", "", "Input",
+								Digits("session-input-value", "", "0", Flag(z.FlagRight, true), Fg("$blue")),
+								Static("session-input-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(1, 2, 2, 1, Card("session-input-sparkline-card", "", "", Margin(0, 0, 0, 2),
+								Sparkline("session-input-sparkline", "", Hint(30, 3), Fg("$blue")),
+								Static("session-input-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
+							)),
+							Cell(0, 3, 1, 1, Card("session-output", "", "Output",
+								Digits("session-output-value", "", "0", Flag(z.FlagRight, true), Fg("$green")),
+								Static("session-output-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(1, 3, 2, 1, Card("session-output-sparkline-card", "", "", Margin(0, 0, 0, 2),
+								Sparkline("session-output-sparkline", "", Hint(30, 3), Fg("$green")),
+								Static("session-output-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
+							)),
+							Cell(0, 4, 1, 1, Card("session-cost", "", "Cost",
+								Digits("session-cost-value", "", "0.00", Flag(z.FlagRight, true), Fg("$cyan")),
+								Static("session-cost-footer", "", "US$", Fg("$gray"), Flag(z.FlagRight)),
+							)),
+							Cell(1, 4, 2, 1, Card("session-cost-sparkline-card", "", "", Margin(0, 0, 0, 2),
+								Sparkline("session-cost-sparkline", "", Hint(30, 3), Fg("$cyan")),
+								Static("session-cost-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
+							)),
+							// Row 5: Tabs + tables
+							Cell(0, 5, 3, 1,
+								Flex("session-tables-area", "", false, "stretch", 0, Margin(1, 0, 0, 0),
+									Tabs("session-tabs", ""),
+									Switcher("session-table-switcher", "", Hint(0, -1),
+										Table("session-metrics-table", "", mp, false, Hint(0, -1)),
+										Table("session-logs-table", "", lp, false, Hint(0, -1)),
+									),
+								),
+							),
+						),
+					),
+				),
+			),
+			Shortcuts("footer", "", []string{"q", "Quit"}),
+		),
+	)
+
+	deck := z.Find(ui, "sessions").(*z.Deck)
+	content := z.Find(ui, "content").(*z.Switcher)
+
+	// Session header
+	sessionID := z.Find(ui, "session-id").(*z.Static)
+	sessionStart := z.Find(ui, "session-start").(*z.Static)
+	sessionDuration := z.Find(ui, "session-duration").(*z.Static)
+	sessionModel := z.Find(ui, "session-model").(*z.Static)
+	sessionOS := z.Find(ui, "session-os").(*z.Static)
+
+	// Stats row
+	cacheBar := z.Find(ui, "session-cache-bar").(*z.Progress)
+	cacheLabel := z.Find(ui, "session-cache-label").(*z.Static)
+	acceptBar := z.Find(ui, "session-accept-bar").(*z.Progress)
+	acceptLabel := z.Find(ui, "session-accept-label").(*z.Static)
+	linesAdded := z.Find(ui, "session-lines-added").(*z.Static)
+	linesRemoved := z.Find(ui, "session-lines-removed").(*z.Static)
+	cacheBar.SetTotal(100)
+	acceptBar.SetTotal(100)
+
+	// Metrics + sparklines
+	costDigits := z.Find(ui, "session-cost-value").(*z.Digits)
+	inputDigits := z.Find(ui, "session-input-value").(*z.Digits)
+	outputDigits := z.Find(ui, "session-output-value").(*z.Digits)
+	inputFooter := z.Find(ui, "session-input-footer").(*z.Static)
+	outputFooter := z.Find(ui, "session-output-footer").(*z.Static)
+	inputSparkline := z.Find(ui, "session-input-sparkline").(*z.Sparkline)
+	outputSparkline := z.Find(ui, "session-output-sparkline").(*z.Sparkline)
+	costSparkline := z.Find(ui, "session-cost-sparkline").(*z.Sparkline)
+
+	// Tabs + tables
+	sessionTabs := z.Find(ui, "session-tabs").(*z.Tabs)
+	tableSwitcher := z.Find(ui, "session-table-switcher").(*z.Switcher)
+	sessionTabs.Add("Metrics")
+	sessionTabs.Add("Logs")
+	sessionTabs.On(z.EvtChange, func(_ z.Widget, _ z.Event, args ...any) bool {
+		tableSwitcher.Select(args[0].(int))
 		return true
 	})
 
-	copyBtn.On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
-		if err := copyToClipboard(otlpConfig); err == nil {
-			copyBtn.Set("✓ Copied!")
-			Redraw(copyBtn)
-			go func() {
-				time.Sleep(2 * time.Second)
-				copyBtn.Set("Copy config to clipboard")
-				Redraw(copyBtn)
-			}()
-		}
-		return true
-	})
+	z.Derived(store.TotalInput, func(n int64) string { return z.Humanize(n) }).
+		Bind(z.Find(ui, "total-input-value").(*z.Digits))
+	z.Derived(store.TotalOutput, func(n int64) string { return z.Humanize(n) }).
+		Bind(z.Find(ui, "total-output-value").(*z.Digits))
+	z.Derived(store.TotalCost, func(f float64) string { return fmt.Sprintf("%.4f", f) }).
+		Bind(z.Find(ui, "total-cost-value").(*z.Digits))
 
-	var currentItems []*SessionItem
+	z.Find(ui, "total-input-sparkline").(*z.Sparkline).SetProvider(store.Input)
+	z.Find(ui, "total-output-sparkline").(*z.Sparkline).SetProvider(store.Output)
+	z.Find(ui, "total-cost-sparkline").(*z.Sparkline).SetProvider(store.Cost)
+	deck.SetItems([]any{nil})
 
-	updateDetail := func(item *SessionItem) {
+	showSession := func(session *Session) {
+		agg := session.Aggregate()
+
 		// Header
-		name := item.Name
-		if name == "" {
-			name = truncate(item.ID, 36)
+		id := session.ID
+		if len(id) > 18 {
+			id = id[:18] + "…"
 		}
-		detailName.Set(name)
+		sessionID.Set(id)
+		sessionStart.Set(session.Start.Format("15:04:05"))
+		sessionDuration.Set(z.FormatDuration(time.Since(session.Start)))
+		sessionModel.Set(session.PrimaryModel())
+		sessionOS.Set(session.OSType + "/" + session.HostArch)
 
-		_, dot := statusDot(item.Status, theme)
-		statusStr := dot + " "
-		switch item.Status {
-		case StatusActive:
-			statusStr += "Active"
-		case StatusIdle:
-			statusStr += "Idle"
-		default:
-			statusStr += "Ended"
+		// Cache ratio: what fraction of total prompt tokens came from cache
+		totalTokens := agg.Input + agg.CacheRead + agg.CacheCreation
+		cacheRatio := 0
+		if totalTokens > 0 {
+			cacheRatio = int(float64(agg.CacheRead) * 100 / float64(totalTokens))
 		}
-		if !item.LastSeen.IsZero() {
-			statusStr += "  ·  " + item.LastSeen.Format("15:04:05")
-		}
-		detailStatus.Set(statusStr)
+		cacheBar.Set(cacheRatio)
+		cacheLabel.Set(fmt.Sprintf("%d%% cached", cacheRatio))
 
-		// KPI big numbers — last metric window
-		last := item.Last
-		digInput.Set(formatDigitsTokens(last.InputTokens))
-		digOutput.Set(formatDigitsTokens(last.OutputTokens))
-		digCost.Set(formatDigitsCost(last.CostUSD))
+		// Accept ratio: how often code edit suggestions were accepted
+		totalEdits := agg.Accepted + agg.Rejected
+		acceptRatio := 0
+		if totalEdits > 0 {
+			acceptRatio = int(float64(agg.Accepted) * 100 / float64(totalEdits))
+		}
+		acceptBar.Set(acceptRatio)
+		acceptLabel.Set(fmt.Sprintf("%d%% accepted", acceptRatio))
 
-		// Sparkline — total tokens from 2-min buckets
-		if sc := sparks[item.ID]; sc.total != nil {
-			vals := sc.total.Values()
-			maxV := 1.0
-			for _, v := range vals {
-				if v > maxV {
-					maxV = v
-				}
-			}
-			detailSpark.SetMax(maxV)
-			detailSpark.SetValues(vals)
-		}
+		// Lines changed
+		linesAdded.Set(fmt.Sprintf("+%s", z.Humanize(agg.LinesAdded)))
+		linesRemoved.Set(fmt.Sprintf("-%s", z.Humanize(agg.LinesRemoved)))
 
-		// Session details text
-		t := item.Total
-		detailInfo.Clear()
-		if item.ID != "" {
-			detailInfo.Add(fmt.Sprintf("%-12s %s", "Session", truncate(item.ID, 40)))
-		}
-		if item.Name != "" && item.Name != item.ID {
-			detailInfo.Add(fmt.Sprintf("%-12s %s", "Name", item.Name))
-		}
-		if item.OrgID != "" {
-			detailInfo.Add(fmt.Sprintf("%-12s %s", "Org", truncate(item.OrgID, 40)))
-		}
-		if item.UserEmail != "" {
-			detailInfo.Add(fmt.Sprintf("%-12s %s", "User", item.UserEmail))
-		}
-		if item.TerminalType != "" {
-			detailInfo.Add(fmt.Sprintf("%-12s %s", "Terminal", item.TerminalType))
-		}
-		if !item.FirstSeen.IsZero() {
-			detailInfo.Add(fmt.Sprintf("%-12s %s", "Started", item.FirstSeen.Format("2006-01-02  15:04:05")))
-		}
-		if !item.LastSeen.IsZero() {
-			detailInfo.Add(fmt.Sprintf("%-12s %s", "Last seen", item.LastSeen.Format("2006-01-02  15:04:05")))
-		}
-		detailInfo.Add("")
-		detailInfo.Add("── Totals ─────────────────────────────────────────")
-		detailInfo.Add(fmt.Sprintf("%-20s %s tokens", "Input", formatTokens(t.InputTokens)))
-		detailInfo.Add(fmt.Sprintf("%-20s %s tokens", "Output", formatTokens(t.OutputTokens)))
-		detailInfo.Add(fmt.Sprintf("%-20s %s tokens", "Cache read", formatTokens(t.CacheReadTokens)))
-		detailInfo.Add(fmt.Sprintf("%-20s %s tokens", "Cache creation", formatTokens(t.CacheCreationTokens)))
-		detailInfo.Add(fmt.Sprintf("%-20s $%.6f", "Cost", t.CostUSD))
-		if t.ActiveTimeUser > 0 || t.ActiveTimeCLI > 0 {
-			detailInfo.Add(fmt.Sprintf("%-20s %.1fs user  ·  %.1fs CLI", "Active time", t.ActiveTimeUser, t.ActiveTimeCLI))
-		}
-		if t.LinesAdded > 0 || t.LinesRemoved > 0 {
-			detailInfo.Add(fmt.Sprintf("%-20s +%d  −%d", "Lines changed", t.LinesAdded, t.LinesRemoved))
-		}
-		if t.EditDecisionsAccepted > 0 || t.EditDecisionsRejected > 0 {
-			detailInfo.Add(fmt.Sprintf("%-20s %d accepted  ·  %d rejected", "Edit decisions", t.EditDecisionsAccepted, t.EditDecisionsRejected))
-		}
+		// Metrics + sparklines
+		lastSeen := session.LastSeen().Format("15:04:05")
+		costDigits.Set(fmt.Sprintf("%.4f", session.TotalCost()))
+		inputDigits.Set(z.Humanize(agg.Input))
+		outputDigits.Set(z.Humanize(agg.Output))
+		inputFooter.Set(lastSeen)
+		outputFooter.Set(lastSeen)
+		inputSparkline.SetProvider(session.Input)
+		outputSparkline.SetProvider(session.Output)
+		costSparkline.SetProvider(session.Cost)
+
+		// Tables
+		mp.set(session)
+		lp.set(session)
 	}
 
-	updateTotalView := func(tv TotalView) {
-		t := tv.Total
-		valTotInput.Set(formatTokens(t.InputTokens))
-		valTotOutput.Set(formatTokens(t.OutputTokens))
-		valTotCost.Set(fmt.Sprintf("$%.4f", t.CostUSD))
-		active := t.ActiveTimeUser + t.ActiveTimeCLI
-		valTotActive.Set(fmt.Sprintf("%.0fs", active))
-
-		sessionList.Clear()
-		sessionList.Add(fmt.Sprintf("  %-36s  %-19s  %-19s  %s",
-			"Session", "Started", "Last seen", "Status"))
-		sessionList.Add("  " + strings.Repeat("─", 85))
-		for _, s := range tv.Sessions {
-			_, dot := statusDot(s.Status, theme)
-			name := s.Name
-			if name == "" || name == s.ID {
-				name = truncate(s.ID, 36)
-			} else {
-				name = truncate(name+" ("+truncate(s.ID, 8)+"…)", 36)
-			}
-			start, end := "—", "—"
-			if !s.FirstSeen.IsZero() {
-				start = s.FirstSeen.Format("2006-01-02 15:04")
-			}
-			if !s.LastSeen.IsZero() {
-				end = s.LastSeen.Format("2006-01-02 15:04")
-			}
-			sessionList.Add(fmt.Sprintf("%s %-36s  %-19s  %-19s", dot, name, start, end))
+	deck.On(z.EvtSelect, func(_ z.Widget, _ z.Event, args ...any) bool {
+		index := args[0].(int)
+		if index == 0 {
+			content.Select(1)
+			return true
 		}
-	}
-
-	refresh := func() {
-		items, tv := store.Items()
-		currentItems = items
-
-		// Keep sparkline cache in sync with current sessions.
-		for _, item := range items {
-			sc, ok := sparks[item.ID]
-			if !ok {
-				sc = newSparkCache(item.ID)
-				sparks[item.ID] = sc
-			}
-			sc.update(item.Buckets)
+		sessions := store.Items()
+		if index-1 >= len(sessions) {
+			return true
 		}
-
-		// Auto-switch from Start to Monitor on first session.
-		if currentTab == 0 && len(items) > 0 {
-			tabs.Select(1)
-		}
-
-		any := make([]any, len(items))
-		for i, it := range items {
-			any[i] = it
-		}
-		prevIdx := deck.Selected()
-		deck.SetItems(any)
-		if prevIdx > 0 && prevIdx < len(items) {
-			deck.Select(prevIdx)
-		} else if len(items) > 0 {
-			updateDetail(items[deck.Selected()])
-		}
-
-		updateTotalView(tv)
-		ui.Refresh()
-	}
-
-	deck.On(EvtSelect, func(_ Widget, _ Event, data ...any) bool {
-		idx, ok := data[0].(int)
-		if !ok || idx < 0 || idx >= len(currentItems) {
-			return false
-		}
-		updateDetail(currentItems[idx])
+		showSession(sessions[index-1])
+		content.Select(2)
 		return true
 	})
 
-	store.SetOnChange(refresh)
-	refresh()
+	store.SetOnChange(func() {
+		sessions := store.Items()
+		items := make([]any, 1+len(sessions))
+		items[0] = nil
+		for i, s := range sessions {
+			items[i+1] = s
+		}
+		deck.SetItems(items)
+		if len(sessions) > 0 && content.Selected() == 0 {
+			content.Select(1)
+		}
+		if idx := deck.Selected(); idx > 0 && idx-1 < len(sessions) {
+			showSession(sessions[idx-1])
+		}
+		ui.Refresh()
+	})
+
+	z.Find(ui, "clock").(*z.Clock).Start()
 	return ui
 }
 
-// copyToClipboard writes text to the system clipboard.
-func copyToClipboard(text string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("pbcopy")
-	default:
-		cmd = exec.Command("xclip", "-selection", "clipboard")
+func deckRenderer(theme *z.Theme, store *Store) z.ItemRender {
+	sparkline := z.NewSparkline("deck-dummy", "")
+	sparkline.Apply(theme)
+	sparkline.SetStyle("", sparkline.Style().Modifiable())
+	renderSparkline := func(r *z.Renderer, x, y, w, h int, fg, bg string, data z.DataProvider) {
+		sparkline.SetProvider(data)
+		sparkline.SetBounds(x, y, w, h)
+		sparkline.Style().WithColors(fg, bg)
+		sparkline.Render(r)
 	}
-	cmd.Stdin = strings.NewReader(text)
-	return cmd.Run()
-}
 
-// makeItemRender returns the Deck ItemRender for session cards.
-// Sparklines are looked up from the UI-layer cache, not the model.
-//
-//	Row 0: status dot + session name
-//	Row 1: total input, output counts + cost (right-aligned)
-//	Row 2: "Input " label + input-token sparkline
-//	Row 3: "Output" label + output-token sparkline
-func makeItemRender(theme *Theme, sparks map[string]sparkCache) ItemRender {
-	return func(r *Renderer, x, y, w, h, _ int, data any, selected, focused bool) {
-		item := data.(*SessionItem)
-
-		bg := theme.Color("$bg1")
+	return func(r *z.Renderer, x, y, w, h, index int, data any, selected, focused bool) {
+		var bg string
 		if selected {
 			bg = theme.Color("$bg3")
+		} else {
+			bg = theme.Color("$bg1")
 		}
+
+		// Clear background
 		r.Set("", bg, "")
 		r.Fill(x, y, w, h, " ")
 
-		indicatorFg := theme.Color("$fg2")
-		indicator := " "
+		// Draw indicator if selected
 		if selected {
-			indicator = "▍"
+			var fg string
 			if focused {
-				indicatorFg = theme.Color("$blue")
+				fg = theme.Color("$blue")
+			} else {
+				fg = theme.Color("fg2")
 			}
-		}
-		r.Set(indicatorFg, bg, "")
-		for row := 0; row < h; row++ {
-			r.Put(x, y+row, indicator)
+			r.Set(fg, bg, "")
+			r.Line(x, y, 0, 1, h-2, "▍", "▍", "▍")
 		}
 
-		contentX := x + 2
-		dotFg, dot := statusDot(item.Status, theme)
-		r.Set(dotFg, bg, "")
-		r.Put(contentX, y, dot)
+		// Content starts at x+2
+		cx := x + 2
 
-		nameFg, nameFont := theme.Color("$fg1"), ""
-		if selected {
-			nameFg, nameFont = theme.Color("$fg0"), "bold"
-		}
-		name := item.Name
-		if name == "" {
-			name = truncate(item.ID, w-(contentX+2-x))
-		}
-		r.Set(nameFg, bg, nameFont)
-		r.Text(contentX+2, y, name, w-(contentX+2-x))
+		// Sparkline data
+		var input, output, costTS *z.TimeSeries[float64]
+		var model string
+		var totalCost float64
 
-		if h > 1 {
-			t := item.Total
-			line1 := fmt.Sprintf("in %s  out %s  $%.2f",
-				formatTokens(t.InputTokens), formatTokens(t.OutputTokens), t.CostUSD)
-			startX := x + w - len(line1) - 1
-			if startX < contentX {
-				startX = contentX
-			}
-			r.Set(theme.Color("$fg2"), bg, "")
-			r.Text(startX, y+1, line1, w-(startX-x))
-		}
-
-		renderSparkRow := func(row int, label string, sp *Sparkline) {
-			if sp == nil || row >= h {
-				return
-			}
-			r.Set(theme.Color("$fg2"), bg, "")
-			r.Put(contentX, y+row, label)
-			spX := contentX + len([]rune(label))
-			spW := w - (spX - x)
-			if spW <= 0 {
-				return
-			}
-			sp.Apply(theme)
-			spStyle := sp.Style()
-			spFg := theme.Color(spStyle.Foreground())
-			sp.SetStyle("", NewStyle().WithForeground(spStyle.Foreground()).WithBackground(bg))
-			sp.SetBounds(spX, y+row, spW, 1)
-			sp.Render(r)
-			if emptyCount := spW - len(sp.Values()); emptyCount > 0 {
-				r.Set(spFg, bg, "")
-				for i := 0; i < emptyCount; i++ {
-					r.Put(spX+i, y+row, "▁")
-				}
-			}
+		// Session name + second-line data
+		if index == 0 {
+			r.Set("$cyan", bg, "")
+			r.Text(cx, y, "All Sessions", 0)
+			input = store.Input
+			output = store.Output
+			costTS = store.Cost
+			totalCost = store.TotalCost.Get()
+		} else {
+			session := data.(*Session)
+			r.Set("$cyan", bg, "")
+			r.Text(cx, y, session.ID, 0)
+			input = session.Input
+			output = session.Output
+			costTS = session.Cost
+			model = session.PrimaryModel()
+			totalCost = session.TotalCost()
 		}
 
-		sc := sparks[item.ID]
-		renderSparkRow(2, "Input ", sc.input)
-		renderSparkRow(3, "Output", sc.output)
-	}
-}
+		// Second line: model left, cost right-aligned
+		if model != "" {
+			r.Set("$fg2", bg, "")
+			r.Text(cx, y+1, model, 0)
+		}
+		costStr := fmt.Sprintf("$%.2f", totalCost)
+		r.Set("$cyan", bg, "")
+		r.Text(x+w-len(costStr)-1, y+1, costStr, 0)
 
-// statusDot returns the (fg colour, glyph) for the given status.
-func statusDot(st SessionStatus, theme *Theme) (string, string) {
-	switch st {
-	case StatusActive:
-		return theme.Color("$green"), "●"
-	case StatusIdle:
-		return theme.Color("$yellow"), "●"
-	default:
-		return theme.Color("$fg2"), "○"
+		// Render spark lines
+		r.Set("$fg2", bg, "")
+		r.Text(cx, y+2, "Input", 0)
+		r.Text(cx, y+3, "Output", 0)
+		r.Text(cx, y+4, "Cost", 0)
+		renderSparkline(r, cx+8, y+2, 30, 1, "$blue", bg, input)
+		renderSparkline(r, cx+8, y+3, 30, 1, "$green", bg, output)
+		renderSparkline(r, cx+8, y+4, 30, 1, "$cyan", bg, costTS)
 	}
-}
-
-// truncate shortens s to at most n runes, appending … if needed.
-func truncate(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n-1]) + "…"
-}
-
-// formatTokens formats a token count compactly: 123, 12.4k, 1.2M.
-func formatTokens(n int64) string {
-	switch {
-	case n >= 1_000_000:
-		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
-	case n >= 1_000:
-		return fmt.Sprintf("%.1fk", float64(n)/1_000)
-	default:
-		return fmt.Sprintf("%d", n)
-	}
-}
-
-// formatDigitsTokens formats a token count for the Digits widget.
-// Digits supports 0-9, '.', ':', ',', ' ' only — no k/M suffixes.
-// Values ≥ 10 000 are shown as "X.X" (thousands); the sub-label carries the unit.
-func formatDigitsTokens(n int64) string {
-	if n < 10_000 {
-		return fmt.Sprintf("%d", n)
-	}
-	return fmt.Sprintf("%.1f", float64(n)/1_000.0)
-}
-
-// formatDigitsCost formats a USD cost for the Digits widget (2 decimal places).
-func formatDigitsCost(usd float64) string {
-	if usd < 10 {
-		return fmt.Sprintf("%.2f", usd)
-	}
-	return fmt.Sprintf("%.1f", usd)
 }

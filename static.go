@@ -53,7 +53,13 @@ func (s *Static) Hint() (int, int) {
 func (s *Static) Render(r *Renderer) {
 	s.Component.Render(r)
 	cx, cy, cw, _ := s.Content()
-	r.Text(cx, cy, s.Text, cw)
+	if s.Flag(FlagRight) {
+		textWidth := utf8.RuneCountInString(s.Text)
+		cx = max(cx, cx+cw-textWidth)
+		r.Text(cx, cy, s.Text, 0)
+	} else {
+		r.Text(cx, cy, s.Text, cw)
+	}
 }
 
 // ---- Summarizer -----------------------------------------------------------

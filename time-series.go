@@ -37,30 +37,6 @@ func NewTimeSeries[T Number](start time.Time, interval time.Duration, size int, 
 	}
 }
 
-// All returns an iterator over all slots, oldest-first, yielding each slot's
-// start time and value. Use as: for t, v := range ts.All() { ... }
-func (ts *TimeSeries[T]) All() iter.Seq2[time.Time, T] {
-	return func(yield func(time.Time, T) bool) {
-		for i := range len(ts.buf) {
-			t := ts.start.Add(time.Duration(i) * ts.interval)
-			if !yield(t, ts.buf[ts.bufIndex(i)]) {
-				return
-			}
-		}
-	}
-}
-
-// Get returns the value of the slot covering t.
-// Returns the zero value and false if t is out of range.
-func (ts *TimeSeries[T]) Get(t time.Time) (T, bool) {
-	i, ok := ts.slotIndex(t)
-	if !ok {
-		var zero T
-		return zero, false
-	}
-	return ts.buf[ts.bufIndex(i)], true
-}
-
 // Add accumulates value into the slot that covers t.
 // When auto is enabled and t >= End(), the window is shifted forward first
 // so that t lands in the last slot.
@@ -74,6 +50,30 @@ func (ts *TimeSeries[T]) Add(t time.Time, value T) {
 		return
 	}
 	ts.buf[ts.bufIndex(i)] += value
+}
+
+// All returns an iterator over all slots, oldest-first, yielding each slot's
+// start time and value. Use as: for t, v := range ts.All() { ... }
+func (ts *TimeSeries[T]) All() iter.Seq2[time.Time, T] {
+	return func(yield func(time.Time, T) bool) {
+		for i := range len(ts.buf) {
+			t := ts.start.Add(time.Duration(i) * ts.interval)
+			if !yield(t, ts.buf[ts.bufIndex(i)]) {
+				return
+			}
+		}
+	}
+}
+
+// At returns the value of the slot covering t.
+// Returns the zero value and false if t is out of range.
+func (ts *TimeSeries[T]) At(t time.Time) (T, bool) {
+	i, ok := ts.slotIndex(t)
+	if !ok {
+		var zero T
+		return zero, false
+	}
+	return ts.buf[ts.bufIndex(i)], true
 }
 
 // Clear resets all slot values to zero without changing the window position.
@@ -96,8 +96,37 @@ func (ts *TimeSeries[T]) Floats() []float64 {
 	return out
 }
 
+// Get returns the slot value at the given index, where index 0 is the newest
+// slot and index Size()-1 is the oldest. TimeSeries[float64] satisfies the
+// DataProvider interface used by Sparkline.
+func (ts *TimeSeries[T]) Get(index int) T {
+	return ts.buf[ts.bufIndex(len(ts.buf)-1-index)]
+}
+
 // Interval returns the slot width.
 func (ts *TimeSeries[T]) Interval() time.Duration { return ts.interval }
+
+// Max returns the largest value across all slots.
+func (ts *TimeSeries[T]) Max() T {
+	max := ts.buf[0]
+	for i := 1; i < len(ts.buf); i++ {
+		if v := ts.buf[i]; v > max {
+			max = v
+		}
+	}
+	return max
+}
+
+// Min returns the smallest value across all slots.
+func (ts *TimeSeries[T]) Min() T {
+	min := ts.buf[0]
+	for i := 1; i < len(ts.buf); i++ {
+		if v := ts.buf[i]; v < min {
+			min = v
+		}
+	}
+	return min
+}
 
 // Set replaces the value of the slot that covers t.
 // When auto is enabled and t >= End(), the window is shifted forward first

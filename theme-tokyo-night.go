@@ -126,7 +126,7 @@ func TokyoNightTheme() *Theme {
 		NewStyle("table/cell").WithColors("$fg0", "$bg3"),
 		NewStyle("table/cell:focused").WithColors("$bg0", "$cyan").WithFont("bold"),
 		NewStyle("tabs/highlight").WithColors("$bg0", "$fg0"),
-		NewStyle("tabs/highlight-line").WithForeground("$bg3"),
+		NewStyle("tabs/highlight-line").WithForeground("$orange"),
 		NewStyle("tabs/line:focused").WithForeground("$blue"),
 		NewStyle("tabs/highlight:focused").WithColors("$bg0", "$orange"),
 		NewStyle("tabs/highlight-line:focused").WithForeground("$orange"),
@@ -150,6 +150,7 @@ func TokyoNightTheme() *Theme {
 		NewStyle("commands/shortcut").WithColors("$fg2", "$bg2"),
 		NewStyle("commands/shortcut:focused").WithColors("$bg1", "$blue"),
 		NewStyle("commands/group").WithColors("$fg2", "$bg2").WithFont("bold"),
+		NewStyle("card").WithBorder("round"),
 	)
 
 	t.SetStrings(map[string]string{

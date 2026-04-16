@@ -21,6 +21,7 @@ package compose
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v3"
 	z "github.com/tekugo/zeichenwerk"
@@ -101,6 +102,26 @@ func Build(theme *z.Theme, options ...Option) z.Widget {
 }
 
 // ---- Container Construction -----------------------------------------------
+
+// Card adds a titled card container to the parent. The title is rendered
+// inline with the top border line. Child options are applied to the card in
+// order: the first option that adds a widget becomes the content; the second
+// becomes the footer. Style options (Border, Padding, Fg, etc.) apply to the
+// card itself regardless of position in the option list.
+//
+// Style selectors: "card", "card/title".
+func Card(id, class, title string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			card := z.NewCard(id, class, title)
+			card.Apply(theme)
+			container.Add(card)
+			for _, option := range options {
+				option(theme, card)
+			}
+		}
+	}
+}
 
 // Box adds a titled box container to the parent. Child options are applied to
 // the box, so widget and styling options nested inside Box affect the box
@@ -582,6 +603,26 @@ func Progress(id, class string, horizontal bool, options ...Option) Option {
 	}
 }
 
+// Clock adds an animated clock widget to the parent. interval controls how
+// often the display refreshes; format is a Go time-layout string (e.g.
+// "15:04:05"); prefix is an optional string prepended to the time (e.g. a
+// Nerd Font icon). Start the animation imperatively after building:
+//
+//	clk := z.Find(ui, "my-clock").(*z.Clock)
+//	clk.Start()
+func Clock(id, class string, interval time.Duration, format, prefix string, options ...Option) Option {
+	return func(theme *z.Theme, widget z.Widget) {
+		if container, ok := widget.(z.Container); ok {
+			w := z.NewClock(id, class, interval, format, prefix)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Spinner adds an animated spinner widget to the parent. sequence is the
 // animation frame string; use one of the entries in [zeichenwerk.Spinners]
 // for a built-in sequence. Start and stop the animation imperatively:
@@ -908,6 +949,17 @@ func Cell(x, y, width, height int, option Option) Option {
 func Hint(width, height int) Option {
 	return func(_ *z.Theme, widget z.Widget) {
 		widget.SetHint(width, height)
+	}
+}
+
+// Flag sets or clears a state flag on the widget. Use the Flag constants from
+// the zeichenwerk package (e.g. [zeichenwerk.FlagRight], [zeichenwerk.FlagDisabled]):
+//
+//	Digits("cost", "", "0.00", Fg("$yellow"), Flag(z.FlagRight, true))
+func Flag(flag z.Flag, value ...bool) Option {
+	v := len(value) == 0 || value[0]
+	return func(_ *z.Theme, widget z.Widget) {
+		widget.SetFlag(flag, v)
 	}
 }
 

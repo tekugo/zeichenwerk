@@ -367,8 +367,20 @@ func (ui *UI) Draw() {
 // Parameters:
 //   - widget: Widget to redraw
 func (ui *UI) DrawWidget(widget Widget) {
-	// Refresh, if there is more than one layer
-	if len(ui.layers) > 1 {
+	// Check if the widget is visible and on which layer
+	var layer Container
+	for current := widget; current != nil; {
+		if current.Flag(FlagHidden) {
+			return
+		}
+		if current.Parent() == ui {
+			layer = current.(Container)
+		}
+		current = current.Parent()
+	}
+
+	// Refresh, if it is not on the top layer
+	if layer == nil || len(ui.layers) == 0 || ui.layers[len(ui.layers)-1] != layer {
 		ui.dirty = true
 		ui.Draw()
 		return

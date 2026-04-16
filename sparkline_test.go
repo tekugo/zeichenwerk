@@ -19,14 +19,14 @@ func newCellScreen() *cellScreen {
 	}
 }
 
-func (c *cellScreen) Clear()                           {}
-func (c *cellScreen) Clip(x, y, w, h int)              {}
-func (c *cellScreen) Flush()                           {}
-func (c *cellScreen) Get(x, y int) string              { return c.cells[[2]int{x, y}] }
-func (c *cellScreen) Put(x, y int, ch string)          { c.cells[[2]int{x, y}] = ch; c.fgs[[2]int{x, y}] = c.fg }
-func (c *cellScreen) Set(fg, bg, font string)          { c.fg = fg; c.bg = bg }
+func (c *cellScreen) Clear()                               {}
+func (c *cellScreen) Clip(x, y, w, h int)                  {}
+func (c *cellScreen) Flush()                               {}
+func (c *cellScreen) Get(x, y int) string                  { return c.cells[[2]int{x, y}] }
+func (c *cellScreen) Put(x, y int, ch string)              { c.cells[[2]int{x, y}] = ch; c.fgs[[2]int{x, y}] = c.fg }
+func (c *cellScreen) Set(fg, bg, font string)              { c.fg = fg; c.bg = bg }
 func (c *cellScreen) SetUnderline(style int, color string) {}
-func (c *cellScreen) Translate(x, y int)               {}
+func (c *cellScreen) Translate(x, y int)                   {}
 
 func newSparklineRenderer() (*cellScreen, *Renderer) {
 	cs := newCellScreen()
@@ -59,14 +59,14 @@ func colChars(cs *cellScreen, col, h int) []string {
 
 func TestSparkline_Defaults(t *testing.T) {
 	s := NewSparkline("s", "")
-	if s.mode != Relative {
-		t.Errorf("mode = %v; want Relative", s.mode)
+	if s.absolute {
+		t.Errorf("absolute = true; want false (relative by default)")
 	}
 	if s.threshold != 0 {
 		t.Errorf("threshold = %v; want 0", s.threshold)
 	}
-	if s.capacity != 0 {
-		t.Errorf("capacity = %v; want 0", s.capacity)
+	if s.provider != nil {
+		t.Errorf("provider = %v; want nil", s.provider)
 	}
 }
 
@@ -80,9 +80,9 @@ func TestSparkline_Hint_Default(t *testing.T) {
 	}
 }
 
-func TestSparkline_Hint_FollowsValues(t *testing.T) {
+func TestSparkline_Hint_FollowsProvider(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetValues([]float64{1, 2, 3, 4, 5})
+	s.SetProvider(FloatSlice{1, 2, 3, 4, 5})
 	w, h := s.Hint()
 	if w != 5 || h != 1 {
 		t.Errorf("Hint() = (%d, %d); want (5, 1)", w, h)
@@ -98,63 +98,13 @@ func TestSparkline_Hint_ExplicitOverrides(t *testing.T) {
 	}
 }
 
-// ---- Append / SetCapacity --------------------------------------------------
-
-func TestSparkline_Append_AddsPoint(t *testing.T) {
-	s := NewSparkline("s", "")
-	s.Append(1)
-	s.Append(2)
-	if len(s.values) != 2 {
-		t.Errorf("len(values) = %d; want 2", len(s.values))
-	}
-}
-
-func TestSparkline_Append_CapacityDropsOldest(t *testing.T) {
-	s := NewSparkline("s", "")
-	s.SetCapacity(5)
-	for i := 0; i < 7; i++ {
-		s.Append(float64(i))
-	}
-	if len(s.values) != 5 {
-		t.Errorf("len(values) = %d; want 5 after overflow", len(s.values))
-	}
-	if s.values[0] != 2 {
-		t.Errorf("values[0] = %v; want 2 (oldest dropped)", s.values[0])
-	}
-	if s.values[4] != 6 {
-		t.Errorf("values[4] = %v; want 6 (newest retained)", s.values[4])
-	}
-}
-
-func TestSparkline_SetCapacity_TrimsExisting(t *testing.T) {
-	s := NewSparkline("s", "")
-	s.SetValues([]float64{1, 2, 3, 4, 5, 6})
-	s.SetCapacity(3)
-	if len(s.values) != 3 {
-		t.Errorf("len(values) = %d; want 3 after SetCapacity trim", len(s.values))
-	}
-	if s.values[0] != 4 {
-		t.Errorf("values[0] = %v; want 4 (oldest dropped)", s.values[0])
-	}
-}
-
-func TestSparkline_SetValues_Copies(t *testing.T) {
-	orig := []float64{1, 2, 3}
-	s := NewSparkline("s", "")
-	s.SetValues(orig)
-	orig[0] = 99
-	if s.values[0] == 99 {
-		t.Error("SetValues should copy the slice, not retain the original")
-	}
-}
-
 // ---- Relative scale, height 1 ----------------------------------------------
 
 func TestSparkline_Relative_H1_MaxIsFullBlock(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetValues([]float64{0, 5, 10})
+	s.SetProvider(FloatSlice{0, 5, 10})
 	cs := renderSparkline(s, 3, 1)
-	ch := cs.cells[[2]int{2, 0}] // rightmost = max value
+	ch := cs.cells[[2]int{2, 0}] // rightmost = newest = max
 	if ch != "█" {
 		t.Errorf("max value cell = %q; want █", ch)
 	}
@@ -162,9 +112,9 @@ func TestSparkline_Relative_H1_MaxIsFullBlock(t *testing.T) {
 
 func TestSparkline_Relative_H1_MinIsLowestBlock(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetValues([]float64{0, 5, 10})
+	s.SetProvider(FloatSlice{0, 5, 10})
 	cs := renderSparkline(s, 3, 1)
-	ch := cs.cells[[2]int{0, 0}] // leftmost = min value
+	ch := cs.cells[[2]int{0, 0}] // leftmost = oldest = min
 	if ch != "▁" {
 		t.Errorf("min value cell = %q; want ▁", ch)
 	}
@@ -172,7 +122,7 @@ func TestSparkline_Relative_H1_MinIsLowestBlock(t *testing.T) {
 
 func TestSparkline_Relative_H1_AllEqual_MidRange(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetValues([]float64{5, 5, 5})
+	s.SetProvider(FloatSlice{5, 5, 5})
 	cs := renderSparkline(s, 3, 1)
 	// level=0.5, h=1, totalSteps=8, step=int(0.5*7+0.5)=4 → blocks[4]='▅'
 	for col := 0; col < 3; col++ {
@@ -187,10 +137,10 @@ func TestSparkline_Relative_H1_AllEqual_MidRange(t *testing.T) {
 
 func TestSparkline_Absolute_H1_AtMin_IsLowestBlock(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(10)
-	s.SetValues([]float64{0})
+	s.SetProvider(FloatSlice{0})
 	cs := renderSparkline(s, 1, 1)
 	ch := cs.cells[[2]int{0, 0}]
 	if ch != "▁" {
@@ -200,10 +150,10 @@ func TestSparkline_Absolute_H1_AtMin_IsLowestBlock(t *testing.T) {
 
 func TestSparkline_Absolute_H1_AtMax_IsFullBlock(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(10)
-	s.SetValues([]float64{10})
+	s.SetProvider(FloatSlice{10})
 	cs := renderSparkline(s, 1, 1)
 	ch := cs.cells[[2]int{0, 0}]
 	if ch != "█" {
@@ -213,10 +163,10 @@ func TestSparkline_Absolute_H1_AtMax_IsFullBlock(t *testing.T) {
 
 func TestSparkline_Absolute_H1_BelowMin_Clamps(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(5)
 	s.SetMax(10)
-	s.SetValues([]float64{0}) // below min
+	s.SetProvider(FloatSlice{0}) // below min
 	cs := renderSparkline(s, 1, 1)
 	ch := cs.cells[[2]int{0, 0}]
 	if ch != "▁" {
@@ -226,10 +176,10 @@ func TestSparkline_Absolute_H1_BelowMin_Clamps(t *testing.T) {
 
 func TestSparkline_Absolute_H1_AboveMax_Clamps(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(10)
-	s.SetValues([]float64{20}) // above max
+	s.SetProvider(FloatSlice{20}) // above max
 	cs := renderSparkline(s, 1, 1)
 	ch := cs.cells[[2]int{0, 0}]
 	if ch != "█" {
@@ -243,7 +193,7 @@ func TestSparkline_H1_MatchesOriginalFormula(t *testing.T) {
 	// For h=1, step = int(level*7+0.5) which is exactly int(level*(1*8-1)+0.5).
 	// Verify by checking a mid-value.
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
 	cases := []struct {
@@ -256,7 +206,7 @@ func TestSparkline_H1_MatchesOriginalFormula(t *testing.T) {
 		{7.0 / 7, '█'}, // step=7 → blocks[7]
 	}
 	for _, tc := range cases {
-		s.SetValues([]float64{tc.value})
+		s.SetProvider(FloatSlice{tc.value})
 		cs := renderSparkline(s, 1, 1)
 		got := []rune(cs.cells[[2]int{0, 0}])[0]
 		if got != tc.want {
@@ -272,10 +222,10 @@ func TestSparkline_H2_LevelZero_BottomLowest_TopSpace(t *testing.T) {
 	// bottom (rowFromBottom=0): blocks[0]='▁'
 	// top    (rowFromBottom=1): space
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
-	s.SetValues([]float64{0})
+	s.SetProvider(FloatSlice{0})
 	cs := renderSparkline(s, 1, 2)
 	top := cs.cells[[2]int{0, 0}]
 	bot := cs.cells[[2]int{0, 1}]
@@ -292,10 +242,10 @@ func TestSparkline_H2_LevelOne_BothFullBlock(t *testing.T) {
 	// bottom (rowFromBottom=0): < fullRows(1) → '█'
 	// top    (rowFromBottom=1): == fullRows(1) → blocks[7]='█'
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
-	s.SetValues([]float64{1})
+	s.SetProvider(FloatSlice{1})
 	cs := renderSparkline(s, 1, 2)
 	top := cs.cells[[2]int{0, 0}]
 	bot := cs.cells[[2]int{0, 1}]
@@ -309,10 +259,10 @@ func TestSparkline_H2_LevelOne_BothFullBlock(t *testing.T) {
 
 func TestSparkline_H4_LevelOne_AllFullBlock(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
-	s.SetValues([]float64{1})
+	s.SetProvider(FloatSlice{1})
 	cs := renderSparkline(s, 1, 4)
 	for row := 0; row < 4; row++ {
 		ch := cs.cells[[2]int{0, row}]
@@ -326,16 +276,18 @@ func TestSparkline_H4_LevelOne_AllFullBlock(t *testing.T) {
 
 func TestSparkline_SeriesLongerThanWidth_ShowsRightmost(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
-	// 5 values, render width 3: only last 3 should appear.
-	s.SetValues([]float64{0, 0, 0, 0, 1})
+	// 5 values, render width 3: only last 3 (newest) should appear.
+	// FloatSlice{0,0,0,0,1}: oldest=0 at index 0, newest=1 at index 4.
+	s.SetProvider(FloatSlice{0, 0, 0, 0, 1})
 	cs := renderSparkline(s, 3, 1)
-	// col 0 and 1 → value 0 → '▁'; col 2 → value 1 → '█'
+	// col 2 (rightmost) → newest value 1 → '█'
 	if cs.cells[[2]int{2, 0}] != "█" {
 		t.Errorf("rightmost col = %q; want █ (most recent value)", cs.cells[[2]int{2, 0}])
 	}
+	// col 0 → value 0 → '▁'
 	if cs.cells[[2]int{0, 0}] != "▁" {
 		t.Errorf("col 0 = %q; want ▁", cs.cells[[2]int{0, 0}])
 	}
@@ -343,7 +295,7 @@ func TestSparkline_SeriesLongerThanWidth_ShowsRightmost(t *testing.T) {
 
 func TestSparkline_SeriesShorterThanWidth_PadsLeft(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetValues([]float64{5})
+	s.SetProvider(FloatSlice{5})
 	cs := renderSparkline(s, 4, 1)
 	// cols 0,1,2 have no data → blank; col 3 has data
 	for col := 0; col < 3; col++ {
@@ -356,7 +308,7 @@ func TestSparkline_SeriesShorterThanWidth_PadsLeft(t *testing.T) {
 
 func TestSparkline_SeriesShorterThanWidth_PadsAllRows(t *testing.T) {
 	s := NewSparkline("s", "")
-	s.SetValues([]float64{5})
+	s.SetProvider(FloatSlice{5})
 	cs := renderSparkline(s, 3, 2) // 2 rows
 	// cols 0,1 have no data → all rows blank
 	for col := 0; col < 2; col++ {
@@ -376,7 +328,7 @@ func TestSparkline_Threshold_HighStyleApplied(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(10)
 	s.SetThreshold(7)
@@ -385,7 +337,9 @@ func TestSparkline_Threshold_HighStyleApplied(t *testing.T) {
 	s.SetStyle("", NewStyle("").WithColors("low-fg", "low-bg"))
 	s.SetStyle("high", NewStyle("high").WithColors("high-fg", "high-bg"))
 
-	s.SetValues([]float64{3, 9}) // 3 < threshold, 9 >= threshold
+	// FloatSlice{3,9}: oldest=3 (col 0), newest=9 (col 1).
+	// 3 < threshold, 9 >= threshold.
+	s.SetProvider(FloatSlice{3, 9})
 	s.SetBounds(0, 0, 2, 1)
 	s.Render(r)
 
@@ -404,14 +358,14 @@ func TestSparkline_Threshold_AllRowsGetColumnStyle(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(10)
 	s.SetThreshold(5)
 	s.SetStyle("", NewStyle("").WithColors("low-fg", "low-bg"))
 	s.SetStyle("high", NewStyle("high").WithColors("high-fg", "high-bg"))
 
-	s.SetValues([]float64{8}) // above threshold
+	s.SetProvider(FloatSlice{8}) // above threshold
 	s.SetBounds(0, 0, 1, 3)
 	s.Render(r)
 
@@ -428,7 +382,7 @@ func TestSparkline_Gradient_BelowThreshold_UsesBaseColor(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
 	s.SetThreshold(0.5)
@@ -437,7 +391,7 @@ func TestSparkline_Gradient_BelowThreshold_UsesBaseColor(t *testing.T) {
 	s.SetStyle("high", NewStyle("high").WithColors("#ffffff", "bg"))
 
 	// value = 0 → level = 0 → below threshold → t = 0 → base color
-	s.SetValues([]float64{0})
+	s.SetProvider(FloatSlice{0})
 	s.SetBounds(0, 0, 1, 1)
 	s.Render(r)
 
@@ -452,7 +406,7 @@ func TestSparkline_Gradient_AtMax_UsesHighColor(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
 	s.SetThreshold(0.5)
@@ -461,7 +415,7 @@ func TestSparkline_Gradient_AtMax_UsesHighColor(t *testing.T) {
 	s.SetStyle("high", NewStyle("high").WithColors("#ffffff", "bg"))
 
 	// value = 1 → level = 1 → t = 1 → high color
-	s.SetValues([]float64{1})
+	s.SetProvider(FloatSlice{1})
 	s.SetBounds(0, 0, 1, 1)
 	s.Render(r)
 
@@ -476,7 +430,7 @@ func TestSparkline_Gradient_Midpoint_IsInterpolated(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
 	// threshold=0.5, value=0.75 → midpoint of the above-threshold range [0.5, 1].
@@ -487,7 +441,7 @@ func TestSparkline_Gradient_Midpoint_IsInterpolated(t *testing.T) {
 	s.SetStyle("", NewStyle("").WithColors("#000000", "bg"))
 	s.SetStyle("high", NewStyle("high").WithColors("#ffffff", "bg"))
 
-	s.SetValues([]float64{0.75})
+	s.SetProvider(FloatSlice{0.75})
 	s.SetBounds(0, 0, 1, 1)
 	s.Render(r)
 
@@ -502,7 +456,7 @@ func TestSparkline_Gradient_False_HardCutoff(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
 	s.SetThreshold(0.5)
@@ -511,7 +465,7 @@ func TestSparkline_Gradient_False_HardCutoff(t *testing.T) {
 	s.SetStyle("high", NewStyle("high").WithColors("#ffffff", "bg"))
 
 	// value = 0.9 → above threshold, no gradient → must be exact high color
-	s.SetValues([]float64{0.9})
+	s.SetProvider(FloatSlice{0.9})
 	s.SetBounds(0, 0, 1, 1)
 	s.Render(r)
 
@@ -526,7 +480,7 @@ func TestSparkline_Gradient_AllRowsSameColor(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(1)
 	s.SetThreshold(0.5)
@@ -534,7 +488,7 @@ func TestSparkline_Gradient_AllRowsSameColor(t *testing.T) {
 	s.SetStyle("", NewStyle("").WithColors("#000000", "bg"))
 	s.SetStyle("high", NewStyle("high").WithColors("#ffffff", "bg"))
 
-	s.SetValues([]float64{1})
+	s.SetProvider(FloatSlice{1})
 	s.SetBounds(0, 0, 1, 3) // 3 rows
 	s.Render(r)
 
@@ -551,19 +505,45 @@ func TestSparkline_Threshold_Zero_Disabled(t *testing.T) {
 	r := NewRenderer(cs, NewTheme())
 
 	s := NewSparkline("s", "")
-	s.SetMode(Absolute)
+	s.SetAbsolute(true)
 	s.SetMin(0)
 	s.SetMax(10)
 	s.SetThreshold(0) // disabled
 	s.SetStyle("", NewStyle("").WithColors("base-fg", "base-bg"))
 	s.SetStyle("high", NewStyle("high").WithColors("high-fg", "high-bg"))
 
-	s.SetValues([]float64{9})
+	s.SetProvider(FloatSlice{9})
 	s.SetBounds(0, 0, 1, 1)
 	s.Render(r)
 
 	fg := cs.fgs[[2]int{0, 0}]
 	if fg != "base-fg" {
 		t.Errorf("threshold=0: fg = %q; want base-fg (high style should not apply)", fg)
+	}
+}
+
+// ---- RingBuffer as DataProvider --------------------------------------------
+
+func TestSparkline_RingBufferProvider(t *testing.T) {
+	// Verify RingBuffer[float64] satisfies DataProvider and renders correctly.
+	rb := NewRingBuffer[float64](3)
+	rb.Add(1.0) // oldest
+	rb.Add(2.0)
+	rb.Add(3.0) // newest
+
+	s := NewSparkline("s", "")
+	s.SetAbsolute(true)
+	s.SetMin(1)
+	s.SetMax(3)
+	s.SetProvider(rb)
+	cs := renderSparkline(s, 3, 1)
+
+	// col 2 (rightmost) = newest = 3 = max → '█'
+	if cs.cells[[2]int{2, 0}] != "█" {
+		t.Errorf("rightmost col = %q; want █", cs.cells[[2]int{2, 0}])
+	}
+	// col 0 (leftmost) = oldest = 1 = min → '▁'
+	if cs.cells[[2]int{0, 0}] != "▁" {
+		t.Errorf("leftmost col = %q; want ▁", cs.cells[[2]int{0, 0}])
 	}
 }

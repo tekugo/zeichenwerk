@@ -1410,35 +1410,51 @@ func sparklineDemo(builder *Builder) {
 		Sparkline("sp-multi").Hint(-1, 4).
 		End()
 
+	// Ring buffers hold the live data for each sparkline (capacity = 120).
+	// Pre-seed with 40 points so the charts aren't empty on first show.
+	newRB := func(fn func(i int) float64) *RingBuffer[float64] {
+		rb := NewRingBuffer[float64](120)
+		for _, v := range seed(fn) {
+			rb.Add(v)
+		}
+		return rb
+	}
+
+	rbRel   := newRB(sineNoise)
+	rbAbs   := newRB(sineNoise)
+	rbThr   := newRB(sineAbs)
+	rbGrad  := newRB(sineAbs)
+	rbMulti := newRB(sineNoise)
+
 	spRel := builder.Find("sp-rel").(*Sparkline)
-	spRel.SetValues(seed(sineNoise))
+	spRel.SetProvider(rbRel)
 
 	spAbs := builder.Find("sp-abs").(*Sparkline)
-	spAbs.SetMode(Absolute)
+	spAbs.SetAbsolute(true)
 	spAbs.SetMin(-1.0)
 	spAbs.SetMax(1.0)
-	spAbs.SetValues(seed(sineNoise))
+	spAbs.SetProvider(rbAbs)
 
 	spThr := builder.Find("sp-thr").(*Sparkline)
-	spThr.SetMode(Absolute)
+	spThr.SetAbsolute(true)
 	spThr.SetMin(0.0)
 	spThr.SetMax(1.0)
 	spThr.SetThreshold(0.65)
-	spThr.SetValues(seed(sineAbs))
+	spThr.SetProvider(rbThr)
 
 	spGrad := builder.Find("sp-grad").(*Sparkline)
-	spGrad.SetMode(Absolute)
+	spGrad.SetAbsolute(true)
 	spGrad.SetMin(0.0)
 	spGrad.SetMax(1.0)
 	spGrad.SetThreshold(0.65)
 	spGrad.SetGradient(true)
-	spGrad.SetValues(seed(sineAbs))
+	spGrad.SetProvider(rbGrad)
 
 	spMulti := builder.Find("sp-multi").(*Sparkline)
-	spMulti.SetMode(Absolute)
+	spMulti.SetAbsolute(true)
 	spMulti.SetMin(-1.0)
 	spMulti.SetMax(1.0)
-	spMulti.SetValues(seed(sineNoise))
+	spMulti.SetProvider(rbMulti)
 
 	container := builder.Find("sparkline-demo").(Container)
 
@@ -1459,11 +1475,17 @@ func sparklineDemo(builder *Builder) {
 					v01 := (math.Sin(phase*0.7) + 1.0) / 2.0
 					phase += 0.25
 
-					spRel.Append(v)
-					spAbs.Append(v)
-					spThr.Append(v01)
-					spGrad.Append(v01)
-					spMulti.Append(v)
+					rbRel.Add(v)
+					rbAbs.Add(v)
+					rbThr.Add(v01)
+					rbGrad.Add(v01)
+					rbMulti.Add(v)
+
+					spRel.Refresh()
+					spAbs.Refresh()
+					spThr.Refresh()
+					spGrad.Refresh()
+					spMulti.Refresh()
 				}
 			}
 		}()

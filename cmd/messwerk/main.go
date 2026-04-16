@@ -7,20 +7,20 @@ import (
 	"net"
 	"time"
 
-	"google.golang.org/grpc"
 	collmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	"google.golang.org/grpc"
 
-	. "github.com/tekugo/zeichenwerk"
+	z "github.com/tekugo/zeichenwerk"
 )
 
 func main() {
 	port := flag.Int("port", 4317, "OTLP gRPC listen port")
-	timeout := flag.Duration("timeout", 2*time.Minute, "idle session timeout")
 	themeName := flag.String("t", "tokyo", "theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
+	sim := flag.Bool("sim", false, "populate store with simulated sessions for UI testing")
 	flag.Parse()
 
 	theme := resolveTheme(*themeName)
-	store := newStore(*timeout)
+	store := NewStore()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	srv := grpc.NewServer()
-	collmetricspb.RegisterMetricsServiceServer(srv, &metricsReceiver{store: store})
+	collmetricspb.RegisterMetricsServiceServer(srv, &Receiver{store: store})
 	go func() {
 		slog.Info("OTLP receiver started", "addr", lis.Addr())
 		if err := srv.Serve(lis); err != nil {
@@ -38,41 +38,35 @@ func main() {
 	}()
 
 	ui := buildUI(theme, store)
+	if *sim {
+		populateSim(store)
+	}
 
-	// Ticker: keeps status dots fresh and advances sparkline windows
-	// even when no telemetry is arriving.
-	stop := make(chan struct{})
 	go func() {
-		t := time.NewTicker(15 * time.Second)
-		defer t.Stop()
-		for {
-			select {
-			case <-t.C:
-				store.Tick(time.Now())
-			case <-stop:
-				return
-			}
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for t := range ticker.C {
+			store.TouchAll(t)
 		}
 	}()
 
 	ui.Run()
-	close(stop)
 	srv.Stop()
 }
 
-func resolveTheme(name string) *Theme {
+func resolveTheme(name string) *z.Theme {
 	switch name {
 	case "midnight":
-		return MidnightNeonTheme()
+		return z.MidnightNeonTheme()
 	case "nord":
-		return NordTheme()
+		return z.NordTheme()
 	case "gruvbox-dark":
-		return GruvboxDarkTheme()
+		return z.GruvboxDarkTheme()
 	case "gruvbox-light":
-		return GruvboxLightTheme()
+		return z.GruvboxLightTheme()
 	case "lipstick":
-		return LipstickTheme()
+		return z.LipstickTheme()
 	default:
-		return TokyoNightTheme()
+		return z.TokyoNightTheme()
 	}
 }

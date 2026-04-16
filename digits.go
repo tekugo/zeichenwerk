@@ -192,13 +192,26 @@ func (d *Digits) Render(r *Renderer) {
 	d.Component.Render(r)
 
 	// Get the content area for drawing
-	x, y, _, h := d.Content()
+	x, y, w, h := d.Content()
 	if h < 3 {
 		return // Not enough vertical space
 	}
 
+	// Calculate the starting position depending on alignment
+	var cx int
+	if d.Flag(FlagRight) {
+		cx = x + w
+		for _, ch := range d.Text {
+			if pattern, ok := digits[ch]; ok {
+				cx -= utf8.RuneCountInString(pattern[0])
+			}
+		}
+		cx = max(x, cx)
+	} else {
+		cx = x
+	}
+
 	// Draw each character in the text
-	cx := x
 	for _, ch := range d.Text {
 		if pattern, ok := digits[ch]; ok {
 			for i, row := range pattern {

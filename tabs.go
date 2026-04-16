@@ -30,6 +30,7 @@ func NewTabs(id, class string) *Tabs {
 	}
 	tabs.SetFlag(FlagFocusable, true)
 	OnKey(tabs, tabs.handleKey)
+	OnMouse(tabs, tabs.handleMouse)
 	return tabs
 }
 
@@ -133,6 +134,48 @@ func (t *Tabs) handleKey(event *tcell.EventKey) bool {
 		t.Refresh()
 		t.Dispatch(t, EvtChange, t.index)
 		return true
+	}
+
+	return false
+}
+
+// handleMouse processes mouse input for tab selection.
+// Clicking on a tab title both highlights and activates that tab.
+func (t *Tabs) handleMouse(event *tcell.EventMouse) bool {
+	if event.Buttons() != tcell.Button1 {
+		return false
+	}
+
+	mx, my := event.Position()
+	x, y, w, _ := t.Content()
+
+	// Only respond to clicks on the tab title row
+	if my != y || mx < x || mx >= x+w {
+		return false
+	}
+
+	cx := x
+	for i, tab := range t.tabs {
+		tl := len([]rune(tab))
+		end := cx + tl + 4
+		if mx >= cx && mx < end {
+			oldIndex := t.index
+			t.index = i
+			if t.index != oldIndex {
+				t.Dispatch(t, EvtChange, t.index)
+			}
+			oldSelected := t.selected
+			t.selected = i
+			if t.selected != oldSelected {
+				t.Dispatch(t, EvtActivate, t.selected)
+			}
+			t.Refresh()
+			return true
+		}
+		cx = end
+		if cx >= x+w {
+			break
+		}
 	}
 
 	return false

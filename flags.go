@@ -37,4 +37,7 @@ const (
 	// FlagHorizontal restricts a Viewport to horizontal scrolling only. The
 	// child fills the viewport height; no vertical scrollbar is shown.
 	FlagHorizontal Flag = "horizontal"
+	// FlagRight right-aligns content within a widget's content area.
+	// Supported by [Digits].
+	FlagRight Flag = "right"
 )

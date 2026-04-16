@@ -8,8 +8,6 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-// ==== AI ===================================================================
-
 // barChartBlocks maps a [0, 8] integer to the Unicode block-fill character
 // that fills that many eighths of a cell from the bottom up.
 // 0 = space (empty), 8 = full block (█).
@@ -33,7 +31,7 @@ type BarChart struct {
 	Component
 	series     []BarSeries
 	categories []string
-	mode       ScaleMode
+	absolute   bool
 	max        float64
 	horizontal bool
 	showAxis   bool
@@ -67,7 +65,7 @@ func NewBarChart(id, class string) *BarChart {
 		barGap:    1,
 		ticks:     5,
 		selected:  -1,
-		mode:      Relative,
+
 		chCorner:  "└",
 		chHLine:   "─",
 		chVLine:   "│",
@@ -113,8 +111,10 @@ func (c *BarChart) Categories() []string { return c.categories }
 
 // ── Display setters ───────────────────────────────────────────────────────────
 
-// SetMode sets the scale mode (Relative or Absolute) and redraws.
-func (c *BarChart) SetMode(m ScaleMode) { c.mode = m; c.Refresh() }
+// SetAbsolute switches between relative (false, default) and absolute (true)
+// scaling. In absolute mode the [0, Max] bracket is used directly. In
+// relative mode the range is computed from the visible values each render pass.
+func (c *BarChart) SetAbsolute(v bool) { c.absolute = v; c.Refresh() }
 
 // SetMax sets the explicit maximum for Absolute mode.
 func (c *BarChart) SetMax(v float64) { c.max = v }
@@ -648,7 +648,7 @@ func (c *BarChart) renderLegend(r *Renderer, cx, legendY, cw int) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 func (c *BarChart) effectiveMax() float64 {
-	if c.mode == Absolute && c.max > 0 {
+	if c.absolute && c.max > 0 {
 		return c.max
 	}
 	maxTotal := 0.0

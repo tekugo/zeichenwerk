@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Builder provides a fluent interface for constructing TUI components.
@@ -366,6 +367,15 @@ func (b *Builder) Spacer() *Builder {
 func (b *Builder) Sparkline(id string) *Builder {
 	s := NewSparkline(id, b.class)
 	b.Add(s)
+	return b
+}
+
+// Clock creates a new clock widget. interval is stored and used when Start is
+// called. params are optional positional strings: params[0] is the Go
+// time-layout (default "15:04"), params[1] is a prefix (default "").
+func (b *Builder) Clock(id string, interval time.Duration, params ...string) *Builder {
+	clock := NewClock(id, b.class, interval, params...)
+	b.Add(clock)
 	return b
 }
 

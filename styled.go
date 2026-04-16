@@ -19,18 +19,21 @@ const (
 )
 
 // Block is a parsed unit of styled text.
-// Type is one of "p", "h1"–"h4", "ul", "ol", "code", "bq", or "hr".
+// Type is one of "p", "h1"–"h4", "ul", "ol", "code", "bq", "hr", or "table".
 // Index holds the 1-based item number for "ol" blocks.
 // Depth holds the nesting level (0 = top) for "ul" and "ol" blocks.
 // Task and Done describe task-list items within "ul" blocks.
+// Rows and Aligns hold the parsed cell data for "table" blocks.
 type Block struct {
 	Type    string
 	Text    string
 	Content []Span
-	Index   int  // 1-based item number for "ol"
-	Depth   int  // nesting depth for "ul" and "ol"
-	Task    bool // true if this is a task-list item (- [ ] / - [x])
-	Done    bool // true if the task is checked
+	Index   int      // 1-based item number for "ol"
+	Depth   int      // nesting depth for "ul" and "ol"
+	Task    bool     // true if this is a task-list item (- [ ] / - [x])
+	Done    bool     // true if the task is checked
+	Rows    [][]string // table: Rows[0] = header cells, Rows[1:] = body rows
+	Aligns  []string   // table: per-column alignment ("left", "center", "right")
 }
 
 // Span describes a contiguous run of text within a Block with a single inline
@@ -135,7 +138,7 @@ type segment struct {
 type line []segment
 
 // renderedLine is a laid-out terminal row together with its block kind
-// ("h1"–"h4", "p", "ul", "ol", "pre", "code", "bq", "hr", or "" for blank lines).
+// ("h1"–"h4", "p", "ul", "ol", "pre", "code", "bq", "hr", "table", or "" for blank lines).
 // The kind is used at render time to look up the appropriate theme style.
 type renderedLine struct {
 	kind string
@@ -244,9 +247,11 @@ func wrapSpans(spans []Span, text string, width int) []line {
 // ---- Styled widget ---------------------------------------------------------
 
 // Styled is a read-only widget that renders a subset of Markdown with word
-// wrapping. Supported block types: paragraphs, # h1, ## h2, ### h3,
-// - unordered lists, 1. ordered lists, ``` code blocks. Supported inline
-// styles: *italic*, **bold**, __underline__, ~~strikethrough~~, `code`.
+// wrapping. Supported block types: paragraphs, # h1–h4 headings,
+// - unordered lists (with task-list support), 1. ordered lists,
+// ``` code blocks, > blockquotes, --- horizontal rules, and GFM-style
+// pipe tables. Supported inline styles: *italic*, **bold**,
+// __underline__, ~~strikethrough~~, `code`.
 type Styled struct {
 	Component
 	text   string
@@ -274,10 +279,10 @@ func (s *Styled) SetText(text string) {
 }
 
 // Apply applies a theme's styles to the component, including per-element
-// styles for h1–h4, p, ul, ol, pre, code, bq, and hr.
+// styles for h1–h4, p, ul, ol, pre, code, bq, hr, and table.
 func (s *Styled) Apply(theme *Theme) {
 	theme.Apply(s, s.Selector("styled"))
-	for _, part := range []string{"h1", "h2", "h3", "h4", "p", "ul", "ol", "pre", "code", "bq", "hr"} {
+	for _, part := range []string{"h1", "h2", "h3", "h4", "p", "ul", "ol", "pre", "code", "bq", "hr", "table"} {
 		theme.Apply(s, "styled/"+part)
 	}
 	s.lastW = 0 // styles may affect rendering, force re-layout
@@ -325,8 +330,15 @@ func (s *Styled) Parse() {
 
 	flush := func() {
 		if cur != nil {
-			if cur.Content == nil && cur.Type != "code" {
-				cur.Parse()
+			switch cur.Type {
+			case "table":
+				parseTableBlock(cur)
+			case "code":
+				// verbatim — no inline parsing
+			default:
+				if cur.Content == nil {
+					cur.Parse()
+				}
 			}
 			s.blocks = append(s.blocks, *cur)
 			cur = nil
@@ -409,6 +421,18 @@ func (s *Styled) Parse() {
 			continue
 		}
 
+		// Table row — accumulate consecutive pipe-delimited rows into one block
+		if strings.HasPrefix(trimmed, "|") {
+			if cur != nil && cur.Type == "table" {
+				cur.Text += "\n" + trimmed
+			} else {
+				flush()
+				cur = &Block{Type: "table", Text: trimmed}
+				olIndex = map[int]int{}
+			}
+			continue
+		}
+
 		// List items — measure indent depth (2 spaces per level)
 		leading := len(raw) - len(strings.TrimLeft(raw, " \t"))
 		depth := leading / 2
@@ -481,6 +505,70 @@ func parseOLPrefix(line string) (text string, n int, ok bool) {
 	return line[i+2:], num, true
 }
 
+// parseTableBlock parses the raw accumulated pipe-row text in b.Text into
+// b.Rows (header + body) and b.Aligns (per-column alignment).
+// The expected format is standard GFM:
+//
+//	| Col A | Col B |
+//	|-------|:-----:|
+//	| val   | val   |
+func parseTableBlock(b *Block) {
+	rawLines := strings.Split(b.Text, "\n")
+	if len(rawLines) < 2 {
+		return
+	}
+
+	splitCells := func(s string) []string {
+		s = strings.TrimSpace(s)
+		s = strings.Trim(s, "|")
+		parts := strings.Split(s, "|")
+		cells := make([]string, len(parts))
+		for i, p := range parts {
+			cells[i] = strings.TrimSpace(p)
+		}
+		return cells
+	}
+
+	header := splitCells(rawLines[0])
+	cols := len(header)
+	if cols == 0 {
+		return
+	}
+
+	// Parse separator row for column alignment.
+	b.Aligns = make([]string, cols)
+	for i, cell := range splitCells(rawLines[1]) {
+		if i >= cols {
+			break
+		}
+		cell = strings.TrimSpace(cell)
+		left := strings.HasPrefix(cell, ":")
+		right := strings.HasSuffix(cell, ":")
+		switch {
+		case left && right:
+			b.Aligns[i] = "center"
+		case right:
+			b.Aligns[i] = "right"
+		default:
+			b.Aligns[i] = "left"
+		}
+	}
+
+	b.Rows = make([][]string, 0, len(rawLines)-1)
+	b.Rows = append(b.Rows, header)
+
+	for _, raw := range rawLines[2:] {
+		if strings.TrimSpace(raw) == "" {
+			continue
+		}
+		row := splitCells(raw)
+		for len(row) < cols {
+			row = append(row, "")
+		}
+		b.Rows = append(b.Rows, row[:cols])
+	}
+}
+
 // ---- Layout ----------------------------------------------------------------
 
 func (s *Styled) rl(kind string, segs line) renderedLine {
@@ -522,6 +610,8 @@ func (s *Styled) layout(w int) {
 			s.layoutBQ(b, w)
 		case "hr":
 			s.layoutHR(b, w)
+		case "table":
+			s.layoutTable(b, w)
 		}
 	}
 }
@@ -566,7 +656,7 @@ func (s *Styled) layoutH2(b Block, w int) {
 	for _, wl := range wrapSpans(b.Content, b.Text, w) {
 		s.lines = append(s.lines, s.rl("h2", wl))
 	}
-	s.lines = append(s.lines, s.rl("h2", line{segment{strings.Repeat("─", w-1), 0}}))
+	s.lines = append(s.lines, s.rl("h2", line{segment{strings.Repeat("─", w), 0}}))
 }
 
 // layoutH3 renders a heading using the h3 theme style (typically bold+underline).
@@ -679,6 +769,119 @@ func (s *Styled) layoutCode(b Block, w int) {
 	}
 }
 
+// layoutTable renders a GFM pipe table: a header row, a single separator
+// line, and zero or more body rows. All lines use the "table" theme style.
+// Column widths are derived from the widest cell in each column; cells are
+// padded to that width and aligned per the separator markers.
+//
+//	│ Header A │ Header B │
+//	├──────────┼──────────┤
+//	│ cell     │    cell  │
+func (s *Styled) layoutTable(b Block, w int) {
+	if len(b.Rows) == 0 {
+		return
+	}
+	cols := len(b.Rows[0])
+	if cols == 0 {
+		return
+	}
+
+	// Compute per-column content widths.
+	colW := make([]int, cols)
+	for _, row := range b.Rows {
+		for c, cell := range row {
+			if c >= cols {
+				break
+			}
+			if cw := utf8.RuneCountInString(cell); cw > colW[c] {
+				colW[c] = cw
+			}
+		}
+	}
+
+	// clip trims a rendered row to the available width.
+	clip := func(s string) string {
+		r := []rune(s)
+		if len(r) > w {
+			return string(r[:w])
+		}
+		return s
+	}
+
+	// makeRow formats one data row into a renderedLine.
+	makeRow := func(row []string) renderedLine {
+		var sb strings.Builder
+		for c := 0; c < cols; c++ {
+			cell := ""
+			if c < len(row) {
+				cell = row[c]
+			}
+			cw := colW[c]
+			if rlen := utf8.RuneCountInString(cell); rlen > cw {
+				cell = string([]rune(cell)[:cw])
+			}
+			pad := cw - utf8.RuneCountInString(cell)
+			align := "left"
+			if c < len(b.Aligns) {
+				align = b.Aligns[c]
+			}
+			if c == 0 {
+				sb.WriteString("│ ")
+			} else {
+				sb.WriteString(" │ ")
+			}
+			switch align {
+			case "right":
+				sb.WriteString(strings.Repeat(" ", pad))
+				sb.WriteString(cell)
+			case "center":
+				lpad := pad / 2
+				sb.WriteString(strings.Repeat(" ", lpad))
+				sb.WriteString(cell)
+				sb.WriteString(strings.Repeat(" ", pad-lpad))
+			default: // left
+				sb.WriteString(cell)
+				sb.WriteString(strings.Repeat(" ", pad))
+			}
+		}
+		sb.WriteString(" │")
+		return s.rl("table", line{segment{clip(sb.String()), 0}})
+	}
+
+	// makeBorder builds a horizontal border line using the given left, mid, right,
+	// and fill characters (e.g. ┌, ┬, ┐, ─ for the top border).
+	makeBorder := func(left, mid, right, fill string) renderedLine {
+		var sb strings.Builder
+		for c := 0; c < cols; c++ {
+			if c == 0 {
+				sb.WriteString(left)
+			} else {
+				sb.WriteString(mid)
+			}
+			sb.WriteString(strings.Repeat(fill, colW[c]+2))
+		}
+		sb.WriteString(right)
+		return s.rl("table", line{segment{clip(sb.String()), 0}})
+	}
+
+	// Top border.
+	s.lines = append(s.lines, makeBorder("┌", "┬", "┐", "─"))
+
+	// Header row.
+	s.lines = append(s.lines, makeRow(b.Rows[0]))
+
+	// Header/body separator.
+	s.lines = append(s.lines, makeBorder("├", "┼", "┤", "─"))
+
+	// Body rows.
+	for _, row := range b.Rows[1:] {
+		s.lines = append(s.lines, makeRow(row))
+	}
+
+	// Bottom border.
+	s.lines = append(s.lines, makeBorder("└", "┴", "┘", "─"))
+}
+
 // ---- Render ----------------------------------------------------------------
 
 func (s *Styled) handleKey(ev *tcell.EventKey) bool {
@@ -719,12 +922,12 @@ func (s *Styled) Render(r *Renderer) {
 		s.scroll = maxScroll
 	}
 
-	// Clear content area plus horizontal padding using the widget's base style,
-	// so the padding strips share the same background as the content.
+	// Clear content area plus all padding using the widget's base style,
+	// so every padding strip shares the same background as the content.
 	base := s.Style()
 	r.Set(base.Foreground(), base.Background(), "")
 	pad := base.Padding()
-	r.Fill(x-pad.Left, y, w+pad.Left+pad.Right, h, " ")
+	r.Fill(x-pad.Left, y-pad.Top, w+pad.Left+pad.Right, h+pad.Top+pad.Bottom, " ")
 
 	for i, rl := range s.lines[s.scroll:] {
 		if i >= h {
@@ -751,6 +954,12 @@ func (s *Styled) Render(r *Renderer) {
 			r.Set(fg, bg, font)
 			r.Text(cx, y+i, seg.text, 0)
 			cx += utf8.RuneCountInString(seg.text)
+		}
+		// Fill the remainder of the line so the block's background extends
+		// to the full content width (relevant for styled/pre, styled/code, etc.).
+		if rem := x + w - cx; rem > 0 {
+			r.Set("", bg, "")
+			r.Fill(cx, y+i, rem, 1, " ")
 		}
 	}
 

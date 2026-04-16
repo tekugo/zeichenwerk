@@ -79,11 +79,12 @@ func (d *Deck) Hint() (int, int) {
 // to 0, then redraws.
 func (d *Deck) SetItems(items []any) {
 	d.items = items
-	d.offset = 0
 	if len(items) == 0 {
 		d.index = -1
-	} else {
+		d.offset = 0
+	} else if d.index < 0 || d.index >= len(items) {
 		d.index = 0
+		d.offset = 0
 	}
 	Redraw(d)
 }

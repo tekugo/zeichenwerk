@@ -1,22 +1,16 @@
 package zeichenwerk
 
-// ==== AI ===================================================================
-
 // sparklineBlocks is the ordered set of Unicode block-fill characters used to
 // draw bar columns, from one-eighth height (▁) to full height (█).
 var sparklineBlocks = []rune{'▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'}
 
-// ScaleMode controls how Sparkline values are mapped to bar heights.
-type ScaleMode int
+// FloatSlice adapts a []float64 to DataProvider.
+// The slice must be ordered oldest-first (index 0 = oldest, last = newest),
+// matching the natural append order. Get(0) returns the newest element.
+type FloatSlice []float64
 
-const (
-	// Relative rescales every render pass so the tallest visible bar fills
-	// the full height. Good for shape comparisons across multiple sparklines.
-	Relative ScaleMode = iota
-	// Absolute maps values to a fixed [Min, Max] bracket.
-	// Good for showing absolute magnitude over time.
-	Absolute
-)
+func (f FloatSlice) Size() int         { return len(f) }
+func (f FloatSlice) Get(i int) float64 { return f[len(f)-1-i] }
 
 // Sparkline renders a sequence of float64 values as a column of Unicode block
 // characters. The widget adapts to any content height: with h rows each column
@@ -24,21 +18,18 @@ const (
 // filled with █.
 type Sparkline struct {
 	Component
-	values    []float64
-	mode      ScaleMode
-	min       float64 // lower bound for Absolute mode
-	max       float64 // upper bound for Absolute mode
+	provider  DataProvider
+	absolute  bool    // false = relative (auto-scale), true = fixed [min, max]
+	min       float64 // lower bound for absolute mode
+	max       float64 // upper bound for absolute mode
 	threshold float64 // dual-colour split point; 0 = disabled
 	gradient  bool    // smooth colour interpolation across the threshold range
-	capacity  int     // ring-buffer cap; 0 = unlimited
 }
 
-// NewSparkline creates a Sparkline with Relative scaling and no initial data.
+// NewSparkline creates a Sparkline with relative scaling and no initial data.
 func NewSparkline(id, class string) *Sparkline {
 	return &Sparkline{
 		Component: Component{id: id, class: class},
-		mode:      Relative,
-		min:       0,
 		max:       1,
 	}
 }
@@ -52,12 +43,14 @@ func (s *Sparkline) Apply(theme *Theme) {
 	theme.Apply(s, s.Selector("sparkline/high"))
 }
 
-// Hint returns the preferred (width, height). Width defaults to len(values)
+// Hint returns the preferred (width, height). Width defaults to provider.Size()
 // (minimum 1) when not set explicitly; height defaults to 1.
 func (s *Sparkline) Hint() (int, int) {
 	w, h := s.hwidth, s.hheight
 	if w == 0 {
-		w = len(s.values)
+		if s.provider != nil {
+			w = s.provider.Size()
+		}
 		if w == 0 {
 			w = 1
 		}
@@ -73,17 +66,11 @@ func (s *Sparkline) Render(r *Renderer) {
 	s.Component.Render(r)
 
 	cx, cy, cw, ch := s.Content()
-	if cw <= 0 || ch <= 0 {
+	if cw <= 0 || ch <= 0 || s.provider == nil {
 		return
 	}
 
-	// Select the rightmost cw values (most recent data).
-	vs := s.values
-	if len(vs) > cw {
-		vs = vs[len(vs)-cw:]
-	}
-
-	lo, hi := s.rangeFor(vs)
+	lo, hi := s.rangeFor(cw)
 
 	baseStyle := s.Style("")
 	highStyle := s.Style("high")
@@ -99,10 +86,12 @@ func (s *Sparkline) Render(r *Renderer) {
 		}
 	}
 
+	n := s.provider.Size()
 	for col := 0; col < cw; col++ {
-		// Left-pad: columns with no corresponding data point are blank.
-		dataIdx := col - (cw - len(vs))
-		if dataIdx < 0 {
+		// provIdx 0 = rightmost (newest); provIdx cw-1 = leftmost (oldest shown).
+		provIdx := cw - 1 - col
+		if provIdx >= n {
+			// Left-pad: columns with no corresponding data point are blank.
 			r.Set(baseStyle.Foreground(), baseStyle.Background(), baseStyle.Font())
 			for row := 0; row < ch; row++ {
 				r.Put(cx+col, cy+row, " ")
@@ -110,7 +99,7 @@ func (s *Sparkline) Render(r *Renderer) {
 			continue
 		}
 
-		v := vs[dataIdx]
+		v := s.provider.Get(provIdx)
 
 		var level float64
 		if hi != lo {
@@ -152,58 +141,57 @@ func (s *Sparkline) Render(r *Renderer) {
 
 		for row := 0; row < ch; row++ {
 			rowFromBottom := ch - 1 - row
-			var ch rune
+			var block rune
 			switch {
 			case rowFromBottom < fullRows:
-				ch = '█'
+				block = '█'
 			case rowFromBottom == fullRows:
-				ch = sparklineBlocks[partial]
+				block = sparklineBlocks[partial]
 			default:
-				ch = ' '
+				block = ' '
 			}
-			r.Put(cx+col, cy+row, string(ch))
+			r.Put(cx+col, cy+row, string(block))
 		}
 	}
 }
 
 // ---- Data methods ----------------------------------------------------------
 
-// Append adds a data point to the end of the series. When a capacity is set
-// and the buffer is full, the oldest point is dropped first. Calls Refresh.
-func (s *Sparkline) Append(v float64) {
-	s.values = append(s.values, v)
-	if s.capacity > 0 && len(s.values) > s.capacity {
-		s.values = s.values[len(s.values)-s.capacity:]
+// SetProvider sets the data source and calls Refresh.
+func (s *Sparkline) SetProvider(p DataProvider) {
+	s.provider = p
+	s.Refresh()
+}
+
+// Provider returns the current data source, or nil if none has been set.
+func (s *Sparkline) Provider() DataProvider {
+	return s.provider
+}
+
+// Count returns the number of data points in the current provider, or 0 if
+// no provider has been set.
+func (s *Sparkline) Count() int {
+	if s.provider == nil {
+		return 0
 	}
+	return s.provider.Size()
+}
+
+// SetAbsolute switches between relative (false, default) and absolute (true)
+// scaling. In absolute mode the [Min, Max] bracket is used directly. In
+// relative mode the range is computed from the visible values each render pass.
+func (s *Sparkline) SetAbsolute(v bool) {
+	s.absolute = v
 	s.Refresh()
 }
 
-// SetValues replaces the entire data series and calls Refresh.
-func (s *Sparkline) SetValues(vs []float64) {
-	cp := make([]float64, len(vs))
-	copy(cp, vs)
-	s.values = cp
-	s.Refresh()
-}
-
-// Values returns the current data series.
-func (s *Sparkline) Values() []float64 {
-	return s.values
-}
-
-// SetMode sets the scale mode and calls Refresh.
-func (s *Sparkline) SetMode(m ScaleMode) {
-	s.mode = m
-	s.Refresh()
-}
-
-// SetMin sets the lower bound for Absolute mode and calls Refresh.
+// SetMin sets the lower bound for absolute scaling and calls Refresh.
 func (s *Sparkline) SetMin(v float64) {
 	s.min = v
 	s.Refresh()
 }
 
-// SetMax sets the upper bound for Absolute mode and calls Refresh.
+// SetMax sets the upper bound for absolute scaling and calls Refresh.
 func (s *Sparkline) SetMax(v float64) {
 	s.max = v
 	s.Refresh()
@@ -226,28 +214,25 @@ func (s *Sparkline) SetGradient(v bool) {
 	s.Refresh()
 }
 
-// SetCapacity sets the maximum number of data points retained. Existing data
-// beyond the new capacity is trimmed immediately. Calls Refresh.
-func (s *Sparkline) SetCapacity(n int) {
-	s.capacity = n
-	if n > 0 && len(s.values) > n {
-		s.values = s.values[len(s.values)-n:]
-	}
-	s.Refresh()
-}
-
 // ---- internal helpers -------------------------------------------------------
 
-// rangeFor returns the [lo, hi] scaling bounds for the given visible slice.
-func (s *Sparkline) rangeFor(vs []float64) (lo, hi float64) {
-	if s.mode == Absolute {
+// rangeFor returns the [lo, hi] scaling bounds for the visible window.
+func (s *Sparkline) rangeFor(cw int) (lo, hi float64) {
+	if s.absolute {
 		return s.min, s.max
 	}
-	if len(vs) == 0 {
+	n := s.provider.Size()
+	visible := cw
+	if n < visible {
+		visible = n
+	}
+	if visible == 0 {
 		return 0, 1
 	}
-	lo, hi = vs[0], vs[0]
-	for _, v := range vs[1:] {
+	lo = s.provider.Get(0)
+	hi = lo
+	for i := 1; i < visible; i++ {
+		v := s.provider.Get(i)
 		if v < lo {
 			lo = v
 		}

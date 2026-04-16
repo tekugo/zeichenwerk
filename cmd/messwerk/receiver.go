@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	collmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
@@ -12,159 +11,153 @@ import (
 	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
-// metricsReceiver implements the OTLP MetricsService gRPC endpoint.
-type metricsReceiver struct {
+// Receiver implements the OTLP MetricsService gRPC endpoint.
+type Receiver struct {
 	collmetricspb.UnimplementedMetricsServiceServer
-	store *Store
+	store   *Store
+	metrics Metrics // reused per data point: Clear → fill → Add
 }
 
 // Export processes an incoming batch of OTLP metrics from Claude Code.
-func (recv *metricsReceiver) Export(
+func (recv *Receiver) Export(
 	_ context.Context,
 	req *collmetricspb.ExportMetricsServiceRequest,
 ) (*collmetricspb.ExportMetricsServiceResponse, error) {
 	for _, rm := range req.ResourceMetrics {
-		info := resourceSessionInfo(rm.Resource)
 		for _, sm := range rm.ScopeMetrics {
 			for _, m := range sm.Metrics {
-				recv.handleMetric(m, rm.Resource, info)
+				recv.handleMetric(m, rm.Resource)
 			}
 		}
 	}
+	recv.store.Notify()
 	return &collmetricspb.ExportMetricsServiceResponse{}, nil
 }
 
-func (recv *metricsReceiver) handleMetric(m *metricspb.Metric, res *resourcepb.Resource, info SessionInfo) {
-	points := numberDataPoints(m)
-	for _, dp := range points {
+func (recv *Receiver) handleMetric(m *metricspb.Metric, res *resourcepb.Resource) {
+	for _, dp := range numberDataPoints(m) {
 		sessionID := attrStr(dp.Attributes, "session.id")
 		if sessionID == "" {
 			continue
-		}
-
-		// Fill in identity fields that may come from data-point attributes.
-		dpInfo := info
-		if dpInfo.Name == "" {
-			dpInfo.Name = sessionName(dp.Attributes, "")
-		}
-		if dpInfo.OrgID == "" {
-			dpInfo.OrgID = attrStr(dp.Attributes, "organization.id")
-		}
-		if dpInfo.TerminalType == "" {
-			dpInfo.TerminalType = attrStr(dp.Attributes, "terminal.type")
-		}
-		if dpInfo.UserEmail == "" {
-			dpInfo.UserEmail = attrStr(dp.Attributes, "user.email")
 		}
 
 		ts := time.Unix(0, int64(dp.TimeUnixNano))
 		startTS := time.Unix(0, int64(dp.StartTimeUnixNano))
 		typ := attrStr(dp.Attributes, "type")
 
-		metric := Metric{
-			Timestamp:      ts,
-			StartTimestamp: startTS,
-			Name:           m.Name,
-			Model:          attrStr(dp.Attributes, "model"),
-			Decision:       attrStr(dp.Attributes, "decision"),
-			Language:       attrStr(dp.Attributes, "language"),
-			Source:         attrStr(dp.Attributes, "source"),
-			ToolName:       attrStr(dp.Attributes, "tool_name"),
+		session, isNew := recv.store.Get(sessionID)
+		if isNew {
+			session.ID = sessionID
+			session.Start = ts
+			if res != nil {
+				attrs := res.GetAttributes()
+				session.HostArch = attrStr(attrs, "host.arch")
+				session.OSType = attrStr(attrs, "os.type")
+				session.OSVersion = attrStr(attrs, "os.version")
+				session.ServiceName = attrStr(attrs, "service.name")
+				session.ServiceVersion = attrStr(attrs, "service.version")
+			}
+			session.OrgID = attrStr(dp.Attributes, "organization.id")
+			session.TerminalType = attrStr(dp.Attributes, "terminal.type")
+			session.UserAccountID = attrStr(dp.Attributes, "user.account_id")
+			session.UserAccountUUID = attrStr(dp.Attributes, "user.account_uuid")
+			session.UserEmail = attrStr(dp.Attributes, "user.email")
+			session.UserID = attrStr(dp.Attributes, "user.id")
 		}
+
+		recv.metrics.Clear()
+		recv.metrics.Time = ts
+		recv.metrics.Start = startTS
+		recv.metrics.Model = attrStr(dp.Attributes, "model")
+
+		var logValue string
 
 		switch m.Name {
 		case "claude_code.token.usage":
-			v := dp.GetAsInt()
+			v := dpGetInt(dp)
 			switch typ {
 			case "input":
-				metric.InputTokens = v
+				recv.metrics.Input = v
 			case "output":
-				metric.OutputTokens = v
+				recv.metrics.Output = v
 			case "cacheRead":
-				metric.CacheReadTokens = v
+				recv.metrics.CacheRead = v
 			case "cacheCreation":
-				metric.CacheCreationTokens = v
+				recv.metrics.CacheCreation = v
 			}
-			recv.store.Log.add(otlpEntry{
-				time:      ts,
-				session:   dpInfo.Name,
-				metric:    m.Name,
-				tokenType: typ,
-				value:     fmt.Sprintf("%d", v),
-			})
+			logValue = fmt.Sprintf("%d", v)
 
 		case "claude_code.cost.usage":
-			metric.CostUSD = dp.GetAsDouble()
-			recv.store.Log.add(otlpEntry{
-				time:    ts,
-				session: dpInfo.Name,
-				metric:  m.Name,
-				value:   fmt.Sprintf("$%.6f", metric.CostUSD),
-			})
+			recv.metrics.Cost = dp.GetAsDouble()
+			logValue = fmt.Sprintf("$%.6f", recv.metrics.Cost)
 
 		case "claude_code.active_time.total":
 			v := dp.GetAsDouble()
 			switch typ {
 			case "user":
-				metric.ActiveTimeUser = v
+				recv.metrics.ActiveUser = v
 			case "cli":
-				metric.ActiveTimeCLI = v
+				recv.metrics.ActiveCLI = v
 			}
-			recv.store.Log.add(otlpEntry{
-				time:      ts,
-				session:   dpInfo.Name,
-				metric:    m.Name,
-				tokenType: typ,
-				value:     fmt.Sprintf("%.2fs", v),
-			})
+			logValue = fmt.Sprintf("%.2fs", v)
 
 		case "claude_code.lines_of_code.count":
-			v := dp.GetAsInt()
+			v := dpGetInt(dp)
 			switch typ {
 			case "added":
-				metric.LinesAdded = v
+				recv.metrics.LinesAdded = v
 			case "removed":
-				metric.LinesRemoved = v
+				recv.metrics.LinesRemoved = v
 			}
-			recv.store.Log.add(otlpEntry{
-				time:      ts,
-				session:   dpInfo.Name,
-				metric:    m.Name,
-				tokenType: typ,
-				value:     fmt.Sprintf("%d", v),
-			})
+			logValue = fmt.Sprintf("%d", v)
 
 		case "claude_code.code_edit_tool.decision":
-			v := dp.GetAsInt()
-			switch metric.Decision {
+			v := dpGetInt(dp)
+			decision := attrStr(dp.Attributes, "decision")
+			switch decision {
 			case "accept":
-				metric.EditDecisionsAccepted = v
+				recv.metrics.Accepted = v
 			case "reject":
-				metric.EditDecisionsRejected = v
+				recv.metrics.Rejected = v
 			}
-			recv.store.Log.add(otlpEntry{
-				time:      ts,
-				session:   dpInfo.Name,
-				metric:    m.Name,
-				tokenType: metric.Decision,
-				value:     fmt.Sprintf("%d", v),
-			})
-
-		case "claude_code.session.count":
-			metric.SessionCount = dp.GetAsInt()
-			recv.store.Log.add(otlpEntry{
-				time:    ts,
-				session: dpInfo.Name,
-				metric:  m.Name,
-				value:   fmt.Sprintf("%d", metric.SessionCount),
-			})
+			logValue = fmt.Sprintf("%d", v)
 
 		default:
 			continue
 		}
 
-		recv.store.AddMetric(sessionID, dpInfo, metric)
+		session.Add(&recv.metrics)
+		session.addToSeries(&recv.metrics)
+		recv.store.addToTotal(&recv.metrics)
+
+		attrs := map[string]string{
+			"metric": m.Name,
+			"value":  logValue,
+		}
+		if typ != "" {
+			attrs["type"] = typ
+		}
+		if recv.metrics.Model != "" {
+			attrs["model"] = recv.metrics.Model
+		}
+		session.Log = append(session.Log, Log{
+			Time:  ts,
+			Body:  m.Name,
+			Attrs: attrs,
+		})
 	}
+}
+
+// dpGetInt reads a NumberDataPoint value as int64 regardless of whether the
+// underlying proto oneof is AsInt or AsDouble (the Go OTel SDK may use either).
+func dpGetInt(dp *metricspb.NumberDataPoint) int64 {
+	switch v := dp.Value.(type) {
+	case *metricspb.NumberDataPoint_AsInt:
+		return v.AsInt
+	case *metricspb.NumberDataPoint_AsDouble:
+		return int64(v.AsDouble)
+	}
+	return 0
 }
 
 // numberDataPoints extracts the data-point slice regardless of aggregation type.
@@ -176,50 +169,6 @@ func numberDataPoints(m *metricspb.Metric) []*metricspb.NumberDataPoint {
 		return g.DataPoints
 	}
 	return nil
-}
-
-// resourceSessionInfo extracts session identity fields from resource-level attributes.
-func resourceSessionInfo(res *resourcepb.Resource) SessionInfo {
-	if res == nil {
-		return SessionInfo{}
-	}
-	attrs := res.GetAttributes()
-	name := ""
-	for _, key := range []string{"claude_code.session.path", "process.working_directory", "service.instance.id"} {
-		if v := attrStr(attrs, key); v != "" {
-			name = shortPath(v)
-			break
-		}
-	}
-	return SessionInfo{
-		Name:         name,
-		OrgID:        attrStr(attrs, "organization.id"),
-		TerminalType: attrStr(attrs, "terminal.type"),
-		UserEmail:    attrStr(attrs, "user.email"),
-	}
-}
-
-// sessionName returns the best display name from data-point attributes.
-func sessionName(attrs []*commonpb.KeyValue, resourceName string) string {
-	if resourceName != "" {
-		return resourceName
-	}
-	for _, key := range []string{"process.working_directory", "claude_code.session.path"} {
-		if v := attrStr(attrs, key); v != "" {
-			return shortPath(v)
-		}
-	}
-	return attrStr(attrs, "session.id")
-}
-
-// shortPath returns the last two path components of p for compact display.
-func shortPath(p string) string {
-	parent := filepath.Base(filepath.Dir(p))
-	base := filepath.Base(p)
-	if parent == "." || parent == "/" || parent == "" {
-		return base
-	}
-	return parent + "/" + base
 }
 
 // attrStr returns the string value of the first attribute matching key.

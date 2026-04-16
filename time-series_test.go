@@ -273,27 +273,48 @@ func TestTimeSeriesEndToEnd(t *testing.T) {
 	}
 }
 
-func TestTimeSeriesGet(t *testing.T) {
+func TestTimeSeriesAt(t *testing.T) {
 	ts := NewTimeSeries[int](base, minute, 3, false)
 	ts.Add(base, 10)
 	ts.Add(base.Add(2*minute), 30)
 
-	if v, ok := ts.Get(base); !ok || v != 10 {
-		t.Errorf("Get(base) = %d, %v; want 10, true", v, ok)
+	if v, ok := ts.At(base); !ok || v != 10 {
+		t.Errorf("At(base) = %d, %v; want 10, true", v, ok)
 	}
-	if v, ok := ts.Get(base.Add(2*minute)); !ok || v != 30 {
-		t.Errorf("Get(base+2m) = %d, %v; want 30, true", v, ok)
+	if v, ok := ts.At(base.Add(2*minute)); !ok || v != 30 {
+		t.Errorf("At(base+2m) = %d, %v; want 30, true", v, ok)
 	}
 	// Mid-interval timestamp should map to the same slot.
-	if v, ok := ts.Get(base.Add(30 * time.Second)); !ok || v != 10 {
-		t.Errorf("Get(base+30s) = %d, %v; want 10, true", v, ok)
+	if v, ok := ts.At(base.Add(30 * time.Second)); !ok || v != 10 {
+		t.Errorf("At(base+30s) = %d, %v; want 10, true", v, ok)
 	}
 	// Out of range.
-	if _, ok := ts.Get(base.Add(-minute)); ok {
-		t.Error("Get before Start should return false")
+	if _, ok := ts.At(base.Add(-minute)); ok {
+		t.Error("At before Start should return false")
 	}
-	if _, ok := ts.Get(base.Add(10 * minute)); ok {
-		t.Error("Get after End should return false")
+	if _, ok := ts.At(base.Add(10 * minute)); ok {
+		t.Error("At after End should return false")
+	}
+}
+
+func TestTimeSeriesGetIndex(t *testing.T) {
+	// size=3, add values to slots 0,1,2 (oldest→newest).
+	ts := NewTimeSeries[float64](base, minute, 3, false)
+	ts.Add(base, 1)
+	ts.Add(base.Add(minute), 2)
+	ts.Add(base.Add(2*minute), 3)
+
+	// Get(0) = newest slot (slot 2 = value 3)
+	if got := ts.Get(0); got != 3 {
+		t.Errorf("Get(0) = %v; want 3 (newest)", got)
+	}
+	// Get(1) = middle slot (slot 1 = value 2)
+	if got := ts.Get(1); got != 2 {
+		t.Errorf("Get(1) = %v; want 2", got)
+	}
+	// Get(2) = oldest slot (slot 0 = value 1)
+	if got := ts.Get(2); got != 1 {
+		t.Errorf("Get(2) = %v; want 1 (oldest)", got)
 	}
 }
 
@@ -395,6 +416,41 @@ func TestTimeSeriesClear(t *testing.T) {
 	ts.Add(base.Add(minute), 99)
 	if ts.Values()[1] != 99 {
 		t.Errorf("slot 1 after Add post-Clear = %d, want 99", ts.Values()[1])
+	}
+}
+
+func TestTimeSeriesMinMax(t *testing.T) {
+	ts := NewTimeSeries[int](base, minute, 4, false)
+
+	// All-zero buffer.
+	if got := ts.Min(); got != 0 {
+		t.Errorf("Min() all-zero: want 0, got %d", got)
+	}
+	if got := ts.Max(); got != 0 {
+		t.Errorf("Max() all-zero: want 0, got %d", got)
+	}
+
+	// Mixed values including negative.
+	ts.Set(base, -3)
+	ts.Set(base.Add(minute), 7)
+	ts.Set(base.Add(2*minute), 2)
+	ts.Set(base.Add(3*minute), 0)
+	if got := ts.Min(); got != -3 {
+		t.Errorf("Min(): want -3, got %d", got)
+	}
+	if got := ts.Max(); got != 7 {
+		t.Errorf("Max(): want 7, got %d", got)
+	}
+
+	// After a Shift, dropped slots become zero — verify stale values don't persist.
+	ts.Shift(2 * minute)
+	// Slots now: [0, 0, -3, 7] → no, Shift discards oldest: [-3,7,2,0] shifts by 2 → [2,0,0,0]
+	// Actually Set values were -3,7,2,0. Shift(2) drops first two (-3,7), zeroes new: [2,0,0,0].
+	if got := ts.Min(); got != 0 {
+		t.Errorf("Min() after Shift: want 0, got %d", got)
+	}
+	if got := ts.Max(); got != 2 {
+		t.Errorf("Max() after Shift: want 2, got %d", got)
 	}
 }
 

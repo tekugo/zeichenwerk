@@ -91,6 +91,11 @@ func (s *Switcher) Summary() string {
 // Select sets the visible pane. Pass an int index or a string widget ID.
 // The previously visible pane receives EvtHide; the new one receives EvtShow.
 // Panics if an int index is out of range.
+// Selected returns the index of the currently visible pane.
+func (s *Switcher) Selected() int {
+	return s.selected
+}
+
 func (s *Switcher) Select(index any) {
 	switch pane := index.(type) {
 	case int:

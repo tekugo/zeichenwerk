@@ -563,8 +563,17 @@ func (t *Table) renderTableContent(r *Renderer, x, y, w, h int, gridStyle *Style
 			}
 			cx := x - t.offsetX + rx
 			r.Set(gridStyle.Foreground(), gridStyle.Background(), gridStyle.Font())
-			cw := min(rw, column.Width)
-			r.Repeat(cx, cy, 1, 0, cw, " ")
+			if rx < t.offsetX {
+				start := t.offsetX - rx
+				cw := min(column.Width-start, rw)
+				if cw > 0 {
+					r.Repeat(cx+start, cy, 1, 0, cw, " ")
+				}
+				rw += start
+			} else {
+				cw := min(rw, column.Width)
+				r.Repeat(cx, cy, 1, 0, cw, " ")
+			}
 			if i < len(columns)-1 && t.inner && rw > column.Width {
 				r.screen.Put(cx+column.Width, cy, t.grid.InnerV)
 			}
