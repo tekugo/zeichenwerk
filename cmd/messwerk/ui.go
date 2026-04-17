@@ -113,18 +113,12 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 						),
 						Grid("session", "", []int{0, 0, 0, 0, 0, -1}, []int{26, 26, -1}, false, Border("none"), Padding(1, 2),
 							// Row 0: Session header
-							Cell(0, 0, 3, 1, Card("session-header", "", "",
-								Flex("session-header-row", "", true, "center", 2,
-									Static("session-id", "", "–", Hint(19, 1), Font("bold"), Fg("$cyan")),
-									Spacer("", Hint(-1, 0)),
-									Static("session-start-label", "", "started", Fg("$gray")),
-									Static("session-start", "", "–", Hint(8, 1)),
-									Static("session-duration-label", "", "duration", Fg("$gray")),
-									Static("session-duration", "", "–", Hint(7, 1)),
-									Static("session-model", "", "–", Hint(20, 1), Fg("$blue")),
-									Static("session-os", "", "–", Hint(14, 1), Fg("$gray")),
+							Cell(0, 0, 3, 1,
+								Flex("session-header", "", true, "stretch", 1, Margin(0, 0, 1, 0),
+									Static("session-id", "", "–", Hint(-1, 1), Font("bold"), Fg("$cyan")),
+									Static("session-info", "", "–", Fg("$gray")),
 								),
-							)),
+							),
 							// Row 1: Stats
 							Cell(0, 1, 1, 1, Card("session-cache-card", "", "Cache",
 								Progress("session-cache-bar", "", true, Margin(1)),
@@ -188,11 +182,9 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 	content := z.Find(ui, "content").(*z.Switcher)
 
 	// Session header
+	sessionHeader := z.Find(ui, "session-header").(*z.Flex)
 	sessionID := z.Find(ui, "session-id").(*z.Static)
-	sessionStart := z.Find(ui, "session-start").(*z.Static)
-	sessionDuration := z.Find(ui, "session-duration").(*z.Static)
-	sessionModel := z.Find(ui, "session-model").(*z.Static)
-	sessionOS := z.Find(ui, "session-os").(*z.Static)
+	sessionInfo := z.Find(ui, "session-info").(*z.Static)
 
 	// Stats row
 	cacheBar := z.Find(ui, "session-cache-bar").(*z.Progress)
@@ -245,10 +237,10 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 			id = id[:18] + "…"
 		}
 		sessionID.Set(id)
-		sessionStart.Set(session.Start.Format("15:04:05"))
-		sessionDuration.Set(z.FormatDuration(time.Since(session.Start)))
-		sessionModel.Set(session.PrimaryModel())
-		sessionOS.Set(session.OSType + "/" + session.HostArch)
+		start := session.Start.Format("15:04:05")
+		duration := z.FormatDuration(time.Since(session.Start))
+		sessionInfo.Set(fmt.Sprintf("start %s, duration %s, model %s, os %s/%s", start, duration, session.PrimaryModel(), session.OSType, session.HostArch))
+		sessionHeader.Layout()
 
 		// Cache ratio: what fraction of total prompt tokens came from cache
 		totalTokens := agg.Input + agg.CacheRead + agg.CacheCreation

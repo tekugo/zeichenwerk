@@ -374,7 +374,7 @@ func (ui *UI) DrawWidget(widget Widget) {
 			return
 		}
 		if current.Parent() == ui {
-			layer = current.(Container)
+			layer, _ = current.(Container)
 		}
 		current = current.Parent()
 	}

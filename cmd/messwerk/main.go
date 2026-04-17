@@ -22,7 +22,7 @@ func main() {
 	theme := resolveTheme(*themeName)
 	store := NewStore()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		slog.Error("failed to listen for OTLP", "port", *port, "err", err)
 		return
