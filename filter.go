@@ -102,5 +102,5 @@ func (f *Filter) applyFilter() {
 	if f.bound == nil {
 		return
 	}
-	f.bound.Filter(f.Text())
+	f.bound.Filter(f.Get())
 }

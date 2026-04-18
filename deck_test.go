@@ -11,14 +11,14 @@ import (
 // mockScreen is a minimal Screen implementation for render tests.
 type mockScreen struct{}
 
-func (m *mockScreen) Clear()                  {}
-func (m *mockScreen) Clip(x, y, w, h int)     {}
-func (m *mockScreen) Flush()                  {}
-func (m *mockScreen) Get(x, y int) string     { return "" }
-func (m *mockScreen) Put(x, y int, ch string) {}
-func (m *mockScreen) Set(fg, bg, font string)          {}
+func (m *mockScreen) Clear()                               {}
+func (m *mockScreen) Clip(x, y, w, h int)                  {}
+func (m *mockScreen) Flush()                               {}
+func (m *mockScreen) Get(x, y int) string                  { return "" }
+func (m *mockScreen) Put(x, y int, ch string)              {}
+func (m *mockScreen) Set(fg, bg, font string)              {}
 func (m *mockScreen) SetUnderline(style int, color string) {}
-func (m *mockScreen) Translate(x, y int)               {}
+func (m *mockScreen) Translate(x, y int)                   {}
 
 func newTestRenderer() *Renderer {
 	return NewRenderer(&mockScreen{}, NewTheme())
@@ -29,7 +29,7 @@ func nopRender(r *Renderer, x, y, w, h, index int, data any, selected, focused b
 func newDeck(itemHeight int, items ...any) *Deck {
 	d := NewDeck("d", "", nopRender, itemHeight)
 	if len(items) > 0 {
-		d.SetItems(items)
+		d.Set(items)
 	}
 	return d
 }
@@ -72,7 +72,7 @@ func TestDeck_SetItems_SetsIndex0(t *testing.T) {
 
 func TestDeck_SetItems_EmptySetsMinusOne(t *testing.T) {
 	d := newDeck(2, "a", "b")
-	d.SetItems([]any{})
+	d.Set([]any{})
 	if d.index != -1 {
 		t.Errorf("index = %d; want -1 for empty items", d.index)
 	}
@@ -81,8 +81,8 @@ func TestDeck_SetItems_EmptySetsMinusOne(t *testing.T) {
 func TestDeck_Items_ReturnsSlice(t *testing.T) {
 	items := []any{"x", "y"}
 	d := newDeck(1)
-	d.SetItems(items)
-	got := d.Items()
+	d.Set(items)
+	got := d.Get()
 	if len(got) != 2 || got[0] != "x" {
 		t.Errorf("Items() = %v; want %v", got, items)
 	}
@@ -245,7 +245,7 @@ func TestDeck_Render_CorrectArgs(t *testing.T) {
 	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		calls = append(calls, call{index, data, selected})
 	}, 2)
-	d.SetItems(items)
+	d.Set(items)
 	d.index = 1
 
 	// Bounds: 3 items × 2 rows = 6 rows, all visible.
@@ -280,7 +280,7 @@ func TestDeck_Render_SlotPositions(t *testing.T) {
 	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		slots = append(slots, slotBounds{x, y, w, h})
 	}, 3)
-	d.SetItems([]any{"a", "b"})
+	d.Set([]any{"a", "b"})
 	d.SetBounds(0, 0, 20, 6)
 
 	d.Render(newTestRenderer())
@@ -312,7 +312,7 @@ func TestDeck_Scrollbar_UnitCalculation(t *testing.T) {
 	d := NewDeck("d", "", func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		calledIndices = append(calledIndices, index)
 	}, 2)
-	d.SetItems(items)
+	d.Set(items)
 	d.offset = 1
 	d.index = 1
 	d.SetBounds(0, 0, 20, 4) // 4 rows / 2 = 2 visible slots

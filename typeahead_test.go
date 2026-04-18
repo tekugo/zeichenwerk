@@ -70,8 +70,8 @@ func TestTypeahead_Tab_Accepts(t *testing.T) {
 	if !consumed {
 		t.Error("Tab with active suggestion should be consumed")
 	}
-	if ta.Text() != "hello world" {
-		t.Errorf("Text() = %q; want %q", ta.Text(), "hello world")
+	if ta.Get() != "hello world" {
+		t.Errorf("Text() = %q; want %q", ta.Get(), "hello world")
 	}
 	if accepted != "hello world" {
 		t.Errorf("EvtAccept data = %q; want %q", accepted, "hello world")
@@ -99,8 +99,8 @@ func TestTypeahead_Right_AtEnd_Accepts(t *testing.T) {
 	if !consumed {
 		t.Error("→ at end with suggestion should be consumed")
 	}
-	if ta.Text() != "hello world" {
-		t.Errorf("Text() = %q; want %q", ta.Text(), "hello world")
+	if ta.Get() != "hello world" {
+		t.Errorf("Text() = %q; want %q", ta.Get(), "hello world")
 	}
 }
 

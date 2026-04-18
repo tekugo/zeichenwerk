@@ -10,8 +10,8 @@ import (
 
 func TestInput_Defaults(t *testing.T) {
 	inp := NewInput("i", "")
-	if inp.Text() != "" {
-		t.Errorf("Text() = %q; want empty", inp.Text())
+	if inp.Get() != "" {
+		t.Errorf("Text() = %q; want empty", inp.Get())
 	}
 	if inp.Flag(FlagMasked) {
 		t.Error("FlagMasked should be false by default")
@@ -26,8 +26,8 @@ func TestInput_Defaults(t *testing.T) {
 
 func TestInput_InitialText(t *testing.T) {
 	inp := NewInput("i", "", "hello")
-	if inp.Text() != "hello" {
-		t.Errorf("Text() = %q; want %q", inp.Text(), "hello")
+	if inp.Get() != "hello" {
+		t.Errorf("Text() = %q; want %q", inp.Get(), "hello")
 	}
 }
 
@@ -43,8 +43,8 @@ func TestInput_InitialPlaceholder(t *testing.T) {
 func TestInput_Set_UpdatesText(t *testing.T) {
 	inp := NewInput("i", "")
 	inp.Set("world")
-	if inp.Text() != "world" {
-		t.Errorf("Text() = %q after Set; want %q", inp.Text(), "world")
+	if inp.Get() != "world" {
+		t.Errorf("Text() = %q after Set; want %q", inp.Get(), "world")
 	}
 }
 
@@ -52,16 +52,16 @@ func TestInput_Set_Readonly_Ignored(t *testing.T) {
 	inp := NewInput("i", "", "original")
 	inp.SetFlag(FlagReadonly, true)
 	inp.Set("changed")
-	if inp.Text() != "original" {
-		t.Errorf("Text() = %q after Set on readonly; want %q", inp.Text(), "original")
+	if inp.Get() != "original" {
+		t.Errorf("Text() = %q after Set on readonly; want %q", inp.Get(), "original")
 	}
 }
 
 func TestInput_Set_EmptyString(t *testing.T) {
 	inp := NewInput("i", "", "hello")
 	inp.Set("")
-	if inp.Text() != "" {
-		t.Errorf("Text() = %q after Set(\"\"); want empty", inp.Text())
+	if inp.Get() != "" {
+		t.Errorf("Text() = %q after Set(\"\"); want empty", inp.Get())
 	}
 }
 
@@ -72,18 +72,18 @@ func TestInput_Insert_AppendsAtEnd(t *testing.T) {
 	inp.Insert("a")
 	inp.Insert("b")
 	inp.Insert("c")
-	if inp.Text() != "abc" {
-		t.Errorf("Text() = %q; want %q", inp.Text(), "abc")
+	if inp.Get() != "abc" {
+		t.Errorf("Text() = %q; want %q", inp.Get(), "abc")
 	}
 }
 
 func TestInput_Insert_AtPosition(t *testing.T) {
 	inp := NewInput("i", "", "ac")
 	inp.Start()
-	inp.Right()   // cursor after 'a'
+	inp.Right() // cursor after 'a'
 	inp.Insert("b")
-	if inp.Text() != "abc" {
-		t.Errorf("Text() = %q after insert at position 1; want %q", inp.Text(), "abc")
+	if inp.Get() != "abc" {
+		t.Errorf("Text() = %q after insert at position 1; want %q", inp.Get(), "abc")
 	}
 }
 
@@ -91,8 +91,8 @@ func TestInput_Insert_Readonly_Ignored(t *testing.T) {
 	inp := NewInput("i", "")
 	inp.SetFlag(FlagReadonly, true)
 	inp.Insert("x")
-	if inp.Text() != "" {
-		t.Errorf("Text() = %q after Insert on readonly; want empty", inp.Text())
+	if inp.Get() != "" {
+		t.Errorf("Text() = %q after Insert on readonly; want empty", inp.Get())
 	}
 }
 
@@ -113,8 +113,8 @@ func TestInput_Delete_Backspace(t *testing.T) {
 	inp := NewInput("i", "", "abc")
 	inp.End()
 	inp.Delete()
-	if inp.Text() != "ab" {
-		t.Errorf("Text() = %q after Delete at end; want %q", inp.Text(), "ab")
+	if inp.Get() != "ab" {
+		t.Errorf("Text() = %q after Delete at end; want %q", inp.Get(), "ab")
 	}
 }
 
@@ -122,8 +122,8 @@ func TestInput_Delete_AtStart_NoOp(t *testing.T) {
 	inp := NewInput("i", "", "abc")
 	inp.Start()
 	inp.Delete() // no char before cursor
-	if inp.Text() != "abc" {
-		t.Errorf("Text() = %q after Delete at start; want unchanged %q", inp.Text(), "abc")
+	if inp.Get() != "abc" {
+		t.Errorf("Text() = %q after Delete at start; want unchanged %q", inp.Get(), "abc")
 	}
 }
 
@@ -145,8 +145,8 @@ func TestInput_DeleteForward(t *testing.T) {
 	inp := NewInput("i", "", "abc")
 	inp.Start()
 	inp.DeleteForward()
-	if inp.Text() != "bc" {
-		t.Errorf("Text() = %q after DeleteForward at start; want %q", inp.Text(), "bc")
+	if inp.Get() != "bc" {
+		t.Errorf("Text() = %q after DeleteForward at start; want %q", inp.Get(), "bc")
 	}
 }
 
@@ -154,8 +154,8 @@ func TestInput_DeleteForward_AtEnd_NoOp(t *testing.T) {
 	inp := NewInput("i", "", "abc")
 	inp.End()
 	inp.DeleteForward()
-	if inp.Text() != "abc" {
-		t.Errorf("Text() = %q after DeleteForward at end; want unchanged %q", inp.Text(), "abc")
+	if inp.Get() != "abc" {
+		t.Errorf("Text() = %q after DeleteForward at end; want unchanged %q", inp.Get(), "abc")
 	}
 }
 
@@ -164,8 +164,8 @@ func TestInput_DeleteForward_AtEnd_NoOp(t *testing.T) {
 func TestInput_Clear(t *testing.T) {
 	inp := NewInput("i", "", "hello world")
 	inp.Clear()
-	if inp.Text() != "" {
-		t.Errorf("Text() = %q after Clear; want empty", inp.Text())
+	if inp.Get() != "" {
+		t.Errorf("Text() = %q after Clear; want empty", inp.Get())
 	}
 }
 
@@ -186,8 +186,8 @@ func TestInput_Clear_Readonly_Ignored(t *testing.T) {
 	inp := NewInput("i", "", "hello")
 	inp.SetFlag(FlagReadonly, true)
 	inp.Clear()
-	if inp.Text() != "hello" {
-		t.Errorf("Text() = %q after Clear on readonly; want %q", inp.Text(), "hello")
+	if inp.Get() != "hello" {
+		t.Errorf("Text() = %q after Clear on readonly; want %q", inp.Get(), "hello")
 	}
 }
 
@@ -265,8 +265,8 @@ func TestInput_SetMask_Empty_DisablesMasked(t *testing.T) {
 func TestInput_Text_ReturnsPlaintext_EvenWhenMasked(t *testing.T) {
 	inp := NewInput("i", "", "secret")
 	inp.SetMask("*")
-	if inp.Text() != "secret" {
-		t.Errorf("Text() = %q with mask; want %q (unmasked)", inp.Text(), "secret")
+	if inp.Get() != "secret" {
+		t.Errorf("Text() = %q with mask; want %q (unmasked)", inp.Get(), "secret")
 	}
 }
 
@@ -277,8 +277,8 @@ func TestInput_Keyboard_Backspace(t *testing.T) {
 	inp.SetBounds(0, 0, 20, 1)
 	inp.End()
 	inp.handleKey(tcell.NewEventKey(tcell.KeyBackspace2, "", tcell.ModNone))
-	if inp.Text() != "ab" {
-		t.Errorf("Text() = %q after Backspace; want %q", inp.Text(), "ab")
+	if inp.Get() != "ab" {
+		t.Errorf("Text() = %q after Backspace; want %q", inp.Get(), "ab")
 	}
 }
 
@@ -287,8 +287,8 @@ func TestInput_Keyboard_Delete(t *testing.T) {
 	inp.SetBounds(0, 0, 20, 1)
 	inp.Start()
 	inp.handleKey(tcell.NewEventKey(tcell.KeyDelete, "", tcell.ModNone))
-	if inp.Text() != "bc" {
-		t.Errorf("Text() = %q after Delete key; want %q", inp.Text(), "bc")
+	if inp.Get() != "bc" {
+		t.Errorf("Text() = %q after Delete key; want %q", inp.Get(), "bc")
 	}
 }
 
@@ -317,8 +317,8 @@ func TestInput_Keyboard_CtrlE_MoveToEnd(t *testing.T) {
 func TestInput_Keyboard_Rune_Inserts(t *testing.T) {
 	inp := NewInput("i", "")
 	inp.handleKey(tcell.NewEventKey(tcell.KeyRune, "x", tcell.ModNone))
-	if inp.Text() != "x" {
-		t.Errorf("Text() = %q after rune input; want %q", inp.Text(), "x")
+	if inp.Get() != "x" {
+		t.Errorf("Text() = %q after rune input; want %q", inp.Get(), "x")
 	}
 }
 

@@ -141,7 +141,7 @@ func createUI(theme *Theme) *UI {
 	// Wire navigation
 	switcher := Find(ui, "content").(*Switcher)
 	nav := Find(ui, "nav").(*Deck)
-	nav.SetItems(navItems)
+	nav.Set(navItems)
 	navSwitch := func(_ Widget, _ Event, data ...any) bool {
 		if len(data) == 1 {
 			if sel, ok := data[0].(int); ok {
@@ -957,7 +957,7 @@ func codeEditorScreen(b *Builder) {
 	tree.On(EvtSelect, func(_ Widget, _ Event, _ ...any) bool {
 		if node := tree.Selected(); node != nil {
 			if idx, ok := node.Data().(int); ok {
-				tabs.Select(idx)
+				tabs.Set(idx)
 				switcher.Select(idx)
 			}
 		}

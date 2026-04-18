@@ -63,10 +63,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	dialog := b.
 		Dialog("fc-dialog", title).
 		Class("dialog").
-		Flex("fc-body", false, "stretch", 1).
+		Flex("fc-body", "stretch", 1).Flag(FlagVertical).
 		Typeahead("fc-input", initial).Hint(0, 1).
 		Tree("fc-tree").Hint(0, -1).
-		Flex("fc-footer", true, "center", 0).Hint(0, 1).
+		Flex("fc-footer", "center", 0).Hint(0, 1).
 		Checkbox("fc-hidden", "show hidden", hidden).
 		Spacer().Hint(-1, 0).
 		Button("fc-ok", label).
@@ -176,7 +176,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	updateOK := func() {
 		var ok bool
 		if mode == "save" {
-			ok = isSaveable(input.Text())
+			ok = isSaveable(input.Get())
 		} else {
 			node := tree.Selected()
 			if node != nil {
@@ -190,7 +190,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	}
 
 	confirm := func() {
-		path := filepath.Clean(input.Text())
+		path := filepath.Clean(input.Get())
 		dialog.Dispatch(dialog, EvtAccept, path)
 		ui.Close()
 	}
@@ -314,7 +314,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 		if ignoreInputChange {
 			return true
 		}
-		typed := input.Text()
+		typed := input.Get()
 		if mode == "save" {
 			ok := isSaveable(typed)
 			setInputError(!ok)
@@ -429,7 +429,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	// show-hidden checkbox.
 	hiddenCb.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		hidden = data[0].(bool)
-		currentPath := filepath.Clean(input.Text())
+		currentPath := filepath.Clean(input.Get())
 		buildTree()
 		navigateTo(currentPath)
 		return true

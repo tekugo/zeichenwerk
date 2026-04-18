@@ -20,34 +20,34 @@ func buildUI(theme *Theme, dir string) *UI {
 		Static("header", headerText(dir)).Hint(0, 1).
 		// ── Body ────────────────────────────────────────────────────────────
 		Flex("body", true, "stretch", 0).Hint(0, -1).
-			Box("targets-box", "Targets").Hint(34, 0).Border("thin").
-				Flex("targets-panel", false, "stretch", 0).
-					Add(buildDeck(theme, &deck)).Hint(0, -1).
-					Flex("filter-section", false, "stretch", 0).Margin(1, 0, 0, 0).
-						Static("filter-title", " filter").Foreground("$fg2").
-						Flex("filter-bar", true, "start", 2).Hint(0, 1).Padding(0, 1).
-							Checkbox("filter-make", "make", true).
-							Checkbox("filter-just", "just", true).
-						End().
-					End().
-				End().
-			End().
-			Box("output-box", "Output").Hint(-1, 0).Border("thin").
-				Terminal("output").Hint(0, -1).
-			End().
+		Box("targets-box", "Targets").Hint(34, 0).Border("thin").
+		Flex("targets-panel", false, "stretch", 0).
+		Add(buildDeck(theme, &deck)).Hint(0, -1).
+		Flex("filter-section", false, "stretch", 0).Margin(1, 0, 0, 0).
+		Static("filter-title", " filter").Foreground("$fg2").
+		Flex("filter-bar", true, "start", 2).Hint(0, 1).Padding(0, 1).
+		Checkbox("filter-make", "make", true).
+		Checkbox("filter-just", "just", true).
+		End().
+		End().
+		End().
+		End().
+		Box("output-box", "Output").Hint(-1, 0).Border("thin").
+		Terminal("output").Hint(0, -1).
+		End().
 		End().
 		// ── Footer ──────────────────────────────────────────────────────────
 		Flex("footer", true, "center", 0).Hint(0, 1).
-			Scanner("watch-scanner", 3, "circles").
-			Static("footer-status", "").Hint(0, 1).
-			Spacer().Hint(-1, 1).
-			Shortcuts("footer-shortcuts", "r", "run", "w", "watch", "d", "dir", "m", "make", "j", "just", "c", "clear", "q", "quit").Padding(0, 1, 0, 0).
+		Scanner("watch-scanner", 3, "circles").
+		Static("footer-status", "").Hint(0, 1).
+		Spacer().Hint(-1, 1).
+		Shortcuts("footer-shortcuts", "r", "run", "w", "watch", "d", "dir", "m", "make", "j", "just", "c", "clear", "q", "quit").Padding(0, 1, 0, 0).
 		End()
 
 	ui := b.Build()
 
 	allTargets, _ := loadTargets(dir)
-	deck.SetItems(toItems(allTargets, dir))
+	deck.Set(toItems(allTargets, dir))
 
 	cbMake := Find(ui, "filter-make").(*Checkbox)
 	cbJust := Find(ui, "filter-just").(*Checkbox)
@@ -61,7 +61,7 @@ func buildUI(theme *Theme, dir string) *UI {
 				filtered = append(filtered, t)
 			}
 		}
-		deck.SetItems(toItems(filtered, dir))
+		deck.Set(toItems(filtered, dir))
 		return true
 	}
 
@@ -125,12 +125,12 @@ func buildUI(theme *Theme, dir string) *UI {
 			return true
 		case "r":
 			if idx := deck.Selected(); idx >= 0 {
-				runner.Enqueue(deck.Items()[idx].(Target))
+				runner.Enqueue(deck.Get()[idx].(Target))
 			}
 			return true
 		case "w":
 			if idx := deck.Selected(); idx >= 0 {
-				toggleWatch(deck.Items()[idx].(Target))
+				toggleWatch(deck.Get()[idx].(Target))
 			}
 			return true
 		case "c":
@@ -142,7 +142,7 @@ func buildUI(theme *Theme, dir string) *UI {
 
 	deck.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
 		if idx := deck.Selected(); idx >= 0 {
-			runner.Enqueue(deck.Items()[idx].(Target))
+			runner.Enqueue(deck.Get()[idx].(Target))
 		}
 		return true
 	})

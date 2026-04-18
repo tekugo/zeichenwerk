@@ -701,9 +701,9 @@ func (ui *UI) Confirm(title, message string, onConfirm, onCancel func()) {
 	dialog := b.
 		Dialog("confirm-dialog", title).
 		Class("dialog").
-		Flex("confirm-body", false, "stretch", 1).
+		Flex("confirm-body", "stretch", 1).Flag(FlagVertical).
 		Static("confirm-msg", message).
-		Flex("confirm-buttons", true, "end", 2).
+		Flex("confirm-buttons", "end", 2).
 		Button("confirm-ok", "OK").
 		Button("confirm-cancel", "Cancel").
 		End().
@@ -740,10 +740,10 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 	dialog := b.
 		Dialog("prompt-dialog", title).
 		Class("dialog").
-		Flex("prompt-body", false, "stretch", 1).
+		Flex("prompt-body", "stretch", 1).Flag(FlagVertical).
 		Static("prompt-msg", message).
 		Input("prompt-input").Hint(0, 1).
-		Flex("prompt-buttons", true, "end", 2).
+		Flex("prompt-buttons", "end", 2).
 		Button("prompt-ok", "OK").
 		Button("prompt-cancel", "Cancel").
 		End().
@@ -753,7 +753,7 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 
 	input := Find(dialog, "prompt-input").(*Input)
 	accept := func() {
-		text := input.Text()
+		text := input.Get()
 		ui.Close()
 		if onAccept != nil {
 			onAccept(text)

@@ -16,8 +16,8 @@ func TestTabs_Defaults(t *testing.T) {
 	if tabs.Count() != 0 {
 		t.Errorf("Count() = %d; want 0 for new tabs", tabs.Count())
 	}
-	if tabs.Selected() != -1 {
-		t.Errorf("Selected() = %d for empty tabs; want -1", tabs.Selected())
+	if tabs.Get() != -1 {
+		t.Errorf("Selected() = %d for empty tabs; want -1", tabs.Get())
 	}
 }
 
@@ -36,8 +36,8 @@ func TestTabs_Add_IncreasesCount(t *testing.T) {
 func TestTabs_Add_FirstTabSelected(t *testing.T) {
 	tabs := NewTabs("t", "")
 	tabs.Add("Home")
-	if tabs.Selected() != 0 {
-		t.Errorf("Selected() = %d after first Add; want 0", tabs.Selected())
+	if tabs.Get() != 0 {
+		t.Errorf("Selected() = %d after first Add; want 0", tabs.Get())
 	}
 }
 
@@ -48,19 +48,19 @@ func TestTabs_Select_InRange(t *testing.T) {
 	tabs.Add("A")
 	tabs.Add("B")
 	tabs.Add("C")
-	ok := tabs.Select(2)
+	ok := tabs.Set(2)
 	if !ok {
 		t.Fatal("Select(2) returned false; want true")
 	}
-	if tabs.Selected() != 2 {
-		t.Errorf("Selected() = %d; want 2", tabs.Selected())
+	if tabs.Get() != 2 {
+		t.Errorf("Selected() = %d; want 2", tabs.Get())
 	}
 }
 
 func TestTabs_Select_OutOfRange_ReturnsFalse(t *testing.T) {
 	tabs := NewTabs("t", "")
 	tabs.Add("A")
-	ok := tabs.Select(5)
+	ok := tabs.Set(5)
 	if ok {
 		t.Error("Select(5) should return false for out-of-range index")
 	}
@@ -69,7 +69,7 @@ func TestTabs_Select_OutOfRange_ReturnsFalse(t *testing.T) {
 func TestTabs_Select_NegativeIndex_ReturnsFalse(t *testing.T) {
 	tabs := NewTabs("t", "")
 	tabs.Add("A")
-	ok := tabs.Select(-1)
+	ok := tabs.Set(-1)
 	if ok {
 		t.Error("Select(-1) should return false")
 	}
@@ -84,7 +84,7 @@ func TestTabs_Select_DispatchesEvtActivate(t *testing.T) {
 		firedIdx = data[0].(int)
 		return true
 	})
-	tabs.Select(1)
+	tabs.Set(1)
 	if firedIdx != 1 {
 		t.Errorf("EvtActivate data = %d; want 1", firedIdx)
 	}
@@ -99,7 +99,7 @@ func TestTabs_Select_DispatchesEvtChange(t *testing.T) {
 		firedIdx = data[0].(int)
 		return true
 	})
-	tabs.Select(1)
+	tabs.Set(1)
 	if firedIdx != 1 {
 		t.Errorf("EvtChange data = %d; want 1", firedIdx)
 	}
@@ -113,7 +113,7 @@ func TestTabs_Select_SameIndex_NoEvents(t *testing.T) {
 		fired = true
 		return true
 	})
-	tabs.Select(0) // same as current
+	tabs.Set(0) // same as current
 	if fired {
 		t.Error("EvtChange should not fire when selection does not change")
 	}
@@ -155,7 +155,7 @@ func TestTabs_Keyboard_Right_Advances(t *testing.T) {
 		fired = true
 		return true
 	})
-	tabs.Select(0)
+	tabs.Set(0)
 	tabs.handleKey(buildKey(tcell.KeyRight))
 	if fired {
 		// EvtChange fires when navigation index changes
@@ -167,7 +167,7 @@ func TestTabs_Keyboard_Right_Wraps(t *testing.T) {
 	tabs.Add("A")
 	tabs.Add("B")
 	tabs.Add("C")
-	tabs.Select(2) // index = 2 (last)
+	tabs.Set(2) // index = 2 (last)
 	firedIdx := -1
 	tabs.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		firedIdx = data[0].(int)
@@ -184,7 +184,7 @@ func TestTabs_Keyboard_Left_Wraps(t *testing.T) {
 	tabs.Add("A")
 	tabs.Add("B")
 	tabs.Add("C")
-	tabs.Select(0) // index = 0 (first)
+	tabs.Set(0) // index = 0 (first)
 	firedIdx := -1
 	tabs.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		firedIdx = data[0].(int)
@@ -201,7 +201,7 @@ func TestTabs_Keyboard_Home_GoesToFirst(t *testing.T) {
 	tabs.Add("A")
 	tabs.Add("B")
 	tabs.Add("C")
-	tabs.Select(2)
+	tabs.Set(2)
 	firedIdx := -1
 	tabs.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		firedIdx = data[0].(int)
@@ -218,7 +218,7 @@ func TestTabs_Keyboard_End_GoesToLast(t *testing.T) {
 	tabs.Add("A")
 	tabs.Add("B")
 	tabs.Add("C")
-	tabs.Select(0)
+	tabs.Set(0)
 	firedIdx := -1
 	tabs.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		firedIdx = data[0].(int)
@@ -234,7 +234,7 @@ func TestTabs_Keyboard_Enter_ActivatesCurrentTab(t *testing.T) {
 	tabs := NewTabs("t", "")
 	tabs.Add("A")
 	tabs.Add("B")
-	tabs.Select(1)
+	tabs.Set(1)
 	firedIdx := -1
 	tabs.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
 		firedIdx = data[0].(int)

@@ -79,7 +79,7 @@ func (t *Typeahead) Render(r *Renderer) {
 		return
 	}
 
-	text := t.Text()
+	text := t.Get()
 	if len([]rune(t.suggestion)) <= len([]rune(text)) {
 		return
 	}
@@ -132,7 +132,7 @@ func (t *Typeahead) handleKey(evt *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyRight:
-		text := t.Text()
+		text := t.Get()
 		if t.suggestion != "" && t.pos == len([]rune(text)) {
 			t.accept()
 			return true

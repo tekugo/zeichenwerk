@@ -101,20 +101,12 @@ func (i *Input) Refresh() {
 
 // ---- Input Methods --------------------------------------------------------
 
-// SetMasked configures password masking for the input widget.
-// When masking is enabled, all characters in the input are displayed
-// as the specified mask character instead of their actual values.
-// This is commonly used for password fields and other sensitive inputs.
-// If the mask is the empty string, masking is disabled.
-//
-// Parameters:
-//   - mask: The character to display instead of actual text (e.g., "*", "•")
-func (i *Input) SetMask(mask string) {
-	i.SetFlag(FlagMasked, mask != "")
-	i.mask = mask
+// Get returns the current text content.
+func (i *Input) Get() string {
+	return i.buf.String()
 }
 
-// SetText sets the text content of the input widget and adjusts cursor and
+// Set sets the text content of the input widget and adjusts cursor and
 // scroll positions. This method provides a safe way to programmatically set
 // the input's text content while maintaining proper cursor positioning and
 // scroll state.
@@ -144,9 +136,17 @@ func (i *Input) Set(text string) {
 	i.Refresh()
 }
 
-// Text returns the current text content.
-func (i *Input) Text() string {
-	return i.buf.String()
+// SetMasked configures password masking for the input widget.
+// When masking is enabled, all characters in the input are displayed
+// as the specified mask character instead of their actual values.
+// This is commonly used for password fields and other sensitive inputs.
+// If the mask is the empty string, masking is disabled.
+//
+// Parameters:
+//   - mask: The character to display instead of actual text (e.g., "*", "•")
+func (i *Input) SetMask(mask string) {
+	i.SetFlag(FlagMasked, mask != "")
+	i.mask = mask
 }
 
 // Summary returns the current value or placeholder for Dump output.

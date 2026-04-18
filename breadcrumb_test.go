@@ -43,7 +43,7 @@ func TestBreadcrumb_Hint_Empty(t *testing.T) {
 func TestBreadcrumb_Hint_Natural(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.separator = " > " // 3 chars
-	bc.SetSegments([]string{"Home", "Projects", "zeichenwerk"})
+	bc.Set([]string{"Home", "Projects", "zeichenwerk"})
 	// "Home" (4) + " > " (3) + "Projects" (8) + " > " (3) + "zeichenwerk" (11) = 29
 	w, _ := bc.Hint()
 	if w != 29 {
@@ -54,7 +54,7 @@ func TestBreadcrumb_Hint_Natural(t *testing.T) {
 func TestBreadcrumb_Hint_SingleSegment(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.separator = " / "
-	bc.SetSegments([]string{"Home"})
+	bc.Set([]string{"Home"})
 	w, _ := bc.Hint()
 	if w != 4 {
 		t.Errorf("Hint() width = %d; want 4", w)
@@ -65,9 +65,9 @@ func TestBreadcrumb_Hint_SingleSegment(t *testing.T) {
 
 func TestBreadcrumb_SetSegments_ClampsSelected(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	bc.selected = 2
-	bc.SetSegments([]string{"x"})
+	bc.Set([]string{"x"})
 	if bc.selected != 0 {
 		t.Errorf("selected = %d after shrink; want 0", bc.selected)
 	}
@@ -79,7 +79,7 @@ func TestBreadcrumb_SetSegments_ClampsSelected(t *testing.T) {
 func TestBreadcrumb_SetSegments_ResetsFirst(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.first = 3
-	bc.SetSegments([]string{"a", "b"})
+	bc.Set([]string{"a", "b"})
 	if bc.first != 0 {
 		t.Errorf("first = %d after SetSegments; want 0", bc.first)
 	}
@@ -99,7 +99,7 @@ func TestBreadcrumb_Push(t *testing.T) {
 
 func TestBreadcrumb_Pop_ReturnsLast(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	seg := bc.Pop()
 	if seg != "c" {
 		t.Errorf("Pop() = %q; want %q", seg, "c")
@@ -111,7 +111,7 @@ func TestBreadcrumb_Pop_ReturnsLast(t *testing.T) {
 
 func TestBreadcrumb_Pop_ClampsSelected(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	bc.selected = 2
 	bc.Pop()
 	if bc.selected != 1 {
@@ -129,7 +129,7 @@ func TestBreadcrumb_Pop_Empty(t *testing.T) {
 
 func TestBreadcrumb_Truncate(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c", "d"})
+	bc.Set([]string{"a", "b", "c", "d"})
 	bc.Truncate(1)
 	if len(bc.segments) != 2 {
 		t.Errorf("len(segments) = %d after Truncate(1); want 2", len(bc.segments))
@@ -141,7 +141,7 @@ func TestBreadcrumb_Truncate(t *testing.T) {
 
 func TestBreadcrumb_Truncate_ClampsSelected(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c", "d"})
+	bc.Set([]string{"a", "b", "c", "d"})
 	bc.selected = 3
 	bc.Truncate(1)
 	if bc.selected != 1 {
@@ -153,7 +153,7 @@ func TestBreadcrumb_Truncate_ClampsSelected(t *testing.T) {
 
 func TestBreadcrumb_Select_Clamps(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	bc.Select(10)
 	if bc.selected != 2 {
 		t.Errorf("selected = %d after Select(10); want 2", bc.selected)
@@ -166,7 +166,7 @@ func TestBreadcrumb_Select_Clamps(t *testing.T) {
 
 func TestBreadcrumb_Select_DecreasesFirst(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c", "d"})
+	bc.Set([]string{"a", "b", "c", "d"})
 	bc.first = 2
 	bc.selected = 2
 	bc.Select(0)
@@ -177,7 +177,7 @@ func TestBreadcrumb_Select_DecreasesFirst(t *testing.T) {
 
 func TestBreadcrumb_Select_DoesNotIncreaseFirst(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c", "d"})
+	bc.Set([]string{"a", "b", "c", "d"})
 	bc.first = 1
 	bc.selected = 1
 	bc.Select(3)
@@ -196,7 +196,7 @@ func TestBreadcrumb_Select_EmptySegments(t *testing.T) {
 
 func TestBreadcrumb_Select_DispatchesEvtSelect(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	fired := -1
 	bc.On(EvtSelect, func(_ Widget, _ Event, data ...any) bool {
 		fired = data[0].(int)
@@ -214,7 +214,7 @@ func TestBreadcrumb_ComputeFirstVis_AllFit(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.separator = " / " // 3 chars
 	bc.overflow = "…"    // 1 char
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	// "a / b / c" = 1+3+1+3+1 = 9
 	start := bc.computeFirst(20)
 	if start != 0 {
@@ -226,7 +226,7 @@ func TestBreadcrumb_ComputeFirstVis_Collapses(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.separator = " / " // 3 chars
 	bc.overflow = "…"    // 1 char
-	bc.SetSegments([]string{"Home", "Projects", "zeichenwerk", "spec"})
+	bc.Set([]string{"Home", "Projects", "zeichenwerk", "spec"})
 	// Test with width just enough for last 2: "… / zeichenwerk / spec" = 1+3+11+3+4 = 22
 	start := bc.computeFirst(22)
 	if start != 2 {
@@ -238,7 +238,7 @@ func TestBreadcrumb_ComputeFirstVis_AtLeastOne(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.separator = " / "
 	bc.overflow = "…"
-	bc.SetSegments([]string{"very-long-segment-one", "very-long-segment-two", "very-long-segment-three"})
+	bc.Set([]string{"very-long-segment-one", "very-long-segment-two", "very-long-segment-three"})
 	// Width too narrow to fit anything properly — should still show the last segment.
 	start := bc.computeFirst(3)
 	if start != len(bc.segments)-1 {
@@ -250,7 +250,7 @@ func TestBreadcrumb_ComputeFirstVis_AtLeastOne(t *testing.T) {
 
 func TestBreadcrumb_Enter_DispatchesActivate(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	bc.selected = 1
 	fired := -1
 	bc.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
@@ -267,7 +267,7 @@ func TestBreadcrumb_Enter_DispatchesActivate(t *testing.T) {
 
 func TestBreadcrumb_Focus_AutoSelectsLast(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	// selected starts at -1 after SetSegments (no prior selection)
 	bc.selected = -1
 	bc.Dispatch(bc, EvtFocus)
@@ -278,7 +278,7 @@ func TestBreadcrumb_Focus_AutoSelectsLast(t *testing.T) {
 
 func TestBreadcrumb_Focus_NoAutoSelectWhenAlreadySelected(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
-	bc.SetSegments([]string{"a", "b", "c"})
+	bc.Set([]string{"a", "b", "c"})
 	bc.selected = 1
 	bc.Dispatch(bc, EvtFocus)
 	if bc.selected != 1 {
@@ -304,7 +304,7 @@ func TestBreadcrumb_Render_SegmentsPresent(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.separator = " / "
 	bc.overflow = "..."
-	bc.SetSegments([]string{"Home", "spec"})
+	bc.Set([]string{"Home", "spec"})
 	cs := renderBreadcrumb(bc, 40, 1)
 	// Expect "Home" to appear at x=0
 	got := ""
@@ -325,7 +325,7 @@ func TestBreadcrumb_Render_OverflowPrefix(t *testing.T) {
 	bc.separator = "/"
 	bc.overflow = "…"
 	bc.first = 1
-	bc.SetSegments([]string{"very-long", "spec"})
+	bc.Set([]string{"very-long", "spec"})
 	// Width 6: "…/spec" = 1+1+4 = 6
 	cs := renderBreadcrumb(bc, 6, 1)
 	if cs.Get(0, 0) != "…" {
@@ -342,7 +342,7 @@ func TestBreadcrumb_Render_SeparatorStyle(t *testing.T) {
 	bc := NewBreadcrumb("bc", "")
 	bc.Apply(theme)
 	bc.separator = "/"
-	bc.SetSegments([]string{"a", "b"})
+	bc.Set([]string{"a", "b"})
 
 	cs, r := newBreadcrumbRenderer()
 	bc.SetBounds(0, 0, 10, 1)

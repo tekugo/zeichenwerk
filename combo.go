@@ -85,9 +85,16 @@ func (c *Combo) SetItems(items []string) {
 	c.items = items
 }
 
-// Value returns the last confirmed value.
-func (c *Combo) Value() string {
+// ---- Getter and Setter ----------------------------------------------------
+
+// Get returns the last confirmed value.
+func (c *Combo) Get() string {
 	return c.value
+}
+
+// Set sets the combo box value.
+func (c *Combo) Set(value string) {
+	c.value = value
 }
 
 // ---- Internal Methods -----------------------------------------------------
@@ -111,7 +118,7 @@ func (c *Combo) popup() {
 	b := ui.NewBuilder().Class("popup")
 	popupContainer := b.
 		Box("combo-popup", "").
-		Flex("combo-popup-body", false, "stretch", 0).
+		Flex("combo-popup-body", "stretch", 0).Flag(FlagVertical).
 		Typeahead("combo-popup-input", c.value).Hint(0, 1).
 		List("combo-popup-list", c.items...).Hint(0, -1).
 		End().
@@ -152,7 +159,7 @@ func (c *Combo) popup() {
 			comboPopupCopy(input, list)
 			return true
 		case tcell.KeyEnter:
-			c.value = input.Text()
+			c.value = input.Get()
 			c.Dispatch(c, EvtActivate, c.value)
 			ui.Close()
 			return true

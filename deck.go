@@ -8,12 +8,6 @@ import (
 
 // ==== AI ===================================================================
 
-// ItemRender is the render function type for Deck slots. It is called once per
-// visible slot with the renderer, slot bounds, item index, the data item,
-// whether the slot is the currently highlighted item, and whether the Deck
-// widget itself currently holds keyboard focus.
-type ItemRender func(r *Renderer, x, y, w, h, index int, data any, selected, focused bool)
-
 // Deck is a scrollable list widget where every item occupies a fixed number of
 // rows. Rendering is delegated to a caller-supplied ItemRender function so
 // each slot can display rich, multi-line content without per-item widget
@@ -75,9 +69,14 @@ func (d *Deck) Hint() (int, int) {
 
 // ---- Data -----------------------------------------------------------------
 
-// SetItems replaces all items, resets index to 0 (or -1 if empty) and offset
+// Get returns the current items slice.
+func (d *Deck) Get() []any {
+	return d.items
+}
+
+// Set replaces all items, resets index to 0 (or -1 if empty) and offset
 // to 0, then redraws.
-func (d *Deck) SetItems(items []any) {
+func (d *Deck) Set(items []any) {
 	d.items = items
 	if len(items) == 0 {
 		d.index = -1
@@ -89,22 +88,12 @@ func (d *Deck) SetItems(items []any) {
 	Redraw(d)
 }
 
-// Items returns the current items slice.
-func (d *Deck) Items() []any {
-	return d.items
-}
-
 // SetDisabled replaces the list of non-selectable item indices.
 func (d *Deck) SetDisabled(indices []int) {
 	d.disabled = indices
 }
 
 // ---- Selection ------------------------------------------------------------
-
-// Selected returns the currently highlighted item index (-1 if none).
-func (d *Deck) Selected() int {
-	return d.index
-}
 
 // Select highlights the item at index, adjusts the scroll offset, and
 // dispatches EvtSelect.
@@ -116,6 +105,11 @@ func (d *Deck) Select(index int) {
 	d.adjust()
 	d.Dispatch(d, EvtSelect, d.index)
 	Redraw(d)
+}
+
+// Selected returns the currently highlighted item index (-1 if none).
+func (d *Deck) Selected() int {
+	return d.index
 }
 
 // ---- Navigation -----------------------------------------------------------

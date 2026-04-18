@@ -5,6 +5,7 @@ package zeichenwerk
 // parameters self-documenting at call sites.
 type Flag string
 
+// keep flag constants in alphabetical order
 const (
 	// FlagChecked marks a widget (e.g. Checkbox) as checked.
 	FlagChecked Flag = "checked"
@@ -16,8 +17,13 @@ const (
 	FlagFocusable Flag = "focusable"
 	// FlagFocused indicates that the widget currently holds keyboard focus.
 	FlagFocused Flag = "focused"
+	// FlagGrid is used by Table to signal that the inner grid should be rendered.
+	FlagGrid Flag = "grid"
 	// FlagHidden makes a widget invisible and excluded from layout.
 	FlagHidden Flag = "hidden"
+	// FlagHorizontal restricts a Viewport to horizontal scrolling only. The
+	// child fills the viewport height; no vertical scrollbar is shown.
+	FlagHorizontal Flag = "horizontal"
 	// FlagHovered indicates that the mouse cursor is over the widget.
 	FlagHovered Flag = "hovered"
 	// FlagMasked causes input text to be hidden (e.g. password fields).
@@ -27,17 +33,12 @@ const (
 	FlagPressed Flag = "pressed"
 	// FlagReadonly prevents the widget's value from being modified by the user.
 	FlagReadonly Flag = "readonly"
+	// FlagRight right-aligns content within a widget's content area.
+	// Supported by [Digits].
+	FlagRight Flag = "right"
 	// FlagSkip excludes the widget from Tab/Shift-Tab focus traversal even when
-	// FlagFocusable is set. Useful for read-only or decorative interactive widgets
-	// that should not participate in keyboard navigation.
 	FlagSkip Flag = "skip"
 	// FlagVertical restricts a Viewport to vertical scrolling only. The child
 	// fills the viewport width; no horizontal scrollbar is shown.
 	FlagVertical Flag = "vertical"
-	// FlagHorizontal restricts a Viewport to horizontal scrolling only. The
-	// child fills the viewport height; no vertical scrollbar is shown.
-	FlagHorizontal Flag = "horizontal"
-	// FlagRight right-aligns content within a widget's content area.
-	// Supported by [Digits].
-	FlagRight Flag = "right"
 )

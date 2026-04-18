@@ -207,7 +207,7 @@ func updatePreview(ui *UI) {
 		return
 	}
 
-	inputText := input.Text()
+	inputText := input.Get()
 	if inputText == "" {
 		inputText = "Hello World"
 	}

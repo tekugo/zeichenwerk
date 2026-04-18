@@ -112,68 +112,68 @@ func createUI(theme *z.Theme) *z.UI {
 
 	ui := UI(theme,
 		CRT("crt", "",
-		Flex("root", "", false, "stretch", 0,
-			// ── Header ──────────────────────────────────────────────────────────
-			Flex("header", "", true, "center", 0,
-				Bg("$bg1"), Padding(0, 1),
-				Static("app-icon", "", "◈", Font("bold"), Fg("$cyan"), Padding(0, 1, 0, 0)),
-				Static("app-name", "", "TUI Showcase", Font("bold"), Fg("$fg0")),
-				Spacer("", Hint(2, 0)),
-				VRule("", "thin"),
-				Spacer("", Hint(2, 0)),
-				Static("app-tagline", "", "Real-world terminal UI use cases", Fg("$gray")),
-				Spacer("", Hint(-1, 0)),
-				Static("live-indicator", "", "● LIVE", Fg("$green"), Font("bold"), Padding(0, 2, 0, 0)),
-				Static("header-sep", "", " | ", Fg("$gray")),
-				Static("header-theme-lbl", "", "Theme ", Fg("$gray")),
-				Select("theme-select", "", []string{
-					"neon", "Midnight Neon",
-					"tokyo", "Tokyo Night",
-					"gruvbox-dark", "Gruvbox Dark",
-					"nrrd", "Nord",
-				}, Padding(0, 1, 0, 0)),
-			),
-			// ── Body ────────────────────────────────────────────────────────────
-			Grid("body", "", []int{-1}, []int{26, -1}, false,
-				Hint(0, -1),
-				Cell(0, 0, 1, 1,
-					Flex("sidebar", "", false, "stretch", 0,
-						Bg("$bg1"),
-						Static("sidebar-brand", "", " ◈ SHOWCASE", Font("bold"), Fg("$magenta"), Padding(1, 0)),
-						HRule("", "thin"),
-						Deck("nav", "", renderNav, 3, Hint(0, -1)),
-						HRule("", "thin"),
-						Static("sidebar-key1", "", "  ↑↓  Navigate", Fg("$gray"), Padding(0, 0, 0, 0)),
-						Static("sidebar-key2", "", "  ↵   Select", Fg("$gray")),
-						Static("sidebar-key3", "", "  Tab Focus", Fg("$gray"), Padding(0, 0, 1, 0)),
+			Flex("root", "", false, "stretch", 0,
+				// ── Header ──────────────────────────────────────────────────────────
+				Flex("header", "", true, "center", 0,
+					Bg("$bg1"), Padding(0, 1),
+					Static("app-icon", "", "◈", Font("bold"), Fg("$cyan"), Padding(0, 1, 0, 0)),
+					Static("app-name", "", "TUI Showcase", Font("bold"), Fg("$fg0")),
+					Spacer("", Hint(2, 0)),
+					VRule("", "thin"),
+					Spacer("", Hint(2, 0)),
+					Static("app-tagline", "", "Real-world terminal UI use cases", Fg("$gray")),
+					Spacer("", Hint(-1, 0)),
+					Static("live-indicator", "", "● LIVE", Fg("$green"), Font("bold"), Padding(0, 2, 0, 0)),
+					Static("header-sep", "", " | ", Fg("$gray")),
+					Static("header-theme-lbl", "", "Theme ", Fg("$gray")),
+					Select("theme-select", "", []string{
+						"neon", "Midnight Neon",
+						"tokyo", "Tokyo Night",
+						"gruvbox-dark", "Gruvbox Dark",
+						"nrrd", "Nord",
+					}, Padding(0, 1, 0, 0)),
+				),
+				// ── Body ────────────────────────────────────────────────────────────
+				Grid("body", "", []int{-1}, []int{26, -1}, false,
+					Hint(0, -1),
+					Cell(0, 0, 1, 1,
+						Flex("sidebar", "", false, "stretch", 0,
+							Bg("$bg1"),
+							Static("sidebar-brand", "", " ◈ SHOWCASE", Font("bold"), Fg("$magenta"), Padding(1, 0)),
+							HRule("", "thin"),
+							Deck("nav", "", renderNav, 3, Hint(0, -1)),
+							HRule("", "thin"),
+							Static("sidebar-key1", "", "  ↑↓  Navigate", Fg("$gray"), Padding(0, 0, 0, 0)),
+							Static("sidebar-key2", "", "  ↵   Select", Fg("$gray")),
+							Static("sidebar-key3", "", "  Tab Focus", Fg("$gray"), Padding(0, 0, 1, 0)),
+						),
+					),
+					Cell(1, 0, 1, 1,
+						Switcher("content", "",
+							Include(dashboardScreen),
+							Include(userAdminScreen),
+							Include(logMonitorScreen),
+							Include(processScreen),
+							Include(dataEntryScreen),
+							Include(codeEditorScreen),
+						),
 					),
 				),
-				Cell(1, 0, 1, 1,
-					Switcher("content", "",
-						Include(dashboardScreen),
-						Include(userAdminScreen),
-						Include(logMonitorScreen),
-						Include(processScreen),
-						Include(dataEntryScreen),
-						Include(codeEditorScreen),
-					),
+				// ── Footer ──────────────────────────────────────────────────────────
+				Flex("footer", "", true, "center", 0,
+					Bg("$bg1"), Padding(0, 1),
+					Static("footer-keys", "", " ↑↓ Navigate   Tab/Shift+Tab Focus   Enter/Space Activate   Esc Cancel", Fg("$gray")),
+					Spacer("", Hint(-1, 0)),
+					Static("footer-brand", "", "Zeichenwerk v2.0 ◈", Fg("$gray")),
 				),
 			),
-			// ── Footer ──────────────────────────────────────────────────────────
-			Flex("footer", "", true, "center", 0,
-				Bg("$bg1"), Padding(0, 1),
-				Static("footer-keys", "", " ↑↓ Navigate   Tab/Shift+Tab Focus   Enter/Space Activate   Esc Cancel", Fg("$gray")),
-				Spacer("", Hint(-1, 0)),
-				Static("footer-brand", "", "Zeichenwerk v2.0 ◈", Fg("$gray")),
-			),
-		),
 		),
 	)
 
 	// Wire navigation
 	switcher := z.Find(ui, "content").(*z.Switcher)
 	nav := z.Find(ui, "nav").(*z.Deck)
-	nav.SetItems(navItems)
+	nav.Set(navItems)
 	navSwitch := func(_ z.Widget, _ z.Event, data ...any) bool {
 		if len(data) == 1 {
 			if sel, ok := data[0].(int); ok {
@@ -1022,7 +1022,7 @@ func codeEditorScreen(theme *z.Theme) z.Widget {
 	tree.On(z.EvtSelect, func(_ z.Widget, _ z.Event, _ ...any) bool {
 		if node := tree.Selected(); node != nil {
 			if idx, ok := node.Data().(int); ok {
-				tabs.Select(idx)
+				tabs.Set(idx)
 				switcher.Select(idx)
 			}
 		}

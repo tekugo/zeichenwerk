@@ -212,8 +212,8 @@ func TestFilter_TabAcceptsGhostText(t *testing.T) {
 	if accepted == "" {
 		t.Fatal("Tab should dispatch EvtAccept with the accepted suggestion")
 	}
-	if f.Text() != accepted {
-		t.Errorf("input text %q should match accepted suggestion %q", f.Text(), accepted)
+	if f.Get() != accepted {
+		t.Errorf("input text %q should match accepted suggestion %q", f.Get(), accepted)
 	}
 }
 

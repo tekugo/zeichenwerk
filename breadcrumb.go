@@ -27,121 +27,128 @@ type Breadcrumb struct {
 // NewBreadcrumb creates a new Breadcrumb with sensible defaults: no segments,
 // selected = -1, first = 0, separator = " › ", overflow = "…".
 func NewBreadcrumb(id, class string) *Breadcrumb {
-	c := &Breadcrumb{
+	bc := &Breadcrumb{
 		Component: Component{id: id, class: class},
 		selected:  -1,
 		first:     0,
 		separator: " › ",
 		overflow:  "…",
 	}
-	c.SetFlag(FlagFocusable, true)
-	c.On(EvtFocus, func(_ Widget, _ Event, _ ...any) bool {
-		if c.selected == -1 && len(c.segments) > 0 {
-			c.Select(len(c.segments) - 1)
+	bc.SetFlag(FlagFocusable, true)
+	bc.On(EvtFocus, func(_ Widget, _ Event, _ ...any) bool {
+		if bc.selected == -1 && len(bc.segments) > 0 {
+			bc.Select(len(bc.segments) - 1)
 		}
 		return false
 	})
-	OnKey(c, c.handleKey)
-	OnMouse(c, c.handleMouse)
-	return c
+	OnKey(bc, bc.handleKey)
+	OnMouse(bc, bc.handleMouse)
+	return bc
 }
 
 // ---- Widget Methods -------------------------------------------------------
 
 // Apply registers all breadcrumb style selectors and reads theme strings.
-func (c *Breadcrumb) Apply(theme *Theme) {
-	theme.Apply(c, c.Selector("breadcrumb"), "focused", "hovered", "disabled")
-	theme.Apply(c, c.Selector("breadcrumb/segment"), "focused")
-	theme.Apply(c, c.Selector("breadcrumb/separator"))
+func (bc *Breadcrumb) Apply(theme *Theme) {
+	theme.Apply(bc, bc.Selector("breadcrumb"), "focused", "hovered", "disabled")
+	theme.Apply(bc, bc.Selector("breadcrumb/segment"), "focused")
+	theme.Apply(bc, bc.Selector("breadcrumb/separator"))
 	str := func(key, def string) string {
 		if s := theme.String(key); s != "" {
 			return s
 		}
 		return def
 	}
-	c.separator = str("breadcrumb.separator", " › ")
-	c.overflow = str("breadcrumb.overflow", "…")
+	bc.separator = str("breadcrumb.separator", " › ")
+	bc.overflow = str("breadcrumb.overflow", "…")
 }
 
 // Hint returns the natural width of all segments joined by the separator, plus
 // style overhead. Returns 0 (fill parent) width when no segments are set.
 // Height is always 1 plus style vertical overhead.
-func (c *Breadcrumb) Hint() (int, int) {
-	if c.hwidth != 0 || c.hheight != 0 {
-		return c.hwidth, c.hheight
+func (bc *Breadcrumb) Hint() (int, int) {
+	if bc.hwidth != 0 || bc.hheight != 0 {
+		return bc.hwidth, bc.hheight
 	}
-	n := len(c.segments)
+	n := len(bc.segments)
 	if n == 0 {
-		return 0, 1 + c.Style().Vertical()
+		return 0, 1 + bc.Style().Vertical()
 	}
 	w := 0
-	sepW := utf8.RuneCountInString(c.separator)
-	for _, seg := range c.segments {
+	sepW := utf8.RuneCountInString(bc.separator)
+	for _, seg := range bc.segments {
 		w += utf8.RuneCountInString(seg)
 	}
 	w += sepW * (n - 1)
-	w += c.Style().Horizontal()
-	return w, 1 + c.Style().Vertical()
+	w += bc.Style().Horizontal()
+	return w, 1 + bc.Style().Vertical()
+}
+
+// ---- Getter and Setter ----------------------------------------------------
+
+// Get returns the current segments.
+func (bc *Breadcrumb) Get() []string {
+	return bc.segments
+}
+
+// Sets replaces all segments, resets first to 0, clamps selected, and redraws.
+func (bc *Breadcrumb) Set(segs []string) {
+	bc.segments = segs
+	bc.first = 0
+	if bc.selected >= len(segs) {
+		bc.selected = len(segs) - 1
+	}
+	bc.Refresh()
 }
 
 // ---- Breadcrumb Methods ---------------------------------------------------
 
 // Pop removes and returns the last segment, clamps selected, and redraws.
-func (c *Breadcrumb) Pop() string {
-	n := len(c.segments)
+func (bc *Breadcrumb) Pop() string {
+	n := len(bc.segments)
 	if n == 0 {
 		return ""
 	}
-	seg := c.segments[n-1]
-	c.segments = c.segments[:n-1]
-	if c.selected >= len(c.segments) {
-		c.selected = len(c.segments) - 1
+	seg := bc.segments[n-1]
+	bc.segments = bc.segments[:n-1]
+	if bc.selected >= len(bc.segments) {
+		bc.selected = len(bc.segments) - 1
 	}
-	c.Refresh()
+	bc.Refresh()
 	return seg
 }
 
 // Push appends one segment and redraws.
-func (c *Breadcrumb) Push(seg string) {
-	c.segments = append(c.segments, seg)
-	c.Refresh()
-}
-
-// SetSegments replaces all segments, resets first to 0, clamps selected, and redraws.
-func (c *Breadcrumb) SetSegments(segs []string) {
-	c.segments = segs
-	c.first = 0
-	if c.selected >= len(segs) {
-		c.selected = len(segs) - 1
-	}
-	c.Refresh()
+func (bc *Breadcrumb) Push(seg string) {
+	bc.segments = append(bc.segments, seg)
+	bc.Refresh()
 }
 
 // Truncate removes all segments after index (keeps segments[0..index] inclusive).
-func (c *Breadcrumb) Truncate(index int) {
+func (bc *Breadcrumb) Truncate(index int) {
 	if index < 0 {
 		index = 0
 	}
-	if index+1 < len(c.segments) {
-		c.segments = c.segments[:index+1]
+	if index+1 < len(bc.segments) {
+		bc.segments = bc.segments[:index+1]
 	}
-	if c.selected >= len(c.segments) {
-		c.selected = len(c.segments) - 1
+	if bc.selected >= len(bc.segments) {
+		bc.selected = len(bc.segments) - 1
 	}
-	c.Refresh()
+	bc.Refresh()
 }
 
 // Segments returns the current segments slice.
-func (c *Breadcrumb) Segments() []string { return c.segments }
+func (bc *Breadcrumb) Segments() []string { return bc.segments }
 
 // ---- Navigation -----------------------------------------------------------
 
 // Select focuses the segment at index, clamps to valid range, ensures it is
 // visible, and dispatches EvtSelect. No-op when already selected.
-func (c *Breadcrumb) Select(index int) {
-	n := len(c.segments)
+func (bc *Breadcrumb) Select(index int) {
+	n := len(bc.segments)
 	if n == 0 {
-		c.selected = -1
+		bc.selected = -1
 		return
 	}
 	if index < 0 {
@@ -150,32 +157,32 @@ func (c *Breadcrumb) Select(index int) {
 	if index >= n {
 		index = n - 1
 	}
-	if index == c.selected {
+	if index == bc.selected {
 		return
 	}
-	c.selected = index
-	if index < c.first {
-		c.first = index
+	bc.selected = index
+	if index < bc.first {
+		bc.first = index
 	}
-	c.Dispatch(c, EvtSelect, index)
-	Redraw(c)
+	bc.Dispatch(bc, EvtSelect, index)
+	Redraw(bc)
 }
 
 // Selected returns the currently focused segment index, or -1 if none.
-func (c *Breadcrumb) Selected() int { return c.selected }
+func (bc *Breadcrumb) Selected() int { return bc.selected }
 
 // ---- Display Options ------------------------------------------------------
 
 // SetOverflow overrides the overflow marker and redraws.
-func (c *Breadcrumb) SetOverflow(marker string) {
-	c.overflow = marker
-	c.Refresh()
+func (bc *Breadcrumb) SetOverflow(marker string) {
+	bc.overflow = marker
+	bc.Refresh()
 }
 
 // SetSeparator overrides the separator string and redraws.
-func (c *Breadcrumb) SetSeparator(sep string) {
-	c.separator = sep
-	c.Refresh()
+func (bc *Breadcrumb) SetSeparator(sep string) {
+	bc.separator = sep
+	bc.Refresh()
 }
 
 // ---- Overflow Helpers -----------------------------------------------------
@@ -183,17 +190,17 @@ func (c *Breadcrumb) SetSeparator(sep string) {
 // computeFirst returns the smallest start index such that segments[start:]
 // (with overflow prefix if start > 0) fits within availW. At least one segment
 // is always shown.
-func (c *Breadcrumb) computeFirst(availW int) int {
-	start := c.first
+func (bc *Breadcrumb) computeFirst(availW int) int {
+	start := bc.first
 	if start < 0 {
 		start = 0
 	}
 	for {
-		if c.renderWidth(start) <= availW {
+		if bc.renderWidth(start) <= availW {
 			return start
 		}
 		start++
-		if start >= len(c.segments)-1 {
+		if start >= len(bc.segments)-1 {
 			return start
 		}
 	}
@@ -201,13 +208,13 @@ func (c *Breadcrumb) computeFirst(availW int) int {
 
 // renderWidth returns the display width of segments[start:] with an optional
 // overflow prefix when start > 0.
-func (c *Breadcrumb) renderWidth(start int) int {
-	sepW := utf8.RuneCountInString(c.separator)
+func (bc *Breadcrumb) renderWidth(start int) int {
+	sepW := utf8.RuneCountInString(bc.separator)
 	w := 0
 	if start > 0 {
-		w = utf8.RuneCountInString(c.overflow) + sepW
+		w = utf8.RuneCountInString(bc.overflow) + sepW
 	}
-	segs := c.segments[start:]
+	segs := bc.segments[start:]
 	for i, seg := range segs {
 		w += utf8.RuneCountInString(seg)
 		if i < len(segs)-1 {
@@ -220,53 +227,53 @@ func (c *Breadcrumb) renderWidth(start int) int {
 // ---- Rendering ------------------------------------------------------------
 
 // Render draws the breadcrumb.
-func (c *Breadcrumb) Render(r *Renderer) {
-	if c.Flag(FlagHidden) {
+func (bc *Breadcrumb) Render(r *Renderer) {
+	if bc.Flag(FlagHidden) {
 		return
 	}
-	c.Component.Render(r)
-	cx, cy, cw, _ := c.Content()
-	if cw < 1 || len(c.segments) == 0 {
+	bc.Component.Render(r)
+	cx, cy, cw, _ := bc.Content()
+	if cw < 1 || len(bc.segments) == 0 {
 		return
 	}
 
-	sepS := c.Style("separator")
-	segS := c.Style("segment")
-	segFocS := c.Style("segment:focused")
+	sepS := bc.Style("separator")
+	segS := bc.Style("segment")
+	segFocS := bc.Style("segment:focused")
 
-	sepW := utf8.RuneCountInString(c.separator)
-	start := c.computeFirst(cw)
+	sepW := utf8.RuneCountInString(bc.separator)
+	start := bc.computeFirst(cw)
 	x := cx
 
 	// Overflow prefix.
 	if start > 0 {
-		ovfW := utf8.RuneCountInString(c.overflow)
+		ovfW := utf8.RuneCountInString(bc.overflow)
 		r.Set(sepS.Foreground(), sepS.Background(), sepS.Font())
-		r.Text(x, cy, c.overflow, min(ovfW, cx+cw-x))
+		r.Text(x, cy, bc.overflow, min(ovfW, cx+cw-x))
 		x += ovfW
 		if x < cx+cw {
-			r.Text(x, cy, c.separator, min(sepW, cx+cw-x))
+			r.Text(x, cy, bc.separator, min(sepW, cx+cw-x))
 			x += sepW
 		}
 	}
 
-	for i := start; i < len(c.segments); i++ {
+	for i := start; i < len(bc.segments); i++ {
 		if x >= cx+cw {
 			break
 		}
-		seg := c.segments[i]
+		seg := bc.segments[i]
 		segW := utf8.RuneCountInString(seg)
 		remaining := cx + cw - x
-		if c.Flag(FlagFocused) && i == c.selected {
+		if bc.Flag(FlagFocused) && i == bc.selected {
 			r.Set(segFocS.Foreground(), segFocS.Background(), segFocS.Font())
 		} else {
 			r.Set(segS.Foreground(), segS.Background(), segS.Font())
 		}
 		r.Text(x, cy, seg, min(segW, remaining))
 		x += segW
-		if i < len(c.segments)-1 && x < cx+cw {
+		if i < len(bc.segments)-1 && x < cx+cw {
 			r.Set(sepS.Foreground(), sepS.Background(), sepS.Font())
-			r.Text(x, cy, c.separator, min(sepW, cx+cw-x))
+			r.Text(x, cy, bc.separator, min(sepW, cx+cw-x))
 			x += sepW
 		}
 	}
@@ -274,70 +281,70 @@ func (c *Breadcrumb) Render(r *Renderer) {
 
 // ---- Event Handling -------------------------------------------------------
 
-func (c *Breadcrumb) handleKey(evt *tcell.EventKey) bool {
-	n := len(c.segments)
+func (bc *Breadcrumb) handleKey(evt *tcell.EventKey) bool {
+	n := len(bc.segments)
 	if n == 0 {
 		return false
 	}
 	switch evt.Key() {
 	case tcell.KeyLeft:
-		if c.selected <= 0 {
-			c.Select(n - 1)
+		if bc.selected <= 0 {
+			bc.Select(n - 1)
 		} else {
-			c.Select(c.selected - 1)
+			bc.Select(bc.selected - 1)
 		}
 		return true
 	case tcell.KeyRight:
-		if c.selected >= n-1 {
-			c.Select(0)
+		if bc.selected >= n-1 {
+			bc.Select(0)
 		} else {
-			c.Select(c.selected + 1)
+			bc.Select(bc.selected + 1)
 		}
 		return true
 	case tcell.KeyHome:
-		c.Select(0)
+		bc.Select(0)
 		return true
 	case tcell.KeyEnd:
-		c.Select(n - 1)
+		bc.Select(n - 1)
 		return true
 	case tcell.KeyEnter:
-		if c.selected >= 0 {
-			c.Dispatch(c, EvtActivate, c.selected)
+		if bc.selected >= 0 {
+			bc.Dispatch(bc, EvtActivate, bc.selected)
 		}
 		return true
 	}
 	return false
 }
 
-func (c *Breadcrumb) handleMouse(evt *tcell.EventMouse) bool {
+func (bc *Breadcrumb) handleMouse(evt *tcell.EventMouse) bool {
 	if evt.Buttons() != tcell.Button1 {
 		return false
 	}
 	mx, my := evt.Position()
-	cx, cy, cw, _ := c.Content()
+	cx, cy, cw, _ := bc.Content()
 	if mx < cx || mx >= cx+cw || my != cy {
 		return false
 	}
 
-	start := c.computeFirst(cw)
+	start := bc.computeFirst(cw)
 	x := cx
 
 	// Overflow prefix is not clickable — skip past it.
 	if start > 0 {
-		x += utf8.RuneCountInString(c.overflow) + utf8.RuneCountInString(c.separator)
+		x += utf8.RuneCountInString(bc.overflow) + utf8.RuneCountInString(bc.separator)
 		if mx < x {
 			return false
 		}
 	}
 
-	sepW := utf8.RuneCountInString(c.separator)
-	for i := start; i < len(c.segments); i++ {
-		segW := utf8.RuneCountInString(c.segments[i])
+	sepW := utf8.RuneCountInString(bc.separator)
+	for i := start; i < len(bc.segments); i++ {
+		segW := utf8.RuneCountInString(bc.segments[i])
 		if mx >= x && mx < x+segW {
-			prev := c.selected
-			c.Select(i)
+			prev := bc.selected
+			bc.Select(i)
 			if i == prev {
-				c.Dispatch(c, EvtActivate, i)
+				bc.Dispatch(bc, EvtActivate, i)
 			}
 			return true
 		}

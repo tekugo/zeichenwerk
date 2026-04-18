@@ -1232,7 +1232,7 @@ func LineNumbers(show bool) Option {
 func Items(items []any) Option {
 	return func(_ *z.Theme, widget z.Widget) {
 		if w, ok := widget.(*z.Deck); ok {
-			w.SetItems(items)
+			w.Set(items)
 		}
 	}
 }

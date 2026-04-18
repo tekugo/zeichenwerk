@@ -226,7 +226,7 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 	z.Find(ui, "total-input-sparkline").(*z.Sparkline).SetProvider(store.Input)
 	z.Find(ui, "total-output-sparkline").(*z.Sparkline).SetProvider(store.Output)
 	z.Find(ui, "total-cost-sparkline").(*z.Sparkline).SetProvider(store.Cost)
-	deck.SetItems([]any{nil})
+	deck.Set([]any{nil})
 
 	showSession := func(session *Session) {
 		agg := session.Aggregate()
@@ -302,7 +302,7 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 		for i, s := range sessions {
 			items[i+1] = s
 		}
-		deck.SetItems(items)
+		deck.Set(items)
 		if len(sessions) > 0 && content.Selected() == 0 {
 			content.Select(1)
 		}

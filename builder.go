@@ -151,6 +151,15 @@ func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	return b
 }
 
+// Clock creates a new clock widget. interval is stored and used when Start is
+// called. params are optional positional strings: params[0] is the Go
+// time-layout (default "15:04"), params[1] is a prefix (default "").
+func (b *Builder) Clock(id string, interval time.Duration, params ...string) *Builder {
+	clock := NewClock(id, b.class, interval, params...)
+	b.Add(clock)
+	return b
+}
+
 // Collapsible creates a new collapsible container with a clickable header.
 // The container is pushed onto the builder's stack; call End() to close it.
 func (b *Builder) Collapsible(id, title string, expanded bool) *Builder {
@@ -207,14 +216,15 @@ func (b *Builder) Filter(id string) *Builder {
 }
 
 // Flex creates a new flex container widget for arranging child widgets.
+// The Flex orientation is by default horizontal, use Flag(FlagVertical)
+// for vertical orientation.
 //
 // Parameters:
 //   - id: unique identifier for the flex container
-//   - horizontal: whether the flex container is horizontal
 //   - alignment: how children are aligned ("start", "center", "end", "stretch")
 //   - spacing: cells between child widgets (columns or rows)
-func (b *Builder) Flex(id string, horizontal bool, alignment string, spacing int) *Builder {
-	flex := NewFlex(id, b.class, horizontal, alignment, spacing)
+func (b *Builder) Flex(id string, alignment string, spacing int) *Builder {
+	flex := NewFlex(id, b.class, alignment, spacing)
 	b.Add(flex)
 	return b
 }
@@ -272,6 +282,11 @@ func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
 	h := NewHeatmap(id, b.class, rows, cols)
 	b.Add(h)
 	return b
+}
+
+// HFlex is a shortcut for a stretching horizontal flex with given.spacing.
+func (b *Builder) HFlex(id string, spacing int) *Builder {
+	return b.Flex(id, "stretch", spacing)
 }
 
 // HRule creates a horizontal rule.
@@ -367,15 +382,6 @@ func (b *Builder) Spacer() *Builder {
 func (b *Builder) Sparkline(id string) *Builder {
 	s := NewSparkline(id, b.class)
 	b.Add(s)
-	return b
-}
-
-// Clock creates a new clock widget. interval is stored and used when Start is
-// called. params are optional positional strings: params[0] is the Go
-// time-layout (default "15:04"), params[1] is a prefix (default "").
-func (b *Builder) Clock(id string, interval time.Duration, params ...string) *Builder {
-	clock := NewClock(id, b.class, interval, params...)
-	b.Add(clock)
 	return b
 }
 
@@ -515,6 +521,11 @@ func (b *Builder) Viewport(id, title string) *Builder {
 	viewport := NewViewport(id, b.class, title)
 	b.Add(viewport)
 	return b
+}
+
+// VFlex returns a vertical flex with stretching and the given spacing.
+func (b *Builder) VFlex(id string, spacing int) *Builder {
+	return b.Flex(id, "stretch", spacing).Flag(FlagVertical)
 }
 
 // VRule adds a vertical rule.
@@ -754,8 +765,12 @@ func (b *Builder) Foreground(params ...string) *Builder {
 }
 
 // Flag sets the flag for the current widget.
-func (b *Builder) Flag(flag Flag, value bool) *Builder {
-	b.current.SetFlag(flag, value)
+func (b *Builder) Flag(flag Flag, params ...bool) *Builder {
+	if len(params) == 0 {
+		b.current.SetFlag(flag, true)
+	} else {
+		b.current.SetFlag(flag, params[0])
+	}
 	return b
 }
 

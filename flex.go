@@ -1,8 +1,8 @@
 package zeichenwerk
 
 // Flex is a container widget that arranges child widgets in a linear layout,
-// either horizontally or vertically. It provides flexible sizing and alignment
-// options for creating responsive and organized user interfaces.
+// either horizontally or vertically via flag. It provides flexible sizing
+// and alignment options for creating responsive and organized user interfaces.
 //
 // Layout behavior:
 //   - Fixed sizes: Positive width/height values are treated as absolute sizes
@@ -11,19 +11,17 @@ package zeichenwerk
 //   - Spacing: Applied between adjacent children (not at edges)
 type Flex struct {
 	Component
-	children   []Widget // Child widgets managed by this flex container
-	horizontal bool     // Whether the flex is horizontal or vertical
-	alignment  string   // Child alignment: "start", "center", "end", or "stretch"
-	spacing    int      // Pixels/characters of spacing between children
+	children  []Widget // Child widgets managed by this flex container
+	alignment string   // Child alignment: "start", "center", "end", or "stretch"
+	spacing   int      // Pixels/characters of spacing between children
 }
 
 // NewFlex creates a new flex container widget with the specified configuration.
-// The flex container will arrange its child widgets according to the provided
-// orientation, alignment, and spacing parameters.
+// The flex container will arrange its child widgets by default in a horizontal
+// orientation. For vertical, set flag `FlagVertical`
 //
 // Parameters:
 //   - id: Unique identifier for the flex container
-//   - horizontal: Whether the flex is horizontal or vertical
 //   - alignment: How children are aligned ("start", "center", "end", "stretch")
 //   - spacing: Number of pixels/characters between adjacent children
 //
@@ -37,12 +35,11 @@ type Flex struct {
 //
 //	// Create a vertical flex with stretch alignment
 //	vflex := NewFlex("sidebar", false, "stretch", 1)
-func NewFlex(id, class string, horizontal bool, alignment string, spacing int) *Flex {
+func NewFlex(id, class string, alignment string, spacing int) *Flex {
 	return &Flex{
-		Component:  Component{id: id, class: class},
-		horizontal: horizontal,
-		alignment:  alignment,
-		spacing:    spacing,
+		Component: Component{id: id, class: class},
+		alignment: alignment,
+		spacing:   spacing,
 	}
 }
 
@@ -93,9 +90,6 @@ func (f *Flex) Children() []Widget {
 
 // ---- Summarizer -----------------------------------------------------------
 
-// Horizontal returns the flex container's orientation.
-func (f *Flex) Horizontal() bool { return f.horizontal }
-
 // Alignment returns the child alignment setting.
 func (f *Flex) Alignment() string { return f.alignment }
 
@@ -104,9 +98,9 @@ func (f *Flex) Spacing() int { return f.spacing }
 
 // Summary returns direction and alignment for Dump output.
 func (f *Flex) Summary() string {
-	dir := "vertical"
-	if f.horizontal {
-		dir = "horizontal"
+	dir := "horizontal"
+	if f.Flag(FlagVertical) {
+		dir = "vertical"
 	}
 	return dir + " " + f.alignment
 }
@@ -134,7 +128,7 @@ func (f *Flex) Hint() (int, int) {
 	}
 
 	// otherwise calculate the preferred size
-	if f.horizontal {
+	if !f.Flag(FlagVertical) {
 		// Horizontal layout: sum widths, take max height
 		for i, child := range f.children {
 			cw, ch := child.Hint()
@@ -170,7 +164,7 @@ func (f *Flex) Hint() (int, int) {
 // Layout arranges all child widgets within the flex container according to
 // the specified orientation, alignment, and spacing configuration.
 func (f *Flex) Layout() error {
-	if f.horizontal {
+	if !f.Flag(FlagVertical) {
 		f.Log(f, Debug, "Flex horizontal layout", "id", f.id, "x", f.x, "y", f.y, "w", f.width, "h", f.height)
 		f.layoutHorizontal()
 	} else {

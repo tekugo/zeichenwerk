@@ -157,7 +157,7 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 		zw.OnKey(inp, func(e *tcell.EventKey) bool {
 			switch e.Key() {
 			case tcell.KeyEnter:
-				val := inp.Text()
+				val := inp.Get()
 				ui.Close()
 				tbl.SetCell(row, col, val)
 				tbl.RecalcWidths()

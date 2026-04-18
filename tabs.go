@@ -34,10 +34,7 @@ func NewTabs(id, class string) *Tabs {
 	return tabs
 }
 
-// Add appends a new tab with the specified title to the tabs widget.
-func (t *Tabs) Add(title string) {
-	t.tabs = append(t.tabs, title)
-}
+// ---- Widget Methods -------------------------------------------------------
 
 // Apply applies a theme's styles to the component.
 func (t *Tabs) Apply(theme *Theme) {
@@ -71,6 +68,117 @@ func (t *Tabs) Hint() (int, int) {
 	width += len(t.tabs)*2 + 2
 	return width, 2
 }
+
+// ---- Tabs Methods ---------------------------------------------------------
+
+// Add appends a new tab with the specified title to the tabs widget.
+func (t *Tabs) Add(title string) {
+	t.tabs = append(t.tabs, title)
+}
+
+// Count returns the total number of tabs in the widget.
+//
+// Returns:
+//   - int: The number of tabs
+func (t *Tabs) Count() int {
+	return len(t.tabs)
+}
+
+// Get returns the index of the currently selected tab.
+func (t *Tabs) Get() int {
+	if len(t.tabs) == 0 {
+		return -1
+	}
+	return t.selected
+}
+
+// Set sets the selected tab by index and updates the highlighted index to match.
+func (t *Tabs) Set(index int) bool {
+	if index < 0 || index >= len(t.tabs) {
+		return false
+	}
+
+	oldSelected := t.selected
+	oldIndex := t.index
+
+	t.selected = index
+	t.index = index
+
+	// Emit events if anything changed
+	if t.index != oldIndex {
+		t.Dispatch(t, EvtChange, t.index)
+	}
+	if t.selected != oldSelected {
+		t.Dispatch(t, EvtActivate, t.selected)
+	}
+
+	t.Refresh()
+	return true
+}
+
+// ---- Rendering ------------------------------------------------------------
+
+// Render draws the tabs widget.
+//
+// The tabs widget draws a horizontal row of tabs at the top of its content area.
+// The currently selected tab is highlighted with a different style.
+func (t *Tabs) Render(r *Renderer) {
+	// Determine which styles to use based on focus state
+	x, y, w, _ := t.Content()
+	var normal, highlight, line *Style
+
+	if t.Flag(FlagFocused) {
+		// Use focus-specific styles when tabs widget has focus
+		normal = t.Style("line:focused")
+		if normal == nil {
+			normal = t.Style()
+		}
+		highlight = t.Style("highlight:focused")
+		if highlight == nil {
+			highlight = t.Style("highlight")
+		}
+		line = t.Style("line-highlight:focused")
+		if line == nil {
+			line = t.Style("line-highlight")
+		}
+	} else {
+		// Use normal styles when tabs widget doesn't have focus
+		normal = t.Style()
+		highlight = t.Style("highlight")
+		line = t.Style("line-highlight")
+	}
+
+	cx := x
+	r.Set(normal.Foreground(), normal.Background(), normal.Font())
+
+	for i, tab := range t.tabs {
+		tl := len([]rune(tab))
+		if t.index == i {
+			r.Set(highlight.Foreground(), highlight.Background(), highlight.Font())
+			r.Text(cx+1, y, " "+tab+" ", 0)
+			r.Set(normal.Foreground(), normal.Background(), normal.Font())
+		} else {
+			r.Text(cx+1, y, " "+tab+" ", 0)
+		}
+		if t.selected == i {
+			r.Set(line.Foreground(), line.Background(), line.Font())
+			r.Repeat(cx, y+1, 1, 0, tl+4, "\u2501")
+			r.Set(normal.Foreground(), normal.Background(), normal.Font())
+		} else {
+			r.Repeat(cx, y+1, 1, 0, tl+4, "\u2501")
+		}
+		cx = cx + tl + 4
+		if cx > x+w {
+			break
+		}
+	}
+
+	if cx < x+w {
+		r.Repeat(cx, y+1, 1, 0, x+w-cx, "\u2501")
+	}
+}
+
+// ---- Internal Methods -----------------------------------------------------
 
 // handleKey processes keyboard input for tab navigation.
 // This method implements tab switching controls, allowing users to navigate
@@ -226,30 +334,6 @@ func (t *Tabs) handleLetterNavigation(letter string) bool {
 	return false
 }
 
-// Select sets the selected tab by index and updates the highlighted index to match.
-func (t *Tabs) Select(index int) bool {
-	if index < 0 || index >= len(t.tabs) {
-		return false
-	}
-
-	oldSelected := t.selected
-	oldIndex := t.index
-
-	t.selected = index
-	t.index = index
-
-	// Emit events if anything changed
-	if t.index != oldIndex {
-		t.Dispatch(t, EvtChange, t.index)
-	}
-	if t.selected != oldSelected {
-		t.Dispatch(t, EvtActivate, t.selected)
-	}
-
-	t.Refresh()
-	return true
-}
-
 // Summary returns tab names with the active tab marked for Dump output.
 func (t *Tabs) Summary() string {
 	parts := make([]string, len(t.tabs))
@@ -261,80 +345,4 @@ func (t *Tabs) Summary() string {
 		}
 	}
 	return strings.Join(parts, " | ")
-}
-
-// Selected returns the index of the currently selected tab.
-func (t *Tabs) Selected() int {
-	if len(t.tabs) == 0 {
-		return -1
-	}
-	return t.selected
-}
-
-// Count returns the total number of tabs in the widget.
-//
-// Returns:
-//   - int: The number of tabs
-func (t *Tabs) Count() int {
-	return len(t.tabs)
-}
-
-// Render draws the tabs widget.
-//
-// The tabs widget draws a horizontal row of tabs at the top of its content area.
-// The currently selected tab is highlighted with a different style.
-func (t *Tabs) Render(r *Renderer) {
-	// Determine which styles to use based on focus state
-	x, y, w, _ := t.Content()
-	var normal, highlight, line *Style
-
-	if t.Flag(FlagFocused) {
-		// Use focus-specific styles when tabs widget has focus
-		normal = t.Style("line:focused")
-		if normal == nil {
-			normal = t.Style()
-		}
-		highlight = t.Style("highlight:focused")
-		if highlight == nil {
-			highlight = t.Style("highlight")
-		}
-		line = t.Style("line-highlight:focused")
-		if line == nil {
-			line = t.Style("line-highlight")
-		}
-	} else {
-		// Use normal styles when tabs widget doesn't have focus
-		normal = t.Style()
-		highlight = t.Style("highlight")
-		line = t.Style("line-highlight")
-	}
-
-	cx := x
-	r.Set(normal.Foreground(), normal.Background(), normal.Font())
-
-	for i, tab := range t.tabs {
-		tl := len([]rune(tab))
-		if t.index == i {
-			r.Set(highlight.Foreground(), highlight.Background(), highlight.Font())
-			r.Text(cx+1, y, " "+tab+" ", 0)
-			r.Set(normal.Foreground(), normal.Background(), normal.Font())
-		} else {
-			r.Text(cx+1, y, " "+tab+" ", 0)
-		}
-		if t.selected == i {
-			r.Set(line.Foreground(), line.Background(), line.Font())
-			r.Repeat(cx, y+1, 1, 0, tl+4, "\u2501")
-			r.Set(normal.Foreground(), normal.Background(), normal.Font())
-		} else {
-			r.Repeat(cx, y+1, 1, 0, tl+4, "\u2501")
-		}
-		cx = cx + tl + 4
-		if cx > x+w {
-			break
-		}
-	}
-
-	if cx < x+w {
-		r.Repeat(cx, y+1, 1, 0, x+w-cx, "\u2501")
-	}
 }

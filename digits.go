@@ -222,7 +222,12 @@ func (d *Digits) Render(r *Renderer) {
 	}
 }
 
-// ---- Setter ---------------------------------------------------------------
+// ---- Getter and Setter ----------------------------------------------------
+
+// Get returns the current text.
+func (d *Digits) Get() string {
+	return d.Text
+}
 
 // Set updates the displayed text and triggers a refresh.
 func (d *Digits) Set(value string) {
