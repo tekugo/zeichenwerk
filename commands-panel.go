@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
+	. "github.com/tekugo/zeichenwerk/core"
 )
 
 // commandsPanel is an unexported widget that renders the scrollable command

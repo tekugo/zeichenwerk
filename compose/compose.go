@@ -25,6 +25,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	z "github.com/tekugo/zeichenwerk"
+	c "github.com/tekugo/zeichenwerk/core"
 )
 
 // ---- Composer State -------------------------------------------------------
@@ -36,7 +37,7 @@ import (
 //
 // The theme parameter carries the active theme down the tree. The widget
 // parameter is the parent widget that the Option should add its content to.
-type Option func(*z.Theme, z.Widget)
+type Option func(*c.Theme, c.Widget)
 
 // ---- Composer Functions ---------------------------------------------------
 
@@ -48,7 +49,7 @@ type Option func(*z.Theme, z.Widget)
 //	        Static("title", "", "Hello"),
 //	    ),
 //	).Run()
-func UI(theme *z.Theme, options ...Option) *z.UI {
+func UI(theme *c.Theme, options ...Option) *z.UI {
 	ui := z.NewUI(theme, nil)
 	for _, option := range options {
 		option(theme, ui)

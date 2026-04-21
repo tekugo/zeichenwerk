@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
+	. "github.com/tekugo/zeichenwerk/core"
 )
 
 // ==== AI ===================================================================
