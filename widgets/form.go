@@ -15,8 +15,8 @@ import (
 // synchronization.
 type Form struct {
 	Component
+	Data  any // pointer to struct
 	title string
-	data  any    // pointer to struct
 	child Widget // single child container (e.g., FormGroup)
 }
 
@@ -31,8 +31,8 @@ type Form struct {
 func NewForm(id, class, title string, data any) *Form {
 	f := &Form{
 		Component: Component{id: id, class: class},
+		Data:      data,
 		title:     title,
-		data:      data,
 	}
 	return f
 }
@@ -143,7 +143,7 @@ func (f *Form) Update(value reflect.Value) Handler {
 // other non-Builder code that constructs forms imperatively.
 func BuildFormGroup(form *Form, group *FormGroup, name string, theme *Theme) {
 	line := 0
-	v := reflect.ValueOf(form.Data())
+	v := reflect.ValueOf(form.Data)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return
 	}
@@ -218,11 +218,6 @@ func buildFormControl(control, id, class string, v reflect.Value, options string
 		w.Set(v.String())
 		return w
 	}
-}
-
-// Data returns the data struct pointer associated with this form.
-func (f *Form) Data() any {
-	return f.data
 }
 
 // Title returns the form's title.

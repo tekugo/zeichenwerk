@@ -7,7 +7,7 @@ import (
 // MidnightNeonTheme returns a Theme styled after a dark midnight palette with
 // neon accent colours. It features near-black backgrounds with vivid electric
 // highlights — cyan, blue, green, and magenta — for a futuristic aesthetic.
-func MidnightNeonTheme() *Theme {
+func MidnightNeon() *Theme {
 	t := NewTheme()
 
 	AddUnicodeBorders(t)

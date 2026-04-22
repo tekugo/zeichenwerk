@@ -153,15 +153,14 @@ func (p *Progress) Render(r *Renderer) {
 // Filled and empty portions use different glyphs from the theme.
 func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Style) {
 	// Fetch theme strings for horizontal orientation
-	theme := r.Theme()
-	prefix := theme.String("progress.h.prefix")
-	suffix := theme.String("progress.h.suffix")
-	startFilled := theme.String("progress.h.start.filled")
-	startEmpty := theme.String("progress.h.start.empty")
-	middleFilled := theme.String("progress.h.middle.filled")
-	middleEmpty := theme.String("progress.h.middle.empty")
-	endFilled := theme.String("progress.h.end.filled")
-	endEmpty := theme.String("progress.h.end.empty")
+	prefix := r.Theme.String("progress.h.prefix")
+	suffix := r.Theme.String("progress.h.suffix")
+	startFilled := r.Theme.String("progress.h.start.filled")
+	startEmpty := r.Theme.String("progress.h.start.empty")
+	middleFilled := r.Theme.String("progress.h.middle.filled")
+	middleEmpty := r.Theme.String("progress.h.middle.empty")
+	endFilled := r.Theme.String("progress.h.end.filled")
+	endEmpty := r.Theme.String("progress.h.end.empty")
 
 	// Fallbacks if theme strings are missing
 	if startFilled == "" {
@@ -190,8 +189,8 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 	if trackW < 0 {
 		// Not enough space - render prefix only if space available
 		if w > 0 {
-			baseFg := theme.Color(baseStyle.Foreground())
-			baseBg := theme.Color(baseStyle.Background())
+			baseFg := r.Theme.Color(baseStyle.Foreground())
+			baseBg := r.Theme.Color(baseStyle.Background())
 			baseFont := baseStyle.Font()
 			r.Set(baseFg, baseBg, baseFont)
 			r.Text(x, y, prefix, w)
@@ -208,8 +207,8 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 	// Render prefix (left side) using base style
 	curX := x
 	if prefixWidth > 0 {
-		baseFg := theme.Color(baseStyle.Foreground())
-		baseBg := theme.Color(baseStyle.Background())
+		baseFg := r.Theme.Color(baseStyle.Foreground())
+		baseBg := r.Theme.Color(baseStyle.Background())
 		baseFont := baseStyle.Font()
 		r.Set(baseFg, baseBg, baseFont)
 		r.Text(curX, y, prefix, prefixWidth)
@@ -221,8 +220,8 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 	if barStyle == nil || barStyle == &DefaultStyle {
 		barStyle = baseStyle
 	}
-	barFg := theme.Color(barStyle.Foreground())
-	barBg := theme.Color(barStyle.Background())
+	barFg := r.Theme.Color(barStyle.Foreground())
+	barBg := r.Theme.Color(barStyle.Background())
 	barFont := barStyle.Font()
 
 	// Render track cells directly with Put for proper Unicode width handling
@@ -254,15 +253,15 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 		default:
 			ch = middleEmpty
 		}
-		r.Set(theme.Color(baseStyle.Foreground()), theme.Color(baseStyle.Background()), baseStyle.Font())
+		r.Set(r.Theme.Color(baseStyle.Foreground()), r.Theme.Color(baseStyle.Background()), baseStyle.Font())
 		r.Put(curX, y, ch)
 		curX += utf8.RuneCountInString(ch)
 	}
 
 	// Render suffix (right side)
 	if suffixWidth > 0 {
-		baseFg := theme.Color(baseStyle.Foreground())
-		baseBg := theme.Color(baseStyle.Background())
+		baseFg := r.Theme.Color(baseStyle.Foreground())
+		baseBg := r.Theme.Color(baseStyle.Background())
 		baseFont := baseStyle.Font()
 		r.Set(baseFg, baseBg, baseFont)
 		r.Text(x+w-suffixWidth, y, suffix, suffixWidth)
@@ -272,15 +271,14 @@ func (p *Progress) renderHorizontal(r *Renderer, x, y, w, h int, baseStyle *Styl
 // renderVertical renders a vertical progress bar (bottom-up filling).
 // It uses theme keys "progress.v.*" analogous to horizontal but transposed.
 func (p *Progress) renderVertical(r *Renderer, x, y, w, h int, baseStyle *Style) {
-	theme := r.Theme()
-	prefix := theme.String("progress.v.prefix")
-	suffix := theme.String("progress.v.suffix")
-	startFilled := theme.String("progress.v.start.filled") // top of filled (since we fill upward, top cap of filled region)
-	startEmpty := theme.String("progress.v.start.empty")   // top of empty region
-	middleFilled := theme.String("progress.v.middle.filled")
-	middleEmpty := theme.String("progress.v.middle.empty")
-	endFilled := theme.String("progress.v.end.filled") // bottom of filled region
-	endEmpty := theme.String("progress.v.end.empty")   // bottom of empty region
+	prefix := r.Theme.String("progress.v.prefix")
+	suffix := r.Theme.String("progress.v.suffix")
+	startFilled := r.Theme.String("progress.v.start.filled") // top of filled (since we fill upward, top cap of filled region)
+	startEmpty := r.Theme.String("progress.v.start.empty")   // top of empty region
+	middleFilled := r.Theme.String("progress.v.middle.filled")
+	middleEmpty := r.Theme.String("progress.v.middle.empty")
+	endFilled := r.Theme.String("progress.v.end.filled") // bottom of filled region
+	endEmpty := r.Theme.String("progress.v.end.empty")   // bottom of empty region
 
 	// Fallbacks
 	if startFilled == "" {
@@ -316,8 +314,8 @@ func (p *Progress) renderVertical(r *Renderer, x, y, w, h int, baseStyle *Style)
 		if h > 0 {
 			// Not enough space; just render prefix maybe
 			if prefix != "" {
-				baseFg := theme.Color(baseStyle.Foreground())
-				baseBg := theme.Color(baseStyle.Background())
+				baseFg := r.Theme.Color(baseStyle.Foreground())
+				baseBg := r.Theme.Color(baseStyle.Background())
 				baseFont := baseStyle.Font()
 				r.Set(baseFg, baseBg, baseFont)
 				r.Text(x, y, prefix, w)
@@ -334,8 +332,8 @@ func (p *Progress) renderVertical(r *Renderer, x, y, w, h int, baseStyle *Style)
 	curY := y
 	// Render prefix (top)
 	if prefixRows > 0 {
-		baseFg := theme.Color(baseStyle.Foreground())
-		baseBg := theme.Color(baseStyle.Background())
+		baseFg := r.Theme.Color(baseStyle.Foreground())
+		baseBg := r.Theme.Color(baseStyle.Background())
 		baseFont := baseStyle.Font()
 		r.Set(baseFg, baseBg, baseFont)
 		r.Text(x, curY, prefix, w)
@@ -348,8 +346,8 @@ func (p *Progress) renderVertical(r *Renderer, x, y, w, h int, baseStyle *Style)
 	if barStyle == nil || barStyle == &DefaultStyle {
 		barStyle = baseStyle
 	}
-	barFg := theme.Color(barStyle.Foreground())
-	barBg := theme.Color(barStyle.Background())
+	barFg := r.Theme.Color(barStyle.Foreground())
+	barBg := r.Theme.Color(barStyle.Background())
 	barFont := barStyle.Font()
 
 	// Iterate rows in the track
@@ -382,15 +380,15 @@ func (p *Progress) renderVertical(r *Renderer, x, y, w, h int, baseStyle *Style)
 		if isFilled {
 			r.Set(barFg, barBg, barFont)
 		} else {
-			r.Set(theme.Color(baseStyle.Foreground()), theme.Color(baseStyle.Background()), baseStyle.Font())
+			r.Set(r.Theme.Color(baseStyle.Foreground()), r.Theme.Color(baseStyle.Background()), baseStyle.Font())
 		}
 		r.Text(x, curY+i, ch, 1)
 	}
 
 	// Render suffix (bottom)
 	if suffixRows > 0 {
-		baseFg := theme.Color(baseStyle.Foreground())
-		baseBg := theme.Color(baseStyle.Background())
+		baseFg := r.Theme.Color(baseStyle.Foreground())
+		baseBg := r.Theme.Color(baseStyle.Background())
 		baseFont := baseStyle.Font()
 		r.Set(baseFg, baseBg, baseFont)
 		r.Text(x, y+h-suffixRows, suffix, w)

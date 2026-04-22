@@ -6,15 +6,15 @@ import "github.com/tekugo/zeichenwerk/renderer"
 // borders and colors. Due to dependencies, renderer.Renderer cannot use
 // Border or Theme from this package.
 type Renderer struct {
+	Theme *Theme
 	renderer.Renderer
-	theme *Theme
 }
 
 // NewRenderer creates a new themable renderer.
 func NewRenderer(screen renderer.Screen, theme *Theme) *Renderer {
 	return &Renderer{
 		Renderer: renderer.Renderer{Screen: screen},
-		theme:    theme,
+		Theme:    theme,
 	}
 }
 
@@ -29,7 +29,7 @@ func NewRenderer(screen renderer.Screen, theme *Theme) *Renderer {
 //   - w, h: Width and height of the area to border (inner dimensions)
 //   - box: Border containing the characters for each border element
 func (r *Renderer) Border(x, y, w, h int, border string) {
-	b := r.theme.Border(border)
+	b := r.Theme.Border(border)
 	r.Line(x, y, 1, 0, w-2, b.TopLeft, b.Top, b.TopRight)
 	r.Line(x, y+h-1, 1, 0, w-2, b.BottomLeft, b.Bottom, b.BottomRight)
 	for i := range h - 2 {
@@ -42,10 +42,5 @@ func (r *Renderer) Border(x, y, w, h int, border string) {
 // drawing operations. Colour strings starting with "$" are resolved through
 // the theme's colour registry.
 func (r *Renderer) Set(foreground, background, font string) {
-	r.Renderer.Set(r.theme.Color(foreground), r.theme.Color(background), font)
-}
-
-// Theme returns the renderer's theme.
-func (r *Renderer) Theme() *Theme {
-	return r.theme
+	r.Renderer.Set(r.Theme.Color(foreground), r.Theme.Color(background), font)
 }

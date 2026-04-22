@@ -91,7 +91,7 @@ func (h *Heatmap) Render(r *Renderer) {
 	headerStyle := h.Style("header")
 	midFont := h.Style("mid").Font()
 
-	theme := r.Theme()
+	theme := r.Theme
 	zeroFg := theme.Color(zeroStyle.Foreground())
 	zeroBg := theme.Color(zeroStyle.Background())
 	maxFg := theme.Color(maxStyle.Foreground())

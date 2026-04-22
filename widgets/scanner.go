@@ -144,7 +144,7 @@ func (s *Scanner) Render(r *Renderer) {
 
 	// Get styling
 	style := s.Style()
-	baseColor := r.Theme().Color(style.Foreground())
+	baseColor := r.Theme.Color(style.Foreground())
 	bgColor := style.Background()
 	font := style.Font()
 

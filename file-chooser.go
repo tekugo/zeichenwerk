@@ -8,6 +8,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // ==== AI ===================================================================
@@ -64,10 +65,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	dialog := b.
 		Dialog("fc-dialog", title).
 		Class("dialog").
-		Flex("fc-body", "stretch", 1).Flag(FlagVertical).
+		VFlex("fc-body", "stretch", 1).
 		Typeahead("fc-input", initial).Hint(0, 1).
 		Tree("fc-tree").Hint(0, -1).
-		Flex("fc-footer", "center", 0).Hint(0, 1).
+		HFlex("fc-footer", "center", 0).Hint(0, 1).
 		Checkbox("fc-hidden", "show hidden", hidden).
 		Spacer().Hint(-1, 0).
 		Button("fc-ok", label).
@@ -311,11 +312,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	})
 
 	// Path input → navigate tree.
-	input.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+	OnChange(input, func(typed string) bool {
 		if ignoreInputChange {
 			return true
 		}
-		typed := input.Get()
 		if mode == "save" {
 			ok := isSaveable(typed)
 			setInputError(!ok)

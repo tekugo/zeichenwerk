@@ -10,7 +10,8 @@ import (
 	collmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
 
-	z "github.com/tekugo/zeichenwerk"
+	c "github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/themes"
 )
 
 func main() {
@@ -54,19 +55,19 @@ func main() {
 	srv.Stop()
 }
 
-func resolveTheme(name string) *z.Theme {
+func resolveTheme(name string) *c.Theme {
 	switch name {
 	case "midnight":
-		return z.MidnightNeonTheme()
+		return themes.MidnightNeon()
 	case "nord":
-		return z.NordTheme()
+		return themes.Nord()
 	case "gruvbox-dark":
-		return z.GruvboxDarkTheme()
+		return themes.GruvboxDark()
 	case "gruvbox-light":
-		return z.GruvboxLightTheme()
+		return themes.GruvboxLight()
 	case "lipstick":
-		return z.LipstickTheme()
+		return themes.Lipstick()
 	default:
-		return z.TokyoNightTheme()
+		return themes.TokyoNight()
 	}
 }

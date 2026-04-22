@@ -218,20 +218,6 @@ func (b *Builder) Filter(id string) *Builder {
 	return b
 }
 
-// Flex creates a new flex container widget for arranging child widgets.
-// The Flex orientation is by default horizontal, use Flag(FlagVertical)
-// for vertical orientation.
-//
-// Parameters:
-//   - id: unique identifier for the flex container
-//   - alignment: how children are aligned ("start", "center", "end", "stretch")
-//   - spacing: cells between child widgets (columns or rows)
-func (b *Builder) Flex(id string, alignment string, spacing int) *Builder {
-	flex := NewFlex(id, b.class, alignment, spacing)
-	b.Add(flex)
-	return b
-}
-
 // Form creates a new form widget with the specified id, title, and bound data.
 // The form is added to the current container and styled with the theme.
 func (b *Builder) Form(id, title string, data any) *Builder {
@@ -287,9 +273,18 @@ func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
 	return b
 }
 
-// HFlex is a shortcut for a stretching horizontal flex with given.spacing.
-func (b *Builder) HFlex(id string, spacing int) *Builder {
-	return b.Flex(id, "stretch", spacing)
+// HFlex creates a new flex container widget for arranging child widgets.
+// The Flex orientation is by default horizontal, use Flag(FlagVertical)
+// for vertical orientation.
+//
+// Parameters:
+//   - id: unique identifier for the flex container
+//   - alignment: how children are aligned ("start", "center", "end", "stretch")
+//   - spacing: cells between child widgets (columns or rows)
+func (b *Builder) HFlex(id string, alignment string, spacing int) *Builder {
+	flex := NewFlex(id, b.class, alignment, spacing)
+	b.Add(flex)
+	return b
 }
 
 // HRule creates a horizontal rule.
@@ -527,8 +522,8 @@ func (b *Builder) Viewport(id, title string) *Builder {
 }
 
 // VFlex returns a vertical flex with stretching and the given spacing.
-func (b *Builder) VFlex(id string, spacing int) *Builder {
-	return b.Flex(id, "stretch", spacing).Flag(FlagVertical)
+func (b *Builder) VFlex(id string, alignment string, spacing int) *Builder {
+	return b.HFlex(id, alignment, spacing).Flag(FlagVertical)
 }
 
 // VRule adds a vertical rule.
@@ -543,7 +538,7 @@ func (b *Builder) VRule(style string) *Builder {
 // buildGroup builds the form group by adding all fields from the struct
 func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 	line := 0
-	v := reflect.ValueOf(form.data)
+	v := reflect.ValueOf(form.Data)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		b.current.Log(b.current, Warning, "buildGroup: form data must be a pointer to a struct")
 		return

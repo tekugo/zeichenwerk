@@ -14,7 +14,7 @@ import (
 //   - Snow Storm ($fg0–$fg2): near-white foreground tones
 //   - Frost ($frost1–$frost4, $blue, $cyan, $aqua): blue accent range
 //   - Aurora ($red, $orange, $yellow, $green, $purple): colourful highlights
-func NordTheme() *Theme {
+func Nord() *Theme {
 	t := NewTheme()
 
 	AddUnicodeBorders(t)

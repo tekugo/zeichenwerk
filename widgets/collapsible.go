@@ -82,9 +82,9 @@ func (c *Collapsible) Render(r *Renderer) {
 	cx, cy, cw, _ := c.Content()
 	r.Set(headerStyle.Foreground(), headerStyle.Background(), headerStyle.Font())
 
-	indicator := r.Theme().String("collapsible.collapsed")
+	indicator := r.Theme.String("collapsible.collapsed")
 	if c.expanded {
-		indicator = r.Theme().String("collapsible.expanded")
+		indicator = r.Theme.String("collapsible.expanded")
 	}
 	r.Text(cx, cy, indicator+c.title, cw)
 

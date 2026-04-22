@@ -6,6 +6,9 @@ import (
 
 	z "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/compose"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/values"
+	"github.com/tekugo/zeichenwerk/widgets"
 )
 
 var info = `
@@ -62,7 +65,7 @@ messwerk -port 4318
 ` + "```" + ` 
 `
 
-func buildUI(theme *z.Theme, store *Store) *z.UI {
+func buildUI(theme *core.Theme, store *Store) *z.UI {
 	mp := &metricsProvider{}
 	lp := &logProvider{}
 
@@ -87,24 +90,24 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 						),
 						Grid("all", "", []int{0, 0, 0, -1}, []int{26, 0, -1}, false, Border("none"), Padding(1, 2),
 							Cell(0, 0, 1, 1, Card("total-input", "", "Input",
-								Digits("total-input-value", "", "0", Flag(z.FlagRight, true), Fg("$blue")),
-								Static("total-input-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+								Digits("total-input-value", "", "0", Flag(widgets.FlagRight, true), Fg("$blue")),
+								Static("total-input-footer", "", "tokens", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(1, 0, 2, 1, Card("total-input-sparkline-card", "", "", Margin(0, 0, 0, 2),
 								Sparkline("total-input-sparkline", "", Hint(30, 3), Fg("$blue")),
 								Static("total-input-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
 							)),
 							Cell(0, 1, 1, 1, Card("total-output", "", "Output",
-								Digits("total-output-value", "", "0", Flag(z.FlagRight, true), Fg("$green")),
-								Static("totla-output-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+								Digits("total-output-value", "", "0", Flag(widgets.FlagRight, true), Fg("$green")),
+								Static("totla-output-footer", "", "tokens", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(1, 1, 2, 1, Card("total-output-sparkline-card", "", "", Margin(0, 0, 0, 2),
 								Sparkline("total-output-sparkline", "", Hint(30, 3), Fg("$green")),
 								Static("total-output-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
 							)),
 							Cell(0, 2, 1, 1, Card("total-cost", "", "Cost",
-								Digits("total-cost-value", "", "0.00", Flag(z.FlagRight, true), Fg("$cyan")),
-								Static("total-cost-footer", "", "US$", Fg("$gray"), Flag(z.FlagRight)),
+								Digits("total-cost-value", "", "0.00", Flag(widgets.FlagRight, true), Fg("$cyan")),
+								Static("total-cost-footer", "", "US$", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(1, 2, 2, 1, Card("total-cost-sparkline-card", "", "", Margin(0, 0, 0, 2),
 								Sparkline("total-cost-sparkline", "", Hint(30, 3), Fg("$cyan")),
@@ -122,11 +125,11 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 							// Row 1: Stats
 							Cell(0, 1, 1, 1, Card("session-cache-card", "", "Cache",
 								Progress("session-cache-bar", "", true, Margin(1)),
-								Static("session-cache-label", "", "–", Fg("$gray"), Flag(z.FlagRight)),
+								Static("session-cache-label", "", "–", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(1, 1, 1, 1, Card("session-accept-card", "", "Edits", Margin(0, 0, 0, 2),
 								Progress("session-accept-bar", "", true, Margin(1)),
-								Static("session-accept-label", "", "–", Fg("$gray"), Flag(z.FlagRight)),
+								Static("session-accept-label", "", "–", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(2, 1, 1, 1, Card("session-lines-card", "", "Lines", Margin(0, 0, 0, 2),
 								Flex("session-lines-row", "", true, "center", 1,
@@ -137,24 +140,24 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 							)),
 							// Rows 2–4: Metrics + sparklines
 							Cell(0, 2, 1, 1, Card("session-input", "", "Input",
-								Digits("session-input-value", "", "0", Flag(z.FlagRight, true), Fg("$blue")),
-								Static("session-input-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+								Digits("session-input-value", "", "0", Flag(widgets.FlagRight, true), Fg("$blue")),
+								Static("session-input-footer", "", "tokens", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(1, 2, 2, 1, Card("session-input-sparkline-card", "", "", Margin(0, 0, 0, 2),
 								Sparkline("session-input-sparkline", "", Hint(30, 3), Fg("$blue")),
 								Static("session-input-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
 							)),
 							Cell(0, 3, 1, 1, Card("session-output", "", "Output",
-								Digits("session-output-value", "", "0", Flag(z.FlagRight, true), Fg("$green")),
-								Static("session-output-footer", "", "tokens", Fg("$gray"), Flag(z.FlagRight)),
+								Digits("session-output-value", "", "0", Flag(widgets.FlagRight, true), Fg("$green")),
+								Static("session-output-footer", "", "tokens", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(1, 3, 2, 1, Card("session-output-sparkline-card", "", "", Margin(0, 0, 0, 2),
 								Sparkline("session-output-sparkline", "", Hint(30, 3), Fg("$green")),
 								Static("session-output-sparkline-footer", "", "Last 60 minutes, 2 minute intervals", Fg("$gray")),
 							)),
 							Cell(0, 4, 1, 1, Card("session-cost", "", "Cost",
-								Digits("session-cost-value", "", "0.00", Flag(z.FlagRight, true), Fg("$cyan")),
-								Static("session-cost-footer", "", "US$", Fg("$gray"), Flag(z.FlagRight)),
+								Digits("session-cost-value", "", "0.00", Flag(widgets.FlagRight, true), Fg("$cyan")),
+								Static("session-cost-footer", "", "US$", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(1, 4, 2, 1, Card("session-cost-sparkline-card", "", "", Margin(0, 0, 0, 2),
 								Sparkline("session-cost-sparkline", "", Hint(30, 3), Fg("$cyan")),
@@ -178,54 +181,54 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 		),
 	)
 
-	deck := z.Find(ui, "sessions").(*z.Deck)
-	content := z.Find(ui, "content").(*z.Switcher)
+	deck := core.Find(ui, "sessions").(*widgets.Deck)
+	content := core.Find(ui, "content").(*widgets.Switcher)
 
 	// Session header
-	sessionHeader := z.Find(ui, "session-header").(*z.Flex)
-	sessionID := z.Find(ui, "session-id").(*z.Static)
-	sessionInfo := z.Find(ui, "session-info").(*z.Static)
+	sessionHeader := core.Find(ui, "session-header").(*widgets.Flex)
+	sessionID := core.Find(ui, "session-id").(*widgets.Static)
+	sessionInfo := core.Find(ui, "session-info").(*widgets.Static)
 
 	// Stats row
-	cacheBar := z.Find(ui, "session-cache-bar").(*z.Progress)
-	cacheLabel := z.Find(ui, "session-cache-label").(*z.Static)
-	acceptBar := z.Find(ui, "session-accept-bar").(*z.Progress)
-	acceptLabel := z.Find(ui, "session-accept-label").(*z.Static)
-	linesAdded := z.Find(ui, "session-lines-added").(*z.Static)
-	linesRemoved := z.Find(ui, "session-lines-removed").(*z.Static)
+	cacheBar := core.Find(ui, "session-cache-bar").(*widgets.Progress)
+	cacheLabel := core.Find(ui, "session-cache-label").(*widgets.Static)
+	acceptBar := core.Find(ui, "session-accept-bar").(*widgets.Progress)
+	acceptLabel := core.Find(ui, "session-accept-label").(*widgets.Static)
+	linesAdded := core.Find(ui, "session-lines-added").(*widgets.Static)
+	linesRemoved := core.Find(ui, "session-lines-removed").(*widgets.Static)
 	cacheBar.SetTotal(100)
 	acceptBar.SetTotal(100)
 
 	// Metrics + sparklines
-	costDigits := z.Find(ui, "session-cost-value").(*z.Digits)
-	inputDigits := z.Find(ui, "session-input-value").(*z.Digits)
-	outputDigits := z.Find(ui, "session-output-value").(*z.Digits)
-	inputFooter := z.Find(ui, "session-input-footer").(*z.Static)
-	outputFooter := z.Find(ui, "session-output-footer").(*z.Static)
-	inputSparkline := z.Find(ui, "session-input-sparkline").(*z.Sparkline)
-	outputSparkline := z.Find(ui, "session-output-sparkline").(*z.Sparkline)
-	costSparkline := z.Find(ui, "session-cost-sparkline").(*z.Sparkline)
+	costDigits := core.Find(ui, "session-cost-value").(*widgets.Digits)
+	inputDigits := core.Find(ui, "session-input-value").(*widgets.Digits)
+	outputDigits := core.Find(ui, "session-output-value").(*widgets.Digits)
+	inputFooter := core.Find(ui, "session-input-footer").(*widgets.Static)
+	outputFooter := core.Find(ui, "session-output-footer").(*widgets.Static)
+	inputSparkline := core.Find(ui, "session-input-sparkline").(*widgets.Sparkline)
+	outputSparkline := core.Find(ui, "session-output-sparkline").(*widgets.Sparkline)
+	costSparkline := core.Find(ui, "session-cost-sparkline").(*widgets.Sparkline)
 
 	// Tabs + tables
-	sessionTabs := z.Find(ui, "session-tabs").(*z.Tabs)
-	tableSwitcher := z.Find(ui, "session-table-switcher").(*z.Switcher)
+	sessionTabs := core.Find(ui, "session-tabs").(*widgets.Tabs)
+	tableSwitcher := core.Find(ui, "session-table-switcher").(*widgets.Switcher)
 	sessionTabs.Add("Metrics")
 	sessionTabs.Add("Logs")
-	sessionTabs.On(z.EvtChange, func(_ z.Widget, _ z.Event, args ...any) bool {
+	sessionTabs.On(widgets.EvtChange, func(_ core.Widget, _ core.Event, args ...any) bool {
 		tableSwitcher.Select(args[0].(int))
 		return true
 	})
 
-	z.Derived(store.TotalInput, func(n int64) string { return z.Humanize(n) }).
-		Bind(z.Find(ui, "total-input-value").(*z.Digits))
-	z.Derived(store.TotalOutput, func(n int64) string { return z.Humanize(n) }).
-		Bind(z.Find(ui, "total-output-value").(*z.Digits))
-	z.Derived(store.TotalCost, func(f float64) string { return fmt.Sprintf("%.4f", f) }).
-		Bind(z.Find(ui, "total-cost-value").(*z.Digits))
+	values.Derived(store.TotalInput, func(n int64) string { return core.Humanize(n) }).
+		Bind(core.Find(ui, "total-input-value").(*widgets.Digits))
+	values.Derived(store.TotalOutput, func(n int64) string { return core.Humanize(n) }).
+		Bind(core.Find(ui, "total-output-value").(*widgets.Digits))
+	values.Derived(store.TotalCost, func(f float64) string { return fmt.Sprintf("%.2f", f) }).
+		Bind(core.Find(ui, "total-cost-value").(*widgets.Digits))
 
-	z.Find(ui, "total-input-sparkline").(*z.Sparkline).SetProvider(store.Input)
-	z.Find(ui, "total-output-sparkline").(*z.Sparkline).SetProvider(store.Output)
-	z.Find(ui, "total-cost-sparkline").(*z.Sparkline).SetProvider(store.Cost)
+	core.Find(ui, "total-input-sparkline").(*widgets.Sparkline).SetProvider(store.Input)
+	core.Find(ui, "total-output-sparkline").(*widgets.Sparkline).SetProvider(store.Output)
+	core.Find(ui, "total-cost-sparkline").(*widgets.Sparkline).SetProvider(store.Cost)
 	deck.Set([]any{nil})
 
 	showSession := func(session *Session) {
@@ -238,7 +241,7 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 		}
 		sessionID.Set(id)
 		start := session.Start.Format("15:04:05")
-		duration := z.FormatDuration(time.Since(session.Start))
+		duration := core.FormatDuration(time.Since(session.Start))
 		sessionInfo.Set(fmt.Sprintf("start %s, duration %s, model %s, os %s/%s", start, duration, session.PrimaryModel(), session.OSType, session.HostArch))
 		sessionHeader.Layout()
 
@@ -261,14 +264,14 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 		acceptLabel.Set(fmt.Sprintf("%d%% accepted", acceptRatio))
 
 		// Lines changed
-		linesAdded.Set(fmt.Sprintf("+%s", z.Humanize(agg.LinesAdded)))
-		linesRemoved.Set(fmt.Sprintf("-%s", z.Humanize(agg.LinesRemoved)))
+		linesAdded.Set(fmt.Sprintf("+%s", core.Humanize(agg.LinesAdded)))
+		linesRemoved.Set(fmt.Sprintf("-%s", core.Humanize(agg.LinesRemoved)))
 
 		// Metrics + sparklines
 		lastSeen := session.LastSeen().Format("15:04:05")
-		costDigits.Set(fmt.Sprintf("%.4f", session.TotalCost()))
-		inputDigits.Set(z.Humanize(agg.Input))
-		outputDigits.Set(z.Humanize(agg.Output))
+		costDigits.Set(fmt.Sprintf("%.2f", session.TotalCost()))
+		inputDigits.Set(core.Humanize(agg.Input))
+		outputDigits.Set(core.Humanize(agg.Output))
 		inputFooter.Set(lastSeen)
 		outputFooter.Set(lastSeen)
 		inputSparkline.SetProvider(session.Input)
@@ -280,7 +283,7 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 		lp.set(session)
 	}
 
-	deck.On(z.EvtSelect, func(_ z.Widget, _ z.Event, args ...any) bool {
+	deck.On(widgets.EvtSelect, func(_ core.Widget, _ core.Event, args ...any) bool {
 		index := args[0].(int)
 		if index == 0 {
 			content.Select(1)
@@ -303,7 +306,7 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 			items[i+1] = s
 		}
 		deck.Set(items)
-		if len(sessions) > 0 && content.Selected() == 0 {
+		if len(sessions) > 0 && content.Get() == 0 {
 			content.Select(1)
 		}
 		if idx := deck.Selected(); idx > 0 && idx-1 < len(sessions) {
@@ -312,22 +315,22 @@ func buildUI(theme *z.Theme, store *Store) *z.UI {
 		ui.Refresh()
 	})
 
-	z.Find(ui, "clock").(*z.Clock).Start()
+	core.Find(ui, "clock").(*widgets.Clock).Start()
 	return ui
 }
 
-func deckRenderer(theme *z.Theme, store *Store) z.ItemRender {
-	sparkline := z.NewSparkline("deck-dummy", "")
+func deckRenderer(theme *core.Theme, store *Store) widgets.ItemRender {
+	sparkline := widgets.NewSparkline("deck-dummy", "")
 	sparkline.Apply(theme)
 	sparkline.SetStyle("", sparkline.Style().Modifiable())
-	renderSparkline := func(r *z.Renderer, x, y, w, h int, fg, bg string, data z.DataProvider) {
+	renderSparkline := func(r *core.Renderer, x, y, w, h int, fg, bg string, data widgets.DataProvider) {
 		sparkline.SetProvider(data)
 		sparkline.SetBounds(x, y, w, h)
 		sparkline.Style().WithColors(fg, bg)
 		sparkline.Render(r)
 	}
 
-	return func(r *z.Renderer, x, y, w, h, index int, data any, selected, focused bool) {
+	return func(r *core.Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		var bg string
 		if selected {
 			bg = theme.Color("$bg3")
@@ -355,7 +358,7 @@ func deckRenderer(theme *z.Theme, store *Store) z.ItemRender {
 		cx := x + 2
 
 		// Sparkline data
-		var input, output, costTS *z.TimeSeries[float64]
+		var input, output, costTS *core.TimeSeries[float64]
 		var model string
 		var totalCost float64
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	z "github.com/tekugo/zeichenwerk"
+	"github.com/tekugo/zeichenwerk/widgets"
 )
 
 // ---- metricsProvider -------------------------------------------------------
@@ -23,24 +23,24 @@ func (p *metricsProvider) set(s *Session) {
 	p.mu.Unlock()
 }
 
-var metricsColumns = []z.TableColumn{
+var metricsColumns = []widgets.TableColumn{
 	{Header: "Time", Width: 8},
 	{Header: "Start", Width: 8},
 	{Header: "Model", Width: 22},
-	{Header: "In", Width: 8, Alignment: z.AlignRight},
-	{Header: "Out", Width: 8, Alignment: z.AlignRight},
-	{Header: "CacheR", Width: 8, Alignment: z.AlignRight},
-	{Header: "CacheC", Width: 8, Alignment: z.AlignRight},
-	{Header: "Cost", Width: 10, Alignment: z.AlignRight},
-	{Header: "UserT", Width: 8, Alignment: z.AlignRight},
-	{Header: "CLIT", Width: 8, Alignment: z.AlignRight},
-	{Header: "+Lines", Width: 7, Alignment: z.AlignRight},
-	{Header: "-Lines", Width: 7, Alignment: z.AlignRight},
-	{Header: "Accept", Width: 6, Alignment: z.AlignRight},
-	{Header: "Reject", Width: 6, Alignment: z.AlignRight},
+	{Header: "In", Width: 8, Alignment: widgets.AlignRight},
+	{Header: "Out", Width: 8, Alignment: widgets.AlignRight},
+	{Header: "CacheR", Width: 8, Alignment: widgets.AlignRight},
+	{Header: "CacheC", Width: 8, Alignment: widgets.AlignRight},
+	{Header: "Cost", Width: 10, Alignment: widgets.AlignRight},
+	{Header: "UserT", Width: 8, Alignment: widgets.AlignRight},
+	{Header: "CLIT", Width: 8, Alignment: widgets.AlignRight},
+	{Header: "+Lines", Width: 7, Alignment: widgets.AlignRight},
+	{Header: "-Lines", Width: 7, Alignment: widgets.AlignRight},
+	{Header: "Accept", Width: 6, Alignment: widgets.AlignRight},
+	{Header: "Reject", Width: 6, Alignment: widgets.AlignRight},
 }
 
-func (p *metricsProvider) Columns() []z.TableColumn { return metricsColumns }
+func (p *metricsProvider) Columns() []widgets.TableColumn { return metricsColumns }
 
 func (p *metricsProvider) Length() int {
 	p.mu.RLock()
@@ -109,13 +109,13 @@ func (p *logProvider) set(s *Session) {
 	p.mu.Unlock()
 }
 
-var logColumns = []z.TableColumn{
+var logColumns = []widgets.TableColumn{
 	{Header: "Time", Width: 8},
 	{Header: "Body", Width: 32},
 	{Header: "Attrs", Width: 60},
 }
 
-func (p *logProvider) Columns() []z.TableColumn { return logColumns }
+func (p *logProvider) Columns() []widgets.TableColumn { return logColumns }
 
 func (p *logProvider) Length() int {
 	p.mu.RLock()
@@ -156,4 +156,3 @@ func (p *logProvider) Str(row, col int) string {
 	}
 	return ""
 }
-

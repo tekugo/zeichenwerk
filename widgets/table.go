@@ -423,7 +423,7 @@ func (t *Table) Render(r *Renderer) {
 	gridStyle := t.Style("grid" + state)
 	border := gridStyle.Border()
 	if border != "" && border != "none" {
-		t.grid = r.Theme().Border(border)
+		t.grid = r.Theme.Border(border)
 	}
 	t.renderTableHeader(r, x, y, w, h, headerStyle, gridStyle)
 	t.renderTableContent(r, x, y+2, w, h-2, gridStyle)

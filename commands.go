@@ -6,7 +6,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/widgets"
 )
+
+// ==== AI ===================================================================
 
 // Command represents a named action that can be triggered from the commands
 // palette.
@@ -122,39 +126,39 @@ func (c *Commands) Open() {
 	// Filter is not a Container.
 	b := c.ui.NewBuilder()
 	b.Dialog("commands-dialog", "Commands").
-		Flex("commands-flex", "stretch", 0).Flag(FlagVertical).
+		VFlex("commands-flex", "stretch", 0).
 		Filter("commands-input").Hint(0, 1)
 
 	// Manually add the commandsPanel to the Flex.
-	flex := b.stack.Peek().(*Flex)
+	flex := b.stack.Peek().(*widgets.Flex)
 	panel := newCommandsPanel(c.maxItems)
 	panel.SetItems(initialItems)
 	flex.Add(panel)
 
-	theme := c.ui.renderer.theme
+	theme := c.ui.theme
 	panel.Apply(theme)
 
-	dialog := b.stack[0].(*Dialog)
+	dialog := b.stack[0].(*widgets.Dialog)
 
 	// Override dialog border/background with the "commands" theme style.
 	cmdStyle := theme.Get("commands")
 	dialog.SetStyle("", cmdStyle)
 
 	// Override filter style with "commands/input" if defined.
-	input := Find(dialog, "commands-input").(*Filter)
+	input := core.Find(dialog, "commands-input").(*widgets.Filter)
 	inputStyle := theme.Get("commands/input")
-	if inputStyle != &DefaultStyle {
+	if inputStyle != &core.DefaultStyle {
 		input.SetStyle("", inputStyle)
 	}
 
 	// Reset c.open when the dialog layer is removed (Escape, Close, or Enter).
-	dialog.On(EvtClose, func(_ Widget, _ Event, _ ...any) bool {
+	dialog.On(widgets.EvtClose, func(_ core.Widget, _ core.Event, _ ...any) bool {
 		c.open = false
 		return false
 	})
 
 	// Re-filter the panel on every keystroke.
-	OnChange(input, func(text string) bool {
+	widgets.OnChange(input, func(text string) bool {
 		items := c.filterCommands(text)
 		panel.SetItems(items)
 		c.ui.Refresh()
@@ -163,7 +167,7 @@ func (c *Commands) Open() {
 
 	// Navigation and confirmation keys — prepended so they run before the
 	// Filter's own handlers.
-	OnKey(input, func(e *tcell.EventKey) bool {
+	widgets.OnKey(input, func(e *tcell.EventKey) bool {
 		switch e.Key() {
 		case tcell.KeyUp:
 			panel.move(-1)
@@ -194,7 +198,7 @@ func (c *Commands) Open() {
 	})
 
 	// Panel double-click activates the command (after the popup closes).
-	panel.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
+	panel.On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, data ...any) bool {
 		if len(data) > 0 {
 			if cmd, ok := data[0].(*Command); ok {
 				c.ui.Close()
@@ -224,6 +228,7 @@ func (c *Commands) computePopupSize(items []rankedCommand) (w, h int) {
 		return c.width, h
 	}
 
+	_, _, width, _ := c.ui.Bounds()
 	nameW := 0
 	shortcutW := 0
 	for _, cmd := range c.entries {
@@ -243,8 +248,8 @@ func (c *Commands) computePopupSize(items []rankedCommand) (w, h int) {
 	if w < 44 {
 		w = 44
 	}
-	if c.ui != nil && c.ui.width > 0 {
-		if maxW := c.ui.width - 4; w > maxW {
+	if c.ui != nil && width > 0 {
+		if maxW := width - 4; w > maxW {
 			w = maxW
 		}
 	}

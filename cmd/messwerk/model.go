@@ -4,13 +4,14 @@ import (
 	"sync"
 	"time"
 
-	z "github.com/tekugo/zeichenwerk"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/values"
 )
 
 // Create a new TimeSeries for the last hour with 2 minute intervals
-func newTS() *z.TimeSeries[float64] {
+func newTS() *core.TimeSeries[float64] {
 	start := time.Now().Add(-time.Duration(29) * time.Minute * 2)
-	return z.NewTimeSeries[float64](start, time.Minute*2, 30, true)
+	return core.NewTimeSeries[float64](start, time.Minute*2, 30, true)
 }
 
 // Values holds the aggregated metric data for a model.
@@ -109,9 +110,9 @@ type Session struct {
 	Totals map[string]*Metrics // Session totals per model
 
 	// Deck sparkline series: 30 × 2 min = 60 min
-	Input  *z.TimeSeries[float64]
-	Output *z.TimeSeries[float64]
-	Cost   *z.TimeSeries[float64]
+	Input  *core.TimeSeries[float64]
+	Output *core.TimeSeries[float64]
+	Cost   *core.TimeSeries[float64]
 }
 
 // LastSeen returns the timestamp of the most recently received metrics entry,
@@ -229,14 +230,14 @@ type Store struct {
 	onChange func()
 
 	// Total time lines for all sessions
-	Input  *z.TimeSeries[float64]
-	Output *z.TimeSeries[float64]
-	Cost   *z.TimeSeries[float64]
+	Input  *core.TimeSeries[float64]
+	Output *core.TimeSeries[float64]
+	Cost   *core.TimeSeries[float64]
 
 	// Reactive running totals
-	TotalCost   *z.Value[float64]
-	TotalInput  *z.Value[int64]
-	TotalOutput *z.Value[int64]
+	TotalCost   *values.Value[float64]
+	TotalInput  *values.Value[int64]
+	TotalOutput *values.Value[int64]
 
 	totalCost   float64
 	totalInput  int64
@@ -249,9 +250,9 @@ func NewStore() *Store {
 		Input:       newTS(),
 		Output:      newTS(),
 		Cost:        newTS(),
-		TotalCost:   z.NewValue[float64](0),
-		TotalInput:  z.NewValue[int64](0),
-		TotalOutput: z.NewValue[int64](0),
+		TotalCost:   values.NewValue[float64](0),
+		TotalInput:  values.NewValue[int64](0),
+		TotalOutput: values.NewValue[int64](0),
 	}
 }
 

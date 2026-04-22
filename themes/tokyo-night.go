@@ -7,7 +7,7 @@ import (
 // TokyoNightTheme returns a Theme styled after the Tokyo Night colour palette.
 // It registers Unicode borders via AddUnicodeBorders and sets colours, styles,
 // and string indicators for all built-in widgets.
-func TokyoNightTheme() *Theme {
+func TokyoNight() *Theme {
 	t := NewTheme()
 
 	AddUnicodeBorders(t)

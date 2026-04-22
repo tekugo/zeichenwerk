@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // commandsPanel is an unexported widget that renders the scrollable command
@@ -23,7 +24,7 @@ type commandsPanel struct {
 
 func newCommandsPanel(maxItems int) *commandsPanel {
 	p := &commandsPanel{
-		Component:      Component{id: "commands-panel"},
+		Component:      *NewComponent("commands-panel", ""),
 		index:          -1,
 		maxItems:       maxItems,
 		lastClickIndex: -1,
@@ -209,11 +210,12 @@ func (p *commandsPanel) handleMouse(e *tcell.EventMouse) bool {
 	if e.Buttons() != tcell.Button1 {
 		return false
 	}
+	_, y, _, height := p.Bounds()
 	_, my := e.Position()
-	if my < p.y+1 || my >= p.y+p.height { // +1 to skip the separator row
+	if my < y+1 || my >= y+height { // +1 to skip the separator row
 		return false
 	}
-	row := my - p.y - 1 // -1 to account for the separator row
+	row := my - y - 1 // -1 to account for the separator row
 	absIdx := p.offset + row
 	if absIdx < 0 || absIdx >= len(p.items) {
 		return false
@@ -224,7 +226,7 @@ func (p *commandsPanel) handleMouse(e *tcell.EventMouse) bool {
 	}
 
 	now := time.Now()
-	if absIdx == p.lastClickIndex && now.Sub(p.lastClickTime) < doubleClickThreshold {
+	if absIdx == p.lastClickIndex && now.Sub(p.lastClickTime) < DoubleClickThreshold {
 		// Double-click: activate the command
 		p.lastClickIndex = -1
 		p.Dispatch(p, EvtActivate, item.cmd)

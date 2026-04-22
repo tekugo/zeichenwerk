@@ -78,14 +78,13 @@ func (s *Sparkline) Render(r *Renderer) {
 
 	baseStyle := s.Style("")
 	highStyle := s.Style("high")
-	theme := r.Theme()
 
 	// Pre-resolve colours and threshold position once — only pay the cost when needed.
 	var baseFg, highFg string
 	var threshLevel float64
 	if s.threshold > 0 && s.gradient {
-		baseFg = theme.Color(baseStyle.Foreground())
-		highFg = theme.Color(highStyle.Foreground())
+		baseFg = r.Theme.Color(baseStyle.Foreground())
+		highFg = r.Theme.Color(highStyle.Foreground())
 		if hi != lo {
 			threshLevel = (s.threshold - lo) / (hi - lo)
 		}
@@ -138,9 +137,9 @@ func (s *Sparkline) Render(r *Renderer) {
 			}
 			fg = LerpColor(baseFg, highFg, t)
 		case s.threshold > 0 && v >= s.threshold:
-			fg = theme.Color(highStyle.Foreground())
+			fg = r.Theme.Color(highStyle.Foreground())
 		default:
-			fg = theme.Color(baseStyle.Foreground())
+			fg = r.Theme.Color(baseStyle.Foreground())
 		}
 		r.Set(fg, baseStyle.Background(), baseStyle.Font())
 

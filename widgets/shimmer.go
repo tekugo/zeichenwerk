@@ -139,9 +139,8 @@ func (sh *Shimmer) Render(r *Renderer) {
 	baseStyle := sh.Style("")
 	bandStyle := sh.Style("band")
 
-	theme := r.Theme()
-	baseFg := theme.Color(baseStyle.Foreground())
-	bandFg := theme.Color(bandStyle.Foreground())
+	baseFg := r.Theme.Color(baseStyle.Foreground())
+	bandFg := r.Theme.Color(bandStyle.Foreground())
 
 	for i, line := range sh.lines {
 		if i >= ch {

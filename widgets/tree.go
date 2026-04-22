@@ -236,12 +236,11 @@ func (t *Tree) Render(r *Renderer) {
 	_ = disabledStyle
 
 	// Theme strings
-	theme := r.Theme()
-	strExpanded := theme.String("tree.expanded")
-	strCollapsed := theme.String("tree.collapsed")
-	strBranch := theme.String("tree.branch")
-	strLast := theme.String("tree.last")
-	strTrunk := theme.String("tree.trunk")
+	strExpanded := r.Theme.String("tree.expanded")
+	strCollapsed := r.Theme.String("tree.collapsed")
+	strBranch := r.Theme.String("tree.branch")
+	strLast := r.Theme.String("tree.last")
+	strTrunk := r.Theme.String("tree.trunk")
 
 	end := t.offset + ch
 	if end > len(t.flat) {

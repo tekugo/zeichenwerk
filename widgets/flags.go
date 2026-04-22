@@ -46,6 +46,9 @@ const (
 	// Supported by [Digits].
 	FlagRight Flag = "right"
 
+	// FlagSearch if search (currently only in List) is enabled
+	FlagSearch Flag = "search"
+
 	// FlagSkip excludes the widget from Tab/Shift-Tab focus traversal even when
 	FlagSkip Flag = "skip"
 

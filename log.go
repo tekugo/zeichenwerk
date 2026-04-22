@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/tekugo/zeichenwerk/widgets"
 )
 
 // TableLogItem represents a single entry in the TableLog circular buffer.
@@ -27,7 +29,7 @@ func (le *TableLogItem) String() string {
 // The buffer has a fixed capacity; when full, oldest entries are overwritten.
 type TableLog struct {
 	items   []TableLogItem
-	columns []TableColumn
+	columns []widgets.TableColumn
 	size    int
 	start   int
 	count   int
@@ -38,7 +40,7 @@ type TableLog struct {
 func NewTableLog(size int) *TableLog {
 	return &TableLog{
 		items: make([]TableLogItem, size),
-		columns: []TableColumn{
+		columns: []widgets.TableColumn{
 			{Header: "Time", Width: 12, Sortable: true, Filterable: false},
 			{Header: "Level", Width: 5, Sortable: false, Filterable: true},
 			{Header: "Source", Width: 20, Sortable: false, Filterable: true},
@@ -69,7 +71,7 @@ func (t *TableLog) Add(source, level, message string, params ...any) {
 }
 
 // Columns returns the column definitions for the TableProvider interface.
-func (t *TableLog) Columns() []TableColumn {
+func (t *TableLog) Columns() []widgets.TableColumn {
 	return t.columns
 }
 
@@ -115,7 +117,7 @@ func (t *TableLog) Iter() <-chan TableLogItem {
 // It optionally also writes logs to stderr for development debugging.
 type UILogHandler struct {
 	tableLog *TableLog
-	text     *Text
+	text     *widgets.Text
 	level    slog.Level
 	console  bool
 	attrs    []slog.Attr // attributes from WithAttrs

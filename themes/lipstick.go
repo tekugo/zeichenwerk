@@ -13,7 +13,7 @@ import (
 //   - Ink ($bg0–$bg3): warm near-black backgrounds with a subtle purple tint
 //   - Cream ($fg0–$fg2): warm off-white foreground tones
 //   - Accents: fuchsia, indigo, green, and supporting colours from the Charm palette
-func LipstickTheme() *Theme {
+func Lipstick() *Theme {
 	t := NewTheme()
 
 	AddUnicodeBorders(t)

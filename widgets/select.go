@@ -69,7 +69,7 @@ func (s *Select) Render(r *Renderer) {
 	s.Component.Render(r)
 
 	// Render the content
-	dropdown := r.Theme().String("select.dropdown")
+	dropdown := r.Theme.String("select.dropdown")
 	dw := utf8.RuneCountInString(dropdown)
 	cx, cy, cw, _ := s.Content()
 	r.Text(cx, cy, s.options[s.index].text, 0)

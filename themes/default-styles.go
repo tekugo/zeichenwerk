@@ -14,6 +14,7 @@ func AddDefaultStyles(theme *Theme) {
 		NewStyle("button.dialog").WithColors("$fg1", "$bg2").WithBorder("none"),
 		NewStyle("button.dialog:focused").WithColors("$bg0", "$cyan").WithBorder("none"),
 		NewStyle("button.dialog:hovered").WithColors("$bg0", "$aqua").WithBorder("none"),
+		NewStyle("card").WithBorder("thin"),
 		NewStyle("checkbox").WithColors("$fg1", "$bg0"),
 		NewStyle("checkbox:disabled").WithColors("$bg3", "$bg0"),
 		NewStyle("checkbox:focused").WithColors("$cyan", "$bg0"),

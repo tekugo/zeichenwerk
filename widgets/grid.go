@@ -108,53 +108,14 @@ func NewGrid(id, class string, rows, columns int, lines bool) *Grid {
 	return &grid
 }
 
-// RowSizes returns a copy of the row size configuration.
-func (g *Grid) RowSizes() []int { return append([]int(nil), g.rows...) }
-
-// ColSizes returns a copy of the column size configuration.
-func (g *Grid) ColSizes() []int { return append([]int(nil), g.columns...) }
-
-// Lines returns whether grid lines are drawn between cells.
-func (g *Grid) Lines() bool { return g.lines }
-
-// GridCell holds a child widget with its cell position and span.
-type GridCell struct {
-	X, Y, W, H int
-	Widget     Widget
-}
-
-// GridCells returns the position and span of every child in the grid.
-func (g *Grid) GridCells() []GridCell {
-	out := make([]GridCell, len(g.cells))
-	for i, c := range g.cells {
-		out[i] = GridCell{c.x, c.y, c.w, c.h, c.content}
-	}
-	return out
-}
+// ---- Widget Methods -------------------------------------------------------
 
 // Apply applies a theme's styles to the component.
 func (g *Grid) Apply(theme *Theme) {
 	theme.Apply(g, g.Selector("grid"))
 }
 
-// Summary returns row/column sizes and grid-lines setting for Dump output.
-func (g *Grid) Summary() string {
-	return fmt.Sprintf("rows=%v cols=%v lines=%v", g.rows, g.columns, g.lines)
-}
-
-// Children returns a slice of all child widgets contained in the grid cells.
-// The widgets are returned in the order they were added to the grid, which
-// may not correspond to their visual position within the grid layout.
-//
-// Returns:
-//   - []Widget: A slice containing all child widgets in the grid
-func (g *Grid) Children() []Widget {
-	result := make([]Widget, len(g.cells))
-	for i, cell := range g.cells {
-		result[i] = cell.content
-	}
-	return result
-}
+// ---- Container Methods ----------------------------------------------------
 
 // Add places a widget in the grid at the specified position with the given
 // span. The widget will occupy a rectangular area from (x,y) spanning w
@@ -234,6 +195,47 @@ func (g *Grid) Add(content Widget, params ...any) error {
 	return nil
 }
 
+// Children returns a slice of all child widgets contained in the grid cells.
+// The widgets are returned in the order they were added to the grid, which
+// may not correspond to their visual position within the grid layout.
+//
+// Returns:
+//   - []Widget: A slice containing all child widgets in the grid
+func (g *Grid) Children() []Widget {
+	result := make([]Widget, len(g.cells))
+	for i, cell := range g.cells {
+		result[i] = cell.content
+	}
+	return result
+}
+
+// ---- Summarizer -----------------------------------------------------------
+
+// Summary returns row/column sizes and grid-lines setting for Dump output.
+func (g *Grid) Summary() string {
+	return fmt.Sprintf("rows=%v cols=%v lines=%v", g.rows, g.columns, g.lines)
+}
+
+// ---- Grid Methods ---------------------------------------------------------
+
+// Lines returns whether grid lines are drawn between cells.
+func (g *Grid) Lines() bool { return g.lines }
+
+// GridCell holds a child widget with its cell position and span.
+type GridCell struct {
+	X, Y, W, H int
+	Widget     Widget
+}
+
+// GridCells returns the position and span of every child in the grid.
+func (g *Grid) GridCells() []GridCell {
+	out := make([]GridCell, len(g.cells))
+	for i, c := range g.cells {
+		out[i] = GridCell{c.x, c.y, c.w, c.h, c.content}
+	}
+	return out
+}
+
 // Columns sets the column sizes for the grid. The number of columns must match
 // the number of columns specified when the grid was created. If the number of
 // columns does not match, an error is logged and the grid remains unchanged.
@@ -255,6 +257,8 @@ func (g *Grid) Rows(rows ...int) {
 		g.Log(g, Error, "Cannot change grid size at runtime")
 	}
 }
+
+// ---- Layout ---------------------------------------------------------------
 
 // Layout arranges all child widgets within the grid according to the configured
 // row and column sizes, cell positions, and spanning requirements. This method
@@ -458,6 +462,8 @@ func (g *Grid) Layout() error {
 	return nil
 }
 
+// ---- Rendering ------------------------------------------------------------
+
 func (g *Grid) Render(r *Renderer) {
 	// Use the rendering of the component first
 	g.Component.Render(r)
@@ -478,7 +484,7 @@ func (g *Grid) Render(r *Renderer) {
 	if border == "" || border == "none" {
 		return
 	}
-	b := r.Theme().Border(border)
+	b := r.Theme.Border(border)
 	if b == nil {
 		return
 	}

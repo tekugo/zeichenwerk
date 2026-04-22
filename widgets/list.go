@@ -10,13 +10,6 @@ import (
 	. "github.com/tekugo/zeichenwerk/core"
 )
 
-// flagSearch is an internal flag used to track whether quick-search is enabled.
-const flagSearch Flag = "search"
-
-// doubleClickThreshold is the maximum time between two clicks on the same item
-// for them to be treated as a double-click.
-const doubleClickThreshold = 300 * time.Millisecond
-
 // List is a scrollable list widget that displays text items with comprehensive
 // interaction capabilities.
 //
@@ -87,7 +80,7 @@ func NewList(id, class string, items []string) *List {
 		lastClickIndex: -1,
 	}
 	list.SetFlag(FlagFocusable, true)
-	list.SetFlag(flagSearch, true)
+	list.SetFlag(FlagSearch, true)
 	OnKey(list, list.handleKey)
 	OnMouse(list, list.handleMouse)
 	return list
@@ -354,7 +347,7 @@ func (l *List) handleKey(event *tcell.EventKey) bool {
 		l.Dispatch(l, EvtActivate, l.index)
 		return true
 	case tcell.KeyRune:
-		if l.Flag(flagSearch) {
+		if l.Flag(FlagSearch) {
 			// Quick search by first letter
 			ch := event.Str()
 			for i, item := range l.items {
@@ -393,7 +386,7 @@ func (l *List) handleMouse(event *tcell.EventMouse) bool {
 	}
 
 	now := event.When()
-	isDoubleClick := index == l.lastClickIndex && now.Sub(l.lastClickTime) <= doubleClickThreshold
+	isDoubleClick := index == l.lastClickIndex && now.Sub(l.lastClickTime) <= DoubleClickThreshold
 	l.lastClickIndex = index
 	l.lastClickTime = now
 

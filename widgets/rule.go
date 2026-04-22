@@ -42,7 +42,7 @@ func (c *Rule) Render(r *Renderer) {
 	c.Component.Render(r)
 
 	x, y, w, h := c.Content()
-	b := r.Theme().Border(c.style)
+	b := r.Theme.Border(c.style)
 	if c.horizontal {
 		r.Line(x, y, 1, 0, w-2, b.InnerH, b.InnerH, b.InnerH)
 	} else {
