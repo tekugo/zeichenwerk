@@ -190,3 +190,56 @@ func Padding(a ...int) Option {
 		}
 	}
 }
+
+// ---- Widget Options -------------------------------------------------------
+
+// Total sets the maximum value of a [Progress] bar at construction time.
+// It is a no-op when applied to any other widget type.
+func Total(n int) Option {
+	return func(_ *core.Theme, widget core.Widget) {
+		if w, ok := widget.(*widgets.Progress); ok {
+			w.SetTotal(n)
+		}
+	}
+}
+
+// Value sets the current value of a [Progress] bar at construction time.
+// It is a no-op when applied to any other widget type.
+func Value(n int) Option {
+	return func(_ *core.Theme, widget core.Widget) {
+		if w, ok := widget.(*widgets.Progress); ok {
+			w.Set(n)
+		}
+	}
+}
+
+// Content sets the initial text content of an [Editor] widget at construction
+// time. Each element of lines becomes one editor line. It is a no-op when
+// applied to any other widget type.
+func Content(lines []string) Option {
+	return func(_ *core.Theme, widget core.Widget) {
+		if w, ok := widget.(*widgets.Editor); ok {
+			w.SetContent(lines)
+		}
+	}
+}
+
+// LineNumbers controls whether line numbers are shown in an [Editor] widget.
+// It is a no-op when applied to any other widget type.
+func LineNumbers(show bool) Option {
+	return func(_ *core.Theme, widget core.Widget) {
+		if w, ok := widget.(*widgets.Editor); ok {
+			w.ShowLineNumbers(show)
+		}
+	}
+}
+
+// Items sets the initial data items of a [Deck] widget at construction time.
+// It is a no-op when applied to any other widget type.
+func Items(items []any) Option {
+	return func(_ *core.Theme, widget core.Widget) {
+		if w, ok := widget.(*widgets.Deck); ok {
+			w.Set(items)
+		}
+	}
+}

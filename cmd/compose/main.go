@@ -12,29 +12,32 @@ import (
 	"github.com/gdamore/tcell/v3"
 	z "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/compose"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/themes"
+	"github.com/tekugo/zeichenwerk/widgets"
 )
 
 type navItem struct{ icon, name, desc string }
 
-func parseFlags() (*z.Theme, bool, bool) {
+func parseFlags() (*core.Theme, bool, bool) {
 	t := flag.String("t", "midnight", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
 	dmp := flag.Bool("dump", false, "Dump widget hierarchy to stdout and exit")
 	dmpV := flag.Bool("dump-verbose", false, "Dump widget hierarchy with style details to stdout and exit")
 	flag.Parse()
-	var theme *z.Theme
+	var theme *core.Theme
 	switch *t {
 	case "tokyo":
-		theme = z.TokyoNightTheme()
+		theme = themes.TokyoNight()
 	case "nord":
-		theme = z.NordTheme()
+		theme = themes.Nord()
 	case "gruvbox-dark":
-		theme = z.GruvboxDarkTheme()
+		theme = themes.GruvboxDark()
 	case "gruvbox-light":
-		theme = z.GruvboxLightTheme()
+		theme = themes.GruvboxLight()
 	case "lipstick":
-		theme = z.LipstickTheme()
+		theme = themes.Lipstick()
 	default:
-		theme = z.MidnightNeonTheme()
+		theme = themes.MidnightNeon()
 	}
 	return theme, *dmp, *dmpV
 }
@@ -45,14 +48,14 @@ func main() {
 	if dmp || dmpV {
 		ui.SetBounds(0, 0, 120, 40)
 		ui.Layout()
-		ui.Dump(os.Stdout, z.DumpOptions{Style: dmpV})
+		ui.Dump(os.Stdout, widgets.DumpOptions{Style: dmpV})
 		return
 	}
 
-	crt := z.Find(ui, "crt").(*z.CRT)
+	crt := core.Find(ui, "crt").(*widgets.CRT)
 
 	// Intercept quit shortcuts so the power-off animation plays before exit.
-	z.OnKey(crt, func(e *tcell.EventKey) bool {
+	widgets.OnKey(crt, func(e *tcell.EventKey) bool {
 		switch e.Key() {
 		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
 			crt.PowerOff(20*time.Millisecond, ui.Quit)
@@ -72,7 +75,7 @@ func main() {
 
 // ── Shell ──────────────────────────────────────────────────────────────────────
 
-func createUI(theme *z.Theme) *z.UI {
+func createUI(theme *core.Theme) *z.UI {
 	navItems := []any{
 		navItem{"◈", "Dashboard", "System metrics & KPIs"},
 		navItem{"◉", "User Admin", "Manage users & roles"},
@@ -82,7 +85,7 @@ func createUI(theme *z.Theme) *z.UI {
 		navItem{"✎", "Code Editor", "Edit files & preview"},
 	}
 
-	renderNav := func(r *z.Renderer, x, y, w, h, index int, data any, selected, focused bool) {
+	renderNav := func(r *core.Renderer, x, y, w, h, index int, data any, selected, focused bool) {
 		item := data.(navItem)
 		bg := "$bg1"
 		if selected {
@@ -112,9 +115,9 @@ func createUI(theme *z.Theme) *z.UI {
 
 	ui := UI(theme,
 		CRT("crt", "",
-			Flex("root", "", false, "stretch", 0,
+			VFlex("root", "", "stretch", 0,
 				// ── Header ──────────────────────────────────────────────────────────
-				Flex("header", "", true, "center", 0,
+				HFlex("header", "", "center", 0,
 					Bg("$bg1"), Padding(0, 1),
 					Static("app-icon", "", "◈", Font("bold"), Fg("$cyan"), Padding(0, 1, 0, 0)),
 					Static("app-name", "", "TUI Showcase", Font("bold"), Fg("$fg0")),
@@ -137,7 +140,7 @@ func createUI(theme *z.Theme) *z.UI {
 				Grid("body", "", []int{-1}, []int{26, -1}, false,
 					Hint(0, -1),
 					Cell(0, 0, 1, 1,
-						Flex("sidebar", "", false, "stretch", 0,
+						VFlex("sidebar", "", "stretch", 0,
 							Bg("$bg1"),
 							Static("sidebar-brand", "", " ◈ SHOWCASE", Font("bold"), Fg("$magenta"), Padding(1, 0)),
 							HRule("", "thin"),
@@ -160,7 +163,7 @@ func createUI(theme *z.Theme) *z.UI {
 					),
 				),
 				// ── Footer ──────────────────────────────────────────────────────────
-				Flex("footer", "", true, "center", 0,
+				HFlex("footer", "", "center", 0,
 					Bg("$bg1"), Padding(0, 1),
 					Static("footer-keys", "", " ↑↓ Navigate   Tab/Shift+Tab Focus   Enter/Space Activate   Esc Cancel", Fg("$gray")),
 					Spacer("", Hint(-1, 0)),
@@ -171,10 +174,10 @@ func createUI(theme *z.Theme) *z.UI {
 	)
 
 	// Wire navigation
-	switcher := z.Find(ui, "content").(*z.Switcher)
-	nav := z.Find(ui, "nav").(*z.Deck)
+	switcher := core.Find(ui, "content").(*widgets.Switcher)
+	nav := core.Find(ui, "nav").(*widgets.Deck)
 	nav.Set(navItems)
-	navSwitch := func(_ z.Widget, _ z.Event, data ...any) bool {
+	navSwitch := func(_ core.Widget, _ core.Event, data ...any) bool {
 		if len(data) == 1 {
 			if sel, ok := data[0].(int); ok {
 				switcher.Select(sel)
@@ -182,17 +185,17 @@ func createUI(theme *z.Theme) *z.UI {
 		}
 		return true
 	}
-	nav.On(z.EvtSelect, navSwitch)
-	nav.On(z.EvtActivate, navSwitch)
+	nav.On(widgets.EvtSelect, navSwitch)
+	nav.On(widgets.EvtActivate, navSwitch)
 
 	// Wire theme switcher
-	themes := map[string]*z.Theme{
-		"neon":         z.MidnightNeonTheme(),
-		"tokyo":        z.TokyoNightTheme(),
-		"gruvbox-dark": z.GruvboxDarkTheme(),
-		"nrrd":         z.NordTheme(),
+	themes := map[string]*core.Theme{
+		"neon":         themes.MidnightNeon(),
+		"tokyo":        themes.TokyoNight(),
+		"gruvbox-dark": themes.GruvboxDark(),
+		"nrrd":         themes.Nord(),
 	}
-	z.Find(ui, "theme-select").On(z.EvtChange, func(_ z.Widget, _ z.Event, data ...any) bool {
+	core.Find(ui, "theme-select").On(widgets.EvtChange, func(_ core.Widget, _ core.Event, data ...any) bool {
 		if len(data) == 1 {
 			if key, ok := data[0].(string); ok {
 				if theme, found := themes[key]; found {
@@ -208,20 +211,20 @@ func createUI(theme *z.Theme) *z.UI {
 
 // ── Screen 1: System Dashboard ─────────────────────────────────────────────────
 
-func dashboardScreen(theme *z.Theme) z.Widget {
-	cpuProg := z.NewProgress("dash-cpu-prog", "", true)
+func dashboardScreen(theme *core.Theme) core.Widget {
+	cpuProg := widgets.NewProgress("dash-cpu-prog", "", true)
 	cpuProg.SetTotal(100)
 	cpuProg.Set(64)
 
-	memProg := z.NewProgress("dash-mem-prog", "", true)
+	memProg := widgets.NewProgress("dash-mem-prog", "", true)
 	memProg.SetTotal(100)
 	memProg.Set(41)
 
-	diskProg := z.NewProgress("dash-disk-prog", "", true)
+	diskProg := widgets.NewProgress("dash-disk-prog", "", true)
 	diskProg.SetTotal(100)
 	diskProg.Set(78)
 
-	netProg := z.NewProgress("dash-net-prog", "", true)
+	netProg := widgets.NewProgress("dash-net-prog", "", true)
 	netProg.SetTotal(100)
 	netProg.Set(23)
 
@@ -234,7 +237,7 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 		{"prometheus", "● running", "1.8%", "128 MB", " 2d 11h"},
 		{"grafana", "● running", "0.9%", " 96 MB", " 2d 11h"},
 	}
-	svcTable := z.NewArrayTableProvider(svcHeaders, svcData)
+	svcTable := widgets.NewArrayTableProvider(svcHeaders, svcData)
 
 	activityLines := []string{
 		"[12:34:01] INFO    User admin logged in from 192.168.1.10",
@@ -250,10 +253,10 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 	}
 
 	w := Build(theme,
-		Flex("dashboard", "", false, "stretch", 0,
+		VFlex("dashboard", "", "stretch", 0,
 			Padding(1, 2),
 			// Title row
-			Flex("dash-hdr", "", true, "center", 2,
+			HFlex("dash-hdr", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("dash-title", "", "System Dashboard", Font("bold"), Fg("$cyan")),
 				Spacer("", Hint(-1, 0)),
@@ -263,34 +266,34 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 			),
 			HRule("", "thin", Padding(0, 0, 1, 0)),
 			// KPI cards
-			Flex("kpi-row", "", true, "stretch", 2,
+			HFlex("kpi-row", "", "stretch", 2,
 				Padding(0, 0, 1, 0),
-				Flex("kpi-cpu", "", false, "start", 0,
+				VFlex("kpi-cpu", "", "start", 0,
 					Border("", "round"), Padding(1, 2),
 					Static("kpi-cpu-lbl", "", "CPU Usage", Fg("$gray")),
 					Digits("kpi-cpu-val", "", "64", Fg("$yellow")),
 					Progress("dash-cpu-prog", "", true, Value(64), Total(100)),
 					Static("kpi-cpu-sub", "", "% · 8 cores · 3.2 GHz", Fg("$gray")),
 				),
-				Flex("kpi-mem", "", false, "start", 0,
+				VFlex("kpi-mem", "", "start", 0,
 					Border("", "round"), Padding(1, 2),
 					Static("kpi-mem-lbl", "", "Memory", Fg("$gray")),
 					Digits("kpi-mem-val", "", "4.1", Fg("$cyan")),
-					Include(func(_ *z.Theme) z.Widget { return memProg }),
+					Include(func(_ *core.Theme) core.Widget { return memProg }),
 					Static("kpi-mem-sub", "", "GB of 10 GB total", Fg("$gray")),
 				),
-				Flex("kpi-disk", "", false, "start", 0,
+				VFlex("kpi-disk", "", "start", 0,
 					Border("", "round"), Padding(1, 2),
 					Static("kpi-disk-lbl", "", "Disk", Fg("$gray")),
 					Digits("kpi-disk-val", "", "780", Fg("$orange")),
-					Include(func(_ *z.Theme) z.Widget { return diskProg }),
+					Include(func(_ *core.Theme) core.Widget { return diskProg }),
 					Static("kpi-disk-sub", "", "GB of 1 TB · 78% full", Fg("$gray")),
 				),
-				Flex("kpi-net", "", false, "start", 0,
+				VFlex("kpi-net", "", "start", 0,
 					Border("", "round"), Padding(1, 2),
 					Static("kpi-net-lbl", "", "Network", Fg("$gray")),
 					Digits("kpi-net-val", "", "2.4", Fg("$green")),
-					Include(func(_ *z.Theme) z.Widget { return netProg }),
+					Include(func(_ *core.Theme) core.Widget { return netProg }),
 					Static("kpi-net-sub", "", "Mb/s ↑ · ↓8.1 Mb/s recv", Fg("$gray")),
 				),
 			),
@@ -298,14 +301,14 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 			Grid("dash-mid", "", []int{0}, []int{-2, -1}, false,
 				Hint(0, 10), Padding(0, 0, 1, 0), Border("none"),
 				Cell(0, 0, 1, 1,
-					Flex("svc-pane", "", false, "stretch", 0,
+					VFlex("svc-pane", "", "stretch", 0,
 						Border("", "round"),
 						Static("svc-title", "", " Services", Font("bold"), Fg("$fg0"), Bg("$bg2")),
 						Table("svc-table", "", svcTable, false, Hint(0, -1)),
 					),
 				),
 				Cell(1, 0, 1, 1,
-					Flex("alerts-pane", "", false, "stretch", 0,
+					VFlex("alerts-pane", "", "stretch", 0,
 						Border("", "round"),
 						Static("alerts-title", "", " Alerts & Notices", Font("bold"), Fg("$fg0"), Bg("$bg2")),
 						Static("alert1", "", "⚠  Disk usage on /var exceeds 80%", Fg("$orange"), Padding(0, 1)),
@@ -318,7 +321,7 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 				),
 			),
 			// Activity log
-			Flex("activity-pane", "", false, "stretch", 0,
+			VFlex("activity-pane", "", "stretch", 0,
 				Border("", "round"), Hint(0, -1),
 				Static("activity-title", "", " Recent Activity", Font("bold"), Fg("$fg0"), Bg("$bg2")),
 				Text("activity-log", "", activityLines, false, 200, Hint(0, -1)),
@@ -326,15 +329,15 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 		),
 	)
 
-	container := w.(z.Container)
-	container.On(z.EvtShow, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		for _, sp := range z.FindAll[*z.Spinner](container) {
+	container := w.(core.Container)
+	container.On(widgets.EvtShow, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		for _, sp := range core.FindAll[*widgets.Spinner](container) {
 			sp.Start(120 * time.Millisecond)
 		}
 		return true
 	})
-	container.On(z.EvtHide, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		for _, sp := range z.FindAll[*z.Spinner](container) {
+	container.On(widgets.EvtHide, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		for _, sp := range core.FindAll[*widgets.Spinner](container) {
 			sp.Stop()
 		}
 		return true
@@ -345,7 +348,7 @@ func dashboardScreen(theme *z.Theme) z.Widget {
 
 // ── Screen 2: User Administration ──────────────────────────────────────────────
 
-func userAdminScreen(theme *z.Theme) z.Widget {
+func userAdminScreen(theme *core.Theme) core.Widget {
 	userHeaders := []string{"ID", "Name", "Email", "Role", "Status", "Last Login"}
 	userData := [][]string{
 		{"001", "Alice Johnson", "alice@example.com", "Admin", "● Active", "2026-03-31 11:42"},
@@ -376,16 +379,16 @@ func userAdminScreen(theme *z.Theme) z.Widget {
 	}
 
 	w := Build(theme,
-		Flex("user-admin", "", false, "stretch", 0,
+		VFlex("user-admin", "", "stretch", 0,
 			Padding(1, 2),
-			Flex("ua-hdr", "", true, "center", 2,
+			HFlex("ua-hdr", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("ua-title", "", "User Administration", Font("bold"), Fg("$cyan")),
 				Spacer("", Hint(-1, 0)),
 				Static("ua-count", "", "12 users  ·  9 active  ·  3 pending/inactive", Fg("$gray")),
 			),
 			HRule("", "thin", Padding(0, 0, 1, 0)),
-			Flex("ua-toolbar", "", true, "center", 2,
+			HFlex("ua-toolbar", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("ua-search-lbl", "", "Search:", Fg("$gray")),
 				Typeahead("ua-search", "", []string{"name, email or role…"}, Hint(28, 1)),
@@ -397,14 +400,14 @@ func userAdminScreen(theme *z.Theme) z.Widget {
 			Grid("ua-body", "", []int{-1}, []int{-3, -2}, false,
 				Hint(0, -1), Border("none"),
 				Cell(0, 0, 1, 1,
-					Flex("ua-list-pane", "", false, "stretch", 0,
+					VFlex("ua-list-pane", "", "stretch", 0,
 						Border("", "round"),
 						Static("ua-list-title", "", " Users", Font("bold"), Bg("$bg2")),
-						Table("ua-table", "", z.NewArrayTableProvider(userHeaders, userData), true, Hint(0, -1)),
+						Table("ua-table", "", widgets.NewArrayTableProvider(userHeaders, userData), true, Hint(0, -1)),
 					),
 				),
 				Cell(1, 0, 1, 1,
-					Flex("ua-detail-pane", "", false, "stretch", 0,
+					VFlex("ua-detail-pane", "", "stretch", 0,
 						Border("", "round"),
 						Static("ua-detail-title", "", " Edit User", Font("bold"), Bg("$bg2")),
 						Form("ua-form", "", "", &selectedUser,
@@ -412,7 +415,7 @@ func userAdminScreen(theme *z.Theme) z.Widget {
 								Padding(1),
 							),
 						),
-						Flex("ua-detail-btns", "", true, "end", 2,
+						HFlex("ua-detail-btns", "", "end", 2,
 							Padding(1),
 							Button("ua-save", "dialog", " ✓ Save Changes"),
 							Button("ua-reset", "", " ↺ Reset"),
@@ -424,15 +427,15 @@ func userAdminScreen(theme *z.Theme) z.Widget {
 		),
 	)
 
-	container := w.(z.Container)
-	z.Find(container, "ua-save").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		if lbl, ok := z.Find(container, "ua-detail-title").(*z.Static); ok {
+	container := w.(core.Container)
+	core.Find(container, "ua-save").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		if lbl, ok := core.Find(container, "ua-detail-title").(*widgets.Static); ok {
 			lbl.Set(fmt.Sprintf(" Edit User  ✓ Saved %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
-	z.Find(container, "ua-reset").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		if lbl, ok := z.Find(container, "ua-detail-title").(*z.Static); ok {
+	core.Find(container, "ua-reset").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		if lbl, ok := core.Find(container, "ua-detail-title").(*widgets.Static); ok {
 			lbl.Set(" Edit User")
 		}
 		return true
@@ -479,7 +482,7 @@ func generateLogLine() string {
 	return fmt.Sprintf("[%s] %-5s %-12s  %s", time.Now().Format("15:04:05"), level, src, msg)
 }
 
-func logMonitorScreen(theme *z.Theme) z.Widget {
+func logMonitorScreen(theme *core.Theme) core.Widget {
 	initial := make([]string, 30)
 	base := time.Now().Add(-30 * time.Minute)
 	for i := range initial {
@@ -491,17 +494,17 @@ func logMonitorScreen(theme *z.Theme) z.Widget {
 	}
 
 	w := Build(theme,
-		Flex("log-monitor", "", false, "stretch", 0,
+		VFlex("log-monitor", "", "stretch", 0,
 			Padding(1, 2),
-			Flex("log-hdr", "", true, "center", 2,
+			HFlex("log-hdr", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("log-title", "", "Log Monitor", Font("bold"), Fg("$cyan")),
 				Spacer("", Hint(-1, 0)),
-				Spinner("log-spinner", "", z.Spinners["braille"]),
+				Spinner("log-spinner", "", widgets.Spinners["braille"]),
 				Static("log-live-lbl", "", " streaming", Fg("$green")),
 			),
 			HRule("", "thin", Padding(0, 0, 1, 0)),
-			Flex("log-toolbar", "", true, "center", 2,
+			HFlex("log-toolbar", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("log-filter-lbl", "", "Filter:", Fg("$gray")),
 				Input("log-filter", "", []string{"keyword…"}, Hint(24, 1)),
@@ -532,14 +535,14 @@ func logMonitorScreen(theme *z.Theme) z.Widget {
 			Grid("log-body", "", []int{-1}, []int{-3, -1}, false,
 				Hint(0, -1), Border("none"),
 				Cell(0, 0, 1, 1,
-					Flex("log-view-pane", "", false, "stretch", 0,
+					VFlex("log-view-pane", "", "stretch", 0,
 						Border("", "round"),
 						Static("log-view-title", "", " Log Stream", Font("bold"), Bg("$bg2")),
 						Text("log-text", "", initial, true, 2000, Hint(0, -1)),
 					),
 				),
 				Cell(1, 0, 1, 1,
-					Flex("log-stats-pane", "", false, "stretch", 0,
+					VFlex("log-stats-pane", "", "stretch", 0,
 						Border("", "round"),
 						Static("log-stats-title", "", " Statistics", Font("bold"), Bg("$bg2")),
 						Spacer("", Hint(0, 1)),
@@ -566,19 +569,19 @@ func logMonitorScreen(theme *z.Theme) z.Widget {
 		),
 	)
 
-	container := w.(z.Container)
+	container := w.(core.Container)
 	var ticker *time.Ticker
 	var paused bool
 
-	container.On(z.EvtShow, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		for _, sp := range z.FindAll[*z.Spinner](container) {
+	container.On(widgets.EvtShow, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		for _, sp := range core.FindAll[*widgets.Spinner](container) {
 			sp.Start(80 * time.Millisecond)
 		}
 		ticker = time.NewTicker(1200 * time.Millisecond)
 		go func() {
 			for range ticker.C {
 				if !paused {
-					if logText, ok := z.Find(container, "log-text").(*z.Text); ok {
+					if logText, ok := core.Find(container, "log-text").(*widgets.Text); ok {
 						logText.Add(generateLogLine())
 					}
 				}
@@ -586,8 +589,8 @@ func logMonitorScreen(theme *z.Theme) z.Widget {
 		}()
 		return true
 	})
-	container.On(z.EvtHide, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		for _, sp := range z.FindAll[*z.Spinner](container) {
+	container.On(widgets.EvtHide, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		for _, sp := range core.FindAll[*widgets.Spinner](container) {
 			sp.Stop()
 		}
 		if ticker != nil {
@@ -596,9 +599,9 @@ func logMonitorScreen(theme *z.Theme) z.Widget {
 		return true
 	})
 
-	z.Find(container, "log-pause").On(z.EvtActivate, func(w z.Widget, _ z.Event, _ ...any) bool {
+	core.Find(container, "log-pause").On(widgets.EvtActivate, func(w core.Widget, _ core.Event, _ ...any) bool {
 		paused = !paused
-		if btn, ok := w.(*z.Button); ok {
+		if btn, ok := w.(*widgets.Button); ok {
 			if paused {
 				btn.Set(" ▶ Resume")
 			} else {
@@ -608,8 +611,8 @@ func logMonitorScreen(theme *z.Theme) z.Widget {
 		}
 		return true
 	})
-	z.Find(container, "log-clear").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		if logText, ok := z.Find(container, "log-text").(*z.Text); ok {
+	core.Find(container, "log-clear").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		if logText, ok := core.Find(container, "log-text").(*widgets.Text); ok {
 			logText.Clear()
 		}
 		return true
@@ -620,7 +623,7 @@ func logMonitorScreen(theme *z.Theme) z.Widget {
 
 // ── Screen 4: Process Manager ──────────────────────────────────────────────────
 
-func processScreen(theme *z.Theme) z.Widget {
+func processScreen(theme *core.Theme) core.Widget {
 	procHeaders := []string{"PID", "Name", "User", "CPU%", "MEM", "Status", "Threads", "Started"}
 	procData := [][]string{
 		{"1", "systemd", "root", "0.0", "  8 MB", "● running", " 1", "14d ago"},
@@ -640,25 +643,25 @@ func processScreen(theme *z.Theme) z.Widget {
 	}
 
 	w := Build(theme,
-		Flex("process-mgr", "", false, "stretch", 0,
+		VFlex("process-mgr", "", "stretch", 0,
 			Padding(1, 2),
-			Flex("proc-hdr", "", true, "center", 2,
+			HFlex("proc-hdr", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("proc-title", "", "Process Manager", Font("bold"), Fg("$cyan")),
 				Spacer("", Hint(-1, 0)),
 				Static("proc-summary", "", "14 processes  ·  13 running  ·  1 stopped", Fg("$gray")),
 			),
 			HRule("", "thin", Padding(0, 0, 1, 0)),
-			Flex("proc-res-row", "", true, "stretch", 4,
+			HFlex("proc-res-row", "", "stretch", 4,
 				Padding(0, 0, 1, 0),
-				Flex("proc-cpu-card", "", false, "stretch", 0,
+				VFlex("proc-cpu-card", "", "stretch", 0,
 					Border("", "round"), Padding(0, 2),
 					Static("proc-cpu-lbl", "", "Total CPU", Fg("$gray")),
 					Static("proc-cpu-val", "", "31%", Font("bold"), Fg("$yellow")),
 					Progress("proc-cpu-total", "", true, Total(100), Value(31)),
 					Hint(20, 1),
 				),
-				Flex("proc-mem-card", "", false, "stretch", 0,
+				VFlex("proc-mem-card", "", "stretch", 0,
 					Border("", "round"), Padding(0, 2),
 					Static("proc-mem-lbl", "", "Memory Used", Fg("$gray")),
 					Static("proc-mem-val", "", "1.43 GB / 10 GB", Font("bold"), Fg("$cyan")),
@@ -666,7 +669,7 @@ func processScreen(theme *z.Theme) z.Widget {
 					Hint(20, 1),
 				),
 				Spacer("", Hint(-1, 0)),
-				Flex("proc-info-card", "", false, "stretch", 0,
+				VFlex("proc-info-card", "", "stretch", 0,
 					Border("", "round"), Padding(0, 2),
 					Static("proc-load-lbl", "", "Load Average", Fg("$gray")),
 					Static("proc-load-val", "", "1.42  1.55  1.61", Font("bold"), Fg("$green")),
@@ -674,7 +677,7 @@ func processScreen(theme *z.Theme) z.Widget {
 					Static("proc-uptime-val", "", "14d 06h 23m", Font("bold"), Fg("$fg1")),
 				),
 			),
-			Flex("proc-toolbar", "", true, "center", 2,
+			HFlex("proc-toolbar", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("proc-filter-lbl", "", "Filter:", Fg("$gray")),
 				Input("proc-filter", "", []string{"name or PID…"}, Hint(24, 1)),
@@ -690,30 +693,30 @@ func processScreen(theme *z.Theme) z.Widget {
 				Button("proc-detail", "", " ⬡ Details"),
 				Button("proc-refresh", "dialog", " ↻ Refresh"),
 			),
-			Flex("proc-table-pane", "", false, "stretch", 0,
+			VFlex("proc-table-pane", "", "stretch", 0,
 				Border("", "round"), Hint(0, -1),
 				Static("proc-table-title", "", " Processes", Font("bold"), Bg("$bg2")),
-				Table("proc-table", "", z.NewArrayTableProvider(procHeaders, procData), false, Hint(0, -1)),
+				Table("proc-table", "", widgets.NewArrayTableProvider(procHeaders, procData), false, Hint(0, -1)),
 			),
 		),
 	)
 
-	container := w.(z.Container)
+	container := w.(core.Container)
 
-	z.Find(container, "proc-kill").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		procTable := z.Find(container, "proc-table").(*z.Table)
+	core.Find(container, "proc-kill").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		procTable := core.Find(container, "proc-table").(*widgets.Table)
 		row, _ := procTable.Selected()
 		if row >= 0 && row < len(procData) {
 			pid := procData[row][0]
 			name := strings.TrimSpace(procData[row][1])
-			if lbl, ok := z.Find(container, "proc-summary").(*z.Static); ok {
+			if lbl, ok := core.Find(container, "proc-summary").(*widgets.Static); ok {
 				lbl.Set(fmt.Sprintf("Sent SIGTERM to %s (PID %s)", name, pid))
 			}
 		}
 		return true
 	})
-	z.Find(container, "proc-refresh").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		if lbl, ok := z.Find(container, "proc-summary").(*z.Static); ok {
+	core.Find(container, "proc-refresh").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		if lbl, ok := core.Find(container, "proc-summary").(*widgets.Static); ok {
 			lbl.Set(fmt.Sprintf("14 processes  ·  refreshed %s", time.Now().Format("15:04:05")))
 		}
 		return true
@@ -724,7 +727,7 @@ func processScreen(theme *z.Theme) z.Widget {
 
 // ── Screen 5: Data Entry ───────────────────────────────────────────────────────
 
-func dataEntryScreen(theme *z.Theme) z.Widget {
+func dataEntryScreen(theme *core.Theme) core.Widget {
 	type CustomerInfo struct {
 		Company string `width:"36"`
 		Name    string `label:"Contact Name" width:"36"`
@@ -767,9 +770,9 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 	}
 
 	w := Build(theme,
-		Flex("data-entry", "", false, "stretch", 0,
+		VFlex("data-entry", "", "stretch", 0,
 			Padding(1, 2),
-			Flex("de-hdr", "", true, "center", 2,
+			HFlex("de-hdr", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("de-title", "", "New Order Entry", Font("bold"), Fg("$cyan")),
 				Spacer("", Hint(-1, 0)),
@@ -779,9 +782,9 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 			Grid("de-body", "", []int{0}, []int{-1, -1}, false,
 				Hint(0, -1),
 				Cell(0, 0, 1, 1,
-					Flex("de-form-col", "", false, "stretch", 0,
+					VFlex("de-form-col", "", "stretch", 0,
 						Collapsible("de-cust-section", "", "  ① Customer Information", true,
-							Flex("de-cust-content", "", false, "stretch", 0,
+							HFlex("de-cust-content", "", "stretch", 0,
 								Padding(0, 2),
 								Form("de-cust-form", "", "", &customer,
 									FormGroup("de-cust-grp", "", "", false, 1),
@@ -790,7 +793,7 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 						),
 						Spacer("", Hint(0, 1)),
 						Collapsible("de-ship-section", "", "  ② Shipping Details", true,
-							Flex("de-ship-content", "", false, "stretch", 0,
+							VFlex("de-ship-content", "", "stretch", 0,
 								Padding(0, 2),
 								Form("de-ship-form", "", "", &shipping,
 									FormGroup("de-ship-grp", "", "", false, 1),
@@ -799,7 +802,7 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 						),
 						Spacer("", Hint(0, 1)),
 						Collapsible("de-pay-section", "", "  ③ Payment & Terms", false,
-							Flex("de-pay-content", "", false, "stretch", 0,
+							VFlex("de-pay-content", "", "stretch", 0,
 								Padding(0, 2),
 								Form("de-pay-form", "", "", &payment,
 									FormGroup("de-pay-grp", "", "", false, 1),
@@ -809,39 +812,39 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 					),
 				),
 				Cell(1, 0, 1, 1,
-					Flex("de-items-col", "", false, "stretch", 0,
+					VFlex("de-items-col", "", "stretch", 0,
 						Padding(0, 0, 0, 2),
 						Static("de-items-title", "", "Order Items", Font("bold"), Fg("$fg1"), Padding(0, 0, 1, 0)),
-						Table("de-items-table", "", z.NewArrayTableProvider(orderHeaders, orderData), true, Hint(0, 8)),
+						Table("de-items-table", "", widgets.NewArrayTableProvider(orderHeaders, orderData), true, Hint(0, 8)),
 						Spacer("", Hint(0, 1)),
-						Flex("de-summary", "", false, "stretch", 0,
+						VFlex("de-summary", "", "stretch", 0,
 							Border("", "round"), Padding(1, 2),
 							Static("de-sum-title", "", "Order Summary", Font("bold"), Fg("$fg1")),
 							HRule("", "thin"),
-							Flex("de-sum-row1", "", true, "stretch", 0,
+							HFlex("de-sum-row1", "", "stretch", 0,
 								Static("de-sum-subtotal-lbl", "", "Subtotal", Fg("$gray")),
 								Spacer("", Hint(-1, 0)),
 								Static("de-sum-subtotal-val", "", "$2,688.00"),
 							),
-							Flex("de-sum-row2", "", true, "stretch", 0,
+							HFlex("de-sum-row2", "", "stretch", 0,
 								Static("de-sum-tax-lbl", "", "Tax (0%)", Fg("$gray")),
 								Spacer("", Hint(-1, 0)),
 								Static("de-sum-tax-val", "", "    $0.00"),
 							),
-							Flex("de-sum-row3", "", true, "stretch", 0,
+							HFlex("de-sum-row3", "", "stretch", 0,
 								Static("de-sum-ship-lbl", "", "Shipping (Express)", Fg("$gray")),
 								Spacer("", Hint(-1, 0)),
 								Static("de-sum-ship-val", "", "   $35.00"),
 							),
 							HRule("", "thin"),
-							Flex("de-sum-total-row", "", true, "stretch", 0,
+							HFlex("de-sum-total-row", "", "stretch", 0,
 								Static("de-sum-total-lbl", "", "Total", Font("bold"), Fg("$fg0")),
 								Spacer("", Hint(-1, 0)),
 								Static("de-sum-total-val", "", "$2,723.00", Font("bold"), Fg("$cyan")),
 							),
 						),
 						Spacer("", Hint(0, -1)),
-						Flex("de-actions", "", true, "end", 2,
+						HFlex("de-actions", "", "end", 2,
 							Button("de-btn-draft", "", " ↓ Save Draft"),
 							Button("de-btn-cancel", "", " ✕ Cancel"),
 							Button("de-btn-submit", "dialog", " ✓ Submit Order"),
@@ -853,25 +856,25 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 		),
 	)
 
-	container := w.(z.Container)
+	container := w.(core.Container)
 
-	z.Find(container, "de-btn-submit").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		if lbl, ok := z.Find(container, "de-status").(*z.Static); ok {
+	core.Find(container, "de-btn-submit").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		if lbl, ok := core.Find(container, "de-status").(*widgets.Static); ok {
 			lbl.Set(fmt.Sprintf("✓  Order REF #2026-0099 submitted at %s", time.Now().Format("15:04:05")))
 		}
-		if title, ok := z.Find(container, "de-ref").(*z.Static); ok {
+		if title, ok := core.Find(container, "de-ref").(*widgets.Static); ok {
 			title.Set("Submitted  ·  REF #2026-0099")
 		}
 		return true
 	})
-	z.Find(container, "de-btn-draft").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		if lbl, ok := z.Find(container, "de-status").(*z.Static); ok {
+	core.Find(container, "de-btn-draft").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		if lbl, ok := core.Find(container, "de-status").(*widgets.Static); ok {
 			lbl.Set(fmt.Sprintf("Draft saved at %s", time.Now().Format("15:04:05")))
 		}
 		return true
 	})
-	z.Find(container, "de-btn-cancel").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		if lbl, ok := z.Find(container, "de-status").(*z.Static); ok {
+	core.Find(container, "de-btn-cancel").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		if lbl, ok := core.Find(container, "de-status").(*widgets.Static); ok {
 			lbl.Set("Changes discarded.")
 		}
 		return true
@@ -882,7 +885,7 @@ func dataEntryScreen(theme *z.Theme) z.Widget {
 
 // ── Screen 6: Code Editor ──────────────────────────────────────────────────────
 
-func codeEditorScreen(theme *z.Theme) z.Widget {
+func codeEditorScreen(theme *core.Theme) core.Widget {
 	mainGoContent := []string{
 		"package main",
 		"",
@@ -945,24 +948,24 @@ func codeEditorScreen(theme *z.Theme) z.Widget {
 		"*Tip: Press Ctrl+D to inspect the widget tree of this screen.*"
 
 	// Build file tree imperatively — must happen before Build so we can inject via Include
-	root := z.NewTreeNode("zeichenwerk")
-	widgets := z.NewTreeNode("widgets")
-	widgets.Add(z.NewTreeNode("main.go", 0))
-	widgets.Add(z.NewTreeNode("table.go", 1))
-	widgets.Add(z.NewTreeNode("flex.go"))
-	widgets.Add(z.NewTreeNode("editor.go"))
-	cmd := z.NewTreeNode("cmd")
-	cmd.Add(z.NewTreeNode("showcase"))
-	cmd.Add(z.NewTreeNode("demo"))
-	root.Add(widgets)
+	root := widgets.NewTreeNode("zeichenwerk")
+	widgetsNode := widgets.NewTreeNode("widgets")
+	widgetsNode.Add(widgets.NewTreeNode("main.go", 0))
+	widgetsNode.Add(widgets.NewTreeNode("table.go", 1))
+	widgetsNode.Add(widgets.NewTreeNode("flex.go"))
+	widgetsNode.Add(widgets.NewTreeNode("editor.go"))
+	cmd := widgets.NewTreeNode("cmd")
+	cmd.Add(widgets.NewTreeNode("showcase"))
+	cmd.Add(widgets.NewTreeNode("demo"))
+	root.Add(widgetsNode)
 	root.Add(cmd)
-	root.Add(z.NewTreeNode("README.md", 2))
-	root.Add(z.NewTreeNode("go.mod"))
+	root.Add(widgets.NewTreeNode("README.md", 2))
+	root.Add(widgets.NewTreeNode("go.mod"))
 
 	w := Build(theme,
-		Flex("code-editor", "", false, "stretch", 0,
+		VFlex("code-editor", "", "stretch", 0,
 			Padding(1, 2),
-			Flex("ce-hdr", "", true, "center", 2,
+			HFlex("ce-hdr", "", "center", 2,
 				Padding(0, 0, 1, 0),
 				Static("ce-title", "", "Code Editor", Font("bold"), Fg("$cyan")),
 				Spacer("", Hint(-1, 0)),
@@ -973,25 +976,25 @@ func codeEditorScreen(theme *z.Theme) z.Widget {
 			Grid("ce-body", "", []int{-1}, []int{26, -1}, false,
 				Hint(0, -1), Border("none"),
 				Cell(0, 0, 1, 1,
-					Flex("ce-tree-pane", "", false, "stretch", 0,
+					VFlex("ce-tree-pane", "", "stretch", 0,
 						Border("", "round"),
 						Static("ce-tree-title", "", " Project", Font("bold"), Bg("$bg2")),
 						Tree("ce-tree", "", Hint(0, -1)),
 					),
 				),
 				Cell(1, 0, 1, 1,
-					Flex("ce-edit-col", "", false, "stretch", 0,
+					VFlex("ce-edit-col", "", "stretch", 0,
 						Hint(0, -1),
 						Tabs("ce-tabs", ""),
 						Switcher("ce-switcher", "",
 							Hint(0, -1),
-							Include(func(t *z.Theme) z.Widget {
+							Include(func(t *core.Theme) core.Widget {
 								return Build(t, Editor("ce-editor-main", "", Hint(0, -1), Content(mainGoContent), LineNumbers(true)))
 							}),
-							Include(func(t *z.Theme) z.Widget {
+							Include(func(t *core.Theme) core.Widget {
 								return Build(t, Editor("ce-editor-table", "", Hint(0, -1), Content(tableGoContent), LineNumbers(true)))
 							}),
-							Include(func(t *z.Theme) z.Widget {
+							Include(func(t *core.Theme) core.Widget {
 								return Build(t, Viewport("ce-viewport", "", "",
 									Styled("ce-preview", "", readmeContent),
 								))
@@ -1003,23 +1006,23 @@ func codeEditorScreen(theme *z.Theme) z.Widget {
 		),
 	)
 
-	container := w.(z.Container)
+	container := w.(core.Container)
 
 	// Add tab names imperatively
-	tabs := z.Find(container, "ce-tabs").(*z.Tabs)
+	tabs := core.Find(container, "ce-tabs").(*widgets.Tabs)
 	tabs.Add("main.go")
 	tabs.Add("table.go")
 	tabs.Add("README.md")
 
 	// Populate tree and expand top-level directories
-	tree := z.Find(container, "ce-tree").(*z.Tree)
+	tree := core.Find(container, "ce-tree").(*widgets.Tree)
 	tree.Add(root)
 	tree.Expand(root)
-	tree.Expand(widgets)
+	tree.Expand(widgetsNode)
 
 	// Wire tree → tabs + switcher
-	switcher := z.Find(container, "ce-switcher").(*z.Switcher)
-	tree.On(z.EvtSelect, func(_ z.Widget, _ z.Event, _ ...any) bool {
+	switcher := core.Find(container, "ce-switcher").(*widgets.Switcher)
+	tree.On(widgets.EvtSelect, func(_ core.Widget, _ core.Event, _ ...any) bool {
 		if node := tree.Selected(); node != nil {
 			if idx, ok := node.Data().(int); ok {
 				tabs.Set(idx)
@@ -1030,23 +1033,23 @@ func codeEditorScreen(theme *z.Theme) z.Widget {
 	})
 
 	// Wire editor → status bar
-	mainEditor := z.Find(container, "ce-editor-main").(*z.Editor)
-	statusLbl := z.Find(container, "ce-status").(*z.Static)
-	mainEditor.On(z.EvtChange, func(_ z.Widget, _ z.Event, _ ...any) bool {
+	mainEditor := core.Find(container, "ce-editor-main").(*widgets.Editor)
+	statusLbl := core.Find(container, "ce-status").(*widgets.Static)
+	mainEditor.On(widgets.EvtChange, func(_ core.Widget, _ core.Event, _ ...any) bool {
 		cx, cy, _ := mainEditor.Cursor()
 		statusLbl.Set(fmt.Sprintf("main.go — Ln %d, Col %d", cy+1, cx+1))
 		return false
 	})
 
 	// Wire "New" button → popup dialog
-	z.Find(container, "ce-btn-new").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
-		ui := z.FindUI(container)
-		dlg := z.NewDialog("ce-dlg", "dialog", " New File")
+	core.Find(container, "ce-btn-new").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
+		ui := widgets.FindRoot(container).(*z.UI)
+		dlg := widgets.NewDialog("ce-dlg", "dialog", " New File")
 		body := Build(theme,
-			Flex("ce-dlg-body", "", false, "stretch", 0,
+			VFlex("ce-dlg-body", "", "stretch", 0,
 				Static("ce-dlg-lbl", "", "Filename:", Fg("$fg1")),
 				Input("ce-dlg-input", "", []string{"untitled.go"}, Hint(28, 1)),
-				Flex("ce-dlg-btns", "", true, "end", 2,
+				HFlex("ce-dlg-btns", "", "end", 2,
 					Padding(1, 0, 0, 0),
 					Button("ce-dlg-ok", "dialog", " ✓ Create"),
 					Button("ce-dlg-cancel", "", " ✕ Cancel"),
@@ -1054,7 +1057,7 @@ func codeEditorScreen(theme *z.Theme) z.Widget {
 			),
 		)
 		dlg.Add(body)
-		z.Find(body.(z.Container), "ce-dlg-cancel").On(z.EvtActivate, func(_ z.Widget, _ z.Event, _ ...any) bool {
+		core.Find(body.(core.Container), "ce-dlg-cancel").On(widgets.EvtActivate, func(_ core.Widget, _ core.Event, _ ...any) bool {
 			ui.Close()
 			return true
 		})
