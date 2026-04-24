@@ -106,7 +106,7 @@ func (f *Flex) Summary() string {
 	if f.Flag(FlagVertical) {
 		dir = "vertical"
 	}
-	return dir + " " + AlignmentString(f.alignment)
+	return dir + " " + f.alignment.String()
 }
 
 // ---- Layout ---------------------------------------------------------------

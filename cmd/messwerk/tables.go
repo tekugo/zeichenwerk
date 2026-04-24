@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/tekugo/zeichenwerk/core"
 	"github.com/tekugo/zeichenwerk/widgets"
 )
 
@@ -27,17 +28,17 @@ var metricsColumns = []widgets.TableColumn{
 	{Header: "Time", Width: 8},
 	{Header: "Start", Width: 8},
 	{Header: "Model", Width: 22},
-	{Header: "In", Width: 8, Alignment: widgets.AlignRight},
-	{Header: "Out", Width: 8, Alignment: widgets.AlignRight},
-	{Header: "CacheR", Width: 8, Alignment: widgets.AlignRight},
-	{Header: "CacheC", Width: 8, Alignment: widgets.AlignRight},
-	{Header: "Cost", Width: 10, Alignment: widgets.AlignRight},
-	{Header: "UserT", Width: 8, Alignment: widgets.AlignRight},
-	{Header: "CLIT", Width: 8, Alignment: widgets.AlignRight},
-	{Header: "+Lines", Width: 7, Alignment: widgets.AlignRight},
-	{Header: "-Lines", Width: 7, Alignment: widgets.AlignRight},
-	{Header: "Accept", Width: 6, Alignment: widgets.AlignRight},
-	{Header: "Reject", Width: 6, Alignment: widgets.AlignRight},
+	{Header: "In", Width: 8, Alignment: core.Right},
+	{Header: "Out", Width: 8, Alignment: core.Right},
+	{Header: "CacheR", Width: 8, Alignment: core.Right},
+	{Header: "CacheC", Width: 8, Alignment: core.Right},
+	{Header: "Cost", Width: 10, Alignment: core.Right},
+	{Header: "UserT", Width: 8, Alignment: core.Right},
+	{Header: "CLIT", Width: 8, Alignment: core.Right},
+	{Header: "+Lines", Width: 7, Alignment: core.Right},
+	{Header: "-Lines", Width: 7, Alignment: core.Right},
+	{Header: "Accept", Width: 6, Alignment: core.Right},
+	{Header: "Reject", Width: 6, Alignment: core.Right},
 }
 
 func (p *metricsProvider) Columns() []widgets.TableColumn { return metricsColumns }

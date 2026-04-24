@@ -4,6 +4,9 @@ import (
 	"os"
 
 	. "github.com/tekugo/zeichenwerk"
+	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/themes"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 func main() {
@@ -15,7 +18,7 @@ func main() {
 	editor.SetTabWidth(4)
 	editor.UseSpaces(false)
 	editor.SetAutoIndent(true)
-	editor.Apply(TokyoNightTheme())
+	editor.Apply(TokyoNight())
 
 	// Load some sample content
 	sampleText := `// Welcome to the Zeichenwerk Editor!
@@ -61,7 +64,7 @@ func main() {
 	editor.SetParent(container)
 
 	// Create UI with theme
-	theme := TokyoNightTheme()
+	theme := TokyoNight()
 	ui := NewUI(theme, container)
 
 	// Set up event handlers

@@ -7,6 +7,8 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk"
+	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // buildUI constructs the full triebwerk widget tree.
@@ -15,17 +17,17 @@ func buildUI(theme *Theme, dir string) *UI {
 
 	b := NewBuilder(theme)
 
-	b.Flex("root", false, "stretch", 0).
+	b.VFlex("root", Stretch, 0).
 		// ── Header ──────────────────────────────────────────────────────────
 		Static("header", headerText(dir)).Hint(0, 1).
 		// ── Body ────────────────────────────────────────────────────────────
-		Flex("body", true, "stretch", 0).Hint(0, -1).
+		HFlex("body", Stretch, 0).Hint(0, -1).
 		Box("targets-box", "Targets").Hint(34, 0).Border("thin").
-		Flex("targets-panel", false, "stretch", 0).
+		VFlex("targets-panel", Stretch, 0).
 		Add(buildDeck(theme, &deck)).Hint(0, -1).
-		Flex("filter-section", false, "stretch", 0).Margin(1, 0, 0, 0).
+		VFlex("filter-section", Stretch, 0).Margin(1, 0, 0, 0).
 		Static("filter-title", " filter").Foreground("$fg2").
-		Flex("filter-bar", true, "start", 2).Hint(0, 1).Padding(0, 1).
+		HFlex("filter-bar", Start, 2).Hint(0, 1).Padding(0, 1).
 		Checkbox("filter-make", "make", true).
 		Checkbox("filter-just", "just", true).
 		End().
@@ -37,7 +39,7 @@ func buildUI(theme *Theme, dir string) *UI {
 		End().
 		End().
 		// ── Footer ──────────────────────────────────────────────────────────
-		Flex("footer", true, "center", 0).Hint(0, 1).
+		HFlex("footer", Center, 0).Hint(0, 1).
 		Scanner("watch-scanner", 3, "circles").
 		Static("footer-status", "").Hint(0, 1).
 		Spacer().Hint(-1, 1).

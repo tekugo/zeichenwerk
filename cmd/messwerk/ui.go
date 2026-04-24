@@ -70,8 +70,8 @@ func buildUI(theme *core.Theme, store *Store) *z.UI {
 	lp := &logProvider{}
 
 	ui := UI(theme,
-		Flex("main", "", false, "stretch", 0,
-			Flex("header", "", true, "stretch", 0,
+		VFlex("main", "", core.Stretch, 0,
+			HFlex("header", "", core.Stretch, 0,
 				Static("title", "", " messwerk  ·  Claude Code OTLP Monitor", Hint(-1, 1), Font("bold")),
 				Clock("clock", "", time.Second, time.DateTime, "  "),
 			),
@@ -81,8 +81,8 @@ func buildUI(theme *core.Theme, store *Store) *z.UI {
 				),
 				Cell(1, 1, 1, 1,
 					Switcher("content", "",
-						Flex("info-panel", "", false, "stretch", 1, Padding(1),
-							Flex("info-buttons", "", true, "strech", 0,
+						VFlex("info-panel", "", core.Stretch, 1, Padding(1),
+							HFlex("info-buttons", "", core.Stretch, 0,
 								Spacer("", Hint(-1, 0)),
 								Button("info-copy", "", "Copy to Clipboard"),
 							),
@@ -117,7 +117,7 @@ func buildUI(theme *core.Theme, store *Store) *z.UI {
 						Grid("session", "", []int{0, 0, 0, 0, 0, -1}, []int{26, 26, -1}, false, Border("none"), Padding(1, 2),
 							// Row 0: Session header
 							Cell(0, 0, 3, 1,
-								Flex("session-header", "", true, "stretch", 1, Margin(0, 0, 1, 0),
+								HFlex("session-header", "", core.Stretch, 1, Margin(0, 0, 1, 0),
 									Static("session-id", "", "–", Hint(-1, 1), Font("bold"), Fg("$cyan")),
 									Static("session-info", "", "–", Fg("$gray")),
 								),
@@ -132,7 +132,7 @@ func buildUI(theme *core.Theme, store *Store) *z.UI {
 								Static("session-accept-label", "", "–", Fg("$gray"), Flag(widgets.FlagRight)),
 							)),
 							Cell(2, 1, 1, 1, Card("session-lines-card", "", "Lines", Margin(0, 0, 0, 2),
-								Flex("session-lines-row", "", true, "center", 1,
+								HFlex("session-lines-row", "", core.Center, 1,
 									Static("session-lines-added", "", "+0", Fg("$green")),
 									Spacer("", Hint(-1, 0)),
 									Static("session-lines-removed", "", "-0", Fg("$red")),
@@ -165,7 +165,7 @@ func buildUI(theme *core.Theme, store *Store) *z.UI {
 							)),
 							// Row 5: Tabs + tables
 							Cell(0, 5, 3, 1,
-								Flex("session-tables-area", "", false, "stretch", 0, Margin(1, 0, 0, 0),
+								VFlex("session-tables-area", "", core.Stretch, 0, Margin(1, 0, 0, 0),
 									Tabs("session-tabs", ""),
 									Switcher("session-table-switcher", "", Hint(0, -1),
 										Table("session-metrics-table", "", mp, false, Hint(0, -1)),

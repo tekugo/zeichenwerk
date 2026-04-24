@@ -16,7 +16,7 @@ func TestNewFlex(t *testing.T) {
 		t.Errorf("ID() = %q; want %q", f.ID(), "flex1")
 	}
 	if f.alignment != Start {
-		t.Errorf("alignment = %q; want %q", f.alignment, "start")
+		t.Errorf("alignment = %s; want %q", f.alignment.String(), "start")
 	}
 	if f.spacing != 2 {
 		t.Errorf("spacing = %d; want 2", f.spacing)
@@ -450,12 +450,12 @@ func TestAlign(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pos, size := align(tt.alignment, tt.start, tt.end, tt.size)
 			if pos != tt.wantPos {
-				t.Errorf("align(%q, %d, %d, %d) pos = %d; want %d",
-					tt.alignment, tt.start, tt.end, tt.size, pos, tt.wantPos)
+				t.Errorf("align(%s, %d, %d, %d) pos = %d; want %d",
+					tt.alignment.String(), tt.start, tt.end, tt.size, pos, tt.wantPos)
 			}
 			if size != tt.wantSize {
-				t.Errorf("align(%q, %d, %d, %d) size = %d; want %d",
-					tt.alignment, tt.start, tt.end, tt.size, size, tt.wantSize)
+				t.Errorf("align(%s, %d, %d, %d) size = %d; want %d",
+					tt.alignment.String(), tt.start, tt.end, tt.size, size, tt.wantSize)
 			}
 		})
 	}

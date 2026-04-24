@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	. "github.com/tekugo/zeichenwerk"
+	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/themes"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 type Designer struct {
@@ -66,6 +69,6 @@ func (d *Designer) Render(r *Renderer) {
 
 // main function
 func main() {
-	ui := NewUI(TokyoNightTheme(), NewDesigner())
+	ui := NewUI(TokyoNight(), NewDesigner())
 	ui.Run()
 }

@@ -1,14 +1,15 @@
 package main
 
 import (
-	z "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/compose"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/themes"
 )
 
 func main() {
-	UI(z.TokyoNightTheme(),
-		Flex("main", "", false, "stretch", 0,
-			Flex("header", "", true, "center", 1,
+	UI(themes.TokyoNight(),
+		VFlex("main", "", core.Stretch, 0,
+			HFlex("header", "", core.Center, 1,
 				Static("title", "", "My App"),
 			),
 			Grid("content", "", []int{-1}, []int{20, -1}, false, Hint(0, -1),

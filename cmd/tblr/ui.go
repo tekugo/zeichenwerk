@@ -7,6 +7,8 @@ import (
 	"github.com/gdamore/tcell/v3"
 	zw "github.com/tekugo/zeichenwerk"
 	"github.com/tekugo/zeichenwerk/cmd/tblr/format"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/widgets"
 )
 
 // selMode tracks the current selection type.
@@ -49,7 +51,7 @@ type uiState struct {
 }
 
 // buildUI constructs the tblr widget tree.
-func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath string, activeFormat format.Format) *zw.UI {
+func buildUI(theme *core.Theme, tbl *format.MutableTable, dir string, filePath string, activeFormat format.Format) *zw.UI {
 	state := &uiState{
 		table:        tbl,
 		activeFormat: activeFormat,
@@ -60,19 +62,19 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 
 	b := zw.NewBuilder(theme)
 
-	b.Flex("root", false, "stretch", 0).
+	b.VFlex("root", core.Stretch, 0).
 		Table("tbl", tbl, true).Hint(0, -1).
 		Static("status", statusText(state)).Hint(0, 1).
 		Shortcuts("cmdbar", "e", "edit", "a", "add", "d", "del", "s", "sort", "/", "find", "f", "format", "w", "watch", "q", "quit").Hint(0, 1)
 
 	ui := b.Build()
 
-	tblWidget := zw.Find(ui, "tbl").(*zw.Table)
-	statusBar := zw.Find(ui, "status").(*zw.Static)
-	cmdBar := zw.Find(ui, "cmdbar").(*zw.Shortcuts)
+	tblWidget := core.Find(ui, "tbl").(*widgets.Table)
+	statusBar := core.Find(ui, "status").(*widgets.Static)
+	cmdBar := core.Find(ui, "cmdbar").(*widgets.Shortcuts)
 
 	// cell styler for selection highlight and search matches
-	tblWidget.SetCellStyler(func(row, col int, highlight bool) *zw.Style {
+	tblWidget.SetCellStyler(func(row, col int, highlight bool) *core.Style {
 		if state.searchActive && state.searchPattern != "" {
 			for _, m := range state.searchMatches {
 				if m[0] == row && m[1] == col {
@@ -106,7 +108,7 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 	}
 
 	// track cursor via EvtSelect
-	tblWidget.On(zw.EvtSelect, func(_ zw.Widget, _ zw.Event, data ...any) bool {
+	tblWidget.On(widgets.EvtSelect, func(_ core.Widget, _ core.Event, data ...any) bool {
 		if len(data) >= 2 {
 			if r, ok := data[0].(int); ok {
 				state.curRow = r
@@ -148,13 +150,13 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 		}
 
 		b := ui.NewBuilder()
-		b.Flex("cell-edit-wrap", true, "start", 0).
+		b.HFlex("cell-edit-wrap", core.Start, 0).
 			Input("cell-edit-input", current).Hint(w, 1)
 		wrapper := b.Container()
-		inp := zw.Find(wrapper, "cell-edit-input").(*zw.Input)
+		inp := core.Find(wrapper, "cell-edit-input").(*widgets.Input)
 		inp.End()
 
-		zw.OnKey(inp, func(e *tcell.EventKey) bool {
+		widgets.OnKey(inp, func(e *tcell.EventKey) bool {
 			switch e.Key() {
 			case tcell.KeyEnter:
 				val := inp.Get()
@@ -175,7 +177,7 @@ func buildUI(theme *zw.Theme, tbl *format.MutableTable, dir string, filePath str
 		ui.Popup(x, y, w, 1, wrapper)
 	}
 
-	zw.OnKey(tblWidget, func(e *tcell.EventKey) bool {
+	widgets.OnKey(tblWidget, func(e *tcell.EventKey) bool {
 		row, col := tblWidget.Selected()
 		if row < 0 {
 			row = 0
@@ -512,7 +514,7 @@ func statusText(s *uiState) string {
 }
 
 // doSave serialises and writes the table to disk.
-func doSave(ui *zw.UI, state *uiState, tblWidget *zw.Table, refresh func()) {
+func doSave(ui *zw.UI, state *uiState, tblWidget *widgets.Table, refresh func()) {
 	if state.filePath == "" {
 		ui.Prompt("Save As", "File path:", func(path string) {
 			if path == "" {
@@ -544,7 +546,7 @@ func doSaveToPath(ui *zw.UI, state *uiState, refresh func()) {
 }
 
 // openSearch shows a search prompt and highlights matches.
-func openSearch(ui *zw.UI, state *uiState, tblWidget *zw.Table, cmdBar *zw.Shortcuts, statusBar *zw.Static, refresh func()) {
+func openSearch(ui *zw.UI, state *uiState, tblWidget *widgets.Table, cmdBar *widgets.Shortcuts, statusBar *widgets.Static, refresh func()) {
 	state.searchActive = true
 	cmdBar.SetPairs("Enter", "next", "Esc", "cancel")
 
@@ -590,7 +592,7 @@ func openSearch(ui *zw.UI, state *uiState, tblWidget *zw.Table, cmdBar *zw.Short
 }
 
 // openFormatPicker prompts for a format name.
-func openFormatPicker(ui *zw.UI, state *uiState, tblWidget *zw.Table, refresh func()) {
+func openFormatPicker(ui *zw.UI, state *uiState, tblWidget *widgets.Table, refresh func()) {
 	names := ""
 	for i, f := range format.All() {
 		if i > 0 {
@@ -607,7 +609,7 @@ func openFormatPicker(ui *zw.UI, state *uiState, tblWidget *zw.Table, refresh fu
 }
 
 // toggleWatch starts or stops the clipboard watcher.
-func toggleWatch(ui *zw.UI, state *uiState, tbl *format.MutableTable, tblWidget *zw.Table, cmdBar *zw.Shortcuts, refresh func()) {
+func toggleWatch(ui *zw.UI, state *uiState, tbl *format.MutableTable, tblWidget *widgets.Table, cmdBar *widgets.Shortcuts, refresh func()) {
 	if state.watchActive {
 		if state.watcher != nil {
 			state.watcher.Stop()

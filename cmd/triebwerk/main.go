@@ -4,7 +4,8 @@ import (
 	"flag"
 	"os"
 
-	. "github.com/tekugo/zeichenwerk"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/themes"
 )
 
 func main() {
@@ -13,25 +14,25 @@ func main() {
 	ui.Run()
 }
 
-func parseFlags() (*Theme, string) {
+func parseFlags() (*core.Theme, string) {
 	t := flag.String("t", "tokyo", "Theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
 	d := flag.String("d", "", "Working directory (defaults to current directory)")
 	flag.Parse()
 
-	var theme *Theme
+	var theme *core.Theme
 	switch *t {
 	case "midnight":
-		theme = MidnightNeonTheme()
+		theme = themes.MidnightNeon()
 	case "nord":
-		theme = NordTheme()
+		theme = themes.Nord()
 	case "gruvbox-dark":
-		theme = GruvboxDarkTheme()
+		theme = themes.GruvboxDark()
 	case "gruvbox-light":
-		theme = GruvboxLightTheme()
+		theme = themes.GruvboxLight()
 	case "lipstick":
-		theme = LipstickTheme()
+		theme = themes.Lipstick()
 	default:
-		theme = TokyoNightTheme()
+		theme = themes.TokyoNight()
 	}
 
 	dir := *d

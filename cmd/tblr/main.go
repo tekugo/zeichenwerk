@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	zw "github.com/tekugo/zeichenwerk"
 	"github.com/tekugo/zeichenwerk/cmd/tblr/format"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/themes"
 	"golang.org/x/term"
 )
 
@@ -262,20 +263,20 @@ func runHeadless(args []string, fromName, toName, fmtName string, writeBack bool
 }
 
 // resolveTheme2 maps a theme name to a Theme.
-func resolveTheme2(name string) *zw.Theme {
+func resolveTheme2(name string) *core.Theme {
 	switch name {
 	case "midnight":
-		return zw.MidnightNeonTheme()
+		return themes.MidnightNeon()
 	case "nord":
-		return zw.NordTheme()
+		return themes.Nord()
 	case "gruvbox-dark":
-		return zw.GruvboxDarkTheme()
+		return themes.GruvboxDark()
 	case "gruvbox-light":
-		return zw.GruvboxLightTheme()
+		return themes.GruvboxLight()
 	case "lipstick":
-		return zw.LipstickTheme()
+		return themes.Lipstick()
 	default:
-		return zw.TokyoNightTheme()
+		return themes.TokyoNight()
 	}
 }
 

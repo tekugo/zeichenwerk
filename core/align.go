@@ -13,8 +13,8 @@ const (
 	Stretch Alignment = 6
 )
 
-func AlignmentString(align Alignment) string {
-	switch align {
+func (a Alignment) String() string {
+	switch a {
 	case Start:
 		return "start"
 	case Left:
