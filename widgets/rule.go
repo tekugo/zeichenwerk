@@ -37,12 +37,22 @@ func (c *Rule) Apply(theme *Theme) {
 }
 
 // Render draws the rule as a horizontal or vertical line using the configured
-// border style's inner-H or inner-V character.
+// border style's inner-H or inner-V character. If the theme does not define
+// the requested border, the method falls back to the "default" border and
+// finally skips rendering so a missing theme asset degrades gracefully
+// instead of crashing the renderer.
 func (c *Rule) Render(r *Renderer) {
 	c.Component.Render(r)
 
-	x, y, w, h := c.Content()
 	b := r.Theme.Border(c.style)
+	if b == nil {
+		b = r.Theme.Border("default")
+	}
+	if b == nil {
+		return
+	}
+
+	x, y, w, h := c.Content()
 	if c.horizontal {
 		r.Line(x, y, 1, 0, w-2, b.InnerH, b.InnerH, b.InnerH)
 	} else {

@@ -1,6 +1,10 @@
 package widgets
 
-import "testing"
+import (
+	"testing"
+
+	. "github.com/tekugo/zeichenwerk/core"
+)
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 

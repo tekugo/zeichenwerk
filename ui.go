@@ -760,7 +760,7 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 		Class("").
 		Container()
 
-	input := Find(dialog, "prompt-input").(*Input)
+	input := MustFind[*Input](dialog, "prompt-input")
 	accept := func() {
 		text := input.Get()
 		ui.Close()

@@ -145,7 +145,7 @@ func (c *Commands) Open() {
 	dialog.SetStyle("", cmdStyle)
 
 	// Override filter style with "commands/input" if defined.
-	input := core.Find(dialog, "commands-input").(*widgets.Filter)
+	input := core.MustFind[*widgets.Filter](dialog, "commands-input")
 	inputStyle := theme.Get("commands/input")
 	if inputStyle != &core.DefaultStyle {
 		input.SetStyle("", inputStyle)

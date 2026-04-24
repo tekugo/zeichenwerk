@@ -124,9 +124,15 @@ func NewTheme() *Theme {
 	return theme
 }
 
-// Add adds a style to the theme.
-// The style is automatically assigned a parent based on the style selector.
-// Through this mechanism, inheritance/cascading is implemented.
+// Add registers a style in the theme under its own selector and links it
+// to the most specific less-specific style already present as its parent.
+// The parent link is what implements cascading: when a property is not
+// set on the style itself, lookups walk up this chain until a value is
+// found or DefaultStyle is reached.
+//
+// After registration the style is marked as fixed (immutable); subsequent
+// With... calls will return derived copies rather than mutating the
+// registered style.
 func (t *Theme) Add(style *Style) {
 	parts := split(style.selector)
 	key, priority := selector(0, parts)
@@ -145,24 +151,32 @@ func (t *Theme) Add(style *Style) {
 	style.Fix()
 }
 
-// AddStyles adds all the styles to the theme"s style registry.
-// This method is used for bulk style configuration and theme initialization.
-// Unlike Define(), this method is the official way to replace all styles.
+// AddStyles registers several styles in the theme in one call. Each style
+// is handed off to Add, so ordering matters: styles whose parents should
+// come from the same batch must appear after those parents.
 //
 // Parameters:
-//   - styles: Map of CSS-like selectors to their Style definitions
+//   - styles: The styles to register; their own selector fields drive
+//     registration keys.
 func (t *Theme) AddStyles(styles ...*Style) {
 	for _, style := range styles {
 		t.Add(style)
 	}
 }
 
-// Apply applies styles to a widget based on its type and id.
+// Apply resolves the style for the given selector and installs it on the
+// widget, along with one variant per additional state. When the selector
+// names a widget part (either in the "type/part" or "#id/part" position)
+// the styles are keyed by that part name; otherwise they are stored under
+// the default selector. Each additional state produces a companion lookup
+// appended with ":<state>" (for example ":focus", "text:hover"), so focus
+// and hover variants are installed alongside the base style.
 //
 // Parameters:
-//   - widget: The widget to apply the styles to
-//   - selector: Style selector
-//   - states: Additional states to assign styles to
+//   - widget:   The widget whose styles should be populated.
+//   - selector: The base selector to resolve.
+//   - states:   Additional state variants to install (for example "focus",
+//     "hover", "disabled").
 func (t *Theme) Apply(widget Widget, selector string, states ...string) {
 	parts := split(selector)
 	part := ""
@@ -189,8 +203,10 @@ func (t *Theme) Apply(widget Widget, selector string, states ...string) {
 	}
 }
 
-// Border retrieves a border style by name from the theme's border registry.
-// Returns the zero value BorderStyle if the border name is not found.
+// Border looks up a named border definition in the theme's border
+// registry. Returns nil if no border with that name is registered;
+// callers that render borders unconditionally should ensure the name is
+// known or check for nil before dereferencing.
 func (t *Theme) Border(border string) *Border {
 	return t.borders[border]
 }
@@ -225,22 +241,29 @@ func (t *Theme) Color(color string) string {
 	return color
 }
 
-// Colors returns a direct reference to the theme's color variable registry.
-// This allows for inspection and iteration over all defined color variables.
+// Colors returns the theme's colour-variable registry as a live map. The
+// map is shared with the theme, so callers may mutate it to add or remove
+// variables, but any mutation will be visible to every widget that uses
+// the theme.
 func (t *Theme) Colors() map[string]string {
 	return t.colors
 }
 
-// Flag retrieves a boolean configuration flag from the theme's flag registry.
-// Returns false if the flag name is not found.
+// Flag returns the boolean configuration flag stored under the given
+// name, or false if no such flag has been registered. Flags are used for
+// theme-wide rendering toggles (for example whether to draw focus
+// indicators) and therefore default to off when unset.
 func (t *Theme) Flag(flag string) bool {
 	return t.flags[flag]
 }
 
-// Get returns a style which maps the given selector the best.
+// Get resolves the best-matching style for the given selector by walking
+// the cascade of progressively less specific selectors (see the selector
+// helper for the exact order). If no entry matches, DefaultStyle is
+// returned so callers never have to nil-check the result.
 //
 // Parameters:
-//   - s: Style selector
+//   - s: The selector to resolve.
 func (t *Theme) Get(s string) *Style {
 	parts := split(s)
 	key := s
@@ -306,8 +329,10 @@ func (t *Theme) SetStrings(strings map[string]string) {
 	t.strings = strings
 }
 
-// Styles returns a direct reference to the theme's style registry.
-// This allows for inspection and iteration over all defined styles.
+// Styles returns a snapshot slice of every style registered in the theme.
+// The slice is freshly collected on each call, so mutating it does not
+// affect the theme; the order is unspecified because map iteration order
+// is unspecified in Go.
 func (t *Theme) Styles() []*Style {
 	return slices.Collect(maps.Values(t.styles))
 }
@@ -354,9 +379,23 @@ func split(selector string) []string {
 	return result
 }
 
-// selector returns a stripped down selector string based on the priority.
+// selector implements the style-cascade walk: given a previously seen
+// priority and the regex match groups produced by split, it emits the
+// next candidate selector string together with a new priority value. A
+// returned priority of -1 signals that the cascade is exhausted.
 //
-// The priority of the selectors implicitly defined the cascading of styles.
+// The sequence of emitted candidates encodes the overall specificity
+// order of the theme:
+//
+//  1. ID-anchored selectors (most specific): "#id/part:state",
+//     "#id/part", "#id:state", "#id".
+//  2. Type-anchored selectors that include a state: "type/part.class:state",
+//     "type/part:state", "type.class:state", "type:state", ":state".
+//  3. Type-anchored selectors without a state: "type/part.class",
+//     "type.class", ".class", "type/part", "type".
+//  4. The empty selector (theme default).
+//
+// This ordering matches the behaviour described on the Theme doc comment.
 func selector(priority int, parts []string) (string, int) {
 	if priority < 1 && parts[4] != "" && parts[5] != "" && parts[6] != "" {
 		return "#" + parts[4] + "/" + parts[5] + ":" + parts[6], 1

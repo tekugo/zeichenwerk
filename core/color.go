@@ -7,8 +7,16 @@ import (
 	"strings"
 )
 
-// DimColor multiplies each RGB channel of a #RRGGBB colour by factor ∈ [0, 1],
-// returning a darker version. Non-hex strings are returned unchanged.
+// DimColor scales each RGB channel of a hex colour by factor, producing a
+// darker (factor < 1) or unchanged (factor == 1) variant. Input must be in
+// the lowercase "#RRGGBB" form; anything that does not match that exact
+// shape (including 8-digit RGBA, 3-digit shorthand, named colours, or
+// non-hex theme variables like "$primary") is returned verbatim so callers
+// can pass theme colour strings without defensive branching.
+//
+// The function does not clamp factor, so values greater than 1 brighten the
+// colour subject to uint8 overflow semantics and negative values produce
+// garbage. Each channel is rounded to the nearest integer.
 func DimColor(hex string, factor float64) string {
 	if !strings.HasPrefix(hex, "#") || len(hex) != 7 {
 		return hex
@@ -21,9 +29,16 @@ func DimColor(hex string, factor float64) string {
 	)
 }
 
-// LerpColor linearly interpolates between two #RRGGBB colours.
-// t=0 returns a, t=1 returns b; values outside [0, 1] are clamped.
-// Non-hex strings are returned unchanged at the nearest end of the range.
+// LerpColor performs per-channel linear interpolation between two hex
+// colours a and b. The parameter t is clamped to [0, 1]: values at or below
+// 0 return a unchanged, values at or above 1 return b unchanged, and values
+// in between are mixed in RGB space.
+//
+// Both endpoints are expected to be "#RRGGBB" strings. Non-hex inputs are
+// treated as black by the internal parser — this is harmless at the exact
+// endpoints (which short-circuit to the input) but produces unspecified
+// results in the interior of the range, so callers should sanitise their
+// inputs first.
 func LerpColor(a, b string, t float64) string {
 	if t <= 0 {
 		return a

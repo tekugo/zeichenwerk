@@ -4,6 +4,11 @@ import (
 	"testing"
 )
 
+// TestBorder_Horizontal verifies that Border.Horizontal correctly reports the
+// total horizontal space (in cells) consumed by the left and right border
+// sides. It exercises empty borders, ASCII and Unicode single-character
+// borders, asymmetric borders where one side is missing, and multi-character
+// sides to ensure the rune count — rather than byte length — is used.
 func TestBorder_Horizontal(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -66,6 +71,11 @@ func TestBorder_Horizontal(t *testing.T) {
 	}
 }
 
+// TestBorder_Vertical verifies that Border.Vertical correctly reports the
+// total vertical space (in cells) consumed by the top and bottom border
+// sides. It covers empty borders, ASCII and Unicode borders, asymmetric
+// borders with a missing side, and long horizontal border strings to confirm
+// that each side contributes at most a single row to the vertical extent.
 func TestBorder_Vertical(t *testing.T) {
 	tests := []struct {
 		name     string

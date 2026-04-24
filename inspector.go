@@ -73,8 +73,8 @@ func (i *Inspector) BuildUI() {
 		Class("").
 		Container()
 
-	i.widgets = Find(i.ui, "children").(*List)
-	i.styles = Find(i.ui, "styles").(*List)
+	i.widgets = MustFind[*List](i.ui, "children")
+	i.styles = MustFind[*List](i.ui, "styles")
 
 	OnActivate(i.widgets, i.Activate)
 	OnSelect(i.widgets, i.SelectWidget)

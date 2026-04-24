@@ -1,13 +1,16 @@
 package renderer
 
-// Renderer wraps a Screen and a Theme and provides higher-level drawing
-// primitives (text, fills, borders, scrollbars) on top of the raw cell
-// operations. All widget Render methods receive a *Renderer.
+// Renderer wraps a Screen and provides higher-level drawing primitives
+// (text, fills, lines, scrollbars) on top of the raw cell operations. It
+// deliberately knows nothing about themes or styles — the Set method
+// forwards colour strings verbatim to the underlying Screen. Theme-aware
+// rendering is implemented one layer up by core.Renderer, which embeds
+// this type and resolves theme variables before delegating.
 type Renderer struct {
 	Screen Screen
 }
 
-// NewRenderer creates a new Renderer instance.
+// NewRenderer constructs a Renderer bound to the given Screen.
 func NewRenderer(screen Screen) *Renderer {
 	return &Renderer{
 		Screen: screen,
@@ -43,9 +46,11 @@ func (r *Renderer) Put(x, y int, ch string) {
 	r.Screen.Put(x, y, ch)
 }
 
-// Set sets the foreground colour, background colour, and font for subsequent
-// drawing operations. Colour strings starting with "$" are resolved through
-// the theme's colour registry.
+// Set installs the foreground colour, background colour, and font for
+// subsequent drawing operations. The values are passed straight to the
+// underlying Screen, so they must already be literal colours understood
+// by the back-end — theme variables (prefixed with "$") are resolved at
+// the core.Renderer layer, not here.
 func (r *Renderer) Set(foreground, background, font string) {
 	r.Screen.Set(foreground, background, font)
 }
@@ -65,13 +70,16 @@ func (r *Renderer) Translate(tx, ty int) {
 
 // ---- Extended Rendering ---------------------------------------------------
 
-// Colorize applies the current renderer style to all characters in a rectangular area.
-// This method preserves the existing characters while changing their visual styling,
-// effectively recoloring or reformatting text and graphics within the specified region.
+// Colorize re-applies the current style to every cell in a rectangular
+// area without changing the characters already written there. It reads
+// each cell with Get and immediately writes it back with Put, which
+// causes the back-end to attach the style currently set via Set. This is
+// useful for dimming, highlighting, or otherwise re-tinting an already
+// rendered region.
 //
 // Parameters:
-//   - x, y: Top-left corner of the area to colorize
-//   - width, height: Dimensions of the area to process
+//   - x, y:          Top-left corner of the area (local coordinates).
+//   - width, height: Dimensions of the area to process.
 func (r *Renderer) Colorize(x, y, width, height int) {
 	for i := range width {
 		for j := range height {
@@ -101,23 +109,26 @@ func (r *Renderer) Fill(x, y, w, h int, ch string) {
 	}
 }
 
-// Line draws a line using specified start, middle, and end characters.
-// This method is used for drawing borders, separators, and decorative elements
-// with proper terminal characters for clean visual presentation.
+// Line draws a straight line composed of three distinct parts: a start
+// cap, a run of repeated middle characters, and an end cap. It is the
+// primitive behind border top/bottom strokes, table separators, and
+// decorative rules.
 //
-// # Direction Control
+// The direction is expressed as a unit step vector (dx, dy):
+//   - ( 1,  0): horizontal, left to right
+//   - ( 0,  1): vertical, top to bottom
+//   - (-1,  0): horizontal, right to left
+//   - ( 0, -1): vertical, bottom to top
 //
-// The dx and dy parameters control line direction:
-//   - dx=1, dy=0: Horizontal line (left to right)
-//   - dx=0, dy=1: Vertical line (top to bottom)
-//   - dx=-1, dy=0: Horizontal line (right to left)
-//   - dx=0, dy=-1: Vertical line (bottom to top)
+// Diagonal vectors work too but are rarely used in terminal UI.
 //
 // Parameters:
-//   - x, y: Starting coordinates for the line
-//   - dx, dy: Direction vector (1, 0, or -1 for each axis)
-//   - length: Number of middle characters to draw
-//   - start, middle, end: Unicode characters for line segments
+//   - x, y:               Starting cell for the start cap.
+//   - dx, dy:             Unit step vector; each step of the line
+//     advances by this amount.
+//   - length:             Number of middle cells between start and end.
+//     Zero produces a start cap immediately followed by the end cap.
+//   - start, middle, end: Glyphs used for the three segments.
 func (r *Renderer) Line(x, y, dx, dy, length int, start, middle, end string) {
 	r.Put(x, y, start)
 	cx := x + dx
@@ -147,15 +158,20 @@ func (r *Renderer) Repeat(x, y, dx, dy, length int, ch string) {
 	}
 }
 
-// ScrollbarV renders a vertical scrollbar indicating scroll position and content size.
-// This method creates a visual scrollbar with a thumb that represents the current
-// scroll position and the proportion of visible content relative to total content.
+// ScrollbarV renders a vertical scrollbar indicating scroll position and
+// content size. The thumb size is proportional to the ratio of visible to
+// total content and its position reflects the current offset, so the
+// scrollbar doubles as a progress-like indicator for how far the viewer
+// has scrolled through the content.
+//
+// No scrollbar is drawn when height or total is non-positive.
 //
 // Parameters:
-//   - x, y: Top-left coordinates for the scrollbar
-//   - height: Height of the scrollbar area
-//   - offset: Current scroll offset (how far scrolled from top)
-//   - total: Total number of items/lines in the content
+//   - x, y:   Top-left coordinate of the scrollbar track.
+//   - height: Number of cells occupied by the scrollbar (track length).
+//   - offset: Current scroll offset (items scrolled past the top edge).
+//   - total:  Total number of items in the content, including those not
+//     currently visible.
 func (r *Renderer) ScrollbarV(x, y, height, offset, total int) {
 	if height <= 0 || total <= 0 {
 		return
@@ -163,7 +179,14 @@ func (r *Renderer) ScrollbarV(x, y, height, offset, total int) {
 
 	// Calculate scrollbar thumb position and size
 	thumb := min(max(height*height/total, 1), height)
-	pos := min(max(offset*(height-thumb)/(total-height), 0), height-thumb)
+
+	// Calculate thumb position, handling edge case where total <= height
+	var pos int
+	if total > height {
+		pos = min(max(offset*(height-thumb)/(total-height), 0), height-thumb)
+	} else {
+		pos = 0 // Content fits within view, thumb starts at beginning
+	}
 
 	// Render scrollbar track
 	for i := range height {
@@ -177,15 +200,20 @@ func (r *Renderer) ScrollbarV(x, y, height, offset, total int) {
 	}
 }
 
-// ScrollbarH renders a horizontal scrollbar indicating scroll position and content width.
-// This method creates a visual scrollbar with a thumb that represents the current
-// horizontal scroll position and the proportion of visible content relative to total content width.
+// ScrollbarH renders a horizontal scrollbar indicating scroll position
+// and content width. The layout logic mirrors ScrollbarV; when the
+// content fits inside the visible width (total <= width) the thumb is
+// parked at the start of the track to avoid flicker rather than
+// suppressing the scrollbar entirely.
+//
+// No scrollbar is drawn when width or total is non-positive.
 //
 // Parameters:
-//   - x, y: Top-left coordinates for the scrollbar
-//   - width: Width of the scrollbar area
-//   - offset: Current horizontal scroll offset (how far scrolled from left)
-//   - total: Total width of the content (in characters)
+//   - x, y:   Top-left coordinate of the scrollbar track.
+//   - width:  Number of cells occupied by the scrollbar (track length).
+//   - offset: Current horizontal scroll offset (cells scrolled past the
+//     left edge).
+//   - total:  Total width of the content, in cells.
 func (r *Renderer) ScrollbarH(x, y, width, offset, total int) {
 	if width <= 0 || total <= 0 {
 		return
@@ -214,16 +242,22 @@ func (r *Renderer) ScrollbarH(x, y, width, offset, total int) {
 	}
 }
 
-// Text renders a string at the specified coordinates with optional width limiting and padding.
-// This is the fundamental text rendering method used by all widgets that display text content.
+// Text renders a string at the specified coordinates using the current
+// style. Each rune is written to its own cell, so the function handles
+// multibyte characters correctly while treating the result as
+// single-width in cell units (callers that need double-width glyph
+// support must pre-measure).
+//
+// When max > 0 the text is clipped to that many cells; any remaining
+// space is padded with spaces so the full max-cell band is overwritten.
+// When max == 0 the string is rendered verbatim with no width constraint
+// and no padding.
 //
 // Parameters:
-//   - x, y: Starting coordinates for text rendering
-//   - s: The string to render
-//   - max: Maximum width for text (0 for no limit, >0 for width constraint)
-//
-// This method handles Unicode characters properly and provides the foundation
-// for all text display in labels, buttons, inputs, and other text-based widgets.
+//   - x, y: Starting cell for the first character.
+//   - s:    The text to render.
+//   - max:  Maximum number of cells the output may occupy, or 0 for no
+//     limit.
 func (r *Renderer) Text(x, y int, s string, max int) {
 	i := 0
 	for _, ch := range s {

@@ -78,7 +78,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 		Class("").
 		Container()
 
-	input := Find(dialog, "fc-input").(*Typeahead)
+	input := MustFind[*Typeahead](dialog, "fc-input")
 
 	suggestPath := func(text string) []string {
 		if text == "" {
@@ -125,10 +125,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 		return candidates
 	}
 	input.SetSuggest(suggestPath)
-	tree := Find(dialog, "fc-tree").(*Tree)
-	okBtn := Find(dialog, "fc-ok").(*Button)
-	cancelBtn := Find(dialog, "fc-cancel").(*Button)
-	hiddenCb := Find(dialog, "fc-hidden").(*Checkbox)
+	tree := MustFind[*Tree](dialog, "fc-tree")
+	okBtn := MustFind[*Button](dialog, "fc-ok")
+	cancelBtn := MustFind[*Button](dialog, "fc-cancel")
+	hiddenCb := MustFind[*Checkbox](dialog, "fc-hidden")
 
 	// Capture the normal input style (set by Apply) for error state toggling.
 	normalInputStyle := input.Style()

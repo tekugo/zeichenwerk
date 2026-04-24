@@ -7,9 +7,15 @@ import (
 	"github.com/gdamore/tcell/v3/color"
 )
 
-// TcellScreen is a concrete implementation of the Screen interface using TCell v3.
-// It provides a clipped and translated view into the terminal screen, allowing
-// for windowed rendering of components.
+// TcellScreen is the production Screen implementation on top of
+// gdamore/tcell v3. It maintains a clip rectangle and a translation
+// offset so that higher layers can render widgets in local coordinates
+// without manually re-mapping them to absolute screen positions.
+//
+// The Style method is a TcellScreen-specific extension that exposes the
+// raw tcell.Style at a given cell; it is not part of the Screen
+// interface and should be used only by code that is already coupled to
+// tcell (for example the colour-copy helpers in the Renderer).
 type TcellScreen struct {
 	screen tcell.Screen // underlying tcell screen instance
 	style  tcell.Style  // current style state for drawing
@@ -36,12 +42,15 @@ func (t *TcellScreen) Clear() {
 	t.screen.Clear()
 }
 
-// Clip sets the clipping region and translation origin for subsequent operations.
-// The (x, y) coordinates become the new (0, 0) origin for Put and Get.
+// Clip replaces the clipping region and resets the coordinate origin.
+// After Clip(x, y, w, h), a Put at local (0, 0) targets the absolute
+// cell (x, y), and cells whose translated coordinate falls outside
+// [0, w) × [0, h) are silently discarded. Width or height of 0 means
+// "no limit on that axis".
 //
-// Parameters:
-//   - x, y: The top-left corner of the clipping region (Absolute Screen Coordinates).
-//   - width, height: The dimensions of the clipping region.
+// Note that this is a replacement, not an intersection: the previous
+// clip is forgotten. Callers nesting widgets must intersect explicitly
+// before invoking Clip.
 func (t *TcellScreen) Clip(x, y, width, height int) {
 	t.x = x
 	t.y = y

@@ -124,6 +124,7 @@ func TestFlex_Hint_Horizontal(t *testing.T) {
 
 func TestFlex_Hint_Vertical(t *testing.T) {
 	f := NewFlex("flex", "", Start, 3)
+	f.SetFlag(FlagVertical, true)
 	c1 := NewComponent("c1", "")
 	c1.SetHint(10, 5)
 	c2 := NewComponent("c2", "")

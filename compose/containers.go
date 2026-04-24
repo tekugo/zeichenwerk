@@ -144,7 +144,7 @@ func VFlex(id, class string, alignment core.Alignment, spacing int, options ...O
 	return func(theme *core.Theme, widget core.Widget) {
 		if container, ok := widget.(core.Container); ok {
 			flex := widgets.NewFlex(id, class, alignment, spacing)
-			flex.SetFlag(widgets.FlagVertical, true)
+			flex.SetFlag(core.FlagVertical, true)
 			flex.Apply(theme)
 			container.Add(flex)
 			for _, option := range options {

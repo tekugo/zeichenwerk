@@ -2,7 +2,11 @@ package core
 
 import "fmt"
 
-// NoInsets are no insets at all and represent a null value.
+// NoInsets is a shared, zero-valued Insets instance used as the canonical
+// "no spacing" sentinel. It is returned by Style accessors when no margin
+// or padding has been set anywhere in the cascade. Callers must treat it
+// as read-only: mutating it through the pointer would affect every widget
+// that relies on the sentinel.
 var NoInsets = &Insets{}
 
 // Insets represents spacing or padding values for all four sides of a rectangular area.

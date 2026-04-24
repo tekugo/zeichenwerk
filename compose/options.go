@@ -42,9 +42,9 @@ func Hint(width, height int) Option {
 }
 
 // Flag sets or clears a state flag on the widget. Use the Flag constants from
-// the zeichenwerk package (e.g. [zeichenwerk.FlagRight], [zeichenwerk.FlagDisabled]):
+// the core package (e.g. [core.FlagRight], [core.FlagDisabled]):
 //
-//	Digits("cost", "", "0.00", Fg("$yellow"), Flag(FlagRight, true))
+//	Digits("cost", "", "0.00", Fg("$yellow"), Flag(core.FlagRight, true))
 func Flag(flag core.Flag, value ...bool) Option {
 	v := len(value) == 0 || value[0]
 	return func(_ *core.Theme, widget core.Widget) {

@@ -1,29 +1,46 @@
 package core
 
-// GapBuffer implements a gap buffer data structure, which is an efficient way
-// to store and manipulate text data with frequent insertions and deletions at
-// single cursor position. This data structure is commonly used in text
-// editors.
+import (
+	"fmt"
+	"iter"
+)
+
+// GapBuffer implements a gap buffer, an efficient data structure for storing
+// and manipulating text when edits tend to cluster around a single moving
+// cursor position. It is a classic building block of text editors.
 //
-// The gap buffer maintains a contiguous array with a "gap" (empty space) that
-// moves to the cursor position. Insertions happen at the gap, and deletions
-// expand the gap. This allows O(1) insertions and deletions at the cursor
-// position, with O(n) cost only when moving the cursor to a different
-// position.
+// The buffer is a contiguous rune slice that contains a "gap" — a region of
+// unused slots — positioned at the current cursor. Insertions consume cells
+// at the left edge of the gap, forward deletions consume cells at the right
+// edge, and cursor movement slides the gap by copying the runes that cross
+// it. This makes insert and forward-delete O(1) at the cursor while cursor
+// moves cost O(n) in the distance travelled.
+//
+// Invariants maintained by all operations:
+//   - 0 <= start <= end <= len(buffer)
+//   - the logical text is buffer[0:start] concatenated with buffer[end:]
+//   - the gap (buffer[start:end]) holds unused slots whose contents are
+//     undefined and must not be observed by callers
+//   - the logical cursor position is always equal to start
+//
+// The zero value is not usable; construct instances with NewGapBuffer or
+// NewGapBufferFromString. GapBuffer is not safe for concurrent use.
 type GapBuffer struct {
-	buffer     []rune // buffer consists of printable runes
-	start, end int    // gap start and end index (gap is from start to end-1)
+	buffer     []rune // backing storage; gap cells hold undefined values
+	start, end int    // gap occupies buffer[start:end] (end exclusive)
 }
 
-// NewGapBuffer creates a new gap buffer with the specified initial capacity.
-// The gap buffer will automatically resize when needed.
+// NewGapBuffer creates an empty gap buffer with the specified initial
+// backing capacity. The buffer will automatically grow (doubling each time)
+// when the gap is exhausted, so the capacity is only an optimisation hint.
 //
 // Parameters:
-//   - capacity: Initial capacity of the buffer. Must be at least 2.
+//   - capacity: Initial size of the backing slice. Values below 2 are
+//     silently raised to 2 to guarantee a minimal working gap.
 //
 // Returns:
-//   - *GapBuffer: A new gap buffer instance with the gap positioned at the
-//     beginning.
+//   - *GapBuffer: A new gap buffer whose cursor is positioned at offset 0
+//     and whose entire backing slice is initially gap.
 func NewGapBuffer(capacity int) *GapBuffer {
 	if capacity < 2 {
 		capacity = 2
@@ -35,17 +52,19 @@ func NewGapBuffer(capacity int) *GapBuffer {
 	}
 }
 
-// NewGapBufferFromString creates a new gap buffer initialized with the given
-// string and a specified gap capacity. The gap is positioned at the end of
-// the initial text.
+// NewGapBufferFromString creates a gap buffer pre-populated with text. The
+// text is decoded into runes so multibyte characters occupy a single slot
+// each, and the cursor (and therefore the gap) is placed immediately after
+// the last rune — the typical starting state for an editor opening a file.
 //
 // Parameters:
-//   - text: Initial text to populate the buffer with.
-//   - gapCapacity: Size of the gap to maintain. Must be at least 1.
+//   - text:        Initial content of the buffer.
+//   - gapCapacity: Desired initial gap size. Values below 1 are silently
+//     raised to 1 so at least one edit is possible before a resize.
 //
 // Returns:
-//   - *GapBuffer: A new gap buffer instance with the text loaded and gap at
-//     the end.
+//   - *GapBuffer: A new gap buffer of length len([]rune(text)) with its
+//     cursor positioned at the end of the text.
 func NewGapBufferFromString(text string, gapCapacity int) *GapBuffer {
 	if gapCapacity < 1 {
 		gapCapacity = 1
@@ -69,25 +88,32 @@ func NewGapBufferFromString(text string, gapCapacity int) *GapBuffer {
 
 // ---- Public Methods -------------------------------------------------------
 
-// Delete removes the character immediately after the cursor position.
-// This operation has O(1) time complexity. If the cursor is at the end
-// of the buffer, this operation has no effect.
+// Delete performs a forward delete: it removes the single rune immediately
+// to the right of the cursor by expanding the gap. The cursor itself does
+// not move. When the cursor is at the end of the buffer there is nothing to
+// delete and the call is a no-op.
+//
+// Time complexity is O(1). To delete the rune to the left of the cursor
+// (backspace), first Move the cursor one step left and then call Delete.
 func (gb *GapBuffer) Delete() {
 	if gb.end < len(gb.buffer) {
 		gb.end++
 	}
 }
 
-// Find searches for all occurrences of a substring in the buffer using the
-// Knuth-Morris-Pratt (KMP) algorithm, which has O(n + m) time complexity
-// where n is the buffer length and m is the pattern length.
+// Find returns the logical offsets of every non-overlapping occurrence of
+// substr in the buffer, matched against the gap-free rune sequence (so
+// matches can straddle the gap without being missed). The search uses the
+// Knuth–Morris–Pratt algorithm for O(n + m) time complexity, where n is the
+// buffer length and m is the pattern length.
 //
 // Parameters:
-//   - substr: The substring to search for in the buffer.
+//   - substr: The substring to search for. An empty string yields no matches.
 //
 // Returns:
-//   - []int: A slice containing the starting positions of all matches.
-//     Returns an empty slice if no matches are found or if substr is empty.
+//   - []int: Rune-based starting positions of each match, or an empty (but
+//     non-nil) slice when substr is empty, longer than the buffer, or does
+//     not appear.
 func (gb *GapBuffer) Find(substr string) []int {
 	result := []int{}
 	if substr == "" {
@@ -129,12 +155,17 @@ func (gb *GapBuffer) Find(substr string) []int {
 	return result
 }
 
-// Insert adds a rune at the current cursor position.
-// This operation has O(1) time complexity. The buffer will automatically
-// resize if needed.
+// Insert writes a rune at the current cursor position and advances the
+// cursor past it. The logical buffer length increases by one. If the gap
+// has been exhausted, the backing slice is doubled before the insertion so
+// the call appears to always succeed.
+//
+// The amortised time complexity is O(1) — individual calls may be O(n) when
+// they trigger a resize, but the total cost of any sequence of k insertions
+// is O(k).
 //
 // Parameters:
-//   - r: The rune to insert at the current cursor position.
+//   - r: The rune to insert at the cursor position.
 func (gb *GapBuffer) Insert(r rune) {
 	if gb.start == gb.end {
 		gb.resize()
@@ -143,28 +174,32 @@ func (gb *GapBuffer) Insert(r rune) {
 	gb.start++
 }
 
-// Length returns the number of characters currently stored in the buffer,
-// excluding the gap. This operation has O(1) time complexity.
+// Length returns the number of runes currently stored in the buffer,
+// excluding the gap. Because the two fragments (before the gap and after
+// it) are tracked directly, this is an O(1) query.
 //
 // Returns:
-//   - int: The number of characters in the buffer.
+//   - int: The logical length of the buffer in runes.
 func (gb *GapBuffer) Length() int {
 	return gb.start + (len(gb.buffer) - gb.end)
 }
 
-// Move repositions the gap (cursor) to the specified position in the buffer.
-// This operation has O(n) time complexity in the worst case, where n is the
-// distance between the current and target positions.
+// Move repositions the cursor (and therefore the gap) to the given logical
+// offset by shifting the runes that cross the gap. A position equal to
+// Length() places the cursor after the last rune, which is the natural
+// "append" position.
+//
+// The cost is O(d) where d is the distance between the current and target
+// positions; moving to the current position is free.
 //
 // Parameters:
-//   - pos: Target position for the cursor (0-based index). Must be within
-//     [0, Length()].
+//   - pos: Target cursor offset in the range [0, Length()].
 //
 // Panics:
 //   - If pos is outside the valid range [0, Length()].
 func (gb *GapBuffer) Move(pos int) {
 	if pos < 0 || pos > gb.Length() {
-		panic("Cursor außerhalb des gültigen Bereichs")
+		panic(fmt.Sprintf("GapBuffer.Move: position %d out of range [0, %d]", pos, gb.Length()))
 	}
 
 	if pos < gb.start {
@@ -183,51 +218,66 @@ func (gb *GapBuffer) Move(pos int) {
 	// If pos == gb.start, gap is already at the correct position
 }
 
-// Runes returns a channel that iterates over all runes in the buffer starting
-// from the specified position. The iteration skips the gap and provides a
-// sequential view of the buffer content.
+// Runes returns a range-compatible iterator that yields the buffer's runes
+// in logical order, starting at the given offset and skipping over the
+// gap. Typical usage:
+//
+//	for r := range gb.Runes(0) {
+//	    // ...
+//	}
 //
 // Parameters:
-//   - start: Starting position for iteration (0-based index).
+//   - start: First logical offset to emit. If start is negative or greater
+//     than or equal to Length(), the iterator yields no values.
 //
 // Returns:
-//   - <-chan rune: A channel that yields runes from the buffer sequentially.
-//     The channel is closed when iteration is complete.
+//   - iter.Seq[rune]: A rune sequence that terminates cleanly when the
+//     caller breaks out of the range loop — no goroutine is spawned, so
+//     early termination cannot leak resources.
 //
-// Note: If start is outside the valid range, the channel will be closed
-// immediately.
-func (gb *GapBuffer) Runes(start int) <-chan rune {
-	ch := make(chan rune)
-	go func() {
-		defer close(ch)
+// The buffer must not be mutated while iteration is in progress; the
+// iterator reads directly from the underlying slice without a snapshot,
+// so concurrent edits produce undefined behaviour.
+func (gb *GapBuffer) Runes(start int) iter.Seq[rune] {
+	return func(yield func(rune) bool) {
 		if start < 0 || start >= gb.Length() {
 			return
 		}
 		if start < gb.start {
 			// Start in the left part of the buffer
 			for i := start; i < gb.start; i++ {
-				ch <- gb.buffer[i]
+				if !yield(gb.buffer[i]) {
+					return
+				}
 			}
 			// Continue with the right part of the buffer
 			for i := gb.end; i < len(gb.buffer); i++ {
-				ch <- gb.buffer[i]
+				if !yield(gb.buffer[i]) {
+					return
+				}
 			}
 		} else {
 			// Start in the right part of the buffer
 			offset := gb.end - gb.start
 			for i := start + offset; i < len(gb.buffer); i++ {
-				ch <- gb.buffer[i]
+				if !yield(gb.buffer[i]) {
+					return
+				}
 			}
 		}
-	}()
-	return ch
+	}
 }
 
-// String returns the entire buffer content as a string, excluding the gap.
-// This operation has O(n) time complexity where n is the buffer length.
+// String materialises the full logical content of the buffer as a Go
+// string, concatenating the runes before the gap with those after it. The
+// gap itself is not included. Time complexity is O(n) in the buffer
+// length because all runes are copied.
+//
+// String also makes GapBuffer satisfy fmt.Stringer, so it works directly
+// with fmt.Print and related helpers.
 //
 // Returns:
-//   - string: The complete buffer content as a string.
+//   - string: The complete gap-free buffer content.
 func (gb *GapBuffer) String() string {
 	out := make([]rune, 0, gb.Length())
 	out = append(out, gb.buffer[:gb.start]...)
@@ -237,16 +287,19 @@ func (gb *GapBuffer) String() string {
 
 // ---- Internal Methods -----------------------------------------------------
 
-// computeLPSArray computes the Longest Proper Prefix which is also Suffix
-// (LPS) array for the KMP (Knuth-Morris-Pratt) string matching algorithm.
-// This is used internally by the Find method.
+// computeLPSArray builds the "longest proper prefix which is also a suffix"
+// table used by the Knuth–Morris–Pratt algorithm. Given a pattern P of
+// length m, the returned slice lps has lps[i] equal to the length of the
+// longest proper prefix of P[0..i] that is also a suffix of P[0..i].
+// This table lets KMP skip comparisons after a mismatch without
+// re-examining characters of the input. It runs in O(m) time.
 //
 // Parameters:
-//   - pattern: The pattern to compute LPS array for.
+//   - pattern: The pattern to preprocess. An empty pattern yields an empty
+//     table.
 //
 // Returns:
-//   - []int: LPS array where lps[i] contains the length of the longest proper
-//     prefix of pattern[0..i] which is also a suffix of pattern[0..i].
+//   - []int: The LPS table, one entry per pattern rune.
 func computeLPSArray(pattern []rune) []int {
 	lps := make([]int, len(pattern))
 	length := 0
@@ -268,9 +321,12 @@ func computeLPSArray(pattern []rune) []int {
 	return lps
 }
 
-// resize doubles the capacity of the gap buffer when the gap becomes empty.
-// This is an internal method called automatically when more space is needed.
-// The gap position is preserved during resizing.
+// resize doubles the backing slice when the gap has been exhausted and
+// copies the pre-gap and post-gap fragments into the new slice at their
+// original logical offsets. The newly added capacity is absorbed into the
+// gap, so the cursor position and logical content are both preserved.
+// Because the capacity grows geometrically, amortised insert cost remains
+// O(1) across arbitrarily long sequences of insertions.
 func (gb *GapBuffer) resize() {
 	newBuf := make([]rune, len(gb.buffer)*2)
 	newEnd := len(newBuf) - (len(gb.buffer) - gb.end)

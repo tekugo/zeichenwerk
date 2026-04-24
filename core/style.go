@@ -2,16 +2,21 @@ package core
 
 import "fmt"
 
-// DefaultStyle is the base style used when no other style is specified.
-// It provides reasonable defaults for all style properties:
-// - Fixed: true (cannot be modified directly)
-// - Background: black
-// - Foreground: white
-// - Border: none
-// - Font: empty (system default)
-// - Cursor: empty
-// - Margin: 0
-// - Padding: 0
+// DefaultStyle is the terminal node of every style cascade: it has no
+// parent and every property is populated with a sensible default, so
+// Style accessors always return a concrete value even when nothing else
+// matched. It is marked fixed, so With... calls will return derived
+// copies rather than mutating it in place.
+//
+// Defaults:
+//   - Fixed:      true (cannot be modified directly)
+//   - Background: "black"
+//   - Foreground: "white"
+//   - Border:     "none"
+//   - Font:       "" (terminal default)
+//   - Cursor:     ""
+//   - Margin:     NoInsets (all zero)
+//   - Padding:    NoInsets (all zero)
 var DefaultStyle = Style{
 	parent:     nil,
 	fixed:      true,
@@ -47,14 +52,17 @@ type Style struct {
 	cursor     string  // Cursor style
 }
 
-// NewStyle creates a new Style instance.
+// NewStyle constructs a fresh, modifiable Style with all properties
+// unset. The selector is stored purely for diagnostics (Info output,
+// debugging, cascade introspection) and does not influence lookup unless
+// the style is subsequently registered in a Theme.
 //
 // Parameters:
-//   - selector: Optional CSS-like selector string for debugging and identification.
-//     If multiple strings are provided, only the first one is used.
+//   - selector: Optional selector string; if several are passed only the
+//     first is used, the rest are ignored.
 //
 // Returns:
-//   - A pointer to the new Style instance.
+//   - *Style: A newly allocated Style ready for With... chaining.
 func NewStyle(selector ...string) *Style {
 	if len(selector) > 0 {
 		return &Style{selector: selector[0]}
@@ -368,15 +376,20 @@ func (s *Style) Top() int {
 	return top
 }
 
-// Fix marks the style as immutable.
-// Subsequent modifications will return a new derived style.
+// Fix marks the style as immutable and returns it so it can be used in
+// method chains. Once fixed, the With... methods no longer modify the
+// style in place; they instead create a derived child style that
+// inherits from it via Modifiable. The theme's Add method calls Fix
+// automatically on every registered style.
 func (s *Style) Fix() *Style {
 	s.fixed = true
 	return s
 }
 
-// Info returns a formatted string containing all style properties
-// for debugging purposes.
+// Info formats every resolved property of the style as a multi-line
+// string for debugging and logging. Values come from the cascade, so
+// inherited properties are shown with the effective value rather than an
+// empty string.
 func (s *Style) Info() string {
 	return fmt.Sprintf(
 		`Selector  : %s
@@ -391,10 +404,12 @@ Padding   : %s`,
 		s.selector, "", s.Background(), s.Foreground(), s.Border(), s.Shadow(), s.Cursor(), s.Margin().Info(), s.Padding().Info())
 }
 
-// Modifiable returns a modifiable version of the style.
-// If the style is already modifiable (not fixed), returns self.
-// If the style is fixed, returns a new child style that inherits from this one.
-// This is used internally by all "With..." methods.
+// Modifiable returns a style that can be safely mutated. For an already
+// modifiable (non-fixed) style that is the receiver itself; for a fixed
+// style it is a freshly allocated child style with the receiver set as
+// its parent so cascading behaviour is preserved. All the With... setter
+// methods route their writes through this helper, which is what makes it
+// safe to chain them on theme-registered styles.
 func (s *Style) Modifiable() *Style {
 	if s.fixed {
 		return NewStyle("(custom)").WithParent(s)

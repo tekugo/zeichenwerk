@@ -60,7 +60,7 @@ func TestVRule_Hint_HeightIsZero(t *testing.T) {
 
 func TestHRule_Render_DrawsLine(t *testing.T) {
 	theme := NewTheme()
-	theme.SetBorders(map[string]*Border{"default": {InnerH: "-", InnerV: "|"}})
+	theme.SetBorders(map[string]*Border{"thin": {InnerH: "-", InnerV: "|"}})
 	rule := NewHRule("", "thin")
 	cs := NewTestScreen()
 	renderer := NewRenderer(cs, theme)
@@ -83,7 +83,7 @@ func TestHRule_Render_DrawsLine(t *testing.T) {
 
 func TestVRule_Render_DrawsLine(t *testing.T) {
 	theme := NewTheme()
-	theme.SetBorders(map[string]*Border{"default": {InnerH: "-", InnerV: "|"}})
+	theme.SetBorders(map[string]*Border{"thin": {InnerH: "-", InnerV: "|"}})
 	rule := NewVRule("", "thin")
 	cs := NewTestScreen()
 	renderer := NewRenderer(cs, theme)
