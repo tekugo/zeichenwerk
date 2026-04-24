@@ -10,12 +10,12 @@ import (
 var _ Container = (*Flex)(nil)
 
 func TestNewFlex(t *testing.T) {
-	f := NewFlex("flex1", "cls", "start", 2)
+	f := NewFlex("flex1", "cls", Start, 2)
 
 	if f.ID() != "flex1" {
 		t.Errorf("ID() = %q; want %q", f.ID(), "flex1")
 	}
-	if f.alignment != "start" {
+	if f.alignment != Start {
 		t.Errorf("alignment = %q; want %q", f.alignment, "start")
 	}
 	if f.spacing != 2 {
@@ -27,7 +27,7 @@ func TestNewFlex(t *testing.T) {
 }
 
 func TestFlex_Add(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	c1 := NewComponent("c1", "")
 	c2 := NewComponent("c2", "")
 
@@ -46,7 +46,7 @@ func TestFlex_Add(t *testing.T) {
 }
 
 func TestFlex_Add_Nil(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	f.Add(nil) // should not panic or add anything
 	if len(f.children) != 0 {
 		t.Errorf("nil widget should not be added; got %d children", len(f.children))
@@ -54,7 +54,7 @@ func TestFlex_Add_Nil(t *testing.T) {
 }
 
 func TestFlex_Add_SetsParent(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	c := NewComponent("c", "")
 	f.Add(c)
 	if c.Parent() != f {
@@ -63,7 +63,7 @@ func TestFlex_Add_SetsParent(t *testing.T) {
 }
 
 func TestFlex_Children(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	c1 := NewComponent("c1", "")
 	c2 := NewComponent("c2", "")
 	f.Add(c1)
@@ -79,7 +79,7 @@ func TestFlex_Children(t *testing.T) {
 }
 
 func TestFlex_Hint_Empty(t *testing.T) {
-	f := NewFlex("flex", "", "start", 5)
+	f := NewFlex("flex", "", Start, 5)
 	w, h := f.Hint()
 	if w != 0 || h != 0 {
 		t.Errorf("Hint() for empty flex = %d,%d; want 0,0", w, h)
@@ -87,7 +87,7 @@ func TestFlex_Hint_Empty(t *testing.T) {
 }
 
 func TestFlex_Hint_SingleChild(t *testing.T) {
-	f := NewFlex("flex", "", "start", 5)
+	f := NewFlex("flex", "", Start, 5)
 	c := NewComponent("c", "")
 	c.SetHint(30, 10)
 	f.Add(c)
@@ -103,7 +103,7 @@ func TestFlex_Hint_SingleChild(t *testing.T) {
 }
 
 func TestFlex_Hint_Horizontal(t *testing.T) {
-	f := NewFlex("flex", "", "start", 2)
+	f := NewFlex("flex", "", Start, 2)
 	c1 := NewComponent("c1", "")
 	c1.SetHint(10, 5)
 	c2 := NewComponent("c2", "")
@@ -123,7 +123,7 @@ func TestFlex_Hint_Horizontal(t *testing.T) {
 }
 
 func TestFlex_Hint_Vertical(t *testing.T) {
-	f := NewFlex("flex", "", "start", 3)
+	f := NewFlex("flex", "", Start, 3)
 	c1 := NewComponent("c1", "")
 	c1.SetHint(10, 5)
 	c2 := NewComponent("c2", "")
@@ -144,7 +144,7 @@ func TestFlex_Hint_Vertical(t *testing.T) {
 
 func TestFlex_Hint_NoSpacingOnFirst(t *testing.T) {
 	// Spacing is only added between children, not before the first
-	f := NewFlex("flex", "", "start", 10)
+	f := NewFlex("flex", "", Start, 10)
 	c1 := NewComponent("c1", "")
 	c1.SetHint(5, 3)
 	c2 := NewComponent("c2", "")
@@ -163,7 +163,7 @@ func TestFlex_Hint_NoSpacingOnFirst(t *testing.T) {
 }
 
 func TestFlex_LayoutHorizontal_FixedSizes(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	f.SetBounds(0, 0, 60, 20)
 
 	c1 := NewComponent("c1", "")
@@ -192,7 +192,7 @@ func TestFlex_LayoutHorizontal_FixedSizes(t *testing.T) {
 }
 
 func TestFlex_LayoutHorizontal_WithSpacing(t *testing.T) {
-	f := NewFlex("flex", "", "start", 5)
+	f := NewFlex("flex", "", Start, 5)
 	f.SetBounds(0, 0, 65, 20)
 
 	c1 := NewComponent("c1", "")
@@ -216,7 +216,7 @@ func TestFlex_LayoutHorizontal_WithSpacing(t *testing.T) {
 }
 
 func TestFlex_LayoutHorizontal_FractionalSizes(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	f.SetBounds(0, 0, 60, 20)
 
 	c1 := NewComponent("c1", "")
@@ -240,7 +240,7 @@ func TestFlex_LayoutHorizontal_FractionalSizes(t *testing.T) {
 }
 
 func TestFlex_LayoutVertical_FixedSizes(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	f.SetFlag(FlagVertical, true)
 	f.SetBounds(0, 0, 60, 30)
 
@@ -270,7 +270,7 @@ func TestFlex_LayoutVertical_FixedSizes(t *testing.T) {
 }
 
 func TestFlex_LayoutVertical_WithSpacing(t *testing.T) {
-	f := NewFlex("flex", "", "start", 4)
+	f := NewFlex("flex", "", Start, 4)
 	f.SetFlag(FlagVertical, true)
 	f.SetBounds(0, 0, 60, 34)
 
@@ -295,7 +295,7 @@ func TestFlex_LayoutVertical_WithSpacing(t *testing.T) {
 }
 
 func TestFlex_LayoutVertical_FractionalSizes(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	f.SetFlag(FlagVertical, true)
 	f.SetBounds(0, 0, 60, 30)
 
@@ -320,7 +320,7 @@ func TestFlex_LayoutVertical_FractionalSizes(t *testing.T) {
 }
 
 func TestFlex_LayoutHorizontal_AlignStart(t *testing.T) {
-	f := NewFlex("flex", "", "start", 0)
+	f := NewFlex("flex", "", Start, 0)
 	f.SetBounds(0, 0, 60, 30)
 
 	c := NewComponent("c", "")
@@ -338,7 +338,7 @@ func TestFlex_LayoutHorizontal_AlignStart(t *testing.T) {
 }
 
 func TestFlex_LayoutHorizontal_AlignCenter(t *testing.T) {
-	f := NewFlex("flex", "", "center", 0)
+	f := NewFlex("flex", "", Center, 0)
 	f.SetBounds(0, 0, 60, 30)
 
 	c := NewComponent("c", "")
@@ -357,7 +357,7 @@ func TestFlex_LayoutHorizontal_AlignCenter(t *testing.T) {
 }
 
 func TestFlex_LayoutHorizontal_AlignEnd(t *testing.T) {
-	f := NewFlex("flex", "", "end", 0)
+	f := NewFlex("flex", "", End, 0)
 	f.SetBounds(0, 0, 60, 30)
 
 	c := NewComponent("c", "")
@@ -376,7 +376,7 @@ func TestFlex_LayoutHorizontal_AlignEnd(t *testing.T) {
 }
 
 func TestFlex_LayoutHorizontal_AlignStretch(t *testing.T) {
-	f := NewFlex("flex", "", "stretch", 0)
+	f := NewFlex("flex", "", Stretch, 0)
 	f.SetBounds(0, 0, 60, 30)
 
 	c := NewComponent("c", "")
@@ -397,7 +397,7 @@ func TestFlex_LayoutHorizontal_AlignStretch(t *testing.T) {
 func TestAlign(t *testing.T) {
 	tests := []struct {
 		name      string
-		alignment string
+		alignment Alignment
 		start     int
 		end       int
 		size      int
@@ -405,42 +405,42 @@ func TestAlign(t *testing.T) {
 		wantSize  int
 	}{
 		{
-			name: "start", alignment: "start",
+			name: "start", alignment: Start,
 			start: 0, end: 100, size: 30,
 			wantPos: 0, wantSize: 30,
 		},
 		{
-			name: "center fits", alignment: "center",
+			name: "center fits", alignment: Center,
 			start: 0, end: 100, size: 30,
 			wantPos: 35, wantSize: 30, // (100-30)/2 = 35
 		},
 		{
-			name: "center too large", alignment: "center",
+			name: "center too large", alignment: Center,
 			start: 0, end: 20, size: 30,
 			wantPos: 10, wantSize: 30, // space/2 = 10
 		},
 		{
-			name: "end", alignment: "end",
+			name: "end", alignment: End,
 			start: 0, end: 100, size: 30,
 			wantPos: 70, wantSize: 30, // 100-30 = 70
 		},
 		{
-			name: "stretch", alignment: "stretch",
+			name: "stretch", alignment: Stretch,
 			start: 0, end: 100, size: 30,
 			wantPos: 0, wantSize: 100, // fills available space
 		},
 		{
-			name: "unknown defaults to start", alignment: "unknown",
+			name: "unknown defaults to start", alignment: Default,
 			start: 0, end: 100, size: 30,
 			wantPos: 0, wantSize: 30,
 		},
 		{
-			name: "start with offset", alignment: "start",
+			name: "start with offset", alignment: Start,
 			start: 10, end: 110, size: 20,
 			wantPos: 10, wantSize: 20,
 		},
 		{
-			name: "end with offset", alignment: "end",
+			name: "end with offset", alignment: End,
 			start: 10, end: 110, size: 20,
 			wantPos: 90, wantSize: 20,
 		},

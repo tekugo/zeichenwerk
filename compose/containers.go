@@ -105,7 +105,7 @@ func Grid(id, class string, rows, columns []int, lines bool, options ...Option) 
 // differing flag, there is not Flex() in the composition API.
 // alignment controls cross-axis alignment ("start", "center", "end",
 // "stretch") and spacing sets the gap between children in cells.
-func HFlex(id, class string, alignment string, spacing int, options ...Option) Option {
+func HFlex(id, class string, alignment core.Alignment, spacing int, options ...Option) Option {
 	return func(theme *core.Theme, widget core.Widget) {
 		if container, ok := widget.(core.Container); ok {
 			flex := widgets.NewFlex(id, class, alignment, spacing)
@@ -140,7 +140,7 @@ func Switcher(id, class string, options ...Option) Option {
 // Flex() in the composition API.
 // alignment controls cross-axis alignment ("start", "center", "end",
 // "stretch") and spacing sets the gap between children in cells.
-func VFlex(id, class string, alignment string, spacing int, options ...Option) Option {
+func VFlex(id, class string, alignment core.Alignment, spacing int, options ...Option) Option {
 	return func(theme *core.Theme, widget core.Widget) {
 		if container, ok := widget.(core.Container); ok {
 			flex := widgets.NewFlex(id, class, alignment, spacing)

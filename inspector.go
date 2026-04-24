@@ -36,14 +36,14 @@ func (i *Inspector) BuildUI() {
 	i.ui = ui.NewBuilder().
 		Class("inspector").
 		Box("inspector-box", "Inspector").Border("double").
-		VFlex("inspector", "stretch", 0).
+		VFlex("inspector", Stretch, 0).
 		Tabs("inspector-tabs").
 		Switcher("inspector-switcher", true).
 		Tab("Widgets").
-		HFlex("inspector-widgets", "stretch", 0).Flag(FlagVertical).
+		HFlex("inspector-widgets", Stretch, 0).Flag(FlagVertical).
 		Static("breadcrumbs", "Breadcrumbs").
-		HFlex("inspector-content", "stretch", 0).
-		VFlex("inspector-lists", "stretch", 0).
+		HFlex("inspector-content", Stretch, 0).
+		VFlex("inspector-lists", Stretch, 0).
 		Box("widget-box", "Widgets").Border("round").
 		List("children").Hint(30, 15).
 		End().
@@ -51,7 +51,7 @@ func (i *Inspector) BuildUI() {
 		List("styles").Hint(30, 10).
 		End().
 		End().
-		VFlex("info-boxes", "stretch", 0).
+		VFlex("info-boxes", Stretch, 0).
 		Box("widget-info-box", "Information").Border("round").
 		Text("widget-info", []string{}, false, 0).Hint(50, 15).
 		End().

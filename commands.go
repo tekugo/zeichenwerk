@@ -126,7 +126,7 @@ func (c *Commands) Open() {
 	// Filter is not a Container.
 	b := c.ui.NewBuilder()
 	b.Dialog("commands-dialog", "Commands").
-		VFlex("commands-flex", "stretch", 0).
+		VFlex("commands-flex", core.Stretch, 0).
 		Filter("commands-input").Hint(0, 1)
 
 	// Manually add the commandsPanel to the Flex.

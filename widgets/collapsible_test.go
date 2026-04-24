@@ -336,7 +336,7 @@ func TestFocusedIn_NoFocus(t *testing.T) {
 }
 
 func TestFocusedIn_NestedFocus(t *testing.T) {
-	inner := NewFlex("inner", "", "stretch", 0)
+	inner := NewFlex("inner", "", Stretch, 0)
 	inner.SetFlag(FlagVertical, true)
 	nested := NewComponent("nested", "")
 	nested.SetFlag(FlagFocused, true)

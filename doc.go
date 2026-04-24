@@ -12,8 +12,8 @@
 //
 //	func main() {
 //	    NewBuilder(TokyoNightTheme()).
-//	        Flex("root", false, "stretch", 0).
-//	            Flex("header", true, "center", 1).
+//	        Flex("root", false, Stretch, 0).
+//	            Flex("header", true, Center, 1).
 //	                Static("title", "My App").Font("bold").Foreground("$cyan").
 //	            End().
 //	            Grid("body", 1, 2, false).Columns(20, -1).
@@ -42,8 +42,8 @@
 //
 //	func main() {
 //	    UI(z.TokyoNightTheme(),
-//	        Flex("root", "", false, "stretch", 0,
-//	            Flex("header", "", true, "center", 1,
+//	        Flex("root", "", false, Stretch, 0,
+//	            Flex("header", "", true, Center, 1,
 //	                Static("title", "", "My App", Font("bold"), Fg("$cyan")),
 //	            ),
 //	            Grid("body", "", []int{0}, []int{20, -1}, false,

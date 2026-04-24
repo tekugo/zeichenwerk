@@ -394,16 +394,16 @@ func (t *Table) CellBounds(row, col int) (x, y, w int, ok bool) {
 }
 
 // cellText returns text padded to width runes according to alignment.
-func cellText(text string, width, alignment int) string {
+func cellText(text string, width int, alignment Alignment) string {
 	runes := []rune(text)
 	if len(runes) >= width {
 		return string(runes[:width])
 	}
 	pad := width - len(runes)
 	switch alignment {
-	case AlignRight:
+	case Right:
 		return strings.Repeat(" ", pad) + text
-	case AlignCenter:
+	case Center:
 		left := pad / 2
 		return strings.Repeat(" ", left) + text + strings.Repeat(" ", pad-left)
 	default:

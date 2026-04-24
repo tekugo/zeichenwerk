@@ -15,9 +15,9 @@ import (
 //   - Spacing: Applied between adjacent children (not at edges)
 type Flex struct {
 	Component
-	children  []Widget // Child widgets managed by this flex container
-	alignment string   // Child alignment: "start", "center", "end", or "stretch"
-	spacing   int      // Pixels/characters of spacing between children
+	children  []Widget  // Child widgets managed by this flex container
+	alignment Alignment // Child alignment: "start", "center", "end", or "stretch"
+	spacing   int       // Pixels/characters of spacing between children
 }
 
 // NewFlex creates a new flex container widget with the specified configuration.
@@ -39,7 +39,7 @@ type Flex struct {
 //
 //	// Create a vertical flex with stretch alignment
 //	vflex := NewFlex("sidebar", false, "stretch", 1)
-func NewFlex(id, class string, alignment string, spacing int) *Flex {
+func NewFlex(id, class string, alignment Alignment, spacing int) *Flex {
 	return &Flex{
 		Component: Component{id: id, class: class},
 		alignment: alignment,
@@ -95,7 +95,7 @@ func (f *Flex) Children() []Widget {
 // ---- Summarizer -----------------------------------------------------------
 
 // Alignment returns the child alignment setting.
-func (f *Flex) Alignment() string { return f.alignment }
+func (f *Flex) Alignment() Alignment { return f.alignment }
 
 // Spacing returns the gap between children.
 func (f *Flex) Spacing() int { return f.spacing }
@@ -106,7 +106,7 @@ func (f *Flex) Summary() string {
 	if f.Flag(FlagVertical) {
 		dir = "vertical"
 	}
-	return dir + " " + f.alignment
+	return dir + " " + AlignmentString(f.alignment)
 }
 
 // ---- Layout ---------------------------------------------------------------
@@ -339,18 +339,18 @@ func (f *Flex) layoutVertical() {
 // Returns:
 //   - int: The calculated position coordinate
 //   - int: The calculated size (may be modified for "stretch" alignment)
-func align(alignment string, start, end, size int) (int, int) {
+func align(alignment Alignment, start, end, size int) (int, int) {
 	space := end - start
 
 	switch alignment {
-	case "center":
+	case Center:
 		if space >= size {
 			return start + (space-size)/2, size
 		}
 		return start + space/2, size
-	case "end":
+	case End, Right:
 		return end - size, size
-	case "stretch":
+	case Stretch:
 		return start, space
 	default: // "start" or any other value
 		return start, size

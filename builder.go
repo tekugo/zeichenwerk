@@ -279,9 +279,9 @@ func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
 //
 // Parameters:
 //   - id: unique identifier for the flex container
-//   - alignment: how children are aligned ("start", "center", "end", "stretch")
+//   - alignment: how children are aligned (Start, Center, End, Stretch)
 //   - spacing: cells between child widgets (columns or rows)
-func (b *Builder) HFlex(id string, alignment string, spacing int) *Builder {
+func (b *Builder) HFlex(id string, alignment Alignment, spacing int) *Builder {
 	flex := NewFlex(id, b.class, alignment, spacing)
 	b.Add(flex)
 	return b
@@ -522,7 +522,7 @@ func (b *Builder) Viewport(id, title string) *Builder {
 }
 
 // VFlex returns a vertical flex with stretching and the given spacing.
-func (b *Builder) VFlex(id string, alignment string, spacing int) *Builder {
+func (b *Builder) VFlex(id string, alignment Alignment, spacing int) *Builder {
 	return b.HFlex(id, alignment, spacing).Flag(FlagVertical)
 }
 

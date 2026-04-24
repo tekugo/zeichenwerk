@@ -119,7 +119,7 @@ func (c *Combo) popup() {
 	theme := root.Theme()
 	popup := NewBox("combo-popup", "popup", "")
 	popup.Apply(theme)
-	flex := NewFlex("combo-popup-content", "popup", "stretch", 0)
+	flex := NewFlex("combo-popup-content", "popup", Stretch, 0)
 	flex.SetFlag(FlagVertical, true)
 	flex.Apply(theme)
 	input := NewTypeahead("combo-popup-input", "popup", c.value)

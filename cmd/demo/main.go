@@ -63,8 +63,8 @@ func main() {
 // Create the terminal UI.
 func createUI(theme *Theme) *UI {
 	ui := NewBuilder(theme).
-		VFlex("main", "stretch", 0).
-		HFlex("header", "stretch", 2).
+		VFlex("main", Stretch, 0).
+		HFlex("header", Stretch, 2).
 		Static("title", "Zeichenwerk Demo").
 		Static("subtitle", "A terminal UI framework").
 		End().
@@ -107,12 +107,12 @@ func createUI(theme *Theme) *UI {
 		With(commandsDemo).
 		End().
 		Cell(1, 1, 1, 1).
-		VFlex("debug-log-pane", "stretch", 0).Hint(0, 10).
+		VFlex("debug-log-pane", Stretch, 0).Hint(0, 10).
 		Static("debug-log-title", "Debug Log").Background("green").
 		Text("debug-log", []string{"Hello, World!"}, true, 100).Hint(0, -1).
 		End().
 		End().
-		HFlex("footer", "center", 0).
+		HFlex("footer", Center, 0).
 		Shortcuts("footer-shortcuts", "↑↓", "navigate", "Enter", "select", "i", "debug", "t", "theme", "q", "quit").
 		Spacer().Hint(-1, 0).
 		Static("theme-label", " Theme: ").
@@ -161,9 +161,9 @@ func createUI(theme *Theme) *UI {
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
-							VFlex("dialog-content", "stretch", 1).
+							VFlex("dialog-content", Stretch, 1).
 							Static("", "Do you really want to do this?").
-							HFlex("dialog-buttons", "end", 2).
+							HFlex("dialog-buttons", End, 2).
 							Button("btn-yes", "YES").
 							Button("btn-no", "NO").
 							End().
@@ -252,10 +252,10 @@ func createUI(theme *Theme) *UI {
 
 // Box demo
 func box(builder *Builder) {
-	builder.VFlex("box-demo", "stretch", 1).Padding(1).
+	builder.VFlex("box-demo", Stretch, 1).Padding(1).
 		Static("box-title", "Box Widget Demo").Padding(0, 0, 1, 0).
 		HRule("thin").
-		VFlex("box-examples", "stretch", 1).
+		VFlex("box-examples", Stretch, 1).
 		Box("simple-box", "Simple Box").Padding(1).
 		Static("box-content1", "This is content inside a simple box widget.").
 		End().
@@ -323,7 +323,7 @@ func canvas(builder *Builder) {
 	}
 
 	// Add it to the builder
-	builder.VFlex("canvas-demo", "stretch", 1).Padding(1).
+	builder.VFlex("canvas-demo", Stretch, 1).Padding(1).
 		Static("canvas-title", "Canvas Widget (press 'i' to start editing)").Padding(0, 0, 1, 0).
 		Add(c).
 		End()
@@ -331,7 +331,7 @@ func canvas(builder *Builder) {
 
 // Checkbox demo
 func checkbox(builder *Builder) {
-	builder.VFlex("checkbox-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("checkbox-demo", Stretch, 1).Padding(1, 2).
 		Static("checkbox-title", "Checkbox Widget Demo").Padding(0, 0, 1, 0).
 		Static("checkbox-info", "Checkboxes toggle between checked and unchecked states.").Padding(0, 0, 1, 0).
 		Checkbox("cb1", "Enable notifications", false).
@@ -385,7 +385,7 @@ func comboDemo(builder *Builder) {
 		"improve scroll performance",
 	}
 
-	builder.VFlex("combo-demo", "start", 1).Padding(1, 2).
+	builder.VFlex("combo-demo", Start, 1).Padding(1, 2).
 		Static("combo-title", "Combo Widget Demo").Padding(0, 0, 1, 0).
 		Static("combo-desc", "Type freely or pick from the list. ↓↑ navigate, Tab/→ accepts ghost text, Enter confirms.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
@@ -408,12 +408,12 @@ func comboDemo(builder *Builder) {
 
 // Collapsible demo
 func collapsibleDemo(builder *Builder) {
-	builder.VFlex("collapsible-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("collapsible-demo", Stretch, 1).Padding(1, 2).
 		Static("collapsible-title", "Collapsible Widget Demo").Padding(0, 0, 1, 0).
 		Static("collapsible-info", "Click the header or press Enter/Space to toggle. → expands, ← collapses.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
 		Collapsible("col-basic", "Basic section (starts expanded)", true).
-		VFlex("col-basic-content", "stretch", 1).Padding(0, 1).
+		VFlex("col-basic-content", Stretch, 1).Padding(0, 1).
 		Static("", "This is the body of the first collapsible.").
 		Static("", "It can contain any widget — here a few statics.").
 		Static("", "Collapse me with ← or by clicking the header.").
@@ -423,7 +423,7 @@ func collapsibleDemo(builder *Builder) {
 		List("col-list-items", "Alpha", "Beta", "Gamma", "Delta", "Epsilon").
 		End().
 		Collapsible("col-inputs", "Input section (starts collapsed)", false).
-		VFlex("col-inputs-content", "stretch", 1).Padding(0, 1).
+		VFlex("col-inputs-content", Stretch, 1).Padding(0, 1).
 		Static("", "Name:").
 		Input("col-name", "").
 		Static("", "Email:").
@@ -532,7 +532,7 @@ func deckDemo(builder *Builder, theme *Theme) {
 	deck.Set(items)
 	// Wrap in a non-focusable Flex so the left/right padding is stable and
 	// unaffected by the deck's own focus state changing its style.
-	builder.VFlex("deck-wrapper", "stretch", 0).Padding(0, 1).
+	builder.VFlex("deck-wrapper", Stretch, 0).Padding(0, 1).
 		Static("deck-title", "Color constants from the Tokyo Night theme").Padding(0, 0, 1, 0).
 		Add(deck).Hint(0, -1).
 		End()
@@ -554,9 +554,9 @@ func custom() Widget {
 
 // Digits demo
 func digits(builder *Builder) {
-	builder.VFlex("digits-demo", "stretch", 1).Padding(1).
+	builder.VFlex("digits-demo", Stretch, 1).Padding(1).
 		Static("digits-title", "Digits Widget Demo").Padding(0, 0, 1, 0).
-		HFlex("digits-content", "center", 1).
+		HFlex("digits-content", Center, 1).
 		Digits("digits", "12:34").
 		End().
 		Static("digits-info", "Large ASCII art-style digits using Unicode box-drawing characters.").Padding(1, 0, 0, 0).
@@ -564,7 +564,7 @@ func digits(builder *Builder) {
 }
 
 func dropdown(builder *Builder) {
-	builder.VFlex("select-demo", "start", 1).Padding(1, 2).
+	builder.VFlex("select-demo", Start, 1).Padding(1, 2).
 		Static("select-title", "Select Widget Demo").Padding(0, 0, 1, 0).
 		Static("select-info", "Select is a dropdown selection widget.").Padding(0, 0, 1, 0).
 		Select("s1", "f", "Female", "m", "Male", "d", "Diverse").
@@ -589,7 +589,7 @@ func filterDemo(builder *Builder) {
 		"C", "C++", "C#", "Java", "Scala", "Haskell", "Erlang", "Elixir",
 		"Ruby", "PHP", "Dart", "Lua", "Julia", "R", "MATLAB", "Clojure",
 	}
-	builder.VFlex("filter-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("filter-demo", Stretch, 1).Padding(1, 2).
 		Static("filter-title", "Filter Widget Demo").Padding(0, 0, 1, 0).
 		Static("filter-desc", "Type to filter the list below. Ghost text suggests the first prefix match.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
@@ -629,7 +629,7 @@ func form(builder *Builder) {
 		Fixed      bool   `label:"Fixed" readOnly:"true"`
 	}{ID: "JD", Name: "John Doe", Sex: "m"}
 
-	builder.VFlex("form-demo", "start", 1).Margin(2).Border("", "round").Padding(2).
+	builder.VFlex("form-demo", Start, 1).Margin(2).Border("", "round").Padding(2).
 		Form("form", "Connect", &data).
 		Group("form-group", "", "", false, 1).Border("", "round").
 		End().
@@ -638,7 +638,7 @@ func form(builder *Builder) {
 		Group("form-group-2", "user", "", true, 1).Border("", "round").
 		End().
 		End().
-		HFlex("form-buttons", "start", 1).Margin(1).
+		HFlex("form-buttons", Start, 1).Margin(1).
 		Button("save-button", "Save").
 		Static("info-label", "Info").
 		End().
@@ -663,12 +663,12 @@ func grid(builder *Builder) {
 
 // Progress demo
 func marqueeDemo(builder *Builder) {
-	builder.VFlex("marquee-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("marquee-demo", Stretch, 1).Padding(1, 2).
 		Static("marquee-title", "Marquee Widget Demo").Padding(0, 0, 1, 0).
 		Static("marquee-desc", "Text wider than the widget scrolls continuously. Hover to pause.").Padding(0, 0, 1, 0).
 		Marquee("marquee-ticker").Hint(-1, 1).
 		Spacer().Hint(-1, 0).
-		HFlex("marquee-controls", "center", 4).Padding(1, 0, 0, 0).
+		HFlex("marquee-controls", Center, 4).Padding(1, 0, 0, 0).
 		Checkbox("marquee-running", "Running", true).
 		End().
 		End()
@@ -700,7 +700,7 @@ func marqueeDemo(builder *Builder) {
 }
 
 func shimmerDemo(builder *Builder) {
-	builder.VFlex("shimmer-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("shimmer-demo", Stretch, 1).Padding(1, 2).
 		Static("shimmer-title", "Shimmer Widget Demo").Padding(0, 0, 1, 0).
 		Static("shimmer-stepped-label", "Stepped edge:").Padding(0, 0, 0, 0).
 		Shimmer("shimmer-stepped").Hint(-1, 1).
@@ -711,7 +711,7 @@ func shimmerDemo(builder *Builder) {
 		Static("shimmer-multi-label", "Multi-line (gradient):").Padding(0, 0, 0, 0).
 		Shimmer("shimmer-multi").Hint(-1, 3).
 		Spacer().Hint(-1, 0).
-		HFlex("shimmer-controls", "center", 4).Padding(1, 0, 0, 0).
+		HFlex("shimmer-controls", Center, 4).Padding(1, 0, 0, 0).
 		Checkbox("shimmer-running", "Running", true).
 		End().
 		End()
@@ -764,9 +764,9 @@ func shimmerDemo(builder *Builder) {
 }
 
 func progress(builder *Builder) {
-	builder.VFlex("progress-demo", "stretch", 1).Padding(1).
+	builder.VFlex("progress-demo", Stretch, 1).Padding(1).
 		Static("progress-title", "Progress Widget Demo").Padding(0, 0, 1, 0).
-		VFlex("progress-content", "stretch", 1)
+		VFlex("progress-content", Stretch, 1)
 	// Indeterminate progress
 	pIndet := NewProgress("progress-indet", "", true)
 	builder.Add(pIndet)
@@ -801,10 +801,10 @@ func progress(builder *Builder) {
 
 // Scanner demo
 func scanner(builder *Builder) {
-	builder.VFlex("scanner-container", "stretch", 1).Padding(1).
+	builder.VFlex("scanner-container", Stretch, 1).Padding(1).
 		Static("scanner-title", "Scanner Widget Demo").Padding(0, 0, 1, 0).
 		Static("scanner-info", "Back-and-forth scanning animation with fading trail.").Padding(0, 0, 1, 0).
-		VFlex("scanner-flex", "center", 1).
+		VFlex("scanner-flex", Center, 1).
 		Scanner("scanner-blocks", 12, "blocks").
 		Scanner("scanner-circles", 12, "circles").
 		Scanner("scanner-diamonds", 12, "diamonds").
@@ -833,7 +833,7 @@ func scanner(builder *Builder) {
 // Spinner demo
 func spinner(builder *Builder) {
 	builder.Box("spinner-demo", "Spinner").Border("", "round").Margin(1).Padding(1, 5).
-		HFlex("spinner-flex", "start", 2).
+		HFlex("spinner-flex", Start, 2).
 		Spinner("spinner", Spinners["bar"]).
 		Spinner("spinner", Spinners["dot"]).
 		Spinner("spinner", Spinners["dots"]).
@@ -943,7 +943,7 @@ Use **↑ ↓** to scroll one line, **PgUp PgDn** for page scrolling, and **Home
 // Styled text demo
 func styled(builder *Builder) {
 	builder.
-		VFlex("styled-pane", "stretch", 0).Hint(0, -1).
+		VFlex("styled-pane", Stretch, 0).Hint(0, -1).
 		Styled("styled-demo", styledDemoText).Hint(0, -1).
 		Shortcuts("styled-shortcuts", "↑↓", "scroll", "PgUp PgDn", "page", "Home End", "top/bottom").
 		End()
@@ -960,7 +960,7 @@ func table(builder *Builder) {
 
 // Tabs demo
 func tabs(builder *Builder) {
-	builder.VFlex("tabs-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("tabs-demo", Stretch, 1).Padding(1, 2).
 		Tabs("tabs", "First", "Second", "Third", "Fourth").
 		End()
 }
@@ -970,7 +970,7 @@ func terminalDemo(builder *Builder) {
 	term := NewTerminal("terminal-demo", "")
 	term.SetHint(0, -1)
 
-	builder.VFlex("terminal-pane", "stretch", 0).Hint(0, -1).Padding(0, 1).
+	builder.VFlex("terminal-pane", Stretch, 0).Hint(0, -1).Padding(0, 1).
 		Static("terminal-title", "Terminal Widget Demo").Padding(0, 0, 1, 0).
 		Add(term).Hint(0, -1).
 		End()
@@ -1086,7 +1086,7 @@ func typeaheadDemo(builder *Builder) {
 		"Ukraine", "United Kingdom", "United States", "Vietnam",
 	}
 
-	builder.VFlex("typeahead-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("typeahead-demo", Stretch, 1).Padding(1, 2).
 		Static("typeahead-title", "Typeahead Widget Demo").Padding(0, 0, 1, 0).
 		Static("typeahead-desc", "Type to see inline ghost-text completions. Tab or → accepts.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
@@ -1173,7 +1173,7 @@ func tilesDemo(builder *Builder) {
 	}
 
 	// No vertical padding on the outer Flex — every row counts.
-	builder.VFlex("tiles-demo", "stretch", 0).Padding(0, 2).
+	builder.VFlex("tiles-demo", Stretch, 0).Padding(0, 2).
 		Static("tiles-title", "Tiles  ←→↑↓ navigate · Enter activate").Padding(0, 0, 0, 0).
 		Tiles("tiles-grid", renderCard, 14, 4).Hint(-1, -1).
 		End()
@@ -1188,9 +1188,9 @@ func treeFSDemo(builder *Builder) {
 
 	tfs = NewTreeFS("tree-fs", "", ".", false)
 
-	builder.VFlex("tree-fs-demo", "stretch", 0).
+	builder.VFlex("tree-fs-demo", Stretch, 0).
 		// Toolbar: Up button + current root path
-		HFlex("tree-fs-toolbar", "center", 1).Padding(0, 1).
+		HFlex("tree-fs-toolbar", Center, 1).Padding(0, 1).
 		Button("tree-fs-up", "↑ Up").
 		Static("tree-fs-path", tfs.RootPath()).Padding(0, 1).
 		End().
@@ -1244,12 +1244,12 @@ func typewriterDemo(builder *Builder) {
 	}
 	idx := 0
 
-	builder.VFlex("tw-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("tw-demo", Stretch, 1).Padding(1, 2).
 		Static("tw-title", "Typewriter Widget Demo").Padding(0, 0, 1, 0).
 		Static("tw-desc", "Text is revealed character by character with a blinking cursor.").Padding(0, 0, 1, 0).
 		Typewriter("tw").
 		Spacer().Hint(-1, 0).
-		HFlex("tw-controls", "center", 4).Padding(1, 0, 0, 0).
+		HFlex("tw-controls", Center, 4).Padding(1, 0, 0, 0).
 		Checkbox("tw-repeat", "Repeat", false).
 		Checkbox("tw-cursor", "Show cursor", true).
 		Button("tw-restart", "Restart").
@@ -1307,7 +1307,7 @@ func typewriterDemo(builder *Builder) {
 
 // Value demo — two groups of widgets sharing a reactive Value.
 func valueDemo(builder *Builder) {
-	builder.VFlex("value-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("value-demo", Stretch, 1).Padding(1, 2).
 		Static("value-title", "Value Demo").Padding(0, 0, 1, 0).
 		Static("value-info", "Widgets sharing the same Value stay in sync automatically.").Padding(0, 0, 1, 0)
 
@@ -1334,7 +1334,7 @@ func valueDemo(builder *Builder) {
 	strVal.Observe(strInput)
 	builder.Add(strInput)
 	builder.Spacer().Size(0, 1)
-	builder.HFlex("val-digits-row", "center", 0).
+	builder.HFlex("val-digits-row", Center, 0).
 		Add(digits).
 		End()
 
@@ -1365,7 +1365,7 @@ func valueDemo(builder *Builder) {
 }
 
 func viewport(builder *Builder) {
-	builder.VFlex("viewport-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("viewport-demo", Stretch, 1).Padding(1, 2).
 		Static("viewport-title", "Viewport Demo").Padding(0, 0, 1, 0).
 		Static("viewport-info", "A scrollable viewport of the inside widget.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
@@ -1393,7 +1393,7 @@ func sparklineDemo(builder *Builder) {
 		return (math.Sin(float64(i)*0.2) + 1.0) / 2.0
 	}
 
-	builder.VFlex("sparkline-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("sparkline-demo", Stretch, 1).Padding(1, 2).
 		Static("sp-title", "Sparkline Widget Demo").Padding(0, 0, 1, 0).
 		Static("sp-desc", "Live data — each chart updates every 100 ms.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
@@ -1509,7 +1509,7 @@ func sparklineDemo(builder *Builder) {
 func heatmapDemo(builder *Builder) {
 	const rows, cols = 24, 7
 
-	builder.VFlex("heatmap-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("heatmap-demo", Stretch, 1).Padding(1, 2).
 		Static("hm-title", "Heatmap Widget Demo").Padding(0, 0, 1, 0).
 		Heatmap("hm", rows, cols).Hint(-1, -1).
 		End()
@@ -1591,7 +1591,7 @@ func barChartDemo(builder *Builder) {
 		{Label: "Profit", Values: []float64{12, 23, 26, 16, 32, 47, 51, 43, 37, 31, 22, 42}},
 	}
 
-	builder.VFlex("bar-chart-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("bar-chart-demo", Stretch, 1).Padding(1, 2).
 		Static("bc-title", "Bar Chart Widget Demo").Padding(0, 0, 1, 0).
 		Static("bc-desc", "Stacked bar chart with y-axis, grid, and legend. Use ←→ to navigate categories.").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
@@ -1618,13 +1618,13 @@ func barChartDemo(builder *Builder) {
 func breadcrumbDemo(builder *Builder) {
 	path := []string{"Home", "Projects", "zeichenwerk", "cmd", "demo"}
 
-	builder.VFlex("breadcrumb-demo", "stretch", 1).Padding(1, 2).
+	builder.VFlex("breadcrumb-demo", Stretch, 1).Padding(1, 2).
 		Static("bc-title", "Breadcrumb Widget Demo").Padding(0, 0, 1, 0).
 		Static("bc-desc", "Click a segment to navigate. ←→ to move, Enter to activate (truncates path).").Padding(0, 0, 1, 0).
 		HRule("thin").Padding(0, 0, 1, 0).
 		Static("bc-label", "Path:").Padding(0, 0, 0, 0).
 		Breadcrumb("bc").Hint(-1, 1).
-		HFlex("bc-controls", "center", 2).Padding(1, 0, 0, 0).
+		HFlex("bc-controls", Center, 2).Padding(1, 0, 0, 0).
 		Button("bc-push", "Push").
 		Button("bc-pop", "Pop").
 		Button("bc-reset", "Reset").
@@ -1717,7 +1717,7 @@ func people(n int) [][]string {
 // Commands are registered separately in registerCommandsDemo (called after Build).
 // Bind Ctrl+K anywhere in the app to open the palette.
 func commandsDemo(b *Builder) {
-	b.VFlex("commands-demo", "stretch", 1).Padding(1).
+	b.VFlex("commands-demo", Stretch, 1).Padding(1).
 		Static("commands-title", "Commands Palette").Padding(0, 0, 1, 0).
 		HRule("thin").
 		Static("commands-instructions",

@@ -710,9 +710,9 @@ func (ui *UI) Confirm(title, message string, onConfirm, onCancel func()) {
 	dialog := b.
 		Dialog("confirm-dialog", title).
 		Class("dialog").
-		VFlex("confirm-body", "stretch", 1).
+		VFlex("confirm-body", Stretch, 1).
 		Static("confirm-msg", message).
-		HFlex("confirm-buttons", "end", 2).
+		HFlex("confirm-buttons", End, 2).
 		Button("confirm-ok", "OK").
 		Button("confirm-cancel", "Cancel").
 		End().
@@ -749,10 +749,10 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 	dialog := b.
 		Dialog("prompt-dialog", title).
 		Class("dialog").
-		VFlex("prompt-body", "stretch", 1).
+		VFlex("prompt-body", Stretch, 1).
 		Static("prompt-msg", message).
 		Input("prompt-input").Hint(0, 1).
-		HFlex("prompt-buttons", "end", 2).
+		HFlex("prompt-buttons", End, 2).
 		Button("prompt-ok", "OK").
 		Button("prompt-cancel", "Cancel").
 		End().

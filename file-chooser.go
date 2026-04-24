@@ -65,10 +65,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	dialog := b.
 		Dialog("fc-dialog", title).
 		Class("dialog").
-		VFlex("fc-body", "stretch", 1).
+		VFlex("fc-body", Stretch, 1).
 		Typeahead("fc-input", initial).Hint(0, 1).
 		Tree("fc-tree").Hint(0, -1).
-		HFlex("fc-footer", "center", 0).Hint(0, 1).
+		HFlex("fc-footer", Center, 0).Hint(0, 1).
 		Checkbox("fc-hidden", "show hidden", hidden).
 		Spacer().Hint(-1, 0).
 		Button("fc-ok", label).
