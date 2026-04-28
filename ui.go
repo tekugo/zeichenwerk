@@ -209,6 +209,9 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		if ui.dispatch(ui.focus, EvtKey, event) {
 			break
 		}
+		if ui.Dispatch(ui.focus, EvtKey, event) {
+			break
+		}
 
 		// Handle global app events, if the keyboard event was propagated
 		switch event.Key() {

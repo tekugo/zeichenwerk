@@ -6,6 +6,9 @@ A TUI component library based on tcell/v3.
 
 ### Containers
 - [Box](box.md) — bordered box with optional title
+- [Card](card.md) — bordered container with title in border, optional footer
+- [Collapsible](collapsible.md) — toggleable header that hides/reveals one child
+- [CRT](crt.md) — Matrix-style power-on/off animation wrapper
 - [Dialog](dialog.md) — single-child container used as popup layer
 - [Flex](flex.md) — linear layout (horizontal or vertical)
 - [Form](form.md) — data-bound form connected to a Go struct
@@ -18,23 +21,42 @@ A TUI component library based on tcell/v3.
 ### Input
 - [Button](button.md) — clickable button
 - [Checkbox](checkbox.md) — toggleable boolean input
+- [Combo](combo.md) — text input with suggestion-list popup
 - [Editor](editor.md) — multi-line text editor
+- [Filter](filter.md) — search input bound to a Filterable widget
 - [Input](input.md) — single-line text field
 - [List](list.md) — scrollable selectable list
 - [Select](select.md) — dropdown selection
+- [Tree](tree.md) — expandable hierarchy of nodes
+- [TreeFS](tree-fs.md) — Tree pre-wired for filesystem navigation
+- [Typeahead](typeahead.md) — input with ghost-text suggestion completion
 
 ### Display
+- [BarChart](bar-chart.md) — multi-series stacked bar chart
+- [Breadcrumb](breadcrumb.md) — path-style segment indicator
 - [Canvas](canvas.md) — low-level pixel buffer for custom rendering
+- [Deck](deck.md) — fixed-height list of items rendered by a callback
 - [Digits](digits.md) — large ASCII art character display
-- [Progress](progress.md) — progress bar (determinate or indeterminate)
+- [Heatmap](heatmap.md) — coloured cell grid for matrix data
 - [Rule](rule.md) — horizontal or vertical line separator
-- [Scanner](scanner.md) — back-and-forth scanning animation
-- [Spinner](spinner.md) — animated loading indicator
+- [Shortcuts](shortcuts.md) — single-row keyboard hint bar
+- [Sparkline](sparkline.md) — inline trend chart
 - [Static](static.md) — plain text display
 - [Styled](styled.md) — rich text with inline markup
 - [Table](table.md) — tabular data display
 - [Tabs](tabs.md) — tab navigation
+- [Terminal](terminal.md) — embedded terminal emulator
 - [Text](text.md) — multi-line scrollable text
+- [Tiles](tiles.md) — wrapping grid of fixed-size tiles
+
+### Animated
+- [Clock](clock.md) — live wall-clock display
+- [Marquee](marquee.md) — scrolling text ticker
+- [Progress](progress.md) — progress bar (determinate or indeterminate)
+- [Scanner](scanner.md) — back-and-forth scanning animation
+- [Shimmer](shimmer.md) — text with sweeping highlight band
+- [Spinner](spinner.md) — animated loading indicator
+- [Typewriter](typewriter.md) — character-by-character text reveal
 
 ### Custom / Extension
 - [Custom](custom.md) — widget with a user-supplied render function

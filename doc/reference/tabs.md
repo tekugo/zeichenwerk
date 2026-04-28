@@ -1,23 +1,27 @@
 # Tabs
 
-Tab navigation widget.
+Tab strip — a horizontal row of clickable labels. Pair with a `Switcher` to swap content panes.
 
 **Constructor:** `NewTabs(id, class string) *Tabs`
 
 ## Methods
 
-- `Add(title string)` — appends a new tab
-- `Count() int` — returns number of tabs
-- `Select(index int) bool` — sets active tab
-- `Selected() int` — returns active tab index
+- `Add(title string)` — append a new tab
+- `Count() int` — number of tabs
+- `Get() int` — active tab index
+- `Set(index int) bool` — set active tab; returns true if valid
 
 ## Events
 
 | Event | Data | Description |
 |-------|------|-------------|
-| `"activate"` | `int` | Tab selected via Enter |
-| `"change"` | `int` | Highlighted tab changed |
+| `"change"` | `int` | Highlighted tab changed (←/→ navigation) |
+| `"activate"` | `int` | Tab activated via Enter, click, or letter shortcut |
 
 ## Notes
 
-Flags: `"focusable"`
+Flags: `"focusable"`.
+
+Keyboard: ←/→ move highlight (fires `EvtChange`); Enter activates the highlighted tab (fires `EvtActivate`); typing a letter jumps to the first tab whose label starts with that letter and activates it.
+
+Mouse: single click highlights and activates in one step.

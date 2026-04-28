@@ -8,6 +8,9 @@ Zeichenwerk (German for "character works") is a modern, idiomatic Go library for
 building terminal user interfaces. It features a fluent builder API, a
 functional composition API, and an enhanced widget system.
 
+> Developed with and for AI coding assistants — see
+> [AI Assistance](#ai-assistance) for details.
+
 ## How it looks
 
 ![Showcase](showcase.gif)
@@ -17,15 +20,19 @@ functional composition API, and an enhanced widget system.
 ```go
 package main
 
-import . "github.com/tekugo/zeichenwerk"
+import (
+    . "github.com/tekugo/zeichenwerk"
+    "github.com/tekugo/zeichenwerk/core"
+    "github.com/tekugo/zeichenwerk/themes"
+)
 
 func main() {
-    NewBuilder(TokyoNightTheme()).
-        Flex("main", false, "stretch", 0).
-            Flex("header", true, "center", 1).
-                Static("title", "My App").
+    NewBuilder(themes.TokyoNight()).
+        VFlex("main", core.Stretch, 0).
+            HFlex("header", core.Center, 1).Hint(0, 1).
+                Static("title", "My App").Font("bold").Foreground("$cyan").
             End().
-            Grid("content", 2, 2, false).Rows(-1).Columns(20, -1).Hint(0, -1).
+            Grid("content", 1, 2, false).Columns(20, -1).Rows(-1).Hint(0, -1).
                 Cell(0, 0, 1, 1).List("menu", "Item 1", "Item 2", "Item 3").
                 Cell(1, 0, 1, 1).Button("action", "Click Me").
             End().
@@ -45,15 +52,16 @@ widget is an `Option` — a plain function — that you nest directly:
 package main
 
 import (
-    z "github.com/tekugo/zeichenwerk"
+    "github.com/tekugo/zeichenwerk/core"
     . "github.com/tekugo/zeichenwerk/compose"
+    "github.com/tekugo/zeichenwerk/themes"
 )
 
 func main() {
-    UI(z.TokyoNightTheme(),
-        Flex("main", "", false, "stretch", 0,
-            Flex("header", "", true, "center", 1,
-                Static("title", "", "My App"),
+    UI(themes.TokyoNight(),
+        VFlex("main", "", core.Stretch, 0,
+            HFlex("header", "", core.Center, 1,
+                Static("title", "", "My App", Font("bold"), Fg("$cyan")),
             ),
             Grid("content", "", []int{-1}, []int{20, -1}, false, Hint(0, -1),
                 Cell(0, 0, 1, 1, List("menu", "", []string{"Item 1", "Item 2", "Item 3"})),
@@ -67,22 +75,23 @@ func main() {
 Screens can be split into separate functions and composed with `Include`:
 
 ```go
-UI(z.TokyoNightTheme(),
-    Flex("root", "", false, "stretch", 0,
+UI(themes.TokyoNight(),
+    VFlex("root", "", core.Stretch, 0,
         Include(header),
         Include(content),
         Include(footer),
     ),
 ).Run()
 
-func header(theme *z.Theme) z.Widget {
+func header(theme *core.Theme) core.Widget {
     return Build(theme, Static("title", "", "My App", Font("bold"), Fg("$cyan")))
 }
 ```
 
 Where direct widget access is needed after construction — for example to wire
 events, populate a tree, or start animations — retrieve the widget imperatively
-with `z.Find` and call methods on it directly.
+with `core.Find` (or the typed `core.MustFind[T]`) and call methods on it
+directly.
 
 ## Why zeichenwerk
 
@@ -111,43 +120,70 @@ go get github.com/tekugo/zeichenwerk
 
 ## Widgets
 
-| Category    | Widgets                                                      |
-| ----------- | ------------------------------------------------------------ |
-| Containers  | Box, Flex, Grid, Form, Switcher, Tabs, Viewport              |
-| Interaction | Button, Checkbox, Combo, Input, Select, Typeahead            |
-| Navigation  | Breadcrumb, Collapsible, List, Tree                          |
-| Display     | Bar Chart, Deck, Digits, Heatmap, Sparkline, Table, Text     |
-| Text        | Editor, Rule, Static, Styled, Typewriter                     |
-| Animation   | CRT, Scanner, Spinner                                        |
-| Overlay     | Commands palette, Dialog, and container-based popups         |
-| Other       | Canvas, Terminal (ANSI/VT emulator)                          |
+| Category   | Widgets                                                                                                                             |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Containers | Box, Card, Collapsible, CRT, Dialog, Flex, Form, FormGroup, Grid, Grow, Switcher, Tabs, Viewport                                    |
+| Input      | Button, Checkbox, Combo, Editor, Filter, Input, List, Select, Tree, TreeFS, Typeahead                                               |
+| Display    | BarChart, Breadcrumb, Canvas, Deck, Digits, Heatmap, Rule, Shortcuts, Sparkline, Static, Styled, Table, Tabs, Terminal, Text, Tiles |
+| Animated   | Clock, Marquee, Progress, Scanner, Shimmer, Spinner, Typewriter                                                                     |
+| Overlay    | Commands palette, Dialog, and container-based popups                                                                                |
 
 ## Features
 
 ### Event System
 
+Each widget dispatches events; handlers run in reverse registration order and
+bubble up through parent containers until one returns `true`:
+
 ```go
-button.On("click", func(w Widget, event string, data ...any) bool {
-    // Handle click
+button := core.MustFind[*widgets.Button](ui, "submit")
+
+// Typed helper — unwraps the int payload for you.
+widgets.OnActivate(button, func(idx int) bool {
+    // handle click
+    return true
+})
+
+// Raw form when the data type isn't string/int (e.g. Checkbox sends bool).
+checkbox.On(widgets.EvtChange, func(_ Widget, _ Event, data ...any) bool {
+    checked := data[0].(bool)
+    _ = checked
     return true
 })
 ```
 
+See [`doc/events.md`](doc/events.md) for the full event list and per-widget
+payload table.
+
 ### Styling & Themes
 
+Built-in themes (in the `themes` sub-package):
+
+- `themes.TokyoNight()` — dark, blue/purple accents
+- `themes.GruvboxDark()` / `themes.GruvboxLight()` — retro warm palette
+- `themes.Nord()` — arctic blue-grey
+- `themes.MidnightNeon()` — near-black with electric cyan/magenta
+- `themes.Lipstick()` — Charm-inspired fuchsia and indigo
+
+Each theme registers a colour palette (`$bg0`, `$fg0`, `$cyan`, …) plus default
+styles for every built-in widget. Per-widget overrides chain on the builder:
+
 ```go
-theme := NewTheme()
-theme.Set("button.primary", NewStyle("blue", "white", ""))
-theme.Set("button#submit", NewStyle("green", "black", "bold"))
+Static("title", "Dashboard").
+    Foreground("$cyan").
+    Background("$bg1").
+    Font("bold").
+    Padding(0, 2)
+
+Button("ok", "Confirm").
+    Background("$bg2").                // default state
+    Background(":focus", "$blue").     // when focused
+    Foreground(":focus", "$bg0")
 ```
 
-Built-in themes:
-
-- `TokyoNightTheme()` — dark, blue/purple accents
-- `GruvboxDarkTheme()` / `GruvboxLightTheme()` — retro warm palette
-- `NordTheme()` — arctic blue-grey
-- `MidnightNeonTheme()` — near-black with electric cyan/magenta
-- `LipstickTheme()` — Charm-inspired fuchsia and indigo
+Custom themes can be assembled from `core.NewTheme()` and styled by selector
+(`type.class#id:state`); see [`themes/tokyo-night.go`](themes/tokyo-night.go)
+for a minimal worked example.
 
 ### Focus Navigation
 
@@ -191,7 +227,7 @@ go run ./cmd/compose
 
 ## Documentation
 
-- **Tutorial (start here):** [doc/tutorial.md](doc/tutorial.md)
+- **Tutorial (start here):** [doc/tutorial/README.md](doc/tutorial/README.md)
 - Package docs: [doc.go](doc.go)
 - Widget reference: [doc/reference/overview.md](doc/reference/overview.md)
 - Builder pattern: [builder.go](builder.go)
@@ -223,9 +259,8 @@ zeichenwerk.Dump(os.Stdout, someContainer)
 ui.Dump(os.Stdout, zeichenwerk.DumpOptions{Style: true})
 ```
 
-Both demo binaries support `-dump` and `-dump-verbose` flags that lay out
-the UI at a fixed 120×40 size, print the hierarchy, and exit — no terminal
-required:
+Both demo binaries support `-dump` and `-dump-verbose` flags that lay out the UI
+at a fixed 120×40 size, print the hierarchy, and exit — no terminal required:
 
 ```bash
 go run ./cmd/demo -dump
@@ -262,10 +297,10 @@ detailed widget reference is included in
 
 ## Development Status
 
-**Active development** — Core API and widget set are stable. Test coverage
-is growing (bar chart, breadcrumb, button, checkbox, input, list, progress,
-select, switcher, table, tabs, text, viewport, and more are unit-tested).
-Some layout edge cases and advanced widgets are still being refined.
+**Active development** — Core API and widget set are stable. Test coverage is
+growing (bar chart, breadcrumb, button, checkbox, input, list, progress, select,
+switcher, table, tabs, text, viewport, and more are unit-tested). Some layout
+edge cases and advanced widgets are still being refined.
 
 ## AI Assistance
 

@@ -59,6 +59,8 @@ func (t *Table) Set(value TableProvider) {
 		t.tableWidth += column.Width
 	}
 	t.tableWidth += len(columns) - 1
+	t.Log(t, Debug, "New table provider")
+	t.Refresh()
 }
 
 // Hint returns the preferred size of the table.

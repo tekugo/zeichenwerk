@@ -10,9 +10,12 @@ import (
 func Update[T any](container Container, id string, value T) {
 	widget := Find(container, id)
 	if widget == nil {
+		container.Log(container, Error, "Update: Widget not found", "ID", id)
 		return
 	}
 	if s, ok := widget.(Setter[T]); ok {
 		s.Set(value)
+	} else {
+		container.Log(container, Error, "Update: Setter not implemented", "ID", id)
 	}
 }
