@@ -1,32 +1,30 @@
 # Input
 
-Single-line text input field.
+Single-line text input.
 
 **Constructor:** `NewInput(id, class string, params ...string) *Input`
 
-Params: `[0]` initial text, `[1]` placeholder, `[2]` mask character
+Params: `[0]` initial text, `[1]` placeholder, `[2]` mask character.
 
 ## Methods
 
-- `Clear()` — removes all text
-- `Delete()` — backspace (deletes before cursor)
-- `DeleteForward()` — delete (removes at cursor)
-- `End()` — moves cursor to end
-- `Insert(ch string)` — inserts character at cursor
-- `Left()` — moves cursor left
-- `Right()` — moves cursor right
-- `SetMask(mask string)` — enables password masking
-- `SetText(text string)` — replaces entire content
-- `Start()` — moves cursor to beginning
-- `Text() string` — returns current text
+- `Get() string` — current text
+- `Set(text string)` — replace text (does not fire `EvtChange`)
+- `Insert(ch string)` — insert text at cursor
+- `Delete()` — backspace (delete before cursor)
+- `DeleteForward()` — delete at cursor
+- `Clear()` — remove all text
+- `Left() / Right()` — move cursor by one rune
+- `Start() / End()` — jump cursor to beginning/end
+- `SetMask(mask string)` — set the mask character (used when `FlagMasked` is set)
 
 ## Events
 
 | Event | Data | Description |
 |-------|------|-------------|
-| `"change"` | `string` | Text modified |
-| `"enter"` | `string` | Enter key pressed |
+| `"change"` | `string` | Text was modified |
+| `"enter"` | `string` | Enter key pressed; data is the current value |
 
 ## Notes
 
-Flags: `"focusable"`, `"masked"`, `"readonly"`
+Flags: `"focusable"` (default), `"masked"` (display mask character instead of real characters; useful for passwords), `"readonly"` (disable editing without removing focusability).

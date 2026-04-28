@@ -1,19 +1,29 @@
 # Grid
 
-Table-based layout container with cell spanning.
+Table-based layout with cell spanning.
 
 **Constructor:** `NewGrid(id, class string, rows, columns int, lines bool) *Grid`
 
+`lines = true` draws thin separators between cells. After construction, all rows and columns are initialised to fractional weight `-1` (one fraction each); call `Rows(...)` and `Columns(...)` to override.
+
 ## Methods
 
-- `Add(x, y, w, h int, widget Widget)` — places widget in cell with span
-- `Children() []Widget` — returns all cell contents
-- `Columns(columns ...int)` — sets column sizes
-- `Layout()` — calculates cell positions and sizes
-- `Rows(rows ...int)` — sets row sizes
+- `Add(content Widget, params ...any) error` — place a widget in a cell. `params` is `x, y, w, h` (column, row, column-span, row-span). All ints. Without params, defaults to `(0, 0, 1, 1)`.
+- `Children() []Widget` — all placed widgets
+- `Columns(columns ...int)` — column sizes (one int per column)
+- `Rows(rows ...int)` — row sizes (one int per row)
+- `Lines() bool` — whether grid lines are drawn
+- `GridCells() []GridCell` — internal cell descriptors (for inspection / custom rendering)
+- `Layout() error` — compute cell positions and apply bounds to children
 
 ## Notes
 
-**Sizing:** positive = fixed chars, negative = fractional unit, zero = auto (preferred size)
+**Track sizing** (same rule as `Hint`):
 
-**Separator constants:** `GridH` (horizontal), `GridV` (vertical), `GridB` (both)
+- `>0` — fixed cells
+- `<0` — fractional weight (magnitude is the share)
+- `0`  — auto (use the widget's preferred size)
+
+For the grid to absorb all available space, at least one row and one column must use a fractional size.
+
+The Builder method `Cell(x, y, w, h)` sets the position for the **next** widget added; you don't pass cell coordinates to the widget method itself when building through the fluent API.

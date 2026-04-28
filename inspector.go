@@ -6,6 +6,9 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
+	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/values"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // Inspector provides a debugging interface for exploring widget hierarchies.
@@ -29,18 +32,18 @@ func NewInspector(root Container) *Inspector {
 
 // BuildUI constructs the Inspector interface.
 func (i *Inspector) BuildUI() {
-	ui := FindUI(i.container)
+	ui := FindRoot(i.container).(*UI)
 	i.ui = ui.NewBuilder().
 		Class("inspector").
 		Box("inspector-box", "Inspector").Border("double").
-		Flex("inspector", false, "stretch", 0).
+		VFlex("inspector", Stretch, 0).
 		Tabs("inspector-tabs").
 		Switcher("inspector-switcher", true).
 		Tab("Widgets").
-		Flex("inspector-widgets", false, "stretch", 0).
+		HFlex("inspector-widgets", Stretch, 0).Flag(FlagVertical).
 		Static("breadcrumbs", "Breadcrumbs").
-		Flex("inspector-content", true, "stretch", 0).
-		Flex("inspector-lists", false, "stretch", 0).
+		HFlex("inspector-content", Stretch, 0).
+		VFlex("inspector-lists", Stretch, 0).
 		Box("widget-box", "Widgets").Border("round").
 		List("children").Hint(30, 15).
 		End().
@@ -48,7 +51,7 @@ func (i *Inspector) BuildUI() {
 		List("styles").Hint(30, 10).
 		End().
 		End().
-		Flex("info-boxes", false, "stretch", 0).
+		VFlex("info-boxes", Stretch, 0).
 		Box("widget-info-box", "Information").Border("round").
 		Text("widget-info", []string{}, false, 0).Hint(50, 15).
 		End().
@@ -70,8 +73,8 @@ func (i *Inspector) BuildUI() {
 		Class("").
 		Container()
 
-	i.widgets = Find(i.ui, "children").(*List)
-	i.styles = Find(i.ui, "styles").(*List)
+	i.widgets = MustFind[*List](i.ui, "children")
+	i.styles = MustFind[*List](i.ui, "styles")
 
 	OnActivate(i.widgets, i.Activate)
 	OnSelect(i.widgets, i.SelectWidget)
@@ -219,9 +222,8 @@ func widgetDetails(w Widget) string {
 	}
 	result += "Flags     : " + strings.Join(flags, ", ") + "\n"
 	// Grid-specific information
-	if grid, ok := w.(*Grid); ok {
-		result += fmt.Sprintf("Rows      : %v\n", grid.rows)
-		result += fmt.Sprintf("Columns   : %v\n", grid.columns)
+	if summary, ok := w.(Summarizer); ok {
+		result += fmt.Sprintf("Summary   : %s\n", summary.Summary())
 	}
 	return result
 }

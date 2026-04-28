@@ -84,7 +84,7 @@ NewButton(id, class, text string) *Button
 | `"button:focused"` / `":hovered"` / `":pressed"` / `":disabled"` | state |
 | `"button.dialog"` / `"button.dialog:focused"` / `"button.dialog:hovered"` | inside dialog |
 
-Events: `EvtActivate` (payload `0`). Methods: `Activate()`, `Set(any) bool`.
+Events: `EvtActivate(int)` — payload always `0`. Methods: `Activate()`, `Text() string`, `Set(string)`.
 
 ---
 
@@ -105,7 +105,8 @@ Theme strings: `"breadcrumb.separator"` (default `" › "`) · `"breadcrumb.over
 
 Events: `EvtSelect(int)` — focused segment index · `EvtActivate(int)` — Enter or click.
 
-Methods: `SetSegments([]string)`, `Select(int)`, `Selected() int`,
+Methods: `Get() []string`, `Set([]string)`, `Push(string)`, `Pop() string`,
+`Truncate(int)`, `Segments() []string`, `Select(int)`, `Selected() int`,
 `SetSeparator(string)`, `SetOverflow(string)`.
 
 ---
@@ -135,7 +136,7 @@ NewCheckbox(id, class, text string, checked bool) *Checkbox
 | `"checkbox"` | always |
 | `":checked"` / `":focused"` / `":hovered"` / `":disabled"` | state |
 
-Events: `EvtChange(bool)`. Methods: `Toggle()`, `Set(any) bool`.
+Events: `EvtChange(bool)`. Methods: `Checked() bool`, `Toggle()`, `Set(any)`.
 `FlagReadonly` prevents user toggling.
 
 ---
@@ -206,7 +207,7 @@ type ItemRender func(r *Renderer, x, y, w, h, index int, data any, selected, foc
 | `":focused"` / `":hovered"` / `":disabled"` | state |
 
 Events: `EvtSelect(int)`, `EvtActivate(int)`.
-Methods: `SetItems([]any)`, `Items() []any`, `SetDisabled([]int)`,
+Methods: `Get() []any`, `Set([]any)`, `SetDisabled([]int)`,
 `Selected() int`, `Select(int)`, `Move(int)`, `First()`, `Last()`, `PageUp()`, `PageDown()`.
 **itemHeight must be ≥ 1 — panics otherwise.**
 `focused` in `ItemRender` is `true` when the Deck widget holds keyboard focus.
@@ -248,8 +249,10 @@ Methods: `SetContent([]string)`, `Load(string)`, `Lines() []string`, `Text() str
 ## Flex
 
 ```go
-NewFlex(id, class string, horizontal bool, alignment string, spacing int) *Flex
-// alignment: "start" | "center" | "end" | "stretch"
+NewFlex(id, class string, alignment Alignment, spacing int) *Flex
+// alignment: core.Start | core.Center | core.End | core.Stretch | core.Left | core.Right | core.Default
+// Set FlagVertical for vertical orientation; Builder offers HFlex(id, alignment, spacing)
+// and VFlex(id, alignment, spacing) shortcuts.
 ```
 
 Style key: `"flex"`. Events: none. `Add(Widget) error`.
@@ -280,8 +283,10 @@ NewGrid(id, class string, rows, columns int, lines bool) *Grid
 ```
 
 Style key: `"grid"`. Events: none.
-`Add(Widget, x, y, colspan, rowspan int) error`.
+`Add(content Widget, params ...any) error` — `params` is `x, y, w, h` (column,
+row, column-span, row-span; defaults `0, 0, 1, 1` if omitted).
 `Columns(sizes ...int)`, `Rows(sizes ...int)` — positive=fixed, negative=fractional, zero=auto.
+`Builder.Cell(x, y, w, h)` sets the position for the next added widget.
 `Builder.Columns()`/`Rows()` log warning and no-op outside a Grid context.
 
 ---
@@ -312,7 +317,7 @@ Methods: `SetValue(row, col int, v float64)`, `SetRow(row int, vs []float64)`,
 
 ```go
 NewInput(id, class string, params ...string) *Input
-// params[0]=placeholder  params[1]=initial text  params[2]=mask char
+// params[0]=initial text  params[1]=placeholder  params[2]=mask char (default "*")
 ```
 
 | Style key | When |
@@ -320,9 +325,10 @@ NewInput(id, class string, params ...string) *Input
 | `"input"` | always |
 | `":focused"` / `":disabled"` / `":hovered"` | state |
 
-Events: `EvtChange(string)`.
-Methods: `SetText(string)`, `Text() string`, `SetMask(string)`,
-`Left()`, `Right()`, `Start()`, `End()`.
+Events: `EvtChange(string)`, `EvtEnter(string)`.
+Methods: `Get() string`, `Set(string)`, `Insert(string)`, `Delete()`, `DeleteForward()`,
+`Clear()`, `Left()`, `Right()`, `Start()`, `End()`, `SetMask(string)`.
+Flags: `FlagFocusable` (default), `FlagMasked`, `FlagReadonly`.
 Single-line only. `FlagMasked` hides text.
 
 ---
@@ -341,7 +347,11 @@ NewList(id, class string, items []string) *List
 | `"list/highlight:focused"` | highlighted item, focused |
 
 Events: `EvtSelect(int)`, `EvtActivate(int)`.
-Methods: `SetItems([]string)`, `Items() []string`, `Select(int)`, `Selected() int`.
+Methods: `Set([]string)`, `Items() []string`, `Select(int)`, `Selected() int`,
+`Move(int)`, `First()`, `Last()`, `PageUp()`, `PageDown()`,
+`Filter(string)`, `Suggest(string) []string`, `Refresh()`.
+Implements `values.Setter[[]string]`, `Filterable`, `Suggester`.
+Flags: `FlagSearch` enables incremental search-as-you-type.
 
 ---
 
@@ -460,7 +470,10 @@ NewStatic(id, class, text string) *Static
 ```
 
 Style key: `"static"`. Events: none.
-Methods: `SetText(string)`, `SetAlignment(string)` (`"left"` `"center"` `"right"`), `Set(any) bool`.
+Methods: `Set(any)` (formats non-string with `%v`; queues a refresh),
+`SetAlignment(string)` (`"left"` `"center"` `"right"`).
+Public fields `Text`, `Alignment` are also accessible.
+`FlagRight` right-aligns content within the content area.
 
 ---
 
@@ -473,7 +486,6 @@ NewStyled(id, class, text string) *Styled
 Markdown: `# h1` `## h2` `- list` ` ``` code ``` ` `*italic*` `**bold**`
 `__underline__` `~~strikethrough~~` `` `code` ``.
 Style key: `"styled"`. Events: none.
-Methods: `SetText(string)`, `Parse()`.
 
 ---
 
@@ -483,16 +495,18 @@ Methods: `SetText(string)`, `Parse()`.
 NewSwitcher(id, class string) *Switcher
 ```
 
-Style key: `"switcher"`. Events: `EvtShow`, `EvtHide`.
-Methods: `Add(Widget) error`, `Select(any)` (int index or string id), `Children() []Widget`.
-All panes fill switcher bounds; only selected pane is visible and interactive.
+Style key: `"switcher"`. Events: `EvtShow`, `EvtHide` (only fired when the
+`connect` flag passed via `Builder.Switcher(id, true)` is enabled).
+Methods: `Add(Widget) error`, `Select(any)` (int index or string id),
+`Get() int`, `Set(int)`, `Children() []Widget`.
+All panes fill switcher bounds; only the selected pane is visible and interactive.
 
 ---
 
 ## Table
 
 ```go
-NewTable(id, class string, provider TableProvider) *Table
+NewTable(id, class string, provider TableProvider, cellNav bool) *Table
 
 type TableProvider interface {
     Columns() []TableColumn   // header + width per column
@@ -502,6 +516,10 @@ type TableProvider interface {
 // Convenience constructor:
 NewArrayTableProvider(headers []string, rows [][]string)
 ```
+
+> **Important:** `Table.Set(provider)` updates the data and recomputes widths
+> but does **not** queue a redraw on its own (unlike `List.Set`). Always call
+> `core.Find(ui, id).Refresh()` after a `Set` or `values.Update`.
 
 | Style key | When |
 |-----------|------|
@@ -528,8 +546,11 @@ column in row · `Ctrl+Home`/`Ctrl+End` first/last row+column · `Tab`/`Shift+Ta
 next/prev cell wrapping across rows · `Enter` activate · `Space` select.
 
 Methods: `Selected() (row, col int)` · `SetSelected(row, col int) bool` ·
-`CellNav() bool` · `SetCellNav(bool)` · `Offset() (x, y int)` · `SetOffset(x, y int)` ·
-`Set(provider)` · `Refresh()`.
+`Offset() (x, y int)` · `SetOffset(x, y int)` ·
+`Set(TableProvider)` (does NOT redraw — call `Refresh()` after) · `Refresh()` ·
+`SetCellStyler(fn func(row, col int, highlight bool) *Style)` ·
+`CellBounds(row, col int) (x, y, w int, ok bool)`.
+Implements `values.Setter[TableProvider]`. Flag `FlagGrid` toggles inner grid lines.
 
 ---
 
@@ -550,7 +571,7 @@ NewTabs(id, class string) *Tabs
 | `"tabs/highlight-line:focused"` | selected tab underline, focused |
 
 Events: `EvtChange(int)`, `EvtActivate(int)`.
-Methods: `Add(title string)`, `Select(int) bool`, `Selected() int`, `Count() int`.
+Methods: `Add(title string)`, `Set(int) bool`, `Get() int`, `Count() int`.
 Keyboard: Left/Right (wrap) · Home/End · letter keys (first-letter jump) · Enter activate.
 
 ---
@@ -780,6 +801,164 @@ NewViewport(id, class, title string) *Viewport
 
 Style key: `"viewport"`. Events: none.
 `Add(Widget) error` — single child given its full preferred size.
+Flags: `FlagVertical` (vertical-only scrolling), `FlagHorizontal` (horizontal-only).
+
+---
+
+## Card
+
+```go
+NewCard(id, class, title string) *Card
+```
+
+Bordered container with title in the top border line, a content area, and an
+optional footer pinned to the bottom. First `Add(Widget)` is the content;
+second is the footer; further calls replace the footer.
+
+Style keys: `"card"`, `"card/title"`. Events: none.
+Methods: `Add(Widget) error`, `Children() []Widget`, `Set(string)` (update title), `Layout() error`.
+
+---
+
+## Clock
+
+```go
+NewClock(id, class string, interval time.Duration, params ...string) *Clock
+// params[0] = Go time-layout (default "15:04")
+// params[1] = prefix prepended to the time string (default "")
+```
+
+Embeds `Animation`. Re-renders on the given interval.
+Style key: `"clock"`. Events: none.
+Methods: `Start()` (no interval — uses the one given at construction), `Stop()`, `Tick()`.
+
+---
+
+## Filter
+
+```go
+NewFilter(id, class string) *Filter
+```
+
+Search input that filters another widget (`List`, `Tree`, …) as the user
+types. Embeds `Typeahead` so it also shows ghost-text prefix completion.
+Default placeholder: `"Filter…"`.
+
+Style keys cascade `"filter"` → `"typeahead"` → `"typeahead/suggestion"`.
+Events: inherits Typeahead (`EvtChange(string)`, `EvtAccept(string)`).
+Methods: `Bind(Filterable)`, `Unbind()`, `Bound() Filterable`, `Clear()`,
+plus everything inherited from `Typeahead` / `Input`.
+
+```go
+type Filterable interface {
+    Filter(filter string)   // empty string clears the filter
+}
+type Suggester interface {
+    Suggest(query string) []string  // optional ghost-text provider
+}
+```
+
+`List` and `Tree` implement `Filterable`. A target that also implements
+`Suggester` enables ghost-text completion.
+
+---
+
+## FormGroup
+
+```go
+NewFormGroup(id, class, title string, horizontal bool, spacing int) *FormGroup
+```
+
+Container for labelled form controls inside a `Form`. Widgets are organised
+into "lines"; horizontal mode places label and control side-by-side, vertical
+mode stacks them.
+
+Style key: `"form-group"`. Events: none.
+Methods: `Add(widget Widget, params ...any) error` — `params[0]` (int) line index,
+`params[1]` (string) label. `Builder.Group(id, title, name, horizontal, spacing)`
+auto-generates one labelled control per matching struct field; you rarely call
+`Add` directly.
+
+---
+
+## Grow
+
+```go
+NewGrow(id, class string, horizontal bool) *Grow
+```
+
+Animated reveal wrapper. The single child grows from a single line/column to
+its full size on `Start(interval)`.
+
+Style key: `"grow"`. Events: none.
+Methods: `Add(Widget) error`, `Start(interval time.Duration)`, `Stop()`.
+Used internally by the inspector overlay to animate the popup appearance.
+
+---
+
+## Shortcuts
+
+```go
+NewShortcuts(id, class string, pairs ...string) *Shortcuts
+// pairs = alternating key, label, key, label, …
+//   NewShortcuts("help", "", "r", "run", "q", "quit")
+```
+
+Single-row keyboard hint bar — highlighted key followed by dimmed label,
+repeated and separated by theme-defined glyphs. Useful for footer help bars.
+
+Style keys: `"shortcuts"`, `"shortcuts/key"`, `"shortcuts/label"`.
+Theme strings: `"shortcuts.prefix"`, `"shortcuts.separator"` (default `"   "`),
+`"shortcuts.suffix"`. Events: none.
+Methods: `SetPairs(pairs ...string)` — replace and redraw.
+
+---
+
+## Tiles
+
+```go
+NewTiles(id, class string, render ItemRender, tileWidth, tileHeight int) *Tiles
+// tileWidth and tileHeight must be ≥ 1 — panics otherwise
+```
+
+Wrapping grid of fixed-size tiles. Column count is computed at render time
+from content width (`cols = max(1, contentWidth / tileWidth)`). Navigation
+wraps between rows in reading order.
+
+Style key: `"tiles"`. Events: `EvtSelect(int)`, `EvtActivate(int)`.
+Methods: `Items() []any`, `SetItems([]any)`, `SetDisabled([]int)`,
+`Selected() int`, `Select(int)`, `Move(dr, dc int)`, `First()`, `Last()`,
+`PageUp()`, `PageDown()`.
+
+---
+
+## TreeFS
+
+```go
+NewTreeFS(id, class, root string, dirsOnly bool) *TreeFS
+```
+
+A `Tree` pre-wired for filesystem navigation. Loads directory contents lazily
+on first expand. Each node's `Data()` returns the absolute path as `string`.
+
+Style keys cascade `"tree-fs"` → `"tree"`, `"tree-fs/highlight"` → `"tree/highlight"`,
+`"tree-fs/indent"` → `"tree/indent"`. Events: inherits `Tree`.
+Methods: `RootPath() string`, `SetRoot(path string)`,
+`DirsOnly() bool`, `SetDirsOnly(bool)`, plus all `Tree` methods (embedded).
+
+---
+
+## Digits
+
+```go
+NewDigits(id, class, text string) *Digits
+```
+
+Large ASCII-art numerals — typically used for clocks and counters.
+Supported characters: `0-9`, `A-F`, `:`, `.`, `-`. Other characters render as blanks.
+
+Style key: `"digits"`. Events: none.
+Methods: `Get() string`, `Set(string)`. `FlagRight` right-aligns.
 
 ---
 

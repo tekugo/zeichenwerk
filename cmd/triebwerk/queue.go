@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	. "github.com/tekugo/zeichenwerk"
+	"github.com/tekugo/zeichenwerk/widgets"
 )
 
 // crlfWriter wraps an io.Writer and translates bare LF (\n) to CRLF (\r\n).
@@ -43,9 +43,9 @@ type runRequest struct {
 // Runner owns the run queue and executes targets sequentially.
 type Runner struct {
 	queue   chan runRequest
-	term    *Terminal
-	status  *Static
-	scanner *Scanner
+	term    *widgets.Terminal
+	status  *widgets.Static
+	scanner *widgets.Scanner
 	dir     string
 	busy    atomic.Bool
 	written atomic.Bool // true once anything has been written to term
@@ -56,7 +56,7 @@ type Runner struct {
 }
 
 // NewRunner creates a Runner and starts the background drain goroutine.
-func NewRunner(term *Terminal, status *Static, scanner *Scanner, dir string) *Runner {
+func NewRunner(term *widgets.Terminal, status *widgets.Static, scanner *widgets.Scanner, dir string) *Runner {
 	r := &Runner{
 		queue:   make(chan runRequest, 8),
 		term:    term,

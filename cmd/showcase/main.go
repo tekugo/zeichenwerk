@@ -9,6 +9,9 @@ import (
 	"time"
 
 	. "github.com/tekugo/zeichenwerk"
+	. "github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/themes"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 type navItem struct{ icon, name, desc string }
@@ -22,17 +25,17 @@ func parseFlags() (*Theme, bool, bool, bool) {
 	var theme *Theme
 	switch *t {
 	case "tokyo":
-		theme = TokyoNightTheme()
+		theme = themes.TokyoNight()
 	case "nord":
-		theme = NordTheme()
+		theme = themes.Nord()
 	case "gruvbox-dark":
-		theme = GruvboxDarkTheme()
+		theme = themes.GruvboxDark()
 	case "gruvbox-light":
-		theme = GruvboxLightTheme()
+		theme = themes.GruvboxLight()
 	case "lipstick":
-		theme = LipstickTheme()
+		theme = themes.Lipstick()
 	default:
-		theme = MidnightNeonTheme()
+		theme = themes.MidnightNeon()
 	}
 	return theme, *dbg, *dmp, *dmpV
 }
@@ -93,9 +96,9 @@ func createUI(theme *Theme) *UI {
 	}
 
 	ui := NewBuilder(theme).
-		Flex("root", false, "stretch", 0).
+		VFlex("root", Stretch, 0).
 		// ── Header ────────────────────────────────────────────────────────────
-		Flex("header", true, "center", 0).Background("$bg1").Padding(0, 1).
+		HFlex("header", Center, 0).Background("$bg1").Padding(0, 1).
 		Static("app-icon", "◈").Font("bold").Foreground("$cyan").Padding(0, 1, 0, 0).
 		Static("app-name", "TUI Showcase").Font("bold").Foreground("$fg0").
 		Spacer().Hint(2, 0).
@@ -111,7 +114,7 @@ func createUI(theme *Theme) *UI {
 		// ── Body ──────────────────────────────────────────────────────────────
 		Grid("body", 1, 2, false).Hint(0, -1).Columns(26, -1).
 		Cell(0, 0, 1, 1).
-		Flex("sidebar", false, "stretch", 0).Background("$bg1").
+		VFlex("sidebar", Stretch, 0).Background("$bg1").
 		Static("sidebar-brand", " ◈ SHOWCASE").Font("bold").Foreground("$magenta").Padding(1, 0).
 		HRule("thin").
 		Deck("nav", renderNav, 3).Hint(0, -1).
@@ -131,7 +134,7 @@ func createUI(theme *Theme) *UI {
 		End(). // Switcher("content")
 		End(). // Grid("body")
 		// ── Footer ────────────────────────────────────────────────────────────
-		Flex("footer", true, "center", 0).Background("$bg1").Padding(0, 1).
+		HFlex("footer", Center, 0).Background("$bg1").Padding(0, 1).
 		Static("footer-keys", " ↑↓ Navigate   Tab/Shift+Tab Focus   Enter/Space Activate   Esc Cancel").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("footer-brand", "Zeichenwerk v2.0 ◈").Foreground("$gray").
@@ -141,7 +144,7 @@ func createUI(theme *Theme) *UI {
 	// Wire navigation
 	switcher := Find(ui, "content").(*Switcher)
 	nav := Find(ui, "nav").(*Deck)
-	nav.SetItems(navItems)
+	nav.Set(navItems)
 	navSwitch := func(_ Widget, _ Event, data ...any) bool {
 		if len(data) == 1 {
 			if sel, ok := data[0].(int); ok {
@@ -155,10 +158,10 @@ func createUI(theme *Theme) *UI {
 
 	// Wire theme switcher
 	themes := map[string]*Theme{
-		"neon":         MidnightNeonTheme(),
-		"tokyo":        TokyoNightTheme(),
-		"gruvbox-dark": GruvboxDarkTheme(),
-		"nrrd":         NordTheme(),
+		"neon":         themes.MidnightNeon(),
+		"tokyo":        themes.TokyoNight(),
+		"gruvbox-dark": themes.GruvboxDark(),
+		"nord":         themes.Nord(),
 	}
 	Find(ui, "theme-select").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		if len(data) == 1 {
@@ -220,9 +223,9 @@ func dashboardScreen(b *Builder) {
 		"[12:29:01] DEBUG   Cache invalidated: product catalog (1,248 keys)",
 	}
 
-	b.Flex("dashboard", false, "stretch", 0).Padding(1, 2).
+	b.VFlex("dashboard", Stretch, 0).Padding(1, 2).
 		// Title row
-		Flex("dash-hdr", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("dash-hdr", Center, 2).Padding(0, 0, 1, 0).
 		Static("dash-title", "System Dashboard").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("dash-date", time.Now().Format("Mon, 02 Jan 2006")).Foreground("$gray").
@@ -231,30 +234,30 @@ func dashboardScreen(b *Builder) {
 		End(). // Flex("dash-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// ── KPI cards ────────────────────────────────────────────────────────
-		Flex("kpi-row", true, "stretch", 2).Padding(0, 0, 1, 0).
+		HFlex("kpi-row", Stretch, 2).Padding(0, 0, 1, 0).
 		// CPU card
-		Flex("kpi-cpu", false, "start", 0).Border("", "round").Padding(1, 2).
+		VFlex("kpi-cpu", Start, 0).Border("", "round").Padding(1, 2).
 		Static("kpi-cpu-lbl", "CPU Usage").Foreground("$gray").
 		Digits("kpi-cpu-val", "64").Foreground("$yellow").
 		Add(cpuProg).Hint(0, 1).
 		Static("kpi-cpu-sub", "% · 8 cores · 3.2 GHz").Foreground("$gray").
 		End(). // Flex("kpi-cpu")
 		// Memory card
-		Flex("kpi-mem", false, "start", 0).Border("", "round").Padding(1, 2).
+		VFlex("kpi-mem", Start, 0).Border("", "round").Padding(1, 2).
 		Static("kpi-mem-lbl", "Memory").Foreground("$gray").
 		Digits("kpi-mem-val", "4.1").Foreground("$cyan").
 		Add(memProg).Hint(0, 1).
 		Static("kpi-mem-sub", "GB of 10 GB total").Foreground("$gray").
 		End(). // Flex("kpi-mem")
 		// Disk card
-		Flex("kpi-disk", false, "start", 0).Border("", "round").Padding(1, 2).
+		VFlex("kpi-disk", Start, 0).Border("", "round").Padding(1, 2).
 		Static("kpi-disk-lbl", "Disk").Foreground("$gray").
 		Digits("kpi-disk-val", "780").Foreground("$orange").
 		Add(diskProg).Hint(0, 1).
 		Static("kpi-disk-sub", "GB of 1 TB · 78% full").Foreground("$gray").
 		End(). // Flex("kpi-disk")
 		// Network card
-		Flex("kpi-net", false, "start", 0).Border("", "round").Padding(1, 2).
+		VFlex("kpi-net", Start, 0).Border("", "round").Padding(1, 2).
 		Static("kpi-net-lbl", "Network").Foreground("$gray").
 		Digits("kpi-net-val", "2.4").Foreground("$green").
 		Add(netProg).Hint(0, 1).
@@ -264,12 +267,12 @@ func dashboardScreen(b *Builder) {
 		// ── Services + Alerts ────────────────────────────────────────────────
 		Grid("dash-mid", 1, 2, false).Hint(0, 10).Columns(-2, -1).Padding(0, 0, 1, 0).Border("none").
 		Cell(0, 0, 1, 1).
-		Flex("svc-pane", false, "stretch", 0).Border("", "round").
+		VFlex("svc-pane", Stretch, 0).Border("", "round").
 		Static("svc-title", " Services").Font("bold").Foreground("$fg0").Background("$bg2").
 		Table("svc-table", svcTable, false).Hint(0, -1).
 		End(). // Flex("svc-pane")
 		Cell(1, 0, 1, 1).
-		Flex("alerts-pane", false, "stretch", 0).Border("", "round").
+		VFlex("alerts-pane", Stretch, 0).Border("", "round").
 		Static("alerts-title", " Alerts & Notices").Font("bold").Foreground("$fg0").Background("$bg2").
 		Static("alert1", "⚠  Disk usage on /var exceeds 80%").Foreground("$orange").Padding(0, 1).
 		Static("alert2", "⚠  worker-03 memory pressure").Foreground("$orange").Padding(0, 1).
@@ -280,7 +283,7 @@ func dashboardScreen(b *Builder) {
 		End(). // Flex("alerts-pane")
 		End(). // Grid("dash-mid")
 		// ── Activity log ─────────────────────────────────────────────────────
-		Flex("activity-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
+		VFlex("activity-pane", Stretch, 0).Border("", "round").Hint(0, -1).
 		Static("activity-title", " Recent Activity").Font("bold").Foreground("$fg0").Background("$bg2").
 		Text("activity-log", activityLines, false, 200).Hint(0, -1).
 		End(). // Flex("activity-pane")
@@ -334,16 +337,16 @@ func userAdminScreen(b *Builder) {
 		Role: "admin", Department: "Engineering", Active: true, Admin: true,
 	}
 
-	b.Flex("user-admin", false, "stretch", 0).Padding(1, 2).
+	b.VFlex("user-admin", Stretch, 0).Padding(1, 2).
 		// Title
-		Flex("ua-hdr", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("ua-hdr", Center, 2).Padding(0, 0, 1, 0).
 		Static("ua-title", "User Administration").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("ua-count", "12 users  ·  9 active  ·  3 pending/inactive").Foreground("$gray").
 		End(). // Flex("ua-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// Toolbar
-		Flex("ua-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("ua-toolbar", Center, 2).Padding(0, 0, 1, 0).
 		Static("ua-search-lbl", "Search:").Foreground("$gray").
 		Typeahead("ua-search", "", "name, email or role…").Hint(28, 1).
 		Spacer().Hint(-1, 0).
@@ -354,18 +357,18 @@ func userAdminScreen(b *Builder) {
 		// Split: table left, detail right
 		Grid("ua-body", 1, 2, false).Hint(0, -1).Columns(-3, -2).Border("none").
 		Cell(0, 0, 1, 1).
-		Flex("ua-list-pane", false, "stretch", 0).Border("", "round").
+		VFlex("ua-list-pane", Stretch, 0).Border("", "round").
 		Static("ua-list-title", " Users").Font("bold").Background("$bg2").
 		Table("ua-table", NewArrayTableProvider(userHeaders, userData), true).Hint(0, -1).
 		End(). // Flex("ua-list-pane")
 		Cell(1, 0, 1, 1).
-		Flex("ua-detail-pane", false, "stretch", 0).Border("", "round").
+		VFlex("ua-detail-pane", Stretch, 0).Border("", "round").
 		Static("ua-detail-title", " Edit User").Font("bold").Background("$bg2").
 		Form("ua-form", "", &selectedUser).
 		Group("ua-group", "", "", false, 1).Padding(1).
 		End(). // Group("ua-group")
 		End(). // Form("ua-form")
-		Flex("ua-detail-btns", true, "end", 2).Padding(1).
+		HFlex("ua-detail-btns", End, 2).Padding(1).
 		Button("ua-save", " ✓ Save Changes").
 		Button("ua-reset", " ↺ Reset").
 		Button("ua-deactivate", " ⊘ Deactivate").
@@ -440,9 +443,9 @@ func logMonitorScreen(b *Builder) {
 		initial[i] = fmt.Sprintf("[%s] %-5s %-12s  %s", ts, level, src, msg)
 	}
 
-	b.Flex("log-monitor", false, "stretch", 0).Padding(1, 2).
+	b.VFlex("log-monitor", Stretch, 0).Padding(1, 2).
 		// Title + stats row
-		Flex("log-hdr", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("log-hdr", Center, 2).Padding(0, 0, 1, 0).
 		Static("log-title", "Log Monitor").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Spinner("log-spinner", Spinners["braille"]).
@@ -450,7 +453,7 @@ func logMonitorScreen(b *Builder) {
 		End(). // Flex("log-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// Toolbar
-		Flex("log-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("log-toolbar", Center, 2).Padding(0, 0, 1, 0).
 		Static("log-filter-lbl", "Filter:").Foreground("$gray").
 		Input("log-filter", "keyword…").Hint(24, 1).
 		Spacer().Hint(2, 0).
@@ -478,12 +481,12 @@ func logMonitorScreen(b *Builder) {
 		// Main split: log view + stats sidebar
 		Grid("log-body", 1, 2, false).Hint(0, -1).Columns(-3, -1).Border("none").
 		Cell(0, 0, 1, 1).
-		Flex("log-view-pane", false, "stretch", 0).Border("", "round").
+		VFlex("log-view-pane", Stretch, 0).Border("", "round").
 		Static("log-view-title", " Log Stream").Font("bold").Background("$bg2").
 		Text("log-text", initial, true, 2000).Hint(0, -1).
 		End(). // Flex("log-view-pane")
 		Cell(1, 0, 1, 1).
-		Flex("log-stats-pane", false, "stretch", 0).Border("", "round").
+		VFlex("log-stats-pane", Stretch, 0).Border("", "round").
 		Static("log-stats-title", " Statistics").Font("bold").Background("$bg2").
 		Spacer().Hint(0, 1).
 		Static("log-stat-hdr", "Last 30 min").Font("bold").Foreground("$fg1").Padding(0, 1).
@@ -587,28 +590,28 @@ func processScreen(b *Builder) {
 	memTotal.SetTotal(100)
 	memTotal.Set(41)
 
-	b.Flex("process-mgr", false, "stretch", 0).Padding(1, 2).
+	b.VFlex("process-mgr", Stretch, 0).Padding(1, 2).
 		// Title
-		Flex("proc-hdr", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("proc-hdr", Center, 2).Padding(0, 0, 1, 0).
 		Static("proc-title", "Process Manager").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("proc-summary", "14 processes  ·  13 running  ·  1 stopped").Foreground("$gray").
 		End(). // Flex("proc-hdr")
 		HRule("thin").Padding(0, 0, 1, 0).
 		// Resource summary bar
-		Flex("proc-res-row", true, "stretch", 4).Padding(0, 0, 1, 0).
-		Flex("proc-cpu-card", false, "start", 0).Border("", "round").Padding(0, 2).
+		HFlex("proc-res-row", Stretch, 4).Padding(0, 0, 1, 0).
+		VFlex("proc-cpu-card", Start, 0).Border("", "round").Padding(0, 2).
 		Static("proc-cpu-lbl", "Total CPU").Foreground("$gray").
 		Static("proc-cpu-val", "31%").Font("bold").Foreground("$yellow").
 		Add(cpuTotal).Hint(20, 1).
 		End(). // Flex("proc-cpu-card")
-		Flex("proc-mem-card", false, "start", 0).Border("", "round").Padding(0, 2).
+		VFlex("proc-mem-card", Start, 0).Border("", "round").Padding(0, 2).
 		Static("proc-mem-lbl", "Memory Used").Foreground("$gray").
 		Static("proc-mem-val", "1.43 GB / 10 GB").Font("bold").Foreground("$cyan").
 		Add(memTotal).Hint(20, 1).
 		End(). // Flex("proc-mem-card")
 		Spacer().Hint(-1, 0).
-		Flex("proc-info-card", false, "start", 0).Border("", "round").Padding(0, 2).
+		VFlex("proc-info-card", Start, 0).Border("", "round").Padding(0, 2).
 		Static("proc-load-lbl", "Load Average").Foreground("$gray").
 		Static("proc-load-val", "1.42  1.55  1.61").Font("bold").Foreground("$green").
 		Static("proc-uptime-lbl", "Uptime").Foreground("$gray").
@@ -616,7 +619,7 @@ func processScreen(b *Builder) {
 		End(). // Flex("proc-info-card")
 		End(). // Flex("proc-res-row")
 		// Toolbar
-		Flex("proc-toolbar", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("proc-toolbar", Center, 2).Padding(0, 0, 1, 0).
 		Static("proc-filter-lbl", "Filter:").Foreground("$gray").
 		Input("proc-filter", "name or PID…").Hint(24, 1).
 		Select("proc-sort", "cpu", "Sort: CPU%", "mem", "Sort: Memory", "pid", "Sort: PID", "name", "Sort: Name").
@@ -627,7 +630,7 @@ func processScreen(b *Builder) {
 		Button("proc-refresh", " ↻ Refresh").
 		End(). // Flex("proc-toolbar")
 		// Process table
-		Flex("proc-table-pane", false, "stretch", 0).Border("", "round").Hint(0, -1).
+		VFlex("proc-table-pane", Stretch, 0).Border("", "round").Hint(0, -1).
 		Static("proc-table-title", " Processes").Font("bold").Background("$bg2").
 		Table("proc-table", NewArrayTableProvider(procHeaders, procData), false).Hint(0, -1).
 		End(). // Flex("proc-table-pane")
@@ -709,9 +712,9 @@ func dataEntryScreen(b *Builder) {
 		{"3", "TR-0801", "Training Package (remote)", "2", "  $599.00", " $1,198.00"},
 	}
 
-	b.Flex("data-entry", false, "stretch", 0).Padding(1, 2).
+	b.VFlex("data-entry", Stretch, 0).Padding(1, 2).
 		// Title
-		Flex("de-hdr", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("de-hdr", Center, 2).Padding(0, 0, 1, 0).
 		Static("de-title", "New Order Entry").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("de-ref", "Draft  ·  REF #2026-0099").Foreground("$gray").
@@ -721,9 +724,9 @@ func dataEntryScreen(b *Builder) {
 		Grid("de-body", 1, 2, false).Hint(0, -1).Columns(-1, -1).
 		// Left column: collapsible form sections
 		Cell(0, 0, 1, 1).
-		Flex("de-form-col", false, "stretch", 0).
+		VFlex("de-form-col", Stretch, 0).
 		Collapsible("de-cust-section", "  ① Customer Information", true).
-		Flex("de-cust-content", false, "stretch", 0).Padding(0, 2).
+		VFlex("de-cust-content", Stretch, 0).Padding(0, 2).
 		Form("de-cust-form", "", &customer).
 		Group("de-cust-grp", "", "", false, 1).
 		End(). // Group("de-cust-grp")
@@ -732,7 +735,7 @@ func dataEntryScreen(b *Builder) {
 		End(). // Collapsible("de-cust-section")
 		Spacer().Hint(0, 1).
 		Collapsible("de-ship-section", "  ② Shipping Details", true).
-		Flex("de-ship-content", false, "stretch", 0).Padding(0, 2).
+		VFlex("de-ship-content", Stretch, 0).Padding(0, 2).
 		Form("de-ship-form", "", &shipping).
 		Group("de-ship-grp", "", "", false, 1).
 		End(). // Group("de-ship-grp")
@@ -741,7 +744,7 @@ func dataEntryScreen(b *Builder) {
 		End(). // Collapsible("de-ship-section")
 		Spacer().Hint(0, 1).
 		Collapsible("de-pay-section", "  ③ Payment & Terms", false).
-		Flex("de-pay-content", false, "stretch", 0).Padding(0, 2).
+		VFlex("de-pay-content", Stretch, 0).Padding(0, 2).
 		Form("de-pay-form", "", &payment).
 		Group("de-pay-grp", "", "", false, 1).
 		End(). // Group("de-pay-grp")
@@ -751,31 +754,31 @@ func dataEntryScreen(b *Builder) {
 		End(). // Flex("de-form-col")
 		// Right column: order items + summary
 		Cell(1, 0, 1, 1).
-		Flex("de-items-col", false, "stretch", 0).Padding(0, 0, 0, 2).
+		VFlex("de-items-col", Stretch, 0).Padding(0, 0, 0, 2).
 		Static("de-items-title", "Order Items").Font("bold").Foreground("$fg1").Padding(0, 0, 1, 0).
 		Table("de-items-table", NewArrayTableProvider(orderHeaders, orderData), false).Hint(0, 8).
 		Spacer().Hint(0, 1).
 		// Order summary box
-		Flex("de-summary", false, "stretch", 0).Border("", "round").Padding(1, 2).
+		VFlex("de-summary", Stretch, 0).Border("", "round").Padding(1, 2).
 		Static("de-sum-title", "Order Summary").Font("bold").Foreground("$fg1").
 		HRule("thin").
-		Flex("de-sum-row1", true, "stretch", 0).
+		HFlex("de-sum-row1", Stretch, 0).
 		Static("de-sum-subtotal-lbl", "Subtotal").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-subtotal-val", "$2,688.00").
 		End(). // Flex("de-sum-row1")
-		Flex("de-sum-row2", true, "stretch", 0).
+		HFlex("de-sum-row2", Stretch, 0).
 		Static("de-sum-tax-lbl", "Tax (0%)").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-tax-val", "    $0.00").
 		End(). // Flex("de-sum-row2")
-		Flex("de-sum-row3", true, "stretch", 0).
+		VFlex("de-sum-row3", Stretch, 0).
 		Static("de-sum-ship-lbl", "Shipping (Express)").Foreground("$gray").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-ship-val", "   $35.00").
 		End(). // Flex("de-sum-row3")
 		HRule("thin").
-		Flex("de-sum-total-row", true, "stretch", 0).
+		HFlex("de-sum-total-row", Stretch, 0).
 		Static("de-sum-total-lbl", "Total").Font("bold").Foreground("$fg0").
 		Spacer().Hint(-1, 0).
 		Static("de-sum-total-val", "$2,723.00").Font("bold").Foreground("$cyan").
@@ -783,7 +786,7 @@ func dataEntryScreen(b *Builder) {
 		End(). // Flex("de-summary")
 		Spacer().Hint(0, -1).
 		// Action buttons
-		Flex("de-actions", true, "end", 2).
+		HFlex("de-actions", End, 2).
 		Button("de-btn-draft", " ↓ Save Draft").
 		Button("de-btn-cancel", " ✕ Cancel").
 		Button("de-btn-submit", " ✓ Submit Order").
@@ -835,7 +838,7 @@ func codeEditorScreen(b *Builder) {
 		"",
 		"func createUI() *UI {",
 		"    return NewBuilder(MidnightNeonTheme()).",
-		`        Flex("root", false, "stretch", 0).`,
+		`        Flex("root", false, Stretch, 0).`,
 		`        Static("title", "Hello, World!").`,
 		`            Font("bold").Foreground("$cyan").`,
 		`        End(). // Flex("root")`,
@@ -899,9 +902,9 @@ func codeEditorScreen(b *Builder) {
 	root.Add(NewTreeNode("go.mod"))
 
 	// ── Layout ─────────────────────────────────────────────────────────────────
-	b.Flex("code-editor", false, "stretch", 0).Padding(1, 2).
+	b.VFlex("code-editor", Stretch, 0).Padding(1, 2).
 		// Header
-		Flex("ce-hdr", true, "center", 2).Padding(0, 0, 1, 0).
+		HFlex("ce-hdr", Center, 2).Padding(0, 0, 1, 0).
 		Static("ce-title", "Code Editor").Font("bold").Foreground("$cyan").
 		Spacer().Hint(-1, 0).
 		Static("ce-status", "main.go — Ln 1, Col 1").Foreground("$gray").
@@ -911,12 +914,12 @@ func codeEditorScreen(b *Builder) {
 		// Body: file tree + tabbed editor
 		Grid("ce-body", 1, 2, false).Hint(0, -1).Columns(26, -1).Border("none").
 		Cell(0, 0, 1, 1).
-		Flex("ce-tree-pane", false, "stretch", 0).Border("", "round").
+		VFlex("ce-tree-pane", Stretch, 0).Border("", "round").
 		Static("ce-tree-title", " Project").Font("bold").Background("$bg2").
 		Tree("ce-tree").Hint(0, -1).
 		End(). // Flex("ce-tree-pane")
 		Cell(1, 0, 1, 1).
-		Flex("ce-edit-col", false, "stretch", 0).Hint(0, -1).
+		VFlex("ce-edit-col", Stretch, 0).Hint(0, -1).
 		Tabs("ce-tabs").
 		Switcher("ce-switcher", true).Hint(0, -1). // auto-wired to Tabs via EvtActivate
 		Tab("main.go").
@@ -957,7 +960,7 @@ func codeEditorScreen(b *Builder) {
 	tree.On(EvtSelect, func(_ Widget, _ Event, _ ...any) bool {
 		if node := tree.Selected(); node != nil {
 			if idx, ok := node.Data().(int); ok {
-				tabs.Select(idx)
+				tabs.Set(idx)
 				switcher.Select(idx)
 			}
 		}
@@ -974,13 +977,13 @@ func codeEditorScreen(b *Builder) {
 
 	// Wire "New" button → popup a dialog
 	b.Find("ce-btn-new").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
-		ui := FindUI(container)
+		ui := FindRoot(container).(*UI)
 		dlg := NewDialog("ce-dlg", "dialog", " New File")
 		body := ui.NewBuilder().
-			Flex("ce-dlg-body", false, "stretch", 0).
+			VFlex("ce-dlg-body", Stretch, 0).
 			Static("ce-dlg-lbl", "Filename:").Foreground("$fg1").
 			Input("ce-dlg-input", "untitled.go").Hint(28, 1).
-			Flex("ce-dlg-btns", true, "end", 2).Padding(1, 0, 0, 0).
+			VFlex("ce-dlg-btns", End, 2).Padding(1, 0, 0, 0).
 			Button("ce-dlg-ok", " ✓ Create").Class("dialog").
 			Button("ce-dlg-cancel", " ✕ Cancel").
 			End(). // Flex("ce-dlg-btns")

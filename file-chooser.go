@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
+	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // ==== AI ===================================================================
@@ -63,10 +65,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	dialog := b.
 		Dialog("fc-dialog", title).
 		Class("dialog").
-		Flex("fc-body", false, "stretch", 1).
+		VFlex("fc-body", Stretch, 1).
 		Typeahead("fc-input", initial).Hint(0, 1).
 		Tree("fc-tree").Hint(0, -1).
-		Flex("fc-footer", true, "center", 0).Hint(0, 1).
+		HFlex("fc-footer", Center, 0).Hint(0, 1).
 		Checkbox("fc-hidden", "show hidden", hidden).
 		Spacer().Hint(-1, 0).
 		Button("fc-ok", label).
@@ -76,7 +78,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 		Class("").
 		Container()
 
-	input := Find(dialog, "fc-input").(*Typeahead)
+	input := MustFind[*Typeahead](dialog, "fc-input")
 
 	suggestPath := func(text string) []string {
 		if text == "" {
@@ -123,10 +125,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 		return candidates
 	}
 	input.SetSuggest(suggestPath)
-	tree := Find(dialog, "fc-tree").(*Tree)
-	okBtn := Find(dialog, "fc-ok").(*Button)
-	cancelBtn := Find(dialog, "fc-cancel").(*Button)
-	hiddenCb := Find(dialog, "fc-hidden").(*Checkbox)
+	tree := MustFind[*Tree](dialog, "fc-tree")
+	okBtn := MustFind[*Button](dialog, "fc-ok")
+	cancelBtn := MustFind[*Button](dialog, "fc-cancel")
+	hiddenCb := MustFind[*Checkbox](dialog, "fc-hidden")
 
 	// Capture the normal input style (set by Apply) for error state toggling.
 	normalInputStyle := input.Style()
@@ -176,7 +178,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	updateOK := func() {
 		var ok bool
 		if mode == "save" {
-			ok = isSaveable(input.Text())
+			ok = isSaveable(input.Get())
 		} else {
 			node := tree.Selected()
 			if node != nil {
@@ -190,7 +192,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	}
 
 	confirm := func() {
-		path := filepath.Clean(input.Text())
+		path := filepath.Clean(input.Get())
 		dialog.Dispatch(dialog, EvtAccept, path)
 		ui.Close()
 	}
@@ -310,11 +312,10 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	})
 
 	// Path input → navigate tree.
-	input.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+	OnChange(input, func(typed string) bool {
 		if ignoreInputChange {
 			return true
 		}
-		typed := input.Text()
 		if mode == "save" {
 			ok := isSaveable(typed)
 			setInputError(!ok)
@@ -429,7 +430,7 @@ func (ui *UI) FileChooser(title, label, mode, initial string, showHidden bool) W
 	// show-hidden checkbox.
 	hiddenCb.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
 		hidden = data[0].(bool)
-		currentPath := filepath.Clean(input.Text())
+		currentPath := filepath.Clean(input.Get())
 		buildTree()
 		navigateTo(currentPath)
 		return true

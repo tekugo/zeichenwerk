@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+	. "github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/renderer"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // UI represents the main TUI application that manages the screen, event
@@ -21,11 +24,11 @@ import (
 // The UI acts as the central orchestrator for the entire terminal user interface,
 // providing a complete application framework with the following capabilities.
 //
-// # Core Responsibilities
+// # Responsibilities
 //
 //   - Screen initialization and management using tcell
 //   - Event processing (keyboard, mouse, resize events)
-//   - Focus navigation between widgets with Tab/Shift+Tab support
+//   - Focus navigation between with Tab/Shift+Tab support
 //   - Mouse interaction and hover state management
 //   - Rendering coordination and dirty state management
 //   - Debug logging
@@ -54,7 +57,7 @@ import (
 //
 // # Architecture
 //
-// The UI maintains a widget hierarchy where containers can hold child widgets,
+// The UI maintains a widget hierarchy where containers can hold child
 // enabling complex layouts and nested component structures. It provides both
 // imperative APIs for direct control and declarative builder patterns for
 // constructing interfaces.
@@ -96,7 +99,8 @@ type UI struct {
 	refreshs int // Counter for full screen refreshes (debugging and performance monitoring)
 
 	// Rendering system
-	renderer *Renderer    // Renderer instance responsible for drawing widgets to the terminal
+	theme    *Theme       // UI theme
+	renderer *Renderer    // Renderer instance responsible for drawing to the terminal
 	screen   tcell.Screen // The terminal screen interface for low-level cell manipulation and event polling
 
 	// Commands palette
@@ -126,7 +130,7 @@ func parseLevel(l Level) slog.Level {
 // The actual terminal screen initialization is deferred until Run() is called.
 //
 // Parameters:
-//   - theme: The visual theme to use for styling widgets and colors
+//   - theme: The visual theme to use for styling and colors
 //   - root: The root container that will hold all UI widgets
 //   - debug: Enable debug mode to show debug information overlay and logging
 //
@@ -135,9 +139,10 @@ func parseLevel(l Level) slog.Level {
 //   - error: Any error that occurred during initialization (currently always nil)
 func NewUI(theme *Theme, root Container) *UI {
 	ui := &UI{
-		Component: Component{id: "__ui__", x: 0, y: 0, width: 0, height: 0},
+		Component: *NewComponent("__ui__", ""),
+		renderer:  nil,
+		theme:     theme,
 		screen:    nil,
-		renderer:  &Renderer{theme: theme},
 		layers:    []Container{},
 		debug:     false,
 		tableLog:  NewTableLog(2000),
@@ -181,7 +186,7 @@ func (ui *UI) Debug() *UI {
 
 // Creates a new builder with the current UI theme.
 func (ui *UI) NewBuilder() *Builder {
-	return NewBuilder(ui.renderer.theme)
+	return NewBuilder(ui.theme)
 }
 
 // ---- Event Handling -------------------------------------------------------
@@ -202,6 +207,9 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		// If the event is handled by the focused widget or one of its parents
 		// we do not process the event any further.
 		if ui.dispatch(ui.focus, EvtKey, event) {
+			break
+		}
+		if ui.Dispatch(ui.focus, EvtKey, event) {
 			break
 		}
 
@@ -262,11 +270,12 @@ func (ui *UI) Handle(event tcell.Event) bool {
 		ui.dispatch(ui.focus, EvtPaste, event)
 
 	case *tcell.EventResize:
-		w, h := ui.screen.Size()
-		if ui.width != w || ui.height != h {
-			ui.width, ui.height = w, h
+		sw, sh := ui.screen.Size()
+		_, _, width, height := ui.Bounds()
+		if width != sw || height != sh {
+			ui.SetBounds(0, 0, sw, sh)
 			ui.Layout()
-			ui.Log(ui, Debug, "Screen size: %d:%d", ui.width, ui.height)
+			ui.Log(ui, Debug, "Screen size: %d:%d", width, height)
 			ui.Refresh()
 			ui.screen.Sync()
 		}
@@ -311,7 +320,7 @@ func (ui *UI) Add(widget Widget, _ ...any) error {
 	}
 }
 
-// Children returns the child widgets of the App.
+// Children returns the child of the App.
 // Since UI acts as the root container, it returns a slice containing
 // only the root container widget.
 func (ui *UI) Children() []Widget {
@@ -324,15 +333,16 @@ func (ui *UI) Children() []Widget {
 
 // Layout recalculates and applies the layout for all widget layers in the UI.
 // This method is called automatically when the screen is resized or when
-// the UI structure changes. It ensures that all widgets are properly
+// the UI structure changes. It ensures that all are properly
 // positioned and sized according to their layout constraints.
 func (ui *UI) Layout() error {
 	// Set the bounds of the root widget to the screen bounds.
 	// In debug mode, the bottom line is reserved for debug information
+	_, _, width, height := ui.Bounds()
 	if ui.debug {
-		ui.layers[0].SetBounds(0, 0, ui.width, ui.height-1)
+		ui.layers[0].SetBounds(0, 0, width, height-1)
 	} else {
-		ui.layers[0].SetBounds(0, 0, ui.width, ui.height)
+		ui.layers[0].SetBounds(0, 0, width, height)
 	}
 
 	// Lay out the root widget.
@@ -343,7 +353,7 @@ func (ui *UI) Layout() error {
 
 // Draw renders the entire application to the screen.
 // This method handles cursor positioning, debug information display, and
-// coordinates the rendering of all widgets through the renderer.
+// coordinates the rendering of all through the renderer.
 func (ui *UI) Draw() {
 	if !ui.dirty {
 		return
@@ -362,13 +372,25 @@ func (ui *UI) Draw() {
 }
 
 // Redraw renders just a single widget, if its state changed. No new layout is
-// performed, no other widgets are affected.
+// performed, no other are affected.
 //
 // Parameters:
 //   - widget: Widget to redraw
 func (ui *UI) DrawWidget(widget Widget) {
-	// Refresh, if there is more than one layer
-	if len(ui.layers) > 1 {
+	// Check if the widget is visible and on which layer
+	var layer Container
+	for current := widget; current != nil; {
+		if current.Flag(FlagHidden) {
+			return
+		}
+		if current.Parent() == ui {
+			layer, _ = current.(Container)
+		}
+		current = current.Parent()
+	}
+
+	// Refresh, if it is not on the top layer
+	if layer == nil || len(ui.layers) == 0 || ui.layers[len(ui.layers)-1] != layer {
 		ui.dirty = true
 		ui.Draw()
 		return
@@ -392,7 +414,7 @@ func (ui *UI) Redraw(widget Widget) {
 	}
 }
 
-// Refresh triggers a complete screen redraw for all visible widgets.
+// Refresh triggers a complete screen redraw for all visible
 // This method sets the dirty flag and signals the main event loop to perform
 // a full rendering pass on the next iteration.
 func (ui *UI) Refresh() {
@@ -408,6 +430,7 @@ func (ui *UI) Refresh() {
 // providing insights into the application's current state and performance metrics.
 func (ui *UI) ShowDebug() {
 	if ui.debug {
+		_, _, width, height := ui.Bounds()
 		focus := "<nil>"
 		hover := "<nil>"
 		if ui.focus != nil {
@@ -419,9 +442,9 @@ func (ui *UI) ShowDebug() {
 		ui.renderer.Set("black", "green", "")
 		ui.renderer.Text(
 			0,
-			ui.height-1,
-			fmt.Sprintf(" DEBUG \u2502 Refresh %6d \u2502 Redraw %6d \u2502 Screen %3d:%3d \u2502 Layers %2d \u2502 Focus %-20s \u2502 Hover %-20s", ui.refreshs, ui.redraws, ui.width, ui.height, len(ui.layers), focus, hover),
-			ui.width)
+			height-1,
+			fmt.Sprintf(" DEBUG \u2502 Refresh %6d \u2502 Redraw %6d \u2502 Screen %3d:%3d \u2502 Layers %2d \u2502 Focus %-20s \u2502 Hover %-20s", ui.refreshs, ui.redraws, width, height, len(ui.layers), focus, hover),
+			width)
 	}
 }
 
@@ -448,7 +471,7 @@ func (ui *UI) Focus(widget Widget) {
 	ui.Refresh()
 }
 
-// SetFocus navigates focus between widgets using directional or positional commands.
+// SetFocus navigates focus between using directional or positional commands.
 // This method implements keyboard navigation patterns commonly used in terminal
 // applications, providing consistent focus traversal behavior.
 //
@@ -610,6 +633,7 @@ func (ui *UI) Logs() *TableLog {
 func (ui *UI) Popup(x, y, w, h int, popup Container) {
 	// Set parent first for logging to work immediately
 	popup.SetParent(ui)
+	_, _, width, height := ui.Bounds()
 
 	// Auto sizing
 	if w == 0 || h == 0 {
@@ -627,16 +651,16 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 
 	// if x is -1, center the popup horizontally
 	if x == -1 {
-		x = (ui.width - w) / 2
+		x = (width - w) / 2
 	} else if x < 0 {
-		x = ui.width - w + x + 2
+		x = width - w + x + 2
 	}
 
 	// if y is -1, center the popup vertically
 	if y == -1 {
-		y = (ui.height - h) / 2
+		y = (height - h) / 2
 	} else if y < 0 {
-		y = ui.height - h + y + 2
+		y = height - h + y + 2
 	}
 
 	popup.SetBounds(x, y, w, h)
@@ -650,7 +674,7 @@ func (ui *UI) Popup(x, y, w, h int, popup Container) {
 
 // Close removes the topmost layer from the UI layer stack.
 // This method is typically used to close popup dialogs, modal windows,
-// or other overlay widgets that were added as additional layers.
+// or other overlay that were added as additional layers.
 // The base layer (main UI) cannot be closed using this method.
 // EvtClose is dispatched to the removed layer before it is discarded.
 func (ui *UI) Close() {
@@ -689,9 +713,9 @@ func (ui *UI) Confirm(title, message string, onConfirm, onCancel func()) {
 	dialog := b.
 		Dialog("confirm-dialog", title).
 		Class("dialog").
-		Flex("confirm-body", false, "stretch", 1).
+		VFlex("confirm-body", Stretch, 1).
 		Static("confirm-msg", message).
-		Flex("confirm-buttons", true, "end", 2).
+		HFlex("confirm-buttons", End, 2).
 		Button("confirm-ok", "OK").
 		Button("confirm-cancel", "Cancel").
 		End().
@@ -728,10 +752,10 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 	dialog := b.
 		Dialog("prompt-dialog", title).
 		Class("dialog").
-		Flex("prompt-body", false, "stretch", 1).
+		VFlex("prompt-body", Stretch, 1).
 		Static("prompt-msg", message).
 		Input("prompt-input").Hint(0, 1).
-		Flex("prompt-buttons", true, "end", 2).
+		HFlex("prompt-buttons", End, 2).
 		Button("prompt-ok", "OK").
 		Button("prompt-cancel", "Cancel").
 		End().
@@ -739,9 +763,9 @@ func (ui *UI) Prompt(title, message string, onAccept func(string), onCancel func
 		Class("").
 		Container()
 
-	input := Find(dialog, "prompt-input").(*Input)
+	input := MustFind[*Input](dialog, "prompt-input")
 	accept := func() {
-		text := input.Text()
+		text := input.Get()
 		ui.Close()
 		if onAccept != nil {
 			onAccept(text)
@@ -821,11 +845,12 @@ func (ui *UI) Run() error {
 	style := tcell.StyleDefault
 	ui.screen.SetStyle(style)
 	ui.screen.Clear()
-	ui.renderer.screen = NewTcellScreen(ui.screen)
+	ui.renderer = NewRenderer(renderer.NewTcellScreen(ui.screen), ui.theme)
 	ui.renderer.Set("white", "black", "")
 
 	// Take screen size for the root
-	ui.width, ui.height = ui.screen.Size()
+	width, height := ui.screen.Size()
+	ui.SetBounds(0, 0, width, height)
 	ui.Layout()
 
 	// Set initial focus
@@ -862,14 +887,14 @@ func (ui *UI) EventLoop() {
 
 // ---- Theme Management -----------------------------------------------------
 
-// SetTheme changes the active theme and re-applies styling to all widgets.
+// SetTheme changes the active theme and re-applies styling to all
 // This method enables runtime theme switching by updating the renderer's theme
 // and triggering a complete re-styling of the entire widget hierarchy.
 //
 // Parameters:
 //   - theme: The new theme to apply to the application
 func (ui *UI) SetTheme(theme *Theme) {
-	ui.renderer.theme = theme
+	ui.renderer.Theme = theme
 
 	// Re-apply theme styles to all widgets
 	Traverse(ui, func(widget Widget) bool {
@@ -887,7 +912,7 @@ func (ui *UI) SetTheme(theme *Theme) {
 // Returns:
 //   - Theme: The currently active theme
 func (ui *UI) Theme() *Theme {
-	return ui.renderer.theme
+	return ui.theme
 }
 
 // Dump writes a human- and LLM-readable text tree of the full UI state to w.
@@ -895,7 +920,8 @@ func (ui *UI) Theme() *Theme {
 // by the widget hierarchy of each layer. Use this to give an AI agent a
 // snapshot of the current interface without running the full event loop.
 func (ui *UI) Dump(w io.Writer, opts ...DumpOptions) {
-	fmt.Fprintf(w, "[UI] %dx%d layers=%d\n", ui.width, ui.height, len(ui.layers))
+	_, _, width, height := ui.Bounds()
+	fmt.Fprintf(w, "[UI] %dx%d layers=%d\n", width, height, len(ui.layers))
 	for i, layer := range ui.layers {
 		if i > 0 {
 			fmt.Fprintf(w, "  ── layer %d ──\n", i)

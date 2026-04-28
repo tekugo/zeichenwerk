@@ -16,16 +16,16 @@ Called once per visible slot. `x/y/w/h` are the slot's absolute content-area coo
 
 ## Methods
 
-- `First()` — highlights first enabled item
-- `Items() []any` — returns the current items slice
-- `Last()` — highlights last enabled item
-- `Move(count int)` — moves highlight by count (skips disabled items, clamps at bounds)
-- `PageDown()` — moves down by the number of fully visible slots
-- `PageUp()` — moves up by the number of fully visible slots
+- `Get() []any` — returns the current items slice
+- `Set(items []any)` — replaces all items; resets index to 0 (or -1 if empty)
+- `SetDisabled(indices []int)` — replaces the non-selectable index list
 - `Select(index int)` — highlights item at index; adjusts scroll; dispatches `"select"`
 - `Selected() int` — returns the highlighted index (-1 if none)
-- `SetDisabled(indices []int)` — replaces the non-selectable index list
-- `SetItems(items []any)` — replaces all items; resets index to 0 (or -1 if empty)
+- `Move(count int)` — moves highlight by count (skips disabled items, clamps at bounds)
+- `First()` — highlights first enabled item
+- `Last()` — highlights last enabled item
+- `PageUp()` — moves up by the number of fully visible slots
+- `PageDown()` — moves down by the number of fully visible slots
 
 ## Events
 

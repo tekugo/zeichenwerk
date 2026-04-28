@@ -7,6 +7,10 @@ import (
 	"strings"
 
 	. "github.com/tekugo/zeichenwerk"
+	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/themes"
+	. "github.com/tekugo/zeichenwerk/values"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // HAL types
@@ -112,20 +116,20 @@ func main() {
 }
 
 func createUI(explorer *HALExplorer) *UI {
-	builder := NewBuilder(TokyoNightTheme())
+	builder := NewBuilder(TokyoNight())
 
-	builder.Flex("main", false, "stretch", 0).
-		Flex("header", true, "start", 2).
+	builder.VFlex("main", Stretch, 0).
+		HFlex("header", Start, 2).
 		Static("title", "HAL Explorer").
 		Class("title").
 		Padding(1).
 		Static("subtitle", "HTTP client for HAL JSON APIs").
 		End().
-		Flex("content", false, "stretch", 0).
-		Flex("request-panel", false, "start", 3).
+		VFlex("content", Stretch, 0).
+		VFlex("request-panel", Start, 3).
 		Border("", "thick").
 		Padding(1).
-		Flex("request-top", true, "start", 1).
+		HFlex("request-top", Start, 1).
 		Select("method", "GET", "GET", "POST", "POST", "PUT", "PUT", "DELETE", "DELETE", "PATCH", "PATCH", "HEAD", "HEAD", "OPTIONS", "OPTIONS").
 		Padding(0, 0, 0, 1).
 		Editor("url-editor").
@@ -134,56 +138,56 @@ func createUI(explorer *HALExplorer) *UI {
 		Button("send-btn", "Send").
 		Class("primary").
 		End().
-		Flex("headers-section", false, "start", 2).
+		VFlex("headers-section", Start, 2).
 		Static("headers-title", "Headers").
 		HRule("thin").
-		Flex("headers-list", false, "start", 0).
+		VFlex("headers-list", Start, 0).
 		End().
-		Flex("header-add-row", true, "start", 1).
+		HFlex("header-add-row", Start, 1).
 		Static("key-label", "Key:").
 		Editor("header-key").Hint(20, -1).
 		Editor("header-value").Hint(30, -1).
 		Button("add-header-btn", "Add").
 		End().
 		End().
-		Flex("body-section", false, "start", 3).
+		VFlex("body-section", Start, 3).
 		Checkbox("show-body", "Request Body", false).
 		Editor("body-editor").Hint(0, -1).
 		End().
 		End().
-		Flex("response-panel", false, "stretch", 0).
+		VFlex("response-panel", Stretch, 0).
 		Border("", "thick").
 		Padding(1).
-		Flex("response-top", true, "start", 1).
+		HFlex("response-top", Start, 1).
 		Static("response-status", "").Class("status").
 		Spacer().
 		Tabs("response-tabs", "Body", "Links", "Embedded", "Headers", "Properties").
 		End().
 		End().
-		Flex("response-content", true, "stretch", 0).
+		HFlex("response-content", Stretch, 0).
 		Switcher("response-switcher", false).
-		Flex("body-tab", false, "stretch", 0).
+		VFlex("body-tab", Stretch, 0).
 		Viewport("body-viewport", "").
 		Static("body-content", "").
 		End().
 		End().
 		End().
-		Flex("links-tab", false, "stretch", 0).
+		VFlex("links-tab", Stretch, 0).
 		Table("links-content", NewArrayTableProvider([]string{"Rel", "Href", "Templated", "Type", "Title"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
 		End().
-		Flex("embedded-tab", false, "stretch", 0).
+		VFlex("embedded-tab", Stretch, 0).
 		Table("embedded-content", NewArrayTableProvider([]string{"Relation", "Resource"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
 		End().
-		Flex("headers-tab", false, "stretch", 0).
+		VFlex("headers-tab", Stretch, 0).
 		Table("headers-content", NewArrayTableProvider([]string{"Header", "Value"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
 		End().
-		Flex("properties-tab", false, "stretch", 0).
+		VFlex("properties-tab", Stretch, 0).
 		Table("properties-content", NewArrayTableProvider([]string{"Property", "Value"}, [][]string{}), false).
 		Hint(0, -1).
 		End().
@@ -192,7 +196,7 @@ func createUI(explorer *HALExplorer) *UI {
 		End().
 		End().
 		End().
-		Flex("footer", true, "start", 1).
+		HFlex("footer", Start, 1).
 		Static("status-bar", "Ready").
 		Class("status").
 		Spacer().

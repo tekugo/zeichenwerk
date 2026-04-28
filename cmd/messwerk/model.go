@@ -1,361 +1,362 @@
 package main
 
 import (
-	"sort"
 	"sync"
 	"time"
 
-	. "github.com/tekugo/zeichenwerk"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/values"
 )
 
-// SessionStatus represents a session's current activity level.
+// Create a new TimeSeries for the last hour with 2 minute intervals
+func newTS() *core.TimeSeries[float64] {
+	start := time.Now().Add(-time.Duration(29) * time.Minute * 2)
+	return core.NewTimeSeries[float64](start, time.Minute*2, 30, true)
+}
+
+// Values holds the aggregated metric data for a model.
+type Metrics struct {
+	// Time stamps
+	Time  time.Time // ts
+	Start time.Time // start_ts
+
+	// Model name (attrs:model)
+	Model string
+
+	// Cost (claude_code.cost.usage)
+	Cost float64 // [USD]
+
+	// Token usage (claude_code.token.usage)
+	Input         int64 // [tokens] attrs:type input
+	Output        int64 // [tokens] attrs:type output
+	CacheRead     int64 // [tokens] attrs:type cacheRead
+	CacheCreation int64 // [tokens] attrs:type cacheCreation
+
+	// Active times (claude_code.active_time.total)
+	ActiveUser float64 // [s] attrs:type user
+	ActiveCLI  float64 // [s] attrs:type cli
+
+	// Line Count (claude_code.lines_of_code.count)
+	LinesAdded   int64 // [] attrs:type added
+	LinesRemoved int64 // [] attrs:type removed
+
+	// Decisions (claude_code.code_edit_tool.decision)
+	Accepted int64
+	Rejected int64
+}
+
+func (m *Metrics) Add(other *Metrics) {
+	m.Cost += other.Cost
+	m.Input += other.Input
+	m.Output += other.Output
+	m.CacheRead += other.CacheRead
+	m.CacheCreation += other.CacheCreation
+	m.ActiveUser += other.ActiveUser
+	m.ActiveCLI += other.ActiveCLI
+	m.LinesAdded += other.LinesAdded
+	m.LinesRemoved += other.LinesRemoved
+	m.Accepted += other.Accepted
+	m.Rejected += other.Rejected
+}
+
+func (m *Metrics) Clear() {
+	m.Cost = 0
+	m.Input = 0
+	m.Output = 0
+	m.CacheRead = 0
+	m.CacheCreation = 0
+	m.ActiveUser = 0
+	m.ActiveCLI = 0
+	m.LinesAdded = 0
+	m.LinesRemoved = 0
+	m.Accepted = 0
+	m.Rejected = 0
+}
+
 type SessionStatus int
 
 const (
-	StatusActive SessionStatus = iota // data within the last idleTimeout/2
-	StatusIdle                        // no data for idleTimeout/2 … idleTimeout
-	StatusEnded                       // no data for longer than idleTimeout
+	StatusActive SessionStatus = iota
+	StatusIdle
+	StatusEnded
+	StatusTimeOut
 )
 
-// bucket holds the token-delta sum for one minute.
-type bucket struct {
-	minute int64 // Unix seconds / 60
-	tokens int64
+type Session struct {
+	Start  time.Time // start time (first seen)
+	End    time.Time // only if ended or timed-out
+	Status string    // session status
+
+	// resource
+	HostArch       string // host.arch
+	OSType         string // os.type
+	OSVersion      string // os.version
+	ServiceName    string // service.name
+	ServiceVersion string // service.Version
+
+	// attrs
+	// model will be in the metrics
+	OrgID           string // organization.id
+	ID              string // session.id
+	TerminalType    string // terminal.type
+	UserAccountID   string // user.account_id
+	UserAccountUUID string // user.account_uuid
+	UserEmail       string // user.email
+	UserID          string // user.id
+
+	Metrics []Metrics
+	Log     []Log
+
+	Totals map[string]*Metrics // Session totals per model
+
+	// Deck sparkline series: 30 × 2 min = 60 min
+	Input  *core.TimeSeries[float64]
+	Output *core.TimeSeries[float64]
+	Cost   *core.TimeSeries[float64]
 }
 
-// session is the internal per-session state.
-type session struct {
-	id       string
-	name     string
-	lastSeen time.Time
-
-	mu        sync.Mutex
-	byType    map[string]int64 // accumulated token deltas per type
-	totalCost float64          // accumulated cost across all calls
-	buckets   []bucket         // rolling 20-minute history
-	sparkline *Sparkline
-}
-
-func (s *session) status(timeout time.Duration) SessionStatus {
-	since := time.Since(s.lastSeen)
-	if since < timeout/2 {
-		return StatusActive
+// LastSeen returns the timestamp of the most recently received metrics entry,
+// or Start if no metrics have been received yet.
+func (s *Session) LastSeen() time.Time {
+	if len(s.Metrics) == 0 {
+		return s.Start
 	}
-	if since < timeout {
-		return StatusIdle
-	}
-	return StatusEnded
+	return s.Metrics[len(s.Metrics)-1].Time
 }
 
-// totalTokens sums accumulated token deltas across all token types.
-func (s *session) totalTokens() int64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var total int64
-	for _, v := range s.byType {
-		total += v
+// Aggregate returns a single Metrics with all per-model totals summed together.
+func (s *Session) Aggregate() Metrics {
+	var result Metrics
+	for _, m := range s.Totals {
+		result.Add(m)
+	}
+	return result
+}
+
+// PrimaryModel returns the name of the model with the highest cost in this session,
+// or an empty string if no metrics have been received.
+func (s *Session) PrimaryModel() string {
+	var best string
+	var bestCost float64
+	for model, m := range s.Totals {
+		if m.Cost > bestCost {
+			bestCost = m.Cost
+			best = model
+		}
+	}
+	return best
+}
+
+// TotalCost returns the sum of cost across all model totals for this session.
+func (s *Session) TotalCost() float64 {
+	var total float64
+	for _, m := range s.Totals {
+		total += m.Cost
 	}
 	return total
 }
 
-// addTokens accumulates a token delta for the given type and timestamp.
-func (s *session) addTokens(typ string, delta int64, ts time.Time) int64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.byType[typ] += delta
-	s.lastSeen = ts
-	if delta > 0 {
-		s.addBucket(ts.Unix()/60, delta)
+// LastInput returns the input token count from the most recent metrics entry,
+// or 0 if no metrics have been received yet.
+func (s *Session) LastInput() int64 {
+	if len(s.Metrics) == 0 {
+		return 0
 	}
-	return delta
+	return s.Metrics[len(s.Metrics)-1].Input
 }
 
-func (s *session) addBucket(minute, delta int64) {
-	const maxBuckets = 20
-	for i := range s.buckets {
-		if s.buckets[i].minute == minute {
-			s.buckets[i].tokens += delta
-			s.rebuildSparkline()
-			return
+// LastOutput returns the output token count from the most recent metrics entry,
+// or 0 if no metrics have been received yet.
+func (s *Session) LastOutput() int64 {
+	if len(s.Metrics) == 0 {
+		return 0
+	}
+	return s.Metrics[len(s.Metrics)-1].Output
+}
+
+// Add accumulates m into the matching (Time, Model) entry, creating one if needed.
+// Also updates the per-model Totals. Returns true if an existing entry was found.
+func (s *Session) Add(m *Metrics) bool {
+	total, ok := s.Totals[m.Model]
+	if !ok {
+		total = &Metrics{Model: m.Model}
+		s.Totals[m.Model] = total
+	}
+	total.Add(m)
+
+	if existing := s.Find(m.Time, m.Model); existing != nil {
+		existing.Add(m)
+		return true
+	}
+	entry := Metrics{
+		Time:  m.Time,
+		Start: m.Start,
+		Model: m.Model,
+	}
+	entry.Add(m)
+
+	s.Metrics = append(s.Metrics, entry)
+	return false
+}
+
+// Find returns the Metrics entry whose time bucket (truncated to 1 second)
+// and model match ts and model, or nil.
+// 1-second bucketing groups all data points from the same OTLP export batch
+// together, even when individual data points carry slightly different nanosecond
+// timestamps.
+func (s *Session) Find(ts time.Time, model string) *Metrics {
+	bucket := ts.Truncate(time.Second)
+	for i := range s.Metrics {
+		if s.Metrics[i].Time.Truncate(time.Second).Equal(bucket) && s.Metrics[i].Model == model {
+			return &s.Metrics[i]
 		}
 	}
-	s.buckets = append(s.buckets, bucket{minute, delta})
-	if len(s.buckets) > maxBuckets {
-		s.buckets = s.buckets[len(s.buckets)-maxBuckets:]
-	}
-	s.rebuildSparkline()
+	return nil
 }
 
-func (s *session) rebuildSparkline() {
-	vs := make([]float64, len(s.buckets))
-	for i, b := range s.buckets {
-		vs[i] = float64(b.tokens)
-	}
-	s.sparkline.SetValues(vs)
+type Log struct {
+	Time     time.Time         // ts
+	Observed time.Time         // observed_ts
+	Severity string            // severity
+	Body     string            // body
+	TraceID  string            // trace_id
+	Attrs    map[string]string // attrs
 }
 
-// ---- OTLPLog ---------------------------------------------------------------
-
-// otlpEntry is one received OTLP data point.
-type otlpEntry struct {
-	time      time.Time
-	session   string
-	metric    string // e.g. "claude_code.token.usage"
-	tokenType string // attribute "type"; empty for cost metrics
-	value     string // formatted value
-}
-
-// OTLPLog is a thread-safe circular buffer of incoming OTLP entries that
-// implements TableProvider so it can be passed directly to a Table widget.
-type OTLPLog struct {
-	mu      sync.Mutex
-	entries []otlpEntry
-	size    int
-	start   int
-	count   int
-}
-
-func newOTLPLog(size int) *OTLPLog { return &OTLPLog{entries: make([]otlpEntry, size), size: size} }
-
-func (l *OTLPLog) add(e otlpEntry) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	idx := (l.start + l.count) % l.size
-	l.entries[idx] = e
-	if l.count < l.size {
-		l.count++
-	} else {
-		l.start = (l.start + 1) % l.size
-	}
-}
-
-var otlpLogColumns = []TableColumn{
-	{Header: "Time", Width: 8},
-	{Header: "Session", Width: 24},
-	{Header: "Metric", Width: 26},
-	{Header: "Type", Width: 12},
-	{Header: "Value", Width: 14},
-}
-
-func (l *OTLPLog) Columns() []TableColumn { return otlpLogColumns }
-
-func (l *OTLPLog) Length() int {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.count
-}
-
-func (l *OTLPLog) Str(row, col int) string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	e := l.entries[(l.start+l.count-row-1)%l.size] // newest first
-	switch col {
-	case 0:
-		return e.time.Format("15:04:05")
-	case 1:
-		return e.session
-	case 2:
-		return e.metric
-	case 3:
-		return e.tokenType
-	default:
-		return e.value
-	}
-}
-
-// ---- Store -----------------------------------------------------------------
-
-// Store is the in-memory session registry.
 type Store struct {
-	mu          sync.RWMutex
-	sessions    map[string]*session
-	order       []string // insertion order
-	idleTimeout time.Duration
-	onChange    func()
+	mu       sync.RWMutex
+	sessions map[string]*Session
+	order    []string
+	onChange func()
 
-	gesamtBuckets []bucket
-	gesamtSp      *Sparkline
+	// Total time lines for all sessions
+	Input  *core.TimeSeries[float64]
+	Output *core.TimeSeries[float64]
+	Cost   *core.TimeSeries[float64]
 
-	Log *OTLPLog
+	// Reactive running totals
+	TotalCost   *values.Value[float64]
+	TotalInput  *values.Value[int64]
+	TotalOutput *values.Value[int64]
+
+	totalCost   float64
+	totalInput  int64
+	totalOutput int64
 }
 
-// newDeckSparkline creates a Relative-mode sparkline for deck cards.
-// Relative scaling ensures visible variation even after a burst of activity.
-func newDeckSparkline(id string) *Sparkline {
-	return NewSparkline(id, "")
-}
-
-func newStore(timeout time.Duration) *Store {
+func NewStore() *Store {
 	return &Store{
-		sessions:    make(map[string]*session),
-		idleTimeout: timeout,
-		gesamtSp:    newDeckSparkline("gesamt-sp"),
-		Log:         newOTLPLog(500),
+		sessions:    make(map[string]*Session),
+		Input:       newTS(),
+		Output:      newTS(),
+		Cost:        newTS(),
+		TotalCost:   values.NewValue[float64](0),
+		TotalInput:  values.NewValue[int64](0),
+		TotalOutput: values.NewValue[int64](0),
 	}
 }
 
-// SetOnChange registers a function called after every data update.
+// Find returns the existing session with the given ID, or nil.
+func (st *Store) Find(id string) *Session {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	return st.sessions[id]
+}
+
+// Get returns the session with the given ID. If none exists, a new empty
+// session is created, registered, and returned with isNew = true.
+func (st *Store) Get(id string) (s *Session, isNew bool) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if s = st.sessions[id]; s != nil {
+		return s, false
+	}
+	s = &Session{
+		Totals: make(map[string]*Metrics),
+		Input:  newTS(),
+		Output: newTS(),
+		Cost:   newTS(),
+	}
+	st.sessions[id] = s
+	st.order = append(st.order, id)
+	return s, true
+}
+
+// Items returns sessions in insertion order, newest-first.
+func (st *Store) Items() []*Session {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	n := len(st.order)
+	out := make([]*Session, n)
+	for i, id := range st.order {
+		out[n-1-i] = st.sessions[id]
+	}
+	return out
+}
+
+// SetOnChange registers fn to be called (without holding any lock) whenever
+// new data arrives. Pass nil to remove a previously registered callback.
 func (st *Store) SetOnChange(fn func()) {
 	st.mu.Lock()
 	st.onChange = fn
 	st.mu.Unlock()
 }
 
-// UpdateTokens records a delta token count for a session.
-func (st *Store) UpdateTokens(sessionID, sessionName, tokenType string, delta int64, ts time.Time) {
-	st.mu.Lock()
-	s, ok := st.sessions[sessionID]
-	if !ok {
-		s = &session{
-			id:        sessionID,
-			name:      sessionName,
-			lastSeen:  ts,
-			byType:    make(map[string]int64),
-			sparkline: newDeckSparkline(sessionID + "-sp"),
-		}
-		st.sessions[sessionID] = s
-		st.order = append(st.order, sessionID)
-	}
-	onChange := st.onChange
-	st.mu.Unlock()
-
-	added := s.addTokens(tokenType, delta, ts)
-	if added > 0 {
-		st.addGesamtBucket(ts.Unix()/60, added)
-	}
-	if onChange != nil {
-		onChange()
-	}
-}
-
-// UpdateCost accumulates a cost delta for a session.
-func (st *Store) UpdateCost(sessionID string, cost float64) {
+// Notify calls the onChange callback, if one is registered.
+func (st *Store) Notify() {
 	st.mu.RLock()
-	s := st.sessions[sessionID]
-	onChange := st.onChange
+	fn := st.onChange
 	st.mu.RUnlock()
-	if s == nil {
-		return
-	}
-	s.mu.Lock()
-	s.totalCost += cost
-	s.mu.Unlock()
-	if onChange != nil {
-		onChange()
+	if fn != nil {
+		fn()
 	}
 }
 
-func (st *Store) addGesamtBucket(minute, delta int64) {
-	const maxBuckets = 20
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	for i := range st.gesamtBuckets {
-		if st.gesamtBuckets[i].minute == minute {
-			st.gesamtBuckets[i].tokens += delta
-			st.rebuildGesamtSparkline()
-			return
-		}
-	}
-	st.gesamtBuckets = append(st.gesamtBuckets, bucket{minute, delta})
-	if len(st.gesamtBuckets) > maxBuckets {
-		st.gesamtBuckets = st.gesamtBuckets[len(st.gesamtBuckets)-maxBuckets:]
-	}
-	st.rebuildGesamtSparkline()
+// addToSeries adds m's token and cost values to the session's deck-scale TimeSeries.
+func (s *Session) addToSeries(m *Metrics) {
+	s.Input.Add(m.Time, float64(m.Input))
+	s.Output.Add(m.Time, float64(m.Output))
+	s.Cost.Add(m.Time, m.Cost)
 }
 
-// rebuildGesamtSparkline must be called under st.mu.
-func (st *Store) rebuildGesamtSparkline() {
-	vs := make([]float64, len(st.gesamtBuckets))
-	for i, b := range st.gesamtBuckets {
-		vs[i] = float64(b.tokens)
-	}
-	st.gesamtSp.SetValues(vs)
+// addToTotal adds m's token and cost values to the store's overview-scale TimeSeries.
+func (st *Store) addToTotal(m *Metrics) {
+	st.Input.Add(m.Time, float64(m.Input))
+	st.Output.Add(m.Time, float64(m.Output))
+	st.Cost.Add(m.Time, m.Cost)
+	st.totalInput += m.Input
+	st.totalOutput += m.Output
+	st.totalCost += m.Cost
+	st.TotalInput.Set(st.totalInput)
+	st.TotalOutput.Set(st.totalOutput)
+	st.TotalCost.Set(st.totalCost)
 }
 
-// ---- SessionItem (deck display snapshot) -----------------------------------
-
-// SessionItem is the read-only snapshot passed to the Deck item renderer.
-type SessionItem struct {
-	ID           string
-	Name         string
-	TotalTokens  int64
-	InputTokens  int64
-	OutputTokens int64
-	CacheTokens  int64 // cache_read + cache_write
-	TotalCost    float64
-	Status       SessionStatus
-	Sparkline    *Sparkline
-}
-
-// Items returns ordered deck items: Gesamt first, then sessions newest-first.
-func (st *Store) Items() []*SessionItem {
+// LastSeen returns the most recent LastSeen timestamp across all sessions,
+// or the zero time if the store is empty.
+func (st *Store) LastSeen() time.Time {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-
-	type kv struct {
-		s    *session
-		seen time.Time
-	}
-	kvs := make([]kv, 0, len(st.sessions))
-	var totalTokens, totalInput, totalOutput, totalCache int64
-	var totalCost float64
-	bestStatus := StatusEnded
-
+	var t time.Time
 	for _, s := range st.sessions {
-		kvs = append(kvs, kv{s, s.lastSeen})
-		s.mu.Lock()
-		inp := s.byType["input"]
-		out := s.byType["output"]
-		cache := s.byType["cacheRead"] + s.byType["cacheCreation"]
-		s.mu.Unlock()
-		totalInput += inp
-		totalOutput += out
-		totalCache += cache
-		totalTokens += s.totalTokens()
-		totalCost += s.totalCost
-		if st := s.status(st.idleTimeout); st < bestStatus {
-			bestStatus = st
+		if ls := s.LastSeen(); ls.After(t) {
+			t = ls
 		}
 	}
-	sort.Slice(kvs, func(i, j int) bool {
-		return kvs[i].seen.After(kvs[j].seen)
-	})
+	return t
+}
 
-	gesamtStatus := StatusEnded
-	if len(kvs) > 0 {
-		gesamtStatus = bestStatus
+// TouchAll advances all session and store TimeSeries to now and triggers a UI refresh.
+func (st *Store) TouchAll(now time.Time) {
+	st.Input.Touch(now)
+	st.Output.Touch(now)
+	st.Cost.Touch(now)
+	st.mu.RLock()
+	for _, s := range st.sessions {
+		s.Input.Touch(now)
+		s.Output.Touch(now)
+		s.Cost.Touch(now)
 	}
-
-	items := make([]*SessionItem, 0, len(kvs)+1)
-	items = append(items, &SessionItem{
-		ID:           "__gesamt__",
-		Name:         "Gesamt",
-		TotalTokens:  totalTokens,
-		InputTokens:  totalInput,
-		OutputTokens: totalOutput,
-		CacheTokens:  totalCache,
-		TotalCost:    totalCost,
-		Status:       gesamtStatus,
-		Sparkline:    st.gesamtSp,
-	})
-	for _, kv := range kvs {
-		s := kv.s
-		s.mu.Lock()
-		inp := s.byType["input"]
-		out := s.byType["output"]
-		cache := s.byType["cacheRead"] + s.byType["cacheCreation"]
-		s.mu.Unlock()
-		items = append(items, &SessionItem{
-			ID:           s.id,
-			Name:         s.name,
-			TotalTokens:  s.totalTokens(),
-			InputTokens:  inp,
-			OutputTokens: out,
-			CacheTokens:  cache,
-			TotalCost:    s.totalCost,
-			Status:       s.status(st.idleTimeout),
-			Sparkline:    s.sparkline,
-		})
-	}
-	return items
+	st.mu.RUnlock()
+	st.Notify()
 }

@@ -4,6 +4,10 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
+
+	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
 // Builder provides a fluent interface for constructing TUI components.
@@ -150,6 +154,15 @@ func (b *Builder) Checkbox(id, text string, checked bool) *Builder {
 	return b
 }
 
+// Clock creates a new clock widget. interval is stored and used when Start is
+// called. params are optional positional strings: params[0] is the Go
+// time-layout (default "15:04"), params[1] is a prefix (default "").
+func (b *Builder) Clock(id string, interval time.Duration, params ...string) *Builder {
+	clock := NewClock(id, b.class, interval, params...)
+	b.Add(clock)
+	return b
+}
+
 // Collapsible creates a new collapsible container with a clickable header.
 // The container is pushed onto the builder's stack; call End() to close it.
 func (b *Builder) Collapsible(id, title string, expanded bool) *Builder {
@@ -205,19 +218,6 @@ func (b *Builder) Filter(id string) *Builder {
 	return b
 }
 
-// Flex creates a new flex container widget for arranging child widgets.
-//
-// Parameters:
-//   - id: unique identifier for the flex container
-//   - horizontal: whether the flex container is horizontal
-//   - alignment: how children are aligned ("start", "center", "end", "stretch")
-//   - spacing: cells between child widgets (columns or rows)
-func (b *Builder) Flex(id string, horizontal bool, alignment string, spacing int) *Builder {
-	flex := NewFlex(id, b.class, horizontal, alignment, spacing)
-	b.Add(flex)
-	return b
-}
-
 // Form creates a new form widget with the specified id, title, and bound data.
 // The form is added to the current container and styled with the theme.
 func (b *Builder) Form(id, title string, data any) *Builder {
@@ -270,6 +270,20 @@ func (b *Builder) Group(id, title, name string, horizontal bool, spacing int) *B
 func (b *Builder) Heatmap(id string, rows, cols int) *Builder {
 	h := NewHeatmap(id, b.class, rows, cols)
 	b.Add(h)
+	return b
+}
+
+// HFlex creates a new flex container widget for arranging child widgets.
+// The Flex orientation is by default horizontal, use Flag(FlagVertical)
+// for vertical orientation.
+//
+// Parameters:
+//   - id: unique identifier for the flex container
+//   - alignment: how children are aligned (Start, Center, End, Stretch)
+//   - spacing: cells between child widgets (columns or rows)
+func (b *Builder) HFlex(id string, alignment Alignment, spacing int) *Builder {
+	flex := NewFlex(id, b.class, alignment, spacing)
+	b.Add(flex)
 	return b
 }
 
@@ -507,6 +521,11 @@ func (b *Builder) Viewport(id, title string) *Builder {
 	return b
 }
 
+// VFlex returns a vertical flex with stretching and the given spacing.
+func (b *Builder) VFlex(id string, alignment Alignment, spacing int) *Builder {
+	return b.HFlex(id, alignment, spacing).Flag(FlagVertical)
+}
+
 // VRule adds a vertical rule.
 func (b *Builder) VRule(style string) *Builder {
 	rule := NewVRule(b.class, style)
@@ -519,7 +538,7 @@ func (b *Builder) VRule(style string) *Builder {
 // buildGroup builds the form group by adding all fields from the struct
 func (b *Builder) buildGroup(form *Form, group *FormGroup, name string) {
 	line := 0
-	v := reflect.ValueOf(form.data)
+	v := reflect.ValueOf(form.Data)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		b.current.Log(b.current, Warning, "buildGroup: form data must be a pointer to a struct")
 		return
@@ -744,8 +763,12 @@ func (b *Builder) Foreground(params ...string) *Builder {
 }
 
 // Flag sets the flag for the current widget.
-func (b *Builder) Flag(flag Flag, value bool) *Builder {
-	b.current.SetFlag(flag, value)
+func (b *Builder) Flag(flag Flag, params ...bool) *Builder {
+	if len(params) == 0 {
+		b.current.SetFlag(flag, true)
+	} else {
+		b.current.SetFlag(flag, params[0])
+	}
 	return b
 }
 

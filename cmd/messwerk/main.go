@@ -7,29 +7,30 @@ import (
 	"net"
 	"time"
 
-	"google.golang.org/grpc"
 	collmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	"google.golang.org/grpc"
 
-	. "github.com/tekugo/zeichenwerk"
+	c "github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/themes"
 )
 
 func main() {
 	port := flag.Int("port", 4317, "OTLP gRPC listen port")
-	timeout := flag.Duration("timeout", 2*time.Minute, "idle session timeout")
 	themeName := flag.String("t", "tokyo", "theme: midnight, tokyo, nord, gruvbox-dark, gruvbox-light, lipstick")
+	sim := flag.Bool("sim", false, "populate store with simulated sessions for UI testing")
 	flag.Parse()
 
 	theme := resolveTheme(*themeName)
-	store := newStore(*timeout)
+	store := NewStore()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		slog.Error("failed to listen for OTLP", "port", *port, "err", err)
 		return
 	}
 
 	srv := grpc.NewServer()
-	collmetricspb.RegisterMetricsServiceServer(srv, &metricsReceiver{store: store})
+	collmetricspb.RegisterMetricsServiceServer(srv, &Receiver{store: store})
 	go func() {
 		slog.Info("OTLP receiver started", "addr", lis.Addr())
 		if err := srv.Serve(lis); err != nil {
@@ -38,45 +39,35 @@ func main() {
 	}()
 
 	ui := buildUI(theme, store)
+	if *sim {
+		populateSim(store)
+	}
 
-	// Ticker to keep status dots fresh even when no new data arrives.
-	stop := make(chan struct{})
 	go func() {
-		t := time.NewTicker(15 * time.Second)
-		defer t.Stop()
-		for {
-			select {
-			case <-t.C:
-				store.mu.RLock()
-				fn := store.onChange
-				store.mu.RUnlock()
-				if fn != nil {
-					fn()
-				}
-			case <-stop:
-				return
-			}
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for t := range ticker.C {
+			store.TouchAll(t)
 		}
 	}()
 
 	ui.Run()
-	close(stop)
 	srv.Stop()
 }
 
-func resolveTheme(name string) *Theme {
+func resolveTheme(name string) *c.Theme {
 	switch name {
 	case "midnight":
-		return MidnightNeonTheme()
+		return themes.MidnightNeon()
 	case "nord":
-		return NordTheme()
+		return themes.Nord()
 	case "gruvbox-dark":
-		return GruvboxDarkTheme()
+		return themes.GruvboxDark()
 	case "gruvbox-light":
-		return GruvboxLightTheme()
+		return themes.GruvboxLight()
 	case "lipstick":
-		return LipstickTheme()
+		return themes.Lipstick()
 	default:
-		return TokyoNightTheme()
+		return themes.TokyoNight()
 	}
 }

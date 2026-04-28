@@ -5,14 +5,15 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	zw "github.com/tekugo/zeichenwerk"
+	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/widgets"
 )
 
 // Alignment is the per-column horizontal alignment.
 type Alignment uint8
 
 const (
-	AlignLeft   Alignment = iota // default
+	AlignLeft Alignment = iota // default
 	AlignCenter
 	AlignRight
 )
@@ -30,7 +31,7 @@ const maxUndo = 100
 type MutableTable struct {
 	headers    []string
 	alignments []Alignment
-	columns    []zw.TableColumn
+	columns    []widgets.TableColumn
 	data       [][]string
 	hasHeader  bool
 	modified   bool
@@ -51,8 +52,8 @@ func NewMutableTable() *MutableTable {
 
 // --- TableProvider ---
 
-func (t *MutableTable) Columns() []zw.TableColumn { return t.columns }
-func (t *MutableTable) Length() int               { return len(t.data) }
+func (t *MutableTable) Columns() []widgets.TableColumn { return t.columns }
+func (t *MutableTable) Length() int                    { return len(t.data) }
 func (t *MutableTable) Str(row, col int) string {
 	if row < 0 || row >= len(t.data) {
 		return ""
@@ -126,11 +127,11 @@ func (t *MutableTable) syncColumns() {
 		t.columns[i].Sortable = true
 		switch t.alignments[i] {
 		case AlignCenter:
-			t.columns[i].Alignment = zw.AlignCenter
+			t.columns[i].Alignment = core.Center
 		case AlignRight:
-			t.columns[i].Alignment = zw.AlignRight
+			t.columns[i].Alignment = core.Right
 		default:
-			t.columns[i].Alignment = zw.AlignLeft
+			t.columns[i].Alignment = core.Left
 		}
 	}
 }
@@ -140,7 +141,7 @@ func (t *MutableTable) Load(headers []string, data [][]string) {
 	t.headers = make([]string, len(headers))
 	copy(t.headers, headers)
 	t.alignments = make([]Alignment, len(headers))
-	t.columns = make([]zw.TableColumn, len(headers))
+	t.columns = make([]widgets.TableColumn, len(headers))
 	t.data = make([][]string, len(data))
 	for i, row := range data {
 		r := make([]string, len(row))
@@ -349,9 +350,9 @@ func (t *MutableTable) insertCol(at int, header string) {
 	if w < 1 {
 		w = 1
 	}
-	t.columns = append(t.columns, zw.TableColumn{})
+	t.columns = append(t.columns, widgets.TableColumn{})
 	copy(t.columns[at+1:], t.columns[at:])
-	t.columns[at] = zw.TableColumn{Header: header, Width: w, Sortable: true}
+	t.columns[at] = widgets.TableColumn{Header: header, Width: w, Sortable: true}
 
 	for i, row := range t.data {
 		nr := make([]string, len(row)+1)
@@ -387,7 +388,7 @@ func (t *MutableTable) doMoveCol(from, to int) {
 
 	c := t.columns[from]
 	t.columns = append(t.columns[:from], t.columns[from+1:]...)
-	t.columns = append(t.columns, zw.TableColumn{})
+	t.columns = append(t.columns, widgets.TableColumn{})
 	copy(t.columns[to+1:], t.columns[to:])
 	t.columns[to] = c
 
