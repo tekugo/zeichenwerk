@@ -129,5 +129,13 @@ func AddDefaultStyles(theme *Theme) {
 		NewStyle("commands/shortcut").WithColors("$fg3", "$bg2"),
 		NewStyle("commands/shortcut:focused").WithColors("$bg1", "$cyan"),
 		NewStyle("commands/group").WithColors("$fg3", "$bg2").WithFont("bold"),
+		NewStyle("colorpanel").WithColors("$fg1", "$bg1").WithBorder("thin"),
+		NewStyle("colorpanel/title").WithColors("$aqua", "$bg1").WithFont("bold"),
+		NewStyle("previewpanel").WithColors("$fg1", "$bg1").WithBorder("thin"),
+		NewStyle("previewpanel/title").WithColors("$aqua", "$bg1").WithFont("bold"),
+		NewStyle("colorpicker"),
+		NewStyle("colorpicker/contrast.ok").WithColors("$green", "$bg1"),
+		NewStyle("colorpicker/contrast.warn").WithColors("$red", "$bg1"),
+		NewStyle("input.error").WithColors("$bg0", "$red"),
 	)
 }

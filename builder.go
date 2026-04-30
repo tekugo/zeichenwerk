@@ -112,6 +112,23 @@ func (b *Builder) End() *Builder {
 	return b
 }
 
+// addLeaf adds widget to the current parent and applies the theme without
+// pushing the widget onto the container stack. It is used for composite
+// widgets whose internal child tree should not be exposed to the builder
+// API (e.g. ColorPanel, ColorPicker).
+func (b *Builder) addLeaf(widget Widget) {
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		if _, ok := top.(*Grid); ok {
+			top.Add(widget, b.x, b.y, b.w, b.h)
+		} else {
+			top.Add(widget)
+		}
+	}
+	widget.Apply(b.theme)
+	b.current = widget
+}
+
 // ---- Widgets --------------------------------------------------------------
 
 // BarChart creates a new BarChart widget for displaying multi-series stacked
@@ -129,6 +146,26 @@ func (b *Builder) BarChart(id string) *Builder {
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, b.class, title)
 	b.Add(box)
+	return b
+}
+
+// ColorPanel creates a single-colour editor panel (3-row swatch + RGB,
+// HSL, and Hex inputs). The panel emits EvtChange on every value change.
+// It is a composite widget — its inner children are managed internally,
+// so the builder treats it as a leaf and does not push it onto the stack.
+func (b *Builder) ColorPanel(id, title string) *Builder {
+	cp := NewColorPanel(id, b.class, title)
+	b.addLeaf(cp)
+	return b
+}
+
+// ColorPicker creates a colour picker composite. In [ColorSingle] mode it
+// shows one ColorPanel; in [ColorFgBg] mode it shows two ColorPanels and a
+// PreviewPanel side by side. The picker re-emits a single EvtChange when
+// either child panel changes. It is treated as a leaf by the builder.
+func (b *Builder) ColorPicker(id string, mode ColorPickerMode) *Builder {
+	cp := NewColorPicker(id, b.class, mode)
+	b.addLeaf(cp)
 	return b
 }
 
@@ -319,6 +356,16 @@ func (b *Builder) List(id string, values ...string) *Builder {
 func (b *Builder) Marquee(id string) *Builder {
 	m := NewMarquee(id, b.class)
 	b.Add(m)
+	return b
+}
+
+// PreviewPanel creates a fg/bg preview panel that displays the WCAG
+// contrast ratio between its colours. It is updated by parent widgets
+// (typically a ColorPicker) and emits no events. The builder treats it as
+// a leaf — its inner widgets are managed internally.
+func (b *Builder) PreviewPanel(id string) *Builder {
+	pp := NewPreviewPanel(id, b.class)
+	b.addLeaf(pp)
 	return b
 }
 

@@ -106,6 +106,39 @@ func Clock(id, class string, interval time.Duration, format, prefix string, opti
 	}
 }
 
+// ColorPanel adds a single-colour editor panel (3-row swatch + RGB, HSL, and
+// Hex inputs). The panel emits [EvtChange] on every value change with the
+// panel pointer as payload.
+func ColorPanel(id, class, title string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewColorPanel(id, class, title)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// ColorPicker adds a colour picker composite to the parent. In
+// [widgets.ColorSingle] mode it shows one [ColorPanel]; in
+// [widgets.ColorFgBg] mode it shows two [ColorPanel]s plus a [PreviewPanel]
+// side by side and exposes the WCAG contrast ratio between fg and bg.
+func ColorPicker(id, class string, mode widgets.ColorPickerMode, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewColorPicker(id, class, mode)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Combo adds a traditional combo box to the parent: a free-text [Typeahead]
 // input paired with a suggestion [List]. items is the initial suggestion set.
 //
@@ -350,6 +383,22 @@ func Marquee(id, class string, options ...Option) Option {
 	return func(theme *core.Theme, widget core.Widget) {
 		if container, ok := widget.(core.Container); ok {
 			w := widgets.NewMarquee(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// PreviewPanel adds a fg/bg preview swatch with a WCAG contrast ratio readout
+// to the parent. The panel does not emit events and is normally driven by a
+// surrounding [ColorPicker].
+func PreviewPanel(id, class string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewPreviewPanel(id, class)
 			w.Apply(theme)
 			container.Add(w)
 			for _, option := range options {

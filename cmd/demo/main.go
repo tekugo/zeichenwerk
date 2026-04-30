@@ -70,7 +70,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Color Picker", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
@@ -79,6 +79,7 @@ func createUI(theme *Theme) *UI {
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
+		With(colorPickerDemo).
 		With(comboDemo).
 		With(func(b *Builder) { deckDemo(b, theme) }).
 		With(digits).
@@ -157,7 +158,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 32:
+					case 33:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -179,7 +180,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 33:
+					case 34:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -192,7 +193,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 34:
+					case 35:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -205,7 +206,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 35:
+					case 36:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -213,7 +214,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 36:
+					case 37:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -221,7 +222,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 37:
+					case 38:
 						d := ui.FileChooser("Save As", "Save", "save", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							path := data[0].(string)
@@ -450,6 +451,48 @@ func collapsibleDemo(builder *Builder) {
 				return true
 			})
 		}
+	}
+}
+
+// Color Picker demo — shows both single-colour and fg/bg pickers.
+func colorPickerDemo(builder *Builder) {
+	builder.VFlex("color-picker-demo", Stretch, 1).Padding(1, 2).
+		Static("cp-title", "Color Picker Demo").Padding(0, 0, 1, 0).
+		Static("cp-info", "Edit any of R/G/B, H/S/L, or Hex — the other representations update automatically.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("cp-single-label", "Single colour:").Padding(0, 0, 0, 0).
+		ColorPicker("cp-single", ColorSingle).Padding(1, 0).
+		Static("cp-fgbg-label", "Foreground / background with contrast ratio:").Padding(1, 0, 0, 0).
+		ColorPicker("cp-fgbg", ColorFgBg).Padding(1, 0).
+		Static("cp-status", "").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+
+	if single, ok := Find(container, "cp-single").(*ColorPicker); ok {
+		single.SetForeground("#ff8040")
+		single.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+			if cp, ok := data[0].(*ColorPicker); ok {
+				if label, ok := Find(container, "cp-status").(*Static); ok {
+					label.Set(fmt.Sprintf("single: %s", cp.Foreground()))
+				}
+			}
+			return true
+		})
+	}
+
+	if fgbg, ok := Find(container, "cp-fgbg").(*ColorPicker); ok {
+		fgbg.SetForeground("#ffffff")
+		fgbg.SetBackground("#1a1b26")
+		fgbg.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+			if cp, ok := data[0].(*ColorPicker); ok {
+				if label, ok := Find(container, "cp-status").(*Static); ok {
+					label.Set(fmt.Sprintf("fg=%s  bg=%s  contrast=%.1f",
+						cp.Foreground(), cp.Background(), cp.Contrast()))
+				}
+			}
+			return true
+		})
 	}
 }
 
