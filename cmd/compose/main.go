@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
-	z "github.com/tekugo/zeichenwerk"
-	. "github.com/tekugo/zeichenwerk/compose"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
-	"github.com/tekugo/zeichenwerk/widgets"
+	z "github.com/tekugo/zeichenwerk/v2"
+	. "github.com/tekugo/zeichenwerk/v2/compose"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 type navItem struct{ icon, name, desc string }
@@ -890,7 +890,7 @@ func codeEditorScreen(theme *core.Theme) core.Widget {
 		"package main",
 		"",
 		"import (",
-		`    . "github.com/tekugo/zeichenwerk"`,
+		`    . "github.com/tekugo/zeichenwerk/v2"`,
 		")",
 		"",
 		"func main() {",

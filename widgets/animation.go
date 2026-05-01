@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Animation provides a base implementation for timed animations.

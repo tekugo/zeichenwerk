@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/tekugo/zeichenwerk/core"
+import "github.com/tekugo/zeichenwerk/v2/core"
 
 // TableColumn defines the structure and properties of a table column.
 type TableColumn struct {

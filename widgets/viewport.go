@@ -3,7 +3,7 @@ package widgets
 import (
 	"github.com/gdamore/tcell/v3"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Viewport is a scrollable single-child container. The child widget is given

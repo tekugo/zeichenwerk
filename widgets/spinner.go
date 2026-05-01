@@ -3,7 +3,7 @@ package widgets
 import (
 	"strings"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Spinners provides a collection of predefined spinner animations as strings.

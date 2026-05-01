@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tekugo/zeichenwerk/widgets"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // crlfWriter wraps an io.Writer and translates bare LF (\n) to CRLF (\r\n).

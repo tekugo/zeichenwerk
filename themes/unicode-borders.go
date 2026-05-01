@@ -1,7 +1,7 @@
 package themes
 
 import (
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // AddUnicodeBorders registers the standard set of Unicode border styles in the

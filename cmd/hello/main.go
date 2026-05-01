@@ -1,9 +1,9 @@
 package main
 
 import (
-	. "github.com/tekugo/zeichenwerk/compose"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
+	. "github.com/tekugo/zeichenwerk/v2/compose"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
 )
 
 func main() {

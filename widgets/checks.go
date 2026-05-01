@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/tekugo/zeichenwerk/core"
+import "github.com/tekugo/zeichenwerk/v2/core"
 
 // Compile-time interface type checks
 var (

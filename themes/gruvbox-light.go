@@ -1,7 +1,7 @@
 package themes
 
 import (
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // GruvboxLightTheme returns a Theme styled after the Gruvbox Light colour palette.

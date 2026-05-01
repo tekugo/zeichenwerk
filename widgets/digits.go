@@ -3,7 +3,7 @@ package widgets
 import (
 	"unicode/utf8"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // digits contains the ASCII art patterns for rendering large-format characters.

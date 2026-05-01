@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/values"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/values"
 )
 
 // Create a new TimeSeries for the last hour with 2 minute intervals

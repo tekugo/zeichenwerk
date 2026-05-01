@@ -301,13 +301,13 @@ The generated file starts with:
 package main
 
 import (
-    z "github.com/tekugo/zeichenwerk"
-    // "github.com/tekugo/zeichenwerk/compose"  // uncomment for Compose API
+    z "github.com/tekugo/zeichenwerk/v2"
+    // "github.com/tekugo/zeichenwerk/v2/compose"  // uncomment for Compose API
 )
 ```
 
 The import alias `z` is used only when the dot-import is not preferred. A
-`--dot-import` flag switches to `. "github.com/tekugo/zeichenwerk"`.
+`--dot-import` flag switches to `. "github.com/tekugo/zeichenwerk/v2"`.
 
 ---
 
@@ -357,7 +357,7 @@ current working directory. The file path is shown in the toolbar title.
   },
   "theme": "tokyo",
   "package": "main",
-  "import": "github.com/tekugo/zeichenwerk"
+  "import": "github.com/tekugo/zeichenwerk/v2"
 }
 ```
 

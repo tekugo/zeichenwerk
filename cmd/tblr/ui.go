@@ -5,10 +5,10 @@ import (
 	"regexp"
 
 	"github.com/gdamore/tcell/v3"
-	zw "github.com/tekugo/zeichenwerk"
-	"github.com/tekugo/zeichenwerk/cmd/tblr/format"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/widgets"
+	zw "github.com/tekugo/zeichenwerk/v2"
+	"github.com/tekugo/zeichenwerk/v2/cmd/tblr/format"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // selMode tracks the current selection type.

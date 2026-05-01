@@ -3,7 +3,7 @@ package widgets
 import (
 	"fmt"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Switcher represents a container widget that displays one pane at a time

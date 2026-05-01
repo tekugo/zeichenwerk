@@ -4,7 +4,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // ── Constructor / Hint ────────────────────────────────────────────────────────

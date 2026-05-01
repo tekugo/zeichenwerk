@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Static represents a text display widget that shows static content.

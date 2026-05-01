@@ -3,7 +3,7 @@ package widgets
 import (
 	"testing"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // newTestTiles creates a Tiles with a no-op render function and sets bounds

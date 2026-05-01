@@ -1,6 +1,6 @@
 package core
 
-import "github.com/tekugo/zeichenwerk/renderer"
+import "github.com/tekugo/zeichenwerk/v2/renderer"
 
 // Renderer wraps the primitive drawing API from the renderer package and
 // layers theme-aware operations on top of it: symbolic colour names are

@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tekugo/zeichenwerk/cmd/tblr/format"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
+	"github.com/tekugo/zeichenwerk/v2/cmd/tblr/format"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
 	"golang.org/x/term"
 )
 

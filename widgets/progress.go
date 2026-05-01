@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Progress represents a visual progress indicator widget that displays the completion

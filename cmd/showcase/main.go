@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/tekugo/zeichenwerk"
-	. "github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
-	. "github.com/tekugo/zeichenwerk/widgets"
+	. "github.com/tekugo/zeichenwerk/v2"
+	. "github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
+	. "github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 type navItem struct{ icon, name, desc string }
@@ -829,7 +829,7 @@ func codeEditorScreen(b *Builder) {
 		"package main",
 		"",
 		"import (",
-		`    . "github.com/tekugo/zeichenwerk"`,
+		`    . "github.com/tekugo/zeichenwerk/v2"`,
 		")",
 		"",
 		"func main() {",

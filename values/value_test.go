@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/tekugo/zeichenwerk/widgets"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // captureSetter records calls to Set for use in Bind tests.

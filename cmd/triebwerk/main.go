@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
 )
 
 func main() {

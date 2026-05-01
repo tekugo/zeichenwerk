@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tekugo/zeichenwerk/widgets"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // TableLogItem represents a single entry in the TableLog circular buffer.

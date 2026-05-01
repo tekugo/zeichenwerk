@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
-	"github.com/tekugo/zeichenwerk/cmd/tblr/format"
+	"github.com/tekugo/zeichenwerk/v2/cmd/tblr/format"
 )
 
 // ClipboardWatcher polls the clipboard and calls onChange when new table content
