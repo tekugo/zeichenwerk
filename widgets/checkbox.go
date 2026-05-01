@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Checkbox represents a boolean input widget that can be toggled between

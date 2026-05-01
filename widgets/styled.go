@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Inline style flags for Span.Style.

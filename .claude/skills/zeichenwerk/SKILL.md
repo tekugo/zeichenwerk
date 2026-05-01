@@ -6,7 +6,7 @@ user-invocable: false
 
 # Zeichenwerk — terminal UI library for Go
 
-Module: `github.com/tekugo/zeichenwerk`
+Module: `github.com/tekugo/zeichenwerk/v2`
 
 Sub-packages:
 
@@ -27,9 +27,9 @@ Full widget reference: [widgets.md](widgets.md)
 
 ```go
 import (
-    . "github.com/tekugo/zeichenwerk"
-    "github.com/tekugo/zeichenwerk/core"
-    "github.com/tekugo/zeichenwerk/themes"
+    . "github.com/tekugo/zeichenwerk/v2"
+    "github.com/tekugo/zeichenwerk/v2/core"
+    "github.com/tekugo/zeichenwerk/v2/themes"
 )
 
 ui := NewBuilder(themes.TokyoNight()).
@@ -46,9 +46,9 @@ The Builder offers `HFlex(id, alignment, spacing)` and `VFlex(id, alignment, spa
 
 ```go
 import (
-    "github.com/tekugo/zeichenwerk/core"
-    . "github.com/tekugo/zeichenwerk/compose"
-    "github.com/tekugo/zeichenwerk/themes"
+    "github.com/tekugo/zeichenwerk/v2/core"
+    . "github.com/tekugo/zeichenwerk/v2/compose"
+    "github.com/tekugo/zeichenwerk/v2/themes"
 )
 
 ui := UI(themes.TokyoNight(),
@@ -67,8 +67,8 @@ Both APIs produce identical widget trees. Don't mix them in the same file.
 
 ```go
 import (
-    . "github.com/tekugo/zeichenwerk/core"   // for NewTheme, NewStyle
-    . "github.com/tekugo/zeichenwerk/themes" // for AddUnicodeBorders, AddDefaultStyles
+    . "github.com/tekugo/zeichenwerk/v2/core"   // for NewTheme, NewStyle
+    . "github.com/tekugo/zeichenwerk/v2/themes" // for AddUnicodeBorders, AddDefaultStyles
 )
 
 t := NewTheme()
@@ -285,7 +285,7 @@ Design widget sizes and content lengths defensively.
 ## Finding widgets after build
 
 ```go
-import "github.com/tekugo/zeichenwerk/core"
+import "github.com/tekugo/zeichenwerk/v2/core"
 
 ui := builder.Build()
 

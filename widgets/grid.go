@@ -3,7 +3,7 @@ package widgets
 import (
 	"fmt"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // cell represents a single cell within a grid container that holds a widget

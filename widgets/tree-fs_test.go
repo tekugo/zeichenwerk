@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // makeFSTree builds a temporary directory structure for testing:

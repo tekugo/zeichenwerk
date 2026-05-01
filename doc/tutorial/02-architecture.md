@@ -43,10 +43,10 @@ You'll see this shape over and over:
 
 ```go
 import (
-    . "github.com/tekugo/zeichenwerk"     // NewBuilder, Builder, UI
-    "github.com/tekugo/zeichenwerk/core"  // Stretch, MustFind, Debug, …
-    "github.com/tekugo/zeichenwerk/themes"
-    "github.com/tekugo/zeichenwerk/widgets"
+    . "github.com/tekugo/zeichenwerk/v2"     // NewBuilder, Builder, UI
+    "github.com/tekugo/zeichenwerk/v2/core"  // Stretch, MustFind, Debug, …
+    "github.com/tekugo/zeichenwerk/v2/themes"
+    "github.com/tekugo/zeichenwerk/v2/widgets"
 )
 ```
 

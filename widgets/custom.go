@@ -1,7 +1,7 @@
 package widgets
 
 import (
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Custom component is basically just a stub component, which gets a custom

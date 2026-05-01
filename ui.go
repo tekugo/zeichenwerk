@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/renderer"
-	. "github.com/tekugo/zeichenwerk/widgets"
+	. "github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/renderer"
+	. "github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // UI represents the main TUI application that manages the screen, event

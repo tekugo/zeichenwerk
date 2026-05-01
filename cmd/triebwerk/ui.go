@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk"
-	. "github.com/tekugo/zeichenwerk/core"
-	. "github.com/tekugo/zeichenwerk/widgets"
+	. "github.com/tekugo/zeichenwerk/v2"
+	. "github.com/tekugo/zeichenwerk/v2/core"
+	. "github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // buildUI constructs the full triebwerk widget tree.

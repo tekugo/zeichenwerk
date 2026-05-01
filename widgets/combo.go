@@ -4,7 +4,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Combo is a traditional combo box: a single-line display of the current value

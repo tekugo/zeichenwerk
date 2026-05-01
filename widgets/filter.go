@@ -1,7 +1,7 @@
 package widgets
 
 import (
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // ==== AI ===================================================================

@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Regular expression to parse part:state style expressions.

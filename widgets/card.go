@@ -1,7 +1,7 @@
 package widgets
 
 import (
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Card is a bordered container with a title rendered in the top border line,

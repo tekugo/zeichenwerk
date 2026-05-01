@@ -10,8 +10,8 @@ import (
 	collmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
 
-	c "github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
+	c "github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
 )
 
 func main() {

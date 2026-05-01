@@ -3,7 +3,7 @@ package widgets
 import (
 	"github.com/gdamore/tcell/v3"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Text represents a multi-line text display widget with scrolling and

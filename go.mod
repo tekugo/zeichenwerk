@@ -1,4 +1,4 @@
-module github.com/tekugo/zeichenwerk
+module github.com/tekugo/zeichenwerk/v2
 
 go 1.26.1
 

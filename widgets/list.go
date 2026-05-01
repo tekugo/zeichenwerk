@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // List is a scrollable list widget that displays text items with comprehensive

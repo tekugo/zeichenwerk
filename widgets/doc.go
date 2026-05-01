@@ -15,7 +15,7 @@
 //     widget sub-package would need to re-export, adding ceremony
 //     without reducing coupling.
 //   - The fluent Builder and the composition API rely on dot-imports
-//     (`. "github.com/tekugo/zeichenwerk/widgets"`) so that builder
+//     (`. "github.com/tekugo/zeichenwerk/v2/widgets"`) so that builder
 //     expressions remain terse. A split would force either fragile
 //     aliases or callers that import six sub-packages.
 //   - Discoverability is handled by naming conventions and grouped files

@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // barChartBlocks maps a [0, 8] integer to the Unicode block-fill character

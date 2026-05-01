@@ -30,14 +30,14 @@
 //
 // # Composition API
 //
-// The compose sub-package (github.com/tekugo/zeichenwerk/compose) provides a
+// The compose sub-package (github.com/tekugo/zeichenwerk/v2/compose) provides a
 // functional alternative. Every widget is an Option — a plain function value —
 // that can be nested directly or passed around as data. The theme flows through
 // the tree automatically so no global state is required.
 //
 //	import (
-//	    z  "github.com/tekugo/zeichenwerk"
-//	    .  "github.com/tekugo/zeichenwerk/compose"
+//	    z  "github.com/tekugo/zeichenwerk/v2"
+//	    .  "github.com/tekugo/zeichenwerk/v2/compose"
 //	)
 //
 //	func main() {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/tekugo/zeichenwerk/cmd/tblr/format"
+	"github.com/tekugo/zeichenwerk/v2/cmd/tblr/format"
 )
 
 // ANSIOpts controls ANSI rendering.

@@ -2,8 +2,8 @@ package compose
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/widgets"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // ---- Event Handling -------------------------------------------------------

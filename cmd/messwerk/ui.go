@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	z "github.com/tekugo/zeichenwerk"
-	. "github.com/tekugo/zeichenwerk/compose"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/values"
-	"github.com/tekugo/zeichenwerk/widgets"
+	z "github.com/tekugo/zeichenwerk/v2"
+	. "github.com/tekugo/zeichenwerk/v2/compose"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/values"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 var info = `

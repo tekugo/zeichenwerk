@@ -11,10 +11,10 @@ package main
 import (
 	"unicode/utf8"
 
-	zw "github.com/tekugo/zeichenwerk"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
-	"github.com/tekugo/zeichenwerk/widgets"
+	zw "github.com/tekugo/zeichenwerk/v2"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
+	"github.com/tekugo/zeichenwerk/v2/widgets"
 )
 
 // Status displays "● Label" with the dot coloured by Stat.

@@ -2,7 +2,7 @@ package widgets
 
 import (
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Collapsible is a single-child container with a clickable header that expands

@@ -3,7 +3,7 @@ package widgets
 import (
 	"strings"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Dialog is a single-child container designed for overlay use. It renders a

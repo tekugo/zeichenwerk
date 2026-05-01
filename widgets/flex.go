@@ -1,7 +1,7 @@
 package widgets
 
 import (
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Flex is a container widget that arranges child widgets in a linear layout,

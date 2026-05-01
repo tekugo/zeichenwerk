@@ -3,7 +3,7 @@ package widgets
 import (
 	"testing"
 
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // ── Constructor ───────────────────────────────────────────────────────────────

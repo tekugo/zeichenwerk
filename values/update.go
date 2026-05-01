@@ -1,7 +1,7 @@
 package values
 
 import (
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Update updates the content of the widget identified by id within container.

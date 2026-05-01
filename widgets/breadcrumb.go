@@ -4,7 +4,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
-	. "github.com/tekugo/zeichenwerk/core"
+	. "github.com/tekugo/zeichenwerk/v2/core"
 )
 
 // Breadcrumb renders a single-row path indicator showing an ordered list of

@@ -6,9 +6,9 @@
 package main
 
 import (
-	. "github.com/tekugo/zeichenwerk"
-	"github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/themes"
+	. "github.com/tekugo/zeichenwerk/v2"
+	"github.com/tekugo/zeichenwerk/v2/core"
+	"github.com/tekugo/zeichenwerk/v2/themes"
 )
 
 func main() {

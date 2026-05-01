@@ -75,7 +75,7 @@ know the framework.
 ## Prerequisites
 
 ```bash
-go get github.com/tekugo/zeichenwerk
+go get github.com/tekugo/zeichenwerk/v2
 ```
 
 Go 1.26+ is required. The SQLite tutorial additionally needs `mattn/go-sqlite3`
