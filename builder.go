@@ -331,6 +331,20 @@ func (b *Builder) HRule(style string) *Builder {
 	return b
 }
 
+// Indicator creates a new Indicator status widget. The level drives the
+// glyph colour via the indicator:<level> style variants; the label always
+// renders in the base "indicator" style.
+//
+// Parameters:
+//   - id:    unique identifier for the indicator widget
+//   - level: severity level (Debug, Info, Warning, Error, Fatal)
+//   - label: text drawn after the glyph
+func (b *Builder) Indicator(id string, level Level, label string) *Builder {
+	indicator := NewIndicator(id, b.class, level, label)
+	b.Add(indicator)
+	return b
+}
+
 // Input creates a new input widget for entering text.
 //
 // Parameters:
@@ -542,6 +556,22 @@ func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
 		top.Add(tfs.Tree)
 	}
 	b.current = tfs.Tree
+	return b
+}
+
+// TreeWidgets creates a widget-hierarchy tree rooted at root. Each node is
+// labelled with the widget's Go type and id, e.g. "Flex (#main)". The tree
+// is intended for the Inspector and designer tooling. The TreeWidgets
+// pointer itself is not retained; for advanced use (Refresh, SetRoot)
+// instantiate it directly via NewTreeWidgets.
+func (b *Builder) TreeWidgets(id string, root Widget) *Builder {
+	tw := NewTreeWidgets(id, b.class, root)
+	tw.Apply(b.theme)
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		top.Add(tw.Tree)
+	}
+	b.current = tw.Tree
 	return b
 }
 

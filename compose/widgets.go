@@ -346,6 +346,22 @@ func HRule(class, style string, options ...Option) Option {
 	}
 }
 
+// Indicator adds a status Indicator widget to the parent. The level drives
+// the glyph colour via the indicator:<level> style variants; the label
+// always renders in the base "indicator" style.
+func Indicator(id, class string, level core.Level, label string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewIndicator(id, class, level, label)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Input adds a single-line text input widget to the parent. params is passed
 // directly to the underlying constructor; the first element is typically used
 // as placeholder text.

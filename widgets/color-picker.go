@@ -45,22 +45,25 @@ func NewColorPicker(id, class string, mode ColorPickerMode) *ColorPicker {
 	return cp
 }
 
-// build wires the inner panels for the current mode.
+// build wires the inner panels for the current mode. The outer Flex's class
+// is propagated to every inner panel so that class-scoped theme variants
+// (e.g. "colorpanel.dialog") apply to the embedded widgets too.
 func (cp *ColorPicker) build() {
 	id := cp.Flex.ID()
+	class := cp.Flex.Class()
 
-	cp.fg = NewColorPanel(id+"-fg", "", "Foreground")
+	cp.fg = NewColorPanel(id+"-fg", class, "Foreground")
 	cp.Flex.Add(cp.fg)
 	cp.fg.On(EvtChange, cp.onPanelChange)
 
 	if cp.mode == ColorFgBg {
-		cp.bg = NewColorPanel(id+"-bg", "", "Background")
+		cp.bg = NewColorPanel(id+"-bg", class, "Background")
 		// Sensible default contrast: black on white.
 		cp.bg.SetRGB(RGB{255, 255, 255})
 		cp.Flex.Add(cp.bg)
 		cp.bg.On(EvtChange, cp.onPanelChange)
 
-		cp.preview = NewPreviewPanel(id+"-preview", "")
+		cp.preview = NewPreviewPanel(id+"-preview", class)
 		cp.Flex.Add(cp.preview)
 	}
 }

@@ -70,7 +70,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Color Picker", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Color Picker", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Indicator", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
@@ -88,6 +88,7 @@ func createUI(theme *Theme) *UI {
 		With(form).
 		With(grid).
 		With(heatmapDemo).
+		With(indicatorDemo).
 		With(marqueeDemo).
 		With(progress).
 		With(scanner).
@@ -158,7 +159,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 33:
+					case 34:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -180,7 +181,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 34:
+					case 35:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -193,7 +194,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 35:
+					case 36:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -206,7 +207,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 36:
+					case 37:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -214,7 +215,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 37:
+					case 38:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -222,7 +223,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 38:
+					case 39:
 						d := ui.FileChooser("Save As", "Save", "save", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							path := data[0].(string)
@@ -702,6 +703,38 @@ func grid(builder *Builder) {
 		Cell(0, 1, 1, 3).Static("", "Spans 3 rows").
 		Cell(2, 2, 2, 2).Static("", "2 x 2").
 		End()
+}
+
+// Indicator demo
+func indicatorDemo(builder *Builder) {
+	builder.VFlex("indicator-demo", Stretch, 1).Padding(1, 2).
+		Static("indicator-title", "Indicator Widget Demo").Padding(0, 0, 1, 0).
+		Static("indicator-desc", "Status glyph + label. The glyph colour follows the indicator:<level> state selector.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Indicator("ind-debug", Debug, "Debug — verbose diagnostics").
+		Indicator("ind-info", Info, "Info — connection established").
+		Indicator("ind-success", Success, "Success — build completed").
+		Indicator("ind-warning", Warning, "Warning — disk usage at 85%").
+		Indicator("ind-error", Error, "Error — request timed out").
+		Indicator("ind-fatal", Fatal, "Fatal — process aborted").
+		Spacer().Hint(0, 1).
+		HFlex("indicator-controls", Start, 2).
+		Static("ind-cycle-label", "Cycle target:").
+		Button("ind-cycle", "Cycle level").
+		End().
+		Static("indicator-status", "Click 'Cycle level' to step the first indicator through every level.").Padding(1, 0, 0, 0).
+		End()
+
+	pane := builder.Find("indicator-demo").(Container)
+	target := Find(pane, "ind-debug").(*Indicator)
+	cycle := []Level{Debug, Info, Success, Warning, Error, Fatal}
+	idx := 0
+	Find(pane, "ind-cycle").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		idx = (idx + 1) % len(cycle)
+		target.SetLevel(cycle[idx])
+		target.SetLabel(fmt.Sprintf("%s — set via SetLevel", cycle[idx]))
+		return true
+	})
 }
 
 // Progress demo
