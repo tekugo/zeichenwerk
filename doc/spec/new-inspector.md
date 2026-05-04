@@ -1,16 +1,17 @@
 # Inspector
 
-A unified developer console for any running `*UI`: widget hierarchy explorer,
-style editor (widget-local **and** theme-wide), log viewer, event-handler map,
-and an interactive widget creator that doubles as a UI designer with Go code
-generation. Opens as a popup via `Ctrl+D` over a live application; can also be
-launched stand-alone in *empty-canvas* mode (`cmd/inspector`) to design a fresh
-UI from scratch.
+A unified developer console for a running `*UI`. Five tabs over a live widget
+tree: **Widgets** (the explorer + designer), **Styles** (the context-driven
+style editor), **Events** (handler map with function-name introspection),
+**Theme** (the theme-style picker), **Log** (the in-memory log table).
 
-The new Inspector replaces the existing minimal `Inspector` in `inspector.go`.
-The current implementation only offers the Widgets and Debug Log tabs and is
-read-only; the new one keeps that surface as a drop-in starting point and
-extends it with editing, code generation, and event-handler introspection.
+The Inspector mutates the *live* widget tree directly. There is no separate
+`Document` or `DesignerNode` model — every change touches the actual `*UI`
+the Inspector is attached to. Code generation walks the live tree and asks
+each widget for its configurable items via the new `Configurable` interface
+described in §"Configurable model".
+
+The new Inspector replaces the minimal one in `inspector.go`.
 
 ---
 
@@ -22,23 +23,22 @@ extends it with editing, code generation, and event-handler introspection.
 3. **Read** the in-memory `TableLog` with filtering by level/source.
 4. **Discover** which widget handles which event, and — where the runtime
    permits — show the Go function name behind each `Handler`.
-5. **Build** new widgets into the tree (or into a blank document) and generate
-   compilable Go code using the Builder API and the Compose API.
+5. **Build** new widgets into the tree, edit their parameters, and generate
+   compilable Go code (Builder API or Compose API) from the live tree.
 
 The Inspector is a *tool*, not a runtime concern of the application under
-inspection. It must not mutate the application unless the user explicitly
-performs an editing action.
+inspection. Mutations only happen in response to explicit user actions.
 
 ---
 
 ## Visual layout
 
 The Inspector is a `Box` with a double border, hosting a vertical `Flex` with
-a `Tabs` row on top and a `Switcher` below. Each tab swaps the content pane.
+a `Tabs` row at the top and a `Switcher` for the five panes underneath.
 
 ```
 ┌─ Inspector ──────────────────────────────────────────────────────────────────┐
-│ [ Widgets ] [ Styles ] [ Events ] [ Log ] [ Designer ]      Mode: ATTACHED   │
+│ [ Widgets ] [ Styles ] [ Events ] [ Theme ] [ Log ]      Mode: ATTACHED      │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │  …tab content…                                                               │
 │                                                                              │
@@ -49,9 +49,122 @@ The mode label at the top right is one of:
 
 | Mode | Meaning |
 |------|---------|
-| `ATTACHED` | Inspecting the host application (Ctrl+D popup). Edits write back to the host. |
-| `DESIGN`   | Editing a stand-alone document (`cmd/inspector`). Edits build a virtual tree. |
-| `READONLY` | Inspecting a snapshot (e.g. `-dump`-like JSON file). No edits possible. |
+| `ATTACHED` | Inspecting a live `*UI` (Ctrl+D popup). Edits write back. |
+| `READONLY` | Inspecting a snapshot or detached tree. No edits possible. |
+
+The `DESIGN` mode from earlier drafts is gone: a stand-alone designer with no
+host UI just attaches to a fresh `*UI` whose root is an empty `Flex`, so it
+falls into the ATTACHED case.
+
+---
+
+## Configurable model
+
+Every widget that wants to be editable in the Inspector implements
+`Configurable`. This single interface drives the property editor *and* code
+generation, so the two cannot drift apart.
+
+```go
+// PropertyKind describes the editor type used for a property.
+type PropertyKind int
+
+const (
+    PropString PropertyKind = iota
+    PropBool
+    PropInt
+    PropFloat
+    PropEnum     // value comes from Property.Choices
+    PropInsets   // 1–4-cell tuple; Padding / Margin
+    PropBorder   // theme border name (e.g. "thin", "round")
+    PropColor    // theme color reference ("$blue") or hex ("#7aa2f7")
+    PropFont
+    PropID       // widget id; validated against the live tree for uniqueness
+)
+
+// Property describes one editable field on a widget.
+type Property struct {
+    Name        string             // identifier; lower-snake-case
+    Label       string             // human-readable; falls back to Name
+    Kind        PropertyKind
+    Get         func() any         // current value
+    Set         func(v any) error  // validate + apply; returns error on bad input
+    Choices     []string           // PropEnum: ordered key list
+    ChoiceNames []string           // PropEnum: optional pretty labels parallel to Choices
+    Constructor bool               // true: goes in the constructor argument list
+    Builder     string             // Builder method name when Constructor==false (default = title-case Name)
+    Compose     string             // Compose option name; same default rule
+    Help        string             // tooltip / brief docstring
+}
+
+// Configurable is the optional interface a widget implements to expose its
+// editable properties. The order of the slice is the order shown in the
+// editor and the order arguments are emitted in the Constructor argument
+// list (for Constructor==true entries).
+type Configurable interface {
+    Properties() []Property
+}
+```
+
+### Constructor vs. Builder split
+
+Each widget kind has a fixed constructor signature, e.g.
+`NewBox(id, class, title string)`. Properties with `Constructor: true` map to
+those positional args, in slice order. Everything else is emitted as a
+chained method call on the Builder (or as an `Option` for Compose).
+
+Example for `Box`:
+
+```go
+func (b *Box) Properties() []Property {
+    return []Property{
+        {Name: "id",    Kind: PropID,     Constructor: true, /* Get/Set */},
+        {Name: "class", Kind: PropString, Constructor: true},
+        {Name: "title", Kind: PropString, Constructor: true,
+            Get: func() any { return b.Title },
+            Set: func(v any) error { b.Title = v.(string); Redraw(b); return nil }},
+        {Name: "border", Kind: PropBorder,
+            Builder: "Border", Compose: "Border",
+            Get: func() any { return b.Style().Border() },
+            Set: func(v any) error { /* update style.border */ }},
+        {Name: "padding", Kind: PropInsets,
+            Builder: "Padding", Compose: "Padding",
+            Get: func() any { return insetsFromStyle(b.Style()) },
+            Set: func(v any) error { /* update style padding */ }},
+        // …margin, font, etc.
+    }
+}
+```
+
+### Default property descriptors on `Component`
+
+`Component` already owns id, class, hint, padding, margin, font, foreground,
+background, border, and flags. These get a default `Properties()`
+implementation on `Component` itself:
+
+```go
+func (c *Component) Properties() []Property { … }
+```
+
+Each concrete widget *appends* kind-specific properties:
+
+```go
+func (b *Box) Properties() []Property {
+    return append(b.Component.Properties(), Property{Name: "title", …})
+}
+```
+
+This way every widget that embeds `Component` (which is all of them) is
+trivially `Configurable`, even before per-widget refinement.
+
+### Widgets that don't implement `Configurable`
+
+`Configurable` is technically optional. Widgets that don't return useful
+properties (custom user widgets, widgets with non-serialisable state like
+`Custom` with a render closure) are shown in the tree as read-only:
+
+- The properties form shows the inherited `Component` fields only.
+- Code generation emits the constructor with placeholder arguments and a
+  `// TODO: <reason>` comment — no chained methods.
 
 ---
 
@@ -59,355 +172,362 @@ The mode label at the top right is one of:
 
 ### 1. Widgets tab
 
-The hierarchy explorer. Three columns laid out by a horizontal `Flex`:
+The hierarchy explorer and the designer surface, merged into one tab.
 
 ```
 ┌─ Widgets ──────────────────────────────────────────────────────────────────┐
-│ ui > flex#root > grid#body > list#nav                                      │  ← breadcrumb
-├──────────────────┬─────────────────────────┬───────────────────────────────┤
-│  Children        │  Styles (selectors)     │  Information                  │
-│  ─────────       │  ─────────              │  Type      List               │
-│  ▶ list#nav      │  (default)              │  ID        nav                │
-│    grid          │  list:focused           │  Class                        │
-│    static#title  │  list/highlight         │  Parent    grid#body          │
-│                  │  list/scrollbar         │  Bounds    x=4 y=2 w=28 h=20  │
-│                  │                         │  Content   x=5 y=3 w=26 h=18  │
-│                  │                         │  Hint      w=28 h=-1          │
-│                  │                         │  State     :focused           │
-│                  │                         │  Flags     focusable, focused │
-│                  │                         │  Summary   8 items, idx=2     │
-│                  │  [+ Style]              │  [Edit Style]   [+ Child]     │
-└──────────────────┴─────────────────────────┴───────────────────────────────┘
+│ ui > flex#root > grid#body > list#nav                                      │
+│ [+Child] [+Sibling] [↑] [↓] [Indent] [Outdent] [Cut] [Copy] [Paste]        │
+│ [Delete]                                          [Edit Style]  [Generate ▾]│
+├──────────────────┬─────────────────────────────────────────────────────────┤
+│  Tree            │  Properties — List "nav"                                │
+│  ▼ flex root     │  ──────                                                 │
+│    ▼ flex header │  ID         [nav                  ]                     │
+│      static …    │  Class      [                     ]                     │
+│      button quit │  Hint W     [28                   ]                     │
+│    ▼ grid body   │  Hint H     [-1                   ]                     │
+│      ▶ list nav  │  Padding    [0 1                  ]                     │
+│      viewport …  │  Border     [round              ▼]                      │
+│  ─────           │  ──── Styles (widget-local) ──────                       │
+│  Info            │  (default)                                              │
+│  Type   List     │  list:focused                                           │
+│  Bounds 4,2 28,18│  list/highlight                                         │
+│  State  :focused │  list/scrollbar                                         │
+│  Flags  focused  │  [+ Style]            (click a row to edit in Styles)   │
+└──────────────────┴─────────────────────────────────────────────────────────┘
 ```
 
-#### Children list (left)
+#### Tree panel (left)
 
-A `List` showing direct children of the *current container* by ID
-(`type#id` for unlabelled widgets, just `id` otherwise). Empty IDs are
-displayed as `<type@addr>` so every row is unique. A leading `▶` marks
-container children — pressing `Enter` (or double-click) descends into them.
-`Backspace` ascends to the parent. The row reflects flag state via styling:
-focused widgets are bold; hidden widgets are dim.
+A `Tree` widget. Each `TreeNode` carries the `Widget` itself as opaque data;
+expansion mirrors the parent/child structure. The label is `kind#id` (or
+`kind` for empty IDs, with a synthesized label like `kind@N` shown in
+parentheses).
 
-`<` / `>` in the list moves the highlight up / down; `j` / `k` likewise.
+Below the tree, a small "Info" block summarises the highlighted widget's
+type, bounds, state, and flags — the same info as in the current
+`widgetDetails` helper (`inspector.go:198-229`), trimmed to fit.
 
-#### Styles list (centre)
+#### Properties panel (right)
 
-The selectors registered on the *currently selected widget* (via the
-`stylesProvider` interface — see §Required-additions). `(default)` stands
-for the empty selector. Selecting a row populates the Information panel with
-that style's resolved values and enables the `[Edit Style]` button.
+A `FormGroup` whose fields are generated dynamically from the selected
+widget's `Properties()`. Each `PropertyKind` maps to a fixed editor:
 
-#### Information panel (right)
+| Kind        | Editor widget          |
+|-------------|------------------------|
+| `PropString`, `PropID`, `PropFont` | `Input` |
+| `PropInt`, `PropFloat`             | `Input` (numeric validation in `Set`) |
+| `PropBool`                         | `Checkbox` |
+| `PropEnum`                         | `Select` (Choices/ChoiceNames) |
+| `PropInsets`                       | `Input` accepting `1–4` cells (`"0"`, `"0 1"`, `"0 1 0 1"`) |
+| `PropBorder`                       | `Select` populated from `theme.Borders()` |
+| `PropColor`                        | `ColorPicker` (single mode) |
 
-A multi-line `Text` widget showing widget metadata when a child is highlighted,
-or style metadata when a style is highlighted. Format mirrors the existing
-`widgetDetails` helper (see `inspector.go:198-229`) and adds:
+On every keystroke the field calls `prop.Set(value)`. If `Set` returns an
+error, the editor shows an inline red `Static` underneath. Otherwise it
+calls `Relayout(widget)` so the change is visible immediately.
 
-- **Type** with its package prefix stripped.
-- **State** as a CSS pseudo-class string (`:focused`, `:hovered`, …).
-- **Summary** for widgets implementing the existing `Summarizer` interface.
-- **Style chain** (resolved from theme + widget-local overrides).
+Below the kind-specific fields, a "Styles (widget-local)" list shows the
+selectors registered on this widget (via the existing `StylesProvider`).
+Clicking one switches to the **Styles** tab with that selector pre-loaded.
 
 #### Toolbar
 
-Below the panels:
-
 | Button | Hotkey | Action |
 |--------|--------|--------|
-| `[+ Child]` | `a` | Open widget picker (containers only) — see §Designer flow |
-| `[+ Sibling]` | `A` | Add sibling after current widget |
-| `[Edit Style]` | `e` | Switch to **Styles** tab focused on this widget+selector |
-| `[Delete]` | `d` | Remove widget from tree (ATTACHED + DESIGN modes) |
-| `[Locate]` | `l` | Briefly flash the widget on screen (ATTACHED only) |
-| `[Generate]` | `Ctrl+G` | Switch to **Designer** tab with code panel populated |
+| `[+ Child]` | `a` | Open widget picker; new widget appended via `container.Add` |
+| `[+ Sibling]` | `A` | Same picker, inserted via `container.Insert(idx+1, w)` |
+| `[↑]` / `[↓]` | `K`/`J` | Reorder among siblings (`Remove` + `Insert`) |
+| `[Indent]` / `[Outdent]` | `>`/`<` | Move into previous sibling / out to grandparent |
+| `[Cut]` / `[Copy]` / `[Paste]` | `x`/`c`/`v` | Subtree clipboard (in-process) |
+| `[Delete]` | `d` / `Delete` | `parent.Remove(widget)` |
+| `[Edit Style]` | `e` | Switch to Styles tab on the widget's default selector |
+| `[Generate ▾]` | `Ctrl+G` | Drop-down: Builder / Compose / Both — see §"Code generation" |
 
-The `[Delete]`, `[+ Child]`, `[+ Sibling]` buttons are hidden in `READONLY`
-mode. In `ATTACHED` mode they are present but show a confirmation dialog
-warning the user that the host application is being mutated.
+#### Add-child flow
+
+`[+ Child]` opens a modal `Dialog` listing all widget kinds known to the
+inspector's *kind registry* (see §"Kind registry" below). Selecting a kind:
+
+1. Calls the registry's `New(theme)` factory to build a fresh widget with
+   default values for all `Constructor: true` properties.
+2. Appends it to the selected container via `container.Add(w)`.
+3. Re-runs `Layout()` on the parent.
+4. Selects the new widget in the tree and focuses the ID field in the
+   properties panel.
+
+If the selected node is not a `Container`, the dialog warns and offers
+"insert as sibling" instead.
 
 ### 2. Styles tab
 
-A two-pane layout that hosts the existing **`StyleEditor`** widget
-(see `doc/spec/style-editor.md`) on the right and a *scope selector* on the
-left:
+The pure editor. It does **not** have a primary data source of its own;
+instead it shows whichever style was last selected — either a widget-local
+selector picked from the Widgets tab or a theme selector picked from the
+Theme tab.
 
 ```
-┌─ Styles ───────────────────────────────────────────────────────────────────┐
-│ Scope:                       │  ┌─ Selectors ──┐  ┌─ Properties ──────┐  │
-│  ( ) Theme                   │  │ Filter [   ] │  │ Selector list:foc │  │
-│  (•) Widget overrides        │  │ list         │  │ Fg     [$fg0    ] │  │
-│      (list#nav)              │  │ list:focused │  │ Bg     [$bg2    ] │  │
-│  ( ) Type-wide               │  │ list/highl…  │  │ Border [round  ▼] │  │
-│      (List)                  │  │ list/scroll… │  │ Font   [bold    ] │  │
-│                              │  └──────────────┘  └───────────────────┘  │
-│  [Reset]  [Save Theme As…]   │  ┌─ Preview ────────────────────────────┐  │
-│                              │  │  Sample                              │  │
-│                              │  └──────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─ Styles — list:focused (widget-local on list#nav) ────────────────────────┐
+│ Scope:  ● Widget overrides    ○ Theme                                     │
+│                                                                           │
+│  Selector  list:focused                                                   │
+│  Fg        [$fg0                ]                                          │
+│  Bg        [$blue               ]                                          │
+│  Border    [round            ▼]                                            │
+│  Font      [bold                ]                                          │
+│  Margin    [0                   ]                                          │
+│  Padding   [0 2                 ]                                          │
+│  Cursor    [—                   ]                                          │
+│                                                                           │
+│  ┌─ Preview ────────────────────────┐                                     │
+│  │   Sample                          │                                     │
+│  └───────────────────────────────────┘                                     │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The scope radio group controls which `*Theme` the embedded `StyleEditor`
-reads/writes:
+The fields and behavior are exactly those of the `StyleEditor` in
+`doc/spec/style-editor.md`; the Inspector embeds it. The scope radio swaps
+the editor's target between:
 
 | Scope | Source | Write target |
 |-------|--------|--------------|
-| **Theme** | `ui.Theme()` | The live theme (every widget that resolves the selector picks the change up). |
-| **Widget overrides** | `widget.Styles()` | The selected widget's own style map (stored on `Component.styles`). |
-| **Type-wide** | A synthetic `*Theme` filtered to selectors prefixed `type` | Live theme with selector pinned to the type name. |
+| **Widget overrides** | `widget.Style(selector)` | `widget.SetStyle(selector, *Style)` |
+| **Theme** | `ui.Theme().Style(selector)` | `theme.SetStyle(selector, *Style)` |
 
-`[Save Theme As…]` opens a `FileChooser` and writes the live theme back to a
-Go source file using the existing theme-codegen helper (`themes/codegen.go`).
-`[Reset]` reloads the theme from disk (clears unsaved edits) — guarded by a
-confirmation dialog.
+If no widget is currently selected, the **Widget overrides** option is
+disabled. The header line above the scope row always shows what's being
+edited (selector + scope summary).
+
+`[Save Theme As…]` (visible only in **Theme** scope) opens a `FileChooser`
+and writes the live theme back as a Go source file using the existing
+theme-codegen helper (`themes/codegen.go`). `[Reset]` reloads the theme from
+disk after a confirmation dialog.
 
 ### 3. Events tab
 
-A 2-column layout: a `Table` of `(widget, event, handler)` triplets on the
-left, and a "Source" panel on the right with the function's qualified name
-and — when a `.go` source file is reachable — a snippet around the line.
+A `Table` of `(widget, event, handler)` triplets, plus a side panel showing
+the resolved Go function name and (when reachable) a 5-line source snippet.
+Unchanged from the previous draft — see §"Events" in the data sources
+description below.
+
+### 4. Theme tab
+
+A picker over the active `*Theme`. Two columns:
 
 ```
-┌─ Events ───────────────────────────────────────────────────────────────────┐
-│ Filter: [ ]   Event: [all ▼]   Show only: [ ] Focusables                  │
-├──────────────────────────────────┬─────────────────────────────────────────┤
-│ Widget          Event    Handler │  Function                               │
-│ list#nav        select   listSel │  cmd/demo/main.go                       │
-│ list#nav        activate (lambda)│  func main.listSelected(idx int) bool   │
-│ button#quit     activate quitFn  │   23 │                                  │
-│ input#filter    change   onFlt   │   24 │ func listSelected(idx int) bool {│
-│ ui              key      (anon)  │   25 │     ui.Log(ui, Debug, "sel %d",  │
-│ …                                │   26 │         idx)                    │
-│                                  │   27 │     return false                │
-│                                  │   28 │ }                               │
-└──────────────────────────────────┴─────────────────────────────────────────┘
+┌─ Theme — Tokyo Night ─────────────────────────────────────────────────────┐
+│  Filter: [             ]                                                  │
+│ ┌─ Selectors ─────────────┐ ┌─ Computed ────────────────────────────────┐│
+│ │ ""                      │ │ Resolved style for: list:focused          ││
+│ │ box                     │ │ Foreground   $fg0          (#ffffff)      ││
+│ │ box.elevated            │ │ Background   $blue         (#7aa2f7)      ││
+│ │ button                  │ │ Border       round                        ││
+│ │ button:focused          │ │ Font         bold                         ││
+│ │ button:hovered          │ │ Margin       0                            ││
+│ │ list                    │ │ Padding      0 2                          ││
+│ │ ▶ list:focused          │ │                                           ││
+│ │ list/highlight          │ │ [Edit in Styles]                          ││
+│ │ …                       │ └───────────────────────────────────────────┘│
+│ └─────────────────────────┘                                              │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Data sources
+- **Selectors list** (left) — every selector registered on the active
+  theme, sorted lexicographically, filterable.
+- **Computed panel** (right) — the *resolved* style for the highlighted
+  selector, including inherited values shown in muted colour and the
+  hex-resolved values next to colour variables.
+- `[Edit in Styles]` — switches to the Styles tab in **Theme** scope with
+  this selector loaded.
 
-For every widget reachable from `ui` via `core.Traverse`, the inspector
-reads:
+The Theme tab is read-only by itself; all editing happens in the Styles
+tab. This avoids duplicating the editor surface.
 
-1. The widget's `Handlers() map[Event][]Handler` — see §Required-additions.
-2. For each handler, `runtime.FuncForPC(reflect.ValueOf(h).Pointer())`
-   returns a `*runtime.Func` whose `Name()` produces e.g.
-   `github.com/me/pkg.listSelected.func1` and whose `FileLine(pc)` returns
-   `(file, line)`.
+### 5. Log tab
 
-The `Handler` column shows a short label:
-
-| Source | Display |
-|--------|---------|
-| Top-level function (`pkg.Foo`) | `Foo` |
-| Method value (`pkg.(*T).M`) | `T.M` |
-| Closure (`...func1`) | `(lambda)` (or, if the closure has a parent
-function name, `Foo→λ`) |
-| Compiler-synthesised `OnSelect` wrappers | unwrap one level so the user-
-supplied function shows through |
-
-The full qualified name is shown in the right panel along with the source
-location. If the file is reachable on disk (typical during development —
-`runtime.GOROOT()` and the module's source tree exist), 5 lines around
-`FileLine` are read and shown in a read-only `Editor`-style snippet with line
-numbers. If the function is unreachable (stripped binary, embedded source not
-present), the snippet area says `<source not available>`.
-
-#### Filters
-
-- **Filter** — substring match against any column.
-- **Event** — drop-down with all known event constants plus `all`.
-- **Focusables only** — limits to widgets with `FlagFocusable`.
-
-#### Unwrapping typed wrappers
-
-`widgets/event-helper.go` defines wrappers like `OnSelect(w, fn)` that store
-an internal closure on the widget. The closure's name resolves to e.g.
-`zeichenwerk/widgets.OnSelect.func1`, which is unhelpful. The Inspector
-detects names matching the regex
-`^.*/widgets\.On[A-Z][a-zA-Z]+\.func\d+$`
-and tries to retrieve the wrapped user function by reading the closure's
-captured pointer via `reflect`. If that fails, it falls back to displaying
-the wrapper's own name and tags it `(typed wrapper)`.
-
-### 4. Log tab
-
-The existing log table, lifted directly from `inspector.go:64-72`. The body
-is a `Table` widget bound to `ui.tableLog` (`*TableLog`). Additions:
-
-- **Level filter** (`Combo`): `all`, `error`, `warn`, `info`, `debug`.
-- **Source filter** (`Input` typeahead): substring filter on the `Source`
-  column.
-- **Auto-follow** (`Checkbox`): when checked (default), the table jumps to the
-  latest entry on every new log record. Unchecked → the table preserves the
-  user's scroll position.
-- **Clear** button — empties the circular buffer (calls a new
-  `(*TableLog).Reset()` method, see §Required-additions).
-- **Export** button — writes the buffer as JSON or NDJSON via `FileChooser`.
-
-### 5. Designer tab
-
-The interactive widget creator. The full data model and code generator are
-specified in `doc/spec/designer.md`; this tab embeds that designer almost
-verbatim, with one difference:
-
-- In **ATTACHED** mode, the designer's *root* is the same `*UI` the Inspector
-  is attached to (a live tree), and adding widgets actually mutates the
-  application. The toolbar's `Save` / `Load` buttons are replaced with
-  `[Apply]` / `[Revert]` that toggle a virtual overlay.
-- In **DESIGN** mode (stand-alone `cmd/inspector`), the designer behaves
-  exactly as in `doc/spec/designer.md`: a `*Document` JSON file is the
-  source of truth.
-
-```
-┌─ Designer ─────────────────────────────────────────────────────────────────┐
-│ [+Child] [+Sibling] [↑] [↓] [Indent] [Outdent] [Cut] [Copy] [Paste]       │
-│ [Delete]                            [Preview ▾] [Code ▾] [Save] [Apply]   │
-├──────────────┬─────────────────────────────┬─────────────────────────────┤
-│  Tree        │  Properties                  │  Preview │ Code              │
-│  ▼ flex root │  Kind     Flex               │   …live  │ func buildUI() { │
-│    flex …    │  ID       [root          ]  │   widget │   NewBuilder(…)   │
-│    grid body │  Class    [              ]  │   render │     .Flex("root", │
-│      list nav│  Hint W   [-1            ]  │          │       false,…)    │
-│      view m  │  Hint H   [-1            ]  │          │ }                 │
-│      static c│  Padding  [0 0 0 0       ]  │          │                  │
-│              │  ─── Flex ──────────────────│          │                  │
-│              │  Horizontal [ ]              │          │                  │
-│              │  Alignment  [stretch     ▼] │          │                  │
-│              │  Spacing    [0           ]  │          │                  │
-└──────────────┴─────────────────────────────┴─────────────────────────────┘
-```
-
-Design-mode internals (DesignerNode, palette, codegen, validation) are
-**reused** from `doc/spec/designer.md`; the Inspector's tab is a thin
-wrapper that wires the document to the same codegen pass.
-
-#### Code panel
-
-A read-only `Text` widget with a `Tabs` selector for `Builder | Compose`.
-The generated code updates whenever the tree changes (debounced 200 ms).
-Buttons:
-
-- `[Copy]` — writes the visible code to the OS clipboard via
-  `tcell/v3` clipboard support.
-- `[Save…]` — writes the code to a `.go` file via `FileChooser`.
-
-#### Apply (ATTACHED mode)
-
-`[Apply]` rebuilds the tree from the document, calls `ui.Layout()` and
-`ui.Refresh()`, and reports diagnostics to the Log tab. If the build returns
-an error, the Apply is aborted and the host UI remains untouched.
-
-`[Revert]` discards the in-memory document and reloads it from the live
-tree.
+Identical to the previous draft: the `TableLog` rendered as a `Table`,
+filtered by level and source, with auto-follow, clear, and export actions.
 
 ---
 
-## Required additions to the library
+## Mutating the live tree
 
-The Inspector intentionally introduces only small, generic accessors, so the
-core library remains free of inspector-specific concerns.
+Because the Inspector edits the host UI directly, the library needs a few
+small additions so structural changes are possible without reaching into
+unexported fields.
 
-### 1. `Widget.Handlers()`
-
-Add a method on `Component`:
+### `Container.Remove`
 
 ```go
-// Handlers returns a snapshot of the registered event handlers indexed by
-// event. The returned map is a copy; mutating it does not affect the widget.
-// Used by the Inspector and by the dump tooling.
-func (c *Component) Handlers() map[Event][]Handler
+// Remove unlinks child from this container. Returns ErrNotFound if child is
+// not currently a direct child. Implementations call SetParent(nil) on the
+// removed child and trigger their own Layout/Refresh.
+Remove(child Widget) error
 ```
 
-Slice values are copies of the internal slices. The method is exposed via a
-new optional interface `HandlerProvider` so the Inspector can probe it
-without forcing a hard dependency:
+### `Container.Insert`
 
 ```go
-type HandlerProvider interface {
-    Handlers() map[Event][]Handler
+// Insert puts child at index among the existing children. Index 0 prepends;
+// index >= len(Children()) appends. Implementations call SetParent and
+// trigger Layout/Refresh.
+Insert(index int, child Widget) error
+```
+
+Both methods get default implementations on every container kind. Where the
+container has structural constraints (e.g. `Box` accepts a single child,
+`Card` accepts at most two), `Insert` returns `ErrFull` instead of pushing
+beyond capacity.
+
+### Property-set side effects
+
+Every `Property.Set` is responsible for:
+
+1. Validating the input and returning an error on failure.
+2. Applying the change (e.g. `b.Title = v.(string)`).
+3. Calling `Redraw(widget)` for visual-only changes or `Relayout(widget)`
+   for changes that affect size (padding, margin, hint, etc.).
+
+The inspector itself does not need to know which kind of change happened —
+it just calls `Set` and trusts the widget to refresh.
+
+---
+
+## Kind registry
+
+A small registry that maps widget kind names → (default factory, property
+template). Used by the Add-child dialog and by code generation to find the
+constructor signature.
+
+```go
+type KindEntry struct {
+    Name    string                          // "Box", "Static"
+    Group   string                          // "container", "leaf", "input", "display", "animated"
+    New     func(theme *Theme) Widget       // fresh instance with sensible defaults
+    Help    string                          // one-line description for the picker
+}
+
+// Registered kinds. Populated in inspector/kinds.go via init() functions
+// that import each widget package.
+var Kinds = map[string]KindEntry{}
+
+func RegisterKind(e KindEntry) { … }
+```
+
+Each widget contributes its own entry in an `init()` block:
+
+```go
+func init() {
+    inspector.RegisterKind(inspector.KindEntry{
+        Name:  "Box",
+        Group: "container",
+        New:   func(t *Theme) Widget { return NewBox("", "", "") },
+        Help:  "Bordered container with title; holds one child",
+    })
 }
 ```
 
-### 2. `Widget.Styles()`
+---
 
-Promote the ad-hoc `stylesProvider` interface in `inspector.go:107-110` to
-a named interface in the library:
+## Code generation
+
+Walks the live widget tree depth-first. For each widget:
+
+1. Look up the kind entry in `Kinds`.
+2. Call `widget.Properties()` (if `Configurable`); otherwise produce a
+   `// TODO` placeholder.
+3. Split the slice by `Constructor: true` (positional args) vs. the rest
+   (chained method calls / Compose options).
+4. Emit:
+   - **Builder** — `Kind(arg1, arg2, …).Method1(…).Method2(…).`
+     Containers recurse into children, then close with `.End()`.
+   - **Compose** — `compose.Kind(arg1, arg2, …, Method1(…), Method2(…),
+     children…)`.
+
+### Argument formatting
+
+Each `PropertyKind` has a fixed Go-literal formatter:
+
+| Kind         | Builder snippet | Compose snippet |
+|--------------|-----------------|-----------------|
+| `PropString` | `"hello"`       | `"hello"`       |
+| `PropInt`    | `42`            | `42`            |
+| `PropBool`   | `true`          | `true`          |
+| `PropEnum`   | unquoted ident if it matches a Go const (e.g. `core.Stretch`); otherwise quoted | same |
+| `PropInsets` | `1, 2, 3, 4` (variadic) | `compose.Padding(1, 2, 3, 4)` |
+| `PropColor`  | `"$blue"`       | `"$blue"`       |
+| `PropBorder` | `"round"`       | `"round"`       |
+
+Properties that match the kind's default value are omitted from the output
+to keep the generated source compact.
+
+### Event handlers
+
+Handlers cannot be round-tripped (function bodies aren't serializable).
+Generated code emits a comment with the resolved Go function name:
 
 ```go
-type StylesProvider interface {
-    Styles() []string  // selector keys registered on the widget
-    Style(selector string) *Style
-}
+builder.Button("quit", "Quit").
+    // TODO: On(EvtActivate, main.quitFn)
+    End().
 ```
 
-`Component` already implements `Style(selector string)`. Add a
-`Styles() []string` method that walks `c.styles` and returns the keys.
+The function name is resolved via the same `runtime.FuncForPC` /
+`reflect.ValueOf(h).Pointer()` mechanism used by the Events tab.
 
-### 3. `(*TableLog).Reset()`
+### Render functions and table providers
 
-```go
-// Reset empties the circular buffer. Used by the Inspector "Clear" action.
-func (t *TableLog) Reset()
-```
+Widgets that take a closure (`Deck`, `Tiles`) or a provider interface
+(`Table`) emit the constructor with `nil` and a `// TODO` comment for the
+missing argument. The Inspector cannot reproduce those.
 
-### 4. `(*UI).Inspector()`
+### Output target
 
-```go
-// Inspector returns the active Inspector instance, creating one on first
-// call. The returned Inspector lives until the UI is closed.
-func (ui *UI) Inspector() *Inspector
-```
+`[Generate ▾]` opens a small dropdown:
 
-The keybinding in `ui.go:228-236` is rewritten to call this:
+| Option | Action |
+|--------|--------|
+| Builder → file | `FileChooser` save dialog → write `.go` source |
+| Builder → clipboard | OSC-52 (or fallback `$DISPLAY` clipboard tools) |
+| Compose → file | as above with Compose-style output |
+| Compose → clipboard | as above |
+| Both → file | dual-import file with a comment separator |
 
-```go
-case tcell.KeyCtrlD:
-    ui.Inspector().Toggle()
-```
-
-`Toggle()` calls `ui.Popup` if hidden and `ui.Close` if already shown.
+The "preview / code panel" of the previous designer-tab draft is gone — the
+output is delivered directly to a file or the clipboard.
 
 ---
 
 ## Public API
 
 ```go
-// Inspector is a developer console for a *UI.
 type Inspector struct {
     Component
     ui       *UI
-    target   Container        // current container being browsed
-    selected Widget           // currently highlighted widget
-    document *Document        // designer document (nil until first edit)
+    target   Container
+    selected Widget
     mode     InspectorMode
-    layout   Container        // internal builder-built UI
+    layout   Container
 }
 
 type InspectorMode int
 
 const (
     ModeAttached InspectorMode = iota
-    ModeDesign
     ModeReadonly
 )
 
 // NewInspector creates an Inspector attached to the given root.
-// Mode is auto-detected: a live *UI → ModeAttached, a *Document → ModeDesign,
-// a snapshot tree → ModeReadonly.
 func NewInspector(root Container) *Inspector
 
 // SetMode forces a specific mode (e.g. ModeReadonly) regardless of detection.
 func (i *Inspector) SetMode(m InspectorMode)
 
-// Toggle shows or hides the Inspector popup over its UI.
+// Toggle shows / hides the Inspector popup.
 func (i *Inspector) Toggle()
 
-// UI returns the inner builder container (so the popup logic can size and
-// position it).
+// UI returns the inner builder container.
 func (i *Inspector) UI() Container
-
-// Document returns the in-memory designer document (lazily created).
-func (i *Inspector) Document() *Document
 
 // Refresh re-scans the target tree.
 func (i *Inspector) Refresh()
@@ -416,9 +536,6 @@ func (i *Inspector) Refresh()
 ### Builder integration
 
 ```go
-// Inspector adds a hosted Inspector widget into the current builder chain.
-// Useful when an application wants to embed the Inspector permanently
-// (e.g. inside a developer side-panel) instead of opening it as a popup.
 func (b *Builder) Inspector(id string) *Builder
 ```
 
@@ -435,7 +552,7 @@ func Inspector(id, class string, options ...Option) Option
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `EvtSelect` | `Widget` | Widget highlighted in the explorer |
-| `EvtChange` | `*Style` | A style was edited |
+| `EvtChange` | `*Style` or `Property` | A style or property was edited |
 | `EvtActivate` | `Widget` | Container was navigated into |
 | `EvtClose` | — | Inspector popup is closing |
 | `EvtMode` | `InspectorMode` | Mode changed |
@@ -444,15 +561,15 @@ func Inspector(id, class string, options ...Option) Option
 
 ## Keyboard map
 
-Global (when Inspector has focus):
+Global (Inspector has focus):
 
 | Key | Action |
 |-----|--------|
-| `1`–`5` | Switch to tab 1–5 |
-| `Tab` / `Shift+Tab` | Cycle focus inside current tab |
+| `1`–`5` | Switch to tab Widgets / Styles / Events / Theme / Log |
+| `Tab` / `Shift+Tab` | Cycle focus inside the active tab |
 | `Esc` | Close Inspector popup |
-| `Ctrl+G` | Open Designer tab with current widget pre-selected |
-| `Ctrl+E` | Open Styles tab editing current widget |
+| `Ctrl+G` | Generate from current root, save to file |
+| `Ctrl+E` | Switch to Styles tab on the current widget |
 | `?` | Show keybindings cheat sheet |
 
 Widgets-tab specific:
@@ -460,20 +577,152 @@ Widgets-tab specific:
 | Key | Action |
 |-----|--------|
 | `↑` / `↓` / `j` / `k` | Move highlight |
-| `Enter` | Descend into container |
-| `Backspace` | Ascend to parent |
+| `Enter` / `Space` | Expand / collapse container |
 | `a` / `A` | Add child / sibling |
-| `d` | Delete (with confirmation) |
-| `e` | Edit style (jumps to Styles tab) |
-| `l` | Locate (flash widget) |
+| `d` / `Delete` | Delete |
+| `J` / `K` | Move down / up among siblings |
+| `>` / `<` | Indent / outdent |
+| `x` / `c` / `v` | Cut / copy / paste subtree |
+| `e` | Edit default style of selected widget |
 
-Designer-tab specific: defer to `doc/spec/designer.md`.
+Theme-tab specific:
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Navigate selectors |
+| `/` | Focus filter |
+| `Enter` | Open in Styles tab |
+
+---
+
+## Required additions to the library
+
+The Inspector intentionally introduces only small, generic extensions, keeping
+inspector-specific concerns out of the core.
+
+### 1. `Configurable`
+
+The new interface in §"Configurable model". Default implementation lives on
+`Component`; concrete widgets append kind-specific entries.
+
+### 2. `Container.Remove(child Widget) error`
+
+Counterpart to `Add`. Each container implementation already tracks children,
+so this is a few lines per kind plus an `ErrNotFound` sentinel.
+
+### 3. `Container.Insert(index int, child Widget) error`
+
+Index-based child insertion. `ErrFull` for fixed-arity containers.
+
+### 4. `Component.Handlers() map[Event][]Handler`
+
+Already in the previous draft; still required.
+
+### 5. `StylesProvider`
+
+```go
+type StylesProvider interface {
+    Styles() []string
+    Style(selector string) *Style
+}
+```
+
+Already in the previous draft; still required.
+
+### 6. `(*TableLog).Reset()`
+
+Empties the circular buffer.
+
+### 7. `(*UI).Inspector() *Inspector`
+
+Cached singleton accessor; the existing `Ctrl+D` handler in `ui.go` calls
+`ui.Inspector().Toggle()`.
+
+### 8. Kind registry (`Kinds map` + `RegisterKind`)
+
+In a new `inspector` package or in `widgets/kinds.go`. Each widget's `init`
+function registers itself.
+
+---
+
+## Implementation plan
+
+```
+inspector/
+├── inspector.go     — Inspector struct, mode detection, Toggle, public API
+├── widgets-tab.go   — Tree explorer + properties form + structural actions
+├── styles-tab.go    — Embeds StyleEditor; scope-driven
+├── events-tab.go    — Handler table + source-snippet panel
+├── theme-tab.go     — Theme selector picker + computed-style panel
+├── log-tab.go       — TableLog viewer with filters
+├── codegen.go       — Builder + Compose code emitters; walks live tree
+├── kinds.go         — KindEntry, RegisterKind, Kinds map, defaults
+├── handler-meta.go  — runtime.FuncForPC + closure-name unwrapping helpers
+└── doc.go
+```
+
+### Step-by-step
+
+1. **Library additions** — `Configurable`, `Property`, `PropertyKind`;
+   `Container.Remove` / `Insert`; `Component.Handlers` and
+   `Component.Properties`; `StylesProvider`; `(*TableLog).Reset`;
+   `(*UI).Inspector`.
+
+2. **Default `Component.Properties()`** — covers id, class, hint, padding,
+   margin, font, fg/bg, border, focusable/visible flags. ~50 LOC.
+
+3. **Per-widget `Properties()` overrides** — append kind-specific entries
+   (`Box.Title`, `Flex.Horizontal/Alignment/Spacing`, `Grid.Rows/Cols`,
+   `Button.Text`, `Static.Text`, `Input.Placeholder/Mask`, etc.). ~10–15
+   LOC per widget × ~50 widgets ≈ 600 LOC total but trivially mechanical.
+
+4. **Kind registry** — one `init()` block per widget. Mostly mechanical.
+
+5. **Code generation (`codegen.go`)** — single tree walk, calls
+   `Properties()`, splits on `Constructor`, emits with the
+   formatter table from §"Argument formatting". Separate Builder and
+   Compose emitters share a helper that does the property split.
+
+6. **Widgets tab** — Tree from `core.Traverse`; properties form from
+   `Properties()` with the editor-kind table; toolbar buttons drive the
+   structural mutations through `Container.Add` / `Insert` / `Remove`.
+
+7. **Styles tab** — wraps `StyleEditor` (already specified) with a scope
+   selector that switches its `*Theme` between the live theme and a
+   per-widget synthetic theme.
+
+8. **Theme tab** — selector list + computed-style panel.
+   `[Edit in Styles]` switches tab and pre-loads the editor.
+
+9. **Events tab** — unchanged from previous draft.
+
+10. **Log tab** — unchanged from previous draft.
+
+11. **Stand-alone binary (`cmd/inspector`)** — boots a fresh `*UI` whose
+    root is an empty `Flex`, opens the Inspector popup at startup. Flags:
+    `--theme`, `--snapshot <dump.json>` (READONLY), `--out <file.go>`
+    (write generated code on quit).
+
+12. **Theme entries** — add the inspector-specific selectors listed below
+    to every `themes/theme-*.go`.
+
+13. **Tests** —
+    - `inspector/codegen_test.go`: round-trip tree → Builder code → re-parse
+      with `go/parser` for syntactic validity; spot-check generated code
+      for representative trees.
+    - `inspector/kinds_test.go`: every registered kind has a working `New`
+      factory whose result implements `Configurable` with at least the
+      `Constructor: true` properties needed to reconstruct it.
+    - `inspector/properties_test.go`: per-widget `Properties()` round-trip
+      (Get → format → parse → Set returns same value).
+    - `inspector/handler-meta_test.go`: function-name resolution for
+      top-level fns, methods, anonymous closures, typed-wrapper closures.
 
 ---
 
 ## Styling selectors
 
-Inspector-specific selectors are registered in every theme:
+Inspector-specific selectors registered in every theme:
 
 | Selector | Applies to |
 |----------|-----------|
@@ -481,182 +730,53 @@ Inspector-specific selectors are registered in every theme:
 | `inspector/box` | Title-bordered box |
 | `inspector/tabs` | Tab strip |
 | `inspector/breadcrumb` | Path display |
-| `inspector/widget-list` | Widget list rows |
-| `inspector/widget-list:focused` | Focused list row |
-| `inspector/style-list` | Style list rows |
-| `inspector/info` | Information panel `Text` |
-| `inspector/locate-flash` | Bright accent border drawn during `[Locate]` |
+| `inspector/tree` | Tree explorer rows |
+| `inspector/properties` | Properties form group |
+| `inspector/properties:label` | Property labels |
+| `inspector/info` | Info summary panel |
+| `inspector/locate-flash` | Bright accent overlay drawn during `[Locate]` |
 | `inspector/event-table` | Event-handler table |
 | `inspector/source` | Source-snippet panel |
+| `inspector/theme-list` | Theme selectors list |
 
-The Inspector itself doesn't introduce widget *types* — every cell is an
-existing primitive — so theme files only need to add the selectors above.
-
----
-
-## Locate (flash) effect
-
-`[Locate]` (Widgets tab, key `l`) overlays a 1-frame `Custom` widget over the
-selected widget's bounds drawn with the `inspector/locate-flash` style, and
-schedules a 200 ms timer that removes it. It does not consume input or
-redraw anything else. Useful when the explorer-listed ID is hard to find on
-screen.
-
----
-
-## Implementation plan
-
-The implementation lives in a new `inspector/` package so it can be excluded
-from production builds with a build-tag (`!nodebug`) at the user's
-discretion.
-
-```
-inspector/
-├── inspector.go     — Inspector struct, mode detection, NewInspector,
-│                     Toggle, public API
-├── widgets-tab.go   — Hierarchy explorer panel
-├── styles-tab.go    — Style editor scope wrapper around StyleEditor
-├── events-tab.go    — Event-handler table + source-snippet panel
-├── log-tab.go       — TableLog viewer with filters
-├── designer-tab.go  — Embeds the designer document model + codegen
-├── locate.go        — Flash overlay
-├── handler-meta.go  — runtime.FuncForPC + closure-name unwrapping helpers
-└── doc.go
-```
-
-### Step-by-step
-
-1. **Library additions**
-   - `Component.Handlers()` and the `HandlerProvider` interface.
-   - `Component.Styles() []string` and the `StylesProvider` interface.
-   - `(*TableLog).Reset()`.
-   - `(*UI).Inspector()` returning a cached instance.
-   - Replace the inline popup wiring at `ui.go:228-236` with a `Toggle()` call.
-
-2. **Inspector skeleton (`inspector/inspector.go`)**
-   - `NewInspector(root)` snapshots the tree, builds the tab shell with
-     `NewBuilder`, and stores `*UI` references.
-   - Each tab is a private composite widget with its own constructor.
-
-3. **Widgets tab (`inspector/widgets-tab.go`)**
-   - Lifts the existing `Inspector` body from `inspector.go:34-95`.
-   - Adds toolbar buttons; Edit-Style and `[+ Child]` route to the relevant
-     tabs by setting state on the parent Inspector and switching tabs.
-
-4. **Styles tab (`inspector/styles-tab.go`)**
-   - Constructs a `StyleEditor` (see `doc/spec/style-editor.md`) and a scope
-     selector. The scope selector swaps the `*Theme` passed to the editor.
-   - For *Widget overrides* scope: builds a synthetic `*Theme` that contains
-     only the widget's own styles; on edit, copies values back via
-     `widget.SetStyle(selector, style)`.
-
-5. **Events tab (`inspector/events-tab.go`)**
-   - `core.Traverse` over the target. For each widget, call `Handlers()` and
-     `runtime.FuncForPC(reflect.ValueOf(h).Pointer())`.
-   - Build an `[]eventRow` and feed it to a `Table` via a new
-     `eventsTableProvider`.
-   - On row `EvtSelect`, populate the source panel.
-   - `handler-meta.go` exposes `funcName(h Handler) (qualified, short string)`
-     and `funcSource(h Handler) (file string, line int, snippet []string)`.
-   - Re-runs the scan whenever the parent `Inspector` fires `EvtChange`
-     (debounced 250 ms).
-
-6. **Log tab (`inspector/log-tab.go`)**
-   - Reuses `ui.tableLog` directly. Wraps it in a level/source filter
-     `TableProvider` that delegates `Length()` and `Str()` after filtering.
-   - Auto-follow toggles a slog handler that calls `table.SetSelected(0)` on
-     every new record.
-
-7. **Designer tab (`inspector/designer-tab.go`)**
-   - Imports the designer model & codegen from `cmd/designer/`. (Move them
-     into a new `designer/` library package so both the stand-alone binary
-     and the inspector can share the code.)
-   - In ATTACHED mode, the designer is initialised by walking the live
-     widget tree and emitting `DesignerNode` records — each widget kind has
-     a registration entry in `palette.go` that knows how to extract its
-     props (`title` from a `Box`, `text` from a `Static`, etc.).
-
-8. **Locate (`inspector/locate.go`)**
-   - `flash(w Widget)` adds a translucent `Custom` overlay onto the topmost
-     UI layer with bounds equal to `w.Bounds()` and removes it after 200 ms.
-
-9. **Stand-alone binary (`cmd/inspector/main.go`)**
-   - Flags: `--file <path.json>` (open a designer document), `--snapshot
-     <dump.json>` (open a read-only tree), `--theme`.
-   - Without flags, starts in DESIGN mode with an empty `Flex "root"`.
-
-10. **Theme entries**
-    - Add the selectors listed in §Styling-selectors to every
-      `themes/theme-*.go`.
-
-11. **Tests**
-    - `inspector/widgets-tab_test.go` — explorer navigation, breadcrumb.
-    - `inspector/events-tab_test.go` — handler-name unwrapping for
-      top-level fns, methods, anonymous closures, and the `OnXxx` wrappers.
-    - `inspector/handler-meta_test.go` — function-name regex coverage.
-    - `inspector/designer-tab_test.go` — round-trip live tree → document →
-      generated code → re-parsed document.
-
----
-
-## Code-generation contract
-
-When the user clicks `[Generate]`, the Inspector emits a single Go file that
-compiles against the public `zeichenwerk` API and reproduces the explored
-tree. The generator is the same one specified in `doc/spec/designer.md`
-(§"Code generation"); the Inspector merely seeds it from the live tree
-instead of from a hand-built document.
-
-Differences when generating from a *live* tree:
-
-- Widget IDs that are empty are auto-named `<type><n>` so the generated code
-  compiles. The Inspector keeps a name map so re-generation is stable.
-- Event handlers are emitted as `// TODO: handler` placeholders, *not* as
-  generated code — the Inspector cannot serialise function bodies. The
-  comment includes the resolved function name so the developer knows what
-  used to be wired up:
-
-  ```go
-  builder.Button("quit", "Quit").
-      // TODO: On(EvtActivate, main.quitFn)
-      End().
-  ```
-
-- ItemRender / TableProvider stubs are likewise emitted as `nil` with a
-  `// TODO` comment.
+The Inspector adds no new widget *types* — every cell is an existing
+primitive — so themes only need the selector additions.
 
 ---
 
 ## Mutation contract (ATTACHED mode)
 
-The Inspector mutates the host UI only in response to *explicit* user
-actions:
+Mutations only happen in response to explicit user action:
 
 | Action | Mutation |
 |--------|----------|
-| Edit style in Styles tab | `widget.SetStyle(selector, *Style)` or `theme.SetStyle(selector, *Style)`; `Relayout(widget)` |
-| `[+ Child]` / `[+ Sibling]` | `container.Add(child)`; `Relayout(container)` |
-| `[Delete]` | `container.Remove(child)`; `Relayout(container)`; if the deleted widget held focus, refocus the parent |
-| `[Apply]` (Designer) | Replace tree subtree under designer root; `ui.Layout()`; `ui.Refresh()` |
+| Property edit | `prop.Set(v)`; widget calls `Redraw` / `Relayout` |
+| Style edit (widget overrides) | `widget.SetStyle(sel, *Style)`; `Relayout(widget)` |
+| Style edit (theme) | `theme.SetStyle(sel, *Style)`; `Refresh()` on root |
+| `[+ Child]` | `container.Add(child)`; `Relayout(container)` |
+| `[+ Sibling]` | `container.Insert(idx+1, child)`; `Relayout(container)` |
+| `[Delete]` | `parent.Remove(child)`; `Relayout(parent)`; refocus parent if focus was on child |
+| `[↑]` / `[↓]` | `parent.Remove(child)` + `parent.Insert(newIdx, child)` |
+| `[Indent]` | move child into previous sibling (must be a container) |
+| `[Outdent]` | move child into grandparent at parent's position |
 
-All mutations are logged at `slog.Info` level with a `source=inspector`
-attribute so they show up in the Log tab. Failures (e.g. a child rejected
-because the container does not accept children) are surfaced as a red
-toast `Notification` for 3 seconds and recorded as `slog.Warn`.
+All mutations log at `slog.Info` with `source=inspector`. Failures
+(`Container.Insert` returns `ErrFull`, e.g.) surface as a red `Notification`
+toast for 3 seconds and a `slog.Warn` entry.
 
 ---
 
 ## Non-goals
 
-- **Undo/redo** for inspector edits. Mutations are immediate; users wanting
-  undo should drive the application through the Designer document instead.
-- **Cross-process inspection.** The Inspector lives inside the host process
-  and reads in-memory state. Remote inspection (via JSON-RPC, sockets) is a
-  future enhancement — the snapshot/READONLY mode is the seam.
-- **Source modification.** The Generate action emits Go code to a file or
-  the clipboard; the Inspector never edits the user's existing source.
-- **Hot-reload.** Generated code is intentionally non-executing. Re-running
-  the binary picks up changes; the Designer's ATTACHED mode is the
-  short-feedback path.
-- **Full Go function reconstruction.** Event handlers cannot be round-tripped
-  through code generation — only their resolved name is preserved.
+- **Undo / redo** of inspector edits. The simplest path forward is to
+  generate code, save to disk, and re-run; full in-memory undo is a future
+  enhancement.
+- **Cross-process inspection.** The Inspector lives in the host process and
+  reads in-memory state. Remote inspection over a socket is a future
+  enhancement; READONLY mode operating on a serialised snapshot is the seam.
+- **Source modification.** The Inspector emits Go code to a file or the
+  clipboard; it never edits the user's existing source.
+- **Hot reload.** Generated code is non-executing. Re-running the binary
+  picks up changes; the Inspector itself is the short-feedback path.
+- **Round-tripping closures.** Event handlers, render functions, and table
+  providers are emitted as `// TODO` stubs.
