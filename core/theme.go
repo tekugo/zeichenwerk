@@ -211,6 +211,19 @@ func (t *Theme) Border(border string) *Border {
 	return t.borders[border]
 }
 
+// BorderNames returns every registered border name in
+// lexicographic order. The inspector's Border-control select uses
+// it to populate options; tools that just need the lookup should
+// call Border(name) instead.
+func (t *Theme) BorderNames() []string {
+	out := make([]string, 0, len(t.borders))
+	for name := range t.borders {
+		out = append(out, name)
+	}
+	slices.Sort(out)
+	return out
+}
+
 // Color resolves a color name or variable to its actual color value.
 // Theme variables (prefixed with $) are looked up in the color registry,
 // while direct color values are returned unchanged.

@@ -40,13 +40,18 @@ func NewTreeWidgets(id, class string, root Widget) *TreeWidgets {
 	return tw
 }
 
-// Apply applies theme styles. TreeWidgets uses the "tree-widgets" selector
-// family so themes can style it independently of a plain Tree, falling back
-// to "tree" through the theme cascade.
+// Apply applies theme styles by delegating to the embedded Tree's
+// Apply, so TreeWidgets uses the same "tree" selector family that
+// every theme registers. A previous version applied a "tree-widgets"
+// selector family on top, intending to let themes style TreeWidgets
+// independently — but no theme ships those entries today, and the
+// theme cascade resolves any unregistered selector to the empty
+// default, which silently overwrote the baseline tree styles with
+// black-on-black. Until themes opt in with explicit tree-widgets
+// entries, TreeWidgets just looks like a Tree, which is the right
+// fallback.
 func (tw *TreeWidgets) Apply(theme *Theme) {
-	theme.Apply(tw.Tree, tw.Tree.Selector("tree-widgets"), "disabled", "focused", "hovered")
-	theme.Apply(tw.Tree, tw.Tree.Selector("tree-widgets/highlight"), "focused")
-	theme.Apply(tw.Tree, tw.Tree.Selector("tree-widgets/indent"))
+	tw.Tree.Apply(theme)
 }
 
 // Root returns the widget the tree currently mirrors.

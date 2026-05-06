@@ -383,6 +383,19 @@ func (b *Builder) PreviewPanel(id string) *Builder {
 	return b
 }
 
+// Preview opens a Preview container, used to wrap a subtree that
+// should render and lay out normally but stay invisible to focus
+// traversal, hit testing, and other framework walks. Subsequent
+// builder calls populate the Preview's wrapped target until End()
+// pops it off the stack. The first widget added becomes the
+// target; further Adds replace it (Preview holds a single target
+// like Box).
+func (b *Builder) Preview(id string) *Builder {
+	p := NewPreview(id, b.class, nil)
+	b.Add(p)
+	return b
+}
+
 // Progress creates a new progress widget for displaying progress indicators.
 // The progress is initially indeterminate (total=0). Use SetTotal and SetValue
 // to configure it after retrieval via Find.

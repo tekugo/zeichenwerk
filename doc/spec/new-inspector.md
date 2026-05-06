@@ -7,9 +7,8 @@ style editor), **Events** (handler map with function-name introspection),
 
 The Inspector mutates the *live* widget tree directly. There is no separate
 `Document` or `DesignerNode` model — every change touches the actual `*UI`
-the Inspector is attached to. Code generation walks the live tree and asks
-each widget for its configurable items via the new `Configurable` interface
-described in §"Configurable model".
+the Inspector is attached to. Editing and code generation both go through
+**form structs** that live next to each widget — see §"WidgetForm model".
 
 The new Inspector replaces the minimal one in `inspector.go`.
 
@@ -58,113 +57,339 @@ falls into the ATTACHED case.
 
 ---
 
-## Configurable model
+## WidgetForm model
 
-Every widget that wants to be editable in the Inspector implements
-`Configurable`. This single interface drives the property editor *and* code
-generation, so the two cannot drift apart.
+Every editable widget has a sibling `*Form` struct that owns:
+
+- the editing surface (a plain Go struct with reflection-friendly tags that
+  the Form widget renders via the existing `BuildFormGroup`),
+- the load / store between widget and form,
+- the codegen `Emit` that writes the widget's call shape onto an
+  in-progress chain.
+
+Forms live in the `widgets` package, alongside the widgets they edit, so
+they can read and write unexported fields directly without exposing them
+through accessors. The inspector never touches widget internals; it only
+talks to forms.
+
+### Three interfaces
 
 ```go
-// PropertyKind describes the editor type used for a property.
-type PropertyKind int
+// inspector/widget-form.go
+package inspector
 
+type WidgetForm interface {
+    Name() string                  // "Static", "Grid"
+    Group() string                 // "leaf", "container", "input", "display", "animated"
+    Help() string                  // one-line tooltip
+
+    New() core.Widget              // fresh instance from current form fields
+    Load(core.Widget)              // copy widget state into form fields
+    Store(core.Widget)             // copy form fields back into widget
+
+    // Validate runs per-field validation. field=="" means "validate the
+    // whole form including cross-field rules"; returns the first failure
+    // encountered. The property panel calls per-field on change and
+    // whole-form on Apply.
+    Validate(field string) error
+
+    // Emit writes the widget's call shape onto an in-progress chain. The
+    // caller has already written whatever precedes this widget; an Emit
+    // implementation continues with leading ".\n" so the chain stays
+    // continuous. Containers emit only the constructor + chain; the
+    // codegen walker writes children and the closing ".End()".
+    Emit(w io.Writer, mode string) error
+}
+
+// ContainerForm extends WidgetForm for containers whose Add method takes
+// per-child layout parameters. Containers that ignore Add params (Box,
+// Flex, Card, …) implement only WidgetForm.
+type ContainerForm interface {
+    WidgetForm
+    LayoutForm(parent core.Container, child core.Widget) core.LayoutForm
+}
+```
+
+```go
+// core/widget-form.go — LayoutForm lives in core so widget container
+// forms can declare it as a return type without importing inspector.
+package core
+
+type LayoutForm interface {
+    Load(parent Container, child Widget)
+    Store(parent Container, child Widget)
+    Validate(field string) error
+    Emit(w io.Writer, mode string) error
+}
+```
+
+### Codegen modes
+
+Two string constants in inspector. Mode is passed through Emit so future
+back-ends can be added without changing signatures.
+
+```go
 const (
-    PropString PropertyKind = iota
-    PropBool
-    PropInt
-    PropFloat
-    PropEnum     // value comes from Property.Choices
-    PropInsets   // 1–4-cell tuple; Padding / Margin
-    PropBorder   // theme border name (e.g. "thin", "round")
-    PropColor    // theme color reference ("$blue") or hex ("#7aa2f7")
-    PropFont
-    PropID       // widget id; validated against the live tree for uniqueness
+    ModeBuilder = "builder"
+    ModeCompose = "compose"
 )
-
-// Property describes one editable field on a widget.
-type Property struct {
-    Name        string             // identifier; lower-snake-case
-    Label       string             // human-readable; falls back to Name
-    Kind        PropertyKind
-    Get         func() any         // current value
-    Set         func(v any) error  // validate + apply; returns error on bad input
-    Choices     []string           // PropEnum: ordered key list
-    ChoiceNames []string           // PropEnum: optional pretty labels parallel to Choices
-    Constructor bool               // true: goes in the constructor argument list
-    Builder     string             // Builder method name when Constructor==false (default = title-case Name)
-    Compose     string             // Compose option name; same default rule
-    Help        string             // tooltip / brief docstring
-}
-
-// Configurable is the optional interface a widget implements to expose its
-// editable properties. The order of the slice is the order shown in the
-// editor and the order arguments are emitted in the Constructor argument
-// list (for Constructor==true entries).
-type Configurable interface {
-    Properties() []Property
-}
 ```
 
-### Constructor vs. Builder split
+ModeCompose is reserved; current implementation produces an error if used.
 
-Each widget kind has a fixed constructor signature, e.g.
-`NewBox(id, class, title string)`. Properties with `Constructor: true` map to
-those positional args, in slice order. Everything else is emitted as a
-chained method call on the Builder (or as an `Option` for Compose).
+### Indentation: gofmt does it
 
-Example for `Box`:
+The walker writes `.\n` separators only — no tab tracking. `go/format` is
+run on the final output, which normalises chained method calls to a
+single tab past the leading expression. Visual nesting is conveyed by a
+trailing comment on each container's closing `End()`, e.g. `End() // Grid#g1`.
+The comment survives `gofmt` and gives the reader a structural anchor.
+
+### ComponentForm — the embedded base
+
+Every per-widget form embeds `ComponentForm`, which mirrors `Component`'s
+role as the embedded base of every widget. ComponentForm covers the fields
+shared across every kind:
 
 ```go
-func (b *Box) Properties() []Property {
-    return []Property{
-        {Name: "id",    Kind: PropID,     Constructor: true, /* Get/Set */},
-        {Name: "class", Kind: PropString, Constructor: true},
-        {Name: "title", Kind: PropString, Constructor: true,
-            Get: func() any { return b.Title },
-            Set: func(v any) error { b.Title = v.(string); Redraw(b); return nil }},
-        {Name: "border", Kind: PropBorder,
-            Builder: "Border", Compose: "Border",
-            Get: func() any { return b.Style().Border() },
-            Set: func(v any) error { /* update style.border */ }},
-        {Name: "padding", Kind: PropInsets,
-            Builder: "Padding", Compose: "Padding",
-            Get: func() any { return insetsFromStyle(b.Style()) },
-            Set: func(v any) error { /* update style padding */ }},
-        // …margin, font, etc.
-    }
+// widgets/component-form.go
+type ComponentForm struct {
+    // Editing surface (struct-tagged → BuildFormGroup picks them up).
+    ID    string `group:"general" label:"ID" validate:"id-unique"`
+    Class string `group:"general" label:"Class"`
+
+    HintW int `group:"layout" label:"Hint W"`
+    HintH int `group:"layout" label:"Hint H"`
+
+    Skip     bool `group:"flags" label:"Skip Focus"` // FlagSkip — opts out of focus traversal
+    Hidden   bool `group:"flags" label:"Hidden"`
+    Disabled bool `group:"flags" label:"Disabled"`
+
+    // Codegen snapshot (no struct tag → invisible to the property panel).
+    // The Styles tab edits the live *core.Style directly via core.StyleForm;
+    // ComponentForm carries this snapshot only so codegen can emit the
+    // widget's style chain alongside the constructor.
+    style core.StyleForm
 }
 ```
 
-### Default property descriptors on `Component`
+`FlagFocusable` is *not* exposed: focusability is an inherent attribute of
+each widget kind set by its constructor. Users opt out of focus traversal
+by setting `FlagSkip` instead, which is what the form exposes.
 
-`Component` already owns id, class, hint, padding, margin, font, foreground,
-background, border, and flags. These get a default `Properties()`
-implementation on `Component` itself:
+### Primitives + template method
 
-```go
-func (c *Component) Properties() []Property { … }
-```
-
-Each concrete widget *appends* kind-specific properties:
+ComponentForm exposes building blocks plus a template method that
+captures the standard emission shape:
 
 ```go
-func (b *Box) Properties() []Property {
-    return append(b.Component.Properties(), Property{Name: "title", …})
+// Primitives — public so per-widget forms can compose them directly.
+func (f *ComponentForm) CheckBuilderMode(mode string) error
+func (f *ComponentForm) EmitClassPrefix(w io.Writer)        // .Class("foo") if non-empty
+func (f *ComponentForm) EmitChain(w io.Writer)              // Hint, Skip, Hidden, Disabled
+func (f *ComponentForm) EmitStyle(w io.Writer)              // delegates to f.style.EmitBuilderChain
+
+// Template method — the standard order. Per-form Emit shrinks to one call
+// + a body callback for the constructor.
+func (f *ComponentForm) EmitFrame(w io.Writer, mode string, body func() error) error {
+    if err := f.CheckBuilderMode(mode); err != nil { return err }
+    f.EmitClassPrefix(w)
+    if err := body(); err != nil { return err }
+    f.EmitChain(w)
+    f.EmitStyle(w)
+    return nil
 }
 ```
 
-This way every widget that embeds `Component` (which is all of them) is
-trivially `Configurable`, even before per-widget refinement.
+A trivial form is one expression:
 
-### Widgets that don't implement `Configurable`
+```go
+func (f *StaticForm) Emit(w io.Writer, mode string) error {
+    return f.EmitFrame(w, mode, func() error {
+        _, err := fmt.Fprintf(w, ".\nStatic(%q, %q)", f.ID, f.Text)
+        return err
+    })
+}
+```
 
-`Configurable` is technically optional. Widgets that don't return useful
-properties (custom user widgets, widgets with non-serialisable state like
-`Custom` with a render closure) are shown in the tree as read-only:
+A form with a kind-specific tail (e.g. Grid's `.Rows(...).Columns(...)`)
+calls `EmitFrame` and then appends after it returns.
 
-- The properties form shows the inherited `Component` fields only.
-- Code generation emits the constructor with placeholder arguments and a
-  `// TODO: <reason>` comment — no chained methods.
+A form that needs to override the standard shape (e.g. Flex picking
+`HFlex` vs `VFlex` from a flag) calls the primitives directly.
+
+### StyleForm and the fixed-style rule
+
+`core.StyleForm` is the editor + codegen surface for `*Style`. It also
+holds an unexported `fixed bool` snapshot taken at Load time:
+
+```go
+type StyleForm struct {
+    Selector   string `group:"selector" label:"Selector" readonly:""`
+
+    Foreground string `group:"colors" label:"Fg" control:"color"`
+    Background string `group:"colors" label:"Bg" control:"color"`
+
+    Border  string `group:"box" label:"Border"  control:"border"`
+    Padding [4]int `group:"box" label:"Padding" control:"insets"`
+    Margin  [4]int `group:"box" label:"Margin"  control:"insets"`
+
+    Font   string `group:"text" label:"Font" control:"font"`
+    Cursor string `group:"text" label:"Cursor"`
+
+    Shadow string `group:"effects" label:"Shadow"`
+
+    fixed bool // set by Load; suppresses EmitBuilderChain when true
+}
+```
+
+`EmitBuilderChain` short-circuits when `fixed` is true: themed styles are
+inherited from the active theme, so emitting them in generated source
+would override theme changes and bloat the output. Only widget-specific
+overrides (the non-fixed leaf in the cascade) get emitted.
+
+The Styles tab edits the *live* `*Style` of the selected widget through
+its own StyleForm instance, parallel to whatever ComponentForm has loaded
+internally. Edits go through `Modifiable()`, so editing a fixed style
+creates a new non-fixed child that future codegen will then emit.
+
+### Per-widget forms
+
+```go
+// widgets/static-form.go
+type StaticForm struct {
+    ComponentForm
+    Text      string `group:"general" label:"Text"`
+    Alignment string `group:"general" label:"Alignment" control:"select" options:"left,center,right"`
+}
+
+// widgets/flex-form.go
+type FlexForm struct {
+    ComponentForm
+    Vertical  bool   `group:"layout" label:"Vertical"`
+    Alignment string `group:"layout" label:"Alignment" control:"select" options:"start,center,end,stretch,left,right"`
+    Spacing   int    `group:"layout" label:"Spacing"`
+}
+
+// widgets/input-form.go
+type InputForm struct {
+    ComponentForm
+    Text        string `group:"value" label:"Text"`
+    Placeholder string `group:"value" label:"Placeholder"`
+    Mask        string `group:"value" label:"Mask"`
+    Max         int    `group:"value" label:"Max Length"`
+    Masked      bool   `group:"flags" label:"Masked"`
+    Readonly    bool   `group:"flags" label:"Read-only"`
+}
+
+// widgets/grid-form.go — also implements ContainerForm via its
+// LayoutForm method, returning a GridLayoutForm per child.
+type GridForm struct {
+    ComponentForm
+    Rows    []int `group:"layout" label:"Rows"`
+    Columns []int `group:"layout" label:"Columns"`
+    Lines   bool  `group:"layout" label:"Lines"`
+}
+
+type GridLayoutForm struct {
+    X int `group:"position" label:"Column"`
+    Y int `group:"position" label:"Row"`
+    W int `group:"position" label:"Col Span"`
+    H int `group:"position" label:"Row Span"`
+}
+```
+
+### Form (the widget) is special
+
+`Form` (the FormGroup-backed widget) is itself a widget kind, but it
+edits arbitrary user data via reflection on a struct passed at
+construction. A separate "form designer" handles that case; the standard
+WidgetForm shape doesn't fit.
+
+---
+
+## Designer
+
+The **Designer** is the inspector's central hub. It owns the kind
+registry, exposes lookup operations, drives tree edits, and runs codegen.
+Widget *Form structs satisfy `WidgetForm` / `ContainerForm` purely
+structurally; the Designer wires them up.
+
+### Kind table
+
+```go
+// inspector/kinds.go
+type Kind struct {
+    Name  string                      // "Static", "Grid"
+    Group string                      // "leaf", "container", "input", "display", "animated"
+    Help  string                      // one-line description for the picker
+    Type  reflect.Type                // concrete widget pointer type, e.g. (*widgets.Static)(nil)
+    Make  func() WidgetForm           // factory for a fresh form instance
+}
+```
+
+Registration validates the factory at Register time: the Designer calls
+`Make()` once and asserts that the resulting form's Load accepts a
+zero-value of `Kind.Type`. A mis-registration (wrong form for a kind)
+fails immediately rather than panicking later.
+
+### Operations
+
+```go
+type Designer struct { ... }
+
+func NewDesigner(target core.Container) *Designer
+
+// Registry — one Kind per widget type.
+func (d *Designer) Register(k Kind)
+func (d *Designer) Kinds() []Kind            // for the Add-child picker
+func (d *Designer) Kind(w core.Widget) Kind  // unloaded; for capability checks
+func (d *Designer) FormFor(w core.Widget) WidgetForm  // loaded; for editing
+
+// Tree edits.
+func (d *Designer) Add(parent core.Container, kind Kind) (core.Widget, error)
+func (d *Designer) Remove(child core.Widget) error
+func (d *Designer) Move(child core.Widget, newParent core.Container, pos int) error
+func (d *Designer) SetField(widget core.Widget, fieldName string, value any) error
+
+// Codegen.
+func (d *Designer) GenerateFragment(mode string, w io.Writer) error
+func (d *Designer) GenerateFile(mode string, w io.Writer, pkg, funcName string) error
+```
+
+### Concurrency
+
+Designer is **not** safe for concurrent use; callers serialise access.
+The TUI's main loop is the natural serialiser. Background codegen would
+need a snapshot of the tree first.
+
+### Why split `FormFor` from `Kind`
+
+`FormFor(w)` allocates and Loads. `Kind(w)` returns the unloaded factory
+descriptor. The codegen walker uses `Kind` for capability checks (does
+this widget have a ContainerForm?) so it doesn't pay for an unused
+parent.Load on every child.
+
+### Driver-side registration
+
+The widgets package never imports inspector. Registrations happen in the
+driver:
+
+```go
+// cmd/inspector-poc/main.go
+d := inspector.NewDesigner(root)
+d.Register(inspector.Kind{
+    Name: "Static", Group: "leaf",
+    Help: "Non-interactive text label",
+    Type: reflect.TypeOf((*widgets.Static)(nil)),
+    Make: func() inspector.WidgetForm { return &widgets.StaticForm{} },
+})
+// ... one call per widget kind
+```
+
+A mechanical `init()`-based registration scheme could be layered on top
+later, but the current approach keeps the dependency direction clean
+(`widgets ⟂ inspector`).
 
 ---
 
@@ -186,74 +411,89 @@ The hierarchy explorer and the designer surface, merged into one tab.
 │      static …    │  Class      [                     ]                     │
 │      button quit │  Hint W     [28                   ]                     │
 │    ▼ grid body   │  Hint H     [-1                   ]                     │
-│      ▶ list nav  │  Padding    [0 1                  ]                     │
-│      viewport …  │  Border     [round              ▼]                      │
-│  ─────           │  ──── Styles (widget-local) ──────                       │
-│  Info            │  (default)                                              │
-│  Type   List     │  list:focused                                           │
-│  Bounds 4,2 28,18│  list/highlight                                         │
-│  State  :focused │  list/scrollbar                                         │
-│  Flags  focused  │  [+ Style]            (click a row to edit in Styles)   │
+│      ▶ list nav  │  Skip       [ ]                                         │
+│      viewport …  │  Hidden     [ ]                                         │
+│  ─────           │  ──── Layout (in parent grid#body) ───                  │
+│  Info            │  Column     [0                    ]                     │
+│  Type   List     │  Row        [1                    ]                     │
+│  Bounds 4,2 28,18│  Col Span   [1                    ]                     │
+│  State  :focused │  Row Span   [1                    ]                     │
+│  Flags  focused  │  ──── Styles (widget-local) ──────                      │
+│                  │  (default)                                              │
+│                  │  list:focused                                           │
+│                  │  list/highlight                                         │
+│                  │  [+ Style]            (click a row to edit in Styles)   │
 └──────────────────┴─────────────────────────────────────────────────────────┘
 ```
 
 #### Tree panel (left)
 
-A `Tree` widget. Each `TreeNode` carries the `Widget` itself as opaque data;
-expansion mirrors the parent/child structure. The label is `kind#id` (or
-`kind` for empty IDs, with a synthesized label like `kind@N` shown in
-parentheses).
+A `Tree` widget. Each `TreeNode` carries the `Widget` itself as opaque
+data; expansion mirrors the parent/child structure. The label is
+`kind#id` (or `kind` for empty IDs, with a synthesized label like
+`kind@N` shown in parentheses).
 
 Below the tree, a small "Info" block summarises the highlighted widget's
-type, bounds, state, and flags — the same info as in the current
-`widgetDetails` helper (`inspector.go:198-229`), trimmed to fit.
+type, bounds, state, and flags.
 
 #### Properties panel (right)
 
-A `FormGroup` whose fields are generated dynamically from the selected
-widget's `Properties()`. Each `PropertyKind` maps to a fixed editor:
+Built dynamically from the selected widget's `WidgetForm` via the
+existing `BuildFormGroup` helper. Each tagged form field becomes an
+editor:
 
-| Kind        | Editor widget          |
-|-------------|------------------------|
-| `PropString`, `PropID`, `PropFont` | `Input` |
-| `PropInt`, `PropFloat`             | `Input` (numeric validation in `Set`) |
-| `PropBool`                         | `Checkbox` |
-| `PropEnum`                         | `Select` (Choices/ChoiceNames) |
-| `PropInsets`                       | `Input` accepting `1–4` cells (`"0"`, `"0 1"`, `"0 1 0 1"`) |
-| `PropBorder`                       | `Select` populated from `theme.Borders()` |
-| `PropColor`                        | `ColorPicker` (single mode) |
+| Tag (`control:"…"`) | Editor widget |
+|---|---|
+| (default for `string`) | `Input` |
+| (default for `int`/`float`) | `Input` with numeric validation |
+| (default for `bool`) | `Checkbox` |
+| `select` (with `options:"a,b,c"`) | `Select` |
+| `color` | `ColorPicker` (single mode) |
+| `border` | `Select` populated from `theme.Borders()` |
+| `insets` | `Input` accepting 1–4 cells (`"0"`, `"0 1"`, `"0 1 0 1"`) |
+| `font` | `Select` populated from theme's font registry |
 
-On every keystroke the field calls `prop.Set(value)`. If `Set` returns an
-error, the editor shows an inline red `Static` underneath. Otherwise it
-calls `Relayout(widget)` so the change is visible immediately.
+`group:"…"` clusters fields under a section heading; `label:"…"` sets the
+display label; `readonly:""` makes the field read-only.
 
-Below the kind-specific fields, a "Styles (widget-local)" list shows the
-selectors registered on this widget (via the existing `StylesProvider`).
-Clicking one switches to the **Styles** tab with that selector pre-loaded.
+On every keystroke the editor calls `form.Validate(field)`. If validation
+fails, the editor shows an inline red `Static` underneath; the widget is
+not yet updated. On focus-out (or Apply), `form.Store(widget)` writes
+back, and the inspector calls `Relayout(widget)`.
+
+Below the kind-specific fields, **Layout (in parent X)** appears when
+the parent container has a `ContainerForm`. The fields come from
+`parent.LayoutForm(parent, widget)` — e.g. Grid's cell coordinates.
+
+Below that, a **Styles (widget-local)** list shows the selectors
+registered on this widget (via `StylesProvider`). Clicking one switches
+to the **Styles** tab with that selector pre-loaded.
 
 #### Toolbar
 
-| Button | Hotkey | Action |
-|--------|--------|--------|
-| `[+ Child]` | `a` | Open widget picker; new widget appended via `container.Add` |
-| `[+ Sibling]` | `A` | Same picker, inserted via `container.Insert(idx+1, w)` |
-| `[↑]` / `[↓]` | `K`/`J` | Reorder among siblings (`Remove` + `Insert`) |
-| `[Indent]` / `[Outdent]` | `>`/`<` | Move into previous sibling / out to grandparent |
+| Button | Hotkey | Action (via Designer) |
+|--------|--------|------------------------|
+| `[+ Child]` | `a` | `d.Add(selected, kind)` |
+| `[+ Sibling]` | `A` | `d.Add(selected.Parent, kind)` then `d.Move(child, ..., idx+1)` |
+| `[↑]` / `[↓]` | `K`/`J` | `d.Move(child, parent, newIdx)` |
+| `[Indent]` / `[Outdent]` | `>`/`<` | `d.Move(child, prevSibling, end)` / `d.Move(child, grandparent, parentIdx)` |
 | `[Cut]` / `[Copy]` / `[Paste]` | `x`/`c`/`v` | Subtree clipboard (in-process) |
-| `[Delete]` | `d` / `Delete` | `parent.Remove(widget)` |
+| `[Delete]` | `d` / `Delete` | `d.Remove(child)` |
 | `[Edit Style]` | `e` | Switch to Styles tab on the widget's default selector |
-| `[Generate ▾]` | `Ctrl+G` | Drop-down: Builder / Compose / Both — see §"Code generation" |
+| `[Generate ▾]` | `Ctrl+G` | Drop-down: Builder fragment / Builder file / Compose / Both — see §"Code generation" |
 
 #### Add-child flow
 
-`[+ Child]` opens a modal `Dialog` listing all widget kinds known to the
-inspector's *kind registry* (see §"Kind registry" below). Selecting a kind:
+`[+ Child]` opens a modal `Dialog` listing all kinds from
+`d.Kinds()`, grouped by `Kind.Group`. Selecting a kind:
 
-1. Calls the registry's `New(theme)` factory to build a fresh widget with
-   default values for all `Constructor: true` properties.
-2. Appends it to the selected container via `container.Add(w)`.
-3. Re-runs `Layout()` on the parent.
-4. Selects the new widget in the tree and focuses the ID field in the
+1. Calls `d.Add(selectedContainer, kind)` which:
+   - calls `kind.Make()` for a fresh form,
+   - calls `form.New()` for a default-valued widget,
+   - calls `parent.Add(child)` (with whatever extra params the
+     ContainerForm requires for the default child position).
+2. Re-runs `Layout()` on the parent.
+3. Selects the new widget in the tree and focuses the ID field in the
    properties panel.
 
 If the selected node is not a `Container`, the dialog warns and offers
@@ -266,27 +506,7 @@ instead it shows whichever style was last selected — either a widget-local
 selector picked from the Widgets tab or a theme selector picked from the
 Theme tab.
 
-```
-┌─ Styles — list:focused (widget-local on list#nav) ────────────────────────┐
-│ Scope:  ● Widget overrides    ○ Theme                                     │
-│                                                                           │
-│  Selector  list:focused                                                   │
-│  Fg        [$fg0                ]                                          │
-│  Bg        [$blue               ]                                          │
-│  Border    [round            ▼]                                            │
-│  Font      [bold                ]                                          │
-│  Margin    [0                   ]                                          │
-│  Padding   [0 2                 ]                                          │
-│  Cursor    [—                   ]                                          │
-│                                                                           │
-│  ┌─ Preview ────────────────────────┐                                     │
-│  │   Sample                          │                                     │
-│  └───────────────────────────────────┘                                     │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-The fields and behavior are exactly those of the `StyleEditor` in
-`doc/spec/style-editor.md`; the Inspector embeds it. The scope radio swaps
+The fields are exactly those of `core.StyleForm`. The scope radio swaps
 the editor's target between:
 
 | Scope | Source | Write target |
@@ -294,21 +514,23 @@ the editor's target between:
 | **Widget overrides** | `widget.Style(selector)` | `widget.SetStyle(selector, *Style)` |
 | **Theme** | `ui.Theme().Style(selector)` | `theme.SetStyle(selector, *Style)` |
 
+Edits go through `*Style.Modifiable()` so editing a fixed style produces
+a new non-fixed child rather than mutating the theme by accident.
+
 If no widget is currently selected, the **Widget overrides** option is
 disabled. The header line above the scope row always shows what's being
 edited (selector + scope summary).
 
 `[Save Theme As…]` (visible only in **Theme** scope) opens a `FileChooser`
 and writes the live theme back as a Go source file using the existing
-theme-codegen helper (`themes/codegen.go`). `[Reset]` reloads the theme from
-disk after a confirmation dialog.
+theme-codegen helper (`themes/codegen.go`). `[Reset]` reloads the theme
+from disk after a confirmation dialog.
 
 ### 3. Events tab
 
-A `Table` of `(widget, event, handler)` triplets, plus a side panel showing
-the resolved Go function name and (when reachable) a 5-line source snippet.
-Unchanged from the previous draft — see §"Events" in the data sources
-description below.
+A `Table` of `(widget, event, handler)` triplets, plus a side panel
+showing the resolved Go function name and (when reachable) a 5-line
+source snippet.
 
 ### 4. Theme tab
 
@@ -345,121 +567,64 @@ tab. This avoids duplicating the editor surface.
 
 ### 5. Log tab
 
-Identical to the previous draft: the `TableLog` rendered as a `Table`,
-filtered by level and source, with auto-follow, clear, and export actions.
-
----
-
-## Mutating the live tree
-
-Because the Inspector edits the host UI directly, the library needs a few
-small additions so structural changes are possible without reaching into
-unexported fields.
-
-### `Container.Remove`
-
-```go
-// Remove unlinks child from this container. Returns ErrNotFound if child is
-// not currently a direct child. Implementations call SetParent(nil) on the
-// removed child and trigger their own Layout/Refresh.
-Remove(child Widget) error
-```
-
-### `Container.Insert`
-
-```go
-// Insert puts child at index among the existing children. Index 0 prepends;
-// index >= len(Children()) appends. Implementations call SetParent and
-// trigger Layout/Refresh.
-Insert(index int, child Widget) error
-```
-
-Both methods get default implementations on every container kind. Where the
-container has structural constraints (e.g. `Box` accepts a single child,
-`Card` accepts at most two), `Insert` returns `ErrFull` instead of pushing
-beyond capacity.
-
-### Property-set side effects
-
-Every `Property.Set` is responsible for:
-
-1. Validating the input and returning an error on failure.
-2. Applying the change (e.g. `b.Title = v.(string)`).
-3. Calling `Redraw(widget)` for visual-only changes or `Relayout(widget)`
-   for changes that affect size (padding, margin, hint, etc.).
-
-The inspector itself does not need to know which kind of change happened —
-it just calls `Set` and trusts the widget to refresh.
-
----
-
-## Kind registry
-
-A small registry that maps widget kind names → (default factory, property
-template). Used by the Add-child dialog and by code generation to find the
-constructor signature.
-
-```go
-type KindEntry struct {
-    Name    string                          // "Box", "Static"
-    Group   string                          // "container", "leaf", "input", "display", "animated"
-    New     func(theme *Theme) Widget       // fresh instance with sensible defaults
-    Help    string                          // one-line description for the picker
-}
-
-// Registered kinds. Populated in inspector/kinds.go via init() functions
-// that import each widget package.
-var Kinds = map[string]KindEntry{}
-
-func RegisterKind(e KindEntry) { … }
-```
-
-Each widget contributes its own entry in an `init()` block:
-
-```go
-func init() {
-    inspector.RegisterKind(inspector.KindEntry{
-        Name:  "Box",
-        Group: "container",
-        New:   func(t *Theme) Widget { return NewBox("", "", "") },
-        Help:  "Bordered container with title; holds one child",
-    })
-}
-```
+The `TableLog` rendered as a `Table`, filtered by level and source, with
+auto-follow, clear, and export actions.
 
 ---
 
 ## Code generation
 
-Walks the live widget tree depth-first. For each widget:
+The Designer's `GenerateFragment` and `GenerateFile` walk the live tree
+depth-first and assemble a chained Builder (or Compose) expression.
 
-1. Look up the kind entry in `Kinds`.
-2. Call `widget.Properties()` (if `Configurable`); otherwise produce a
-   `// TODO` placeholder.
-3. Split the slice by `Constructor: true` (positional args) vs. the rest
-   (chained method calls / Compose options).
-4. Emit:
-   - **Builder** — `Kind(arg1, arg2, …).Method1(…).Method2(…).`
-     Containers recurse into children, then close with `.End()`.
-   - **Compose** — `compose.Kind(arg1, arg2, …, Method1(…), Method2(…),
-     children…)`.
+### Walker
 
-### Argument formatting
+For each widget the walker:
 
-Each `PropertyKind` has a fixed Go-literal formatter:
+1. **Layout prefix.** If the parent has a `ContainerForm`, calls
+   `parent.LayoutForm(parent, widget).Emit(w, mode)`. This writes things
+   like `.Cell(0, 1, 1, 1)` for Grid.
+2. **Constructor + chain.** Calls `widget's WidgetForm.Emit(w, mode)`.
+   For a form using `EmitFrame`, this writes:
+   - class prefix (`.Class("foo")` if non-empty)
+   - the kind's constructor (`Static("id", "Hello")`)
+   - the standard ComponentForm chain (`Hint`, `Skip`, `Hidden`,
+     `Disabled`)
+   - the style chain (only widget-specific overrides; themed styles
+     suppressed by `StyleForm.fixed`)
+3. **Children.** If the widget is a `Container`, recurse into each
+   child.
+4. **Close.** Emit `.End() // Kind#ID` where Kind comes from
+   `WidgetForm.Name()` and ID from the widget's id.
 
-| Kind         | Builder snippet | Compose snippet |
-|--------------|-----------------|-----------------|
-| `PropString` | `"hello"`       | `"hello"`       |
-| `PropInt`    | `42`            | `42`            |
-| `PropBool`   | `true`          | `true`          |
-| `PropEnum`   | unquoted ident if it matches a Go const (e.g. `core.Stretch`); otherwise quoted | same |
-| `PropInsets` | `1, 2, 3, 4` (variadic) | `compose.Padding(1, 2, 3, 4)` |
-| `PropColor`  | `"$blue"`       | `"$blue"`       |
-| `PropBorder` | `"round"`       | `"round"`       |
+The walker does no indent tracking. Output is `.\n`-separated; trailing
+End-comments preserve nesting visually after gofmt flattens the chain.
 
-Properties that match the kind's default value are omitted from the output
-to keep the generated source compact.
+### Output shapes
+
+```go
+func (d *Designer) GenerateFragment(mode string, w io.Writer) error
+func (d *Designer) GenerateFile(mode string, w io.Writer, pkg, funcName string) error
+```
+
+`GenerateFragment` writes a chained expression starting with
+`NewBuilder(theme)` and ending without a trailing newline. Useful for
+tests and for piping into bigger generators.
+
+`GenerateFile` wraps the fragment with `package`, imports (computed from
+the kinds touched during the walk), and a `func funcName(theme *Theme)
+*UI { return … .Build() }` body. The output is a complete, compilable
+Go file.
+
+Both run `go/format.Source` on the result before returning, so callers
+always see canonical Go.
+
+### Compose mode
+
+`mode == ModeCompose` returns a "not implemented" error today; the
+walker's structure is designed so a compose back-end can be added by
+implementing `WidgetForm.Emit(..., ModeCompose)` per kind without
+walker changes.
 
 ### Event handlers
 
@@ -469,7 +634,7 @@ Generated code emits a comment with the resolved Go function name:
 ```go
 builder.Button("quit", "Quit").
     // TODO: On(EvtActivate, main.quitFn)
-    End().
+    End()
 ```
 
 The function name is resolved via the same `runtime.FuncForPC` /
@@ -478,23 +643,19 @@ The function name is resolved via the same `runtime.FuncForPC` /
 ### Render functions and table providers
 
 Widgets that take a closure (`Deck`, `Tiles`) or a provider interface
-(`Table`) emit the constructor with `nil` and a `// TODO` comment for the
-missing argument. The Inspector cannot reproduce those.
+(`Table`) emit the constructor with `nil` and a `// TODO` comment for
+the missing argument.
 
 ### Output target
 
 `[Generate ▾]` opens a small dropdown:
 
-| Option | Action |
+| Option | Method |
 |--------|--------|
-| Builder → file | `FileChooser` save dialog → write `.go` source |
-| Builder → clipboard | OSC-52 (or fallback `$DISPLAY` clipboard tools) |
-| Compose → file | as above with Compose-style output |
-| Compose → clipboard | as above |
-| Both → file | dual-import file with a comment separator |
-
-The "preview / code panel" of the previous designer-tab draft is gone — the
-output is delivered directly to a file or the clipboard.
+| Builder fragment → clipboard | `GenerateFragment(ModeBuilder, clipboard)` |
+| Builder → file | `GenerateFile(ModeBuilder, file, pkg, fn)` |
+| Compose → file | `GenerateFile(ModeCompose, file, pkg, fn)` (when implemented) |
+| Both → file | dual files with a comment separator |
 
 ---
 
@@ -507,6 +668,7 @@ type Inspector struct {
     target   Container
     selected Widget
     mode     InspectorMode
+    designer *Designer
     layout   Container
 }
 
@@ -597,28 +759,43 @@ Theme-tab specific:
 
 ## Required additions to the library
 
-The Inspector intentionally introduces only small, generic extensions, keeping
-inspector-specific concerns out of the core.
+The Inspector intentionally introduces only small, generic extensions,
+keeping inspector-specific concerns out of the core.
 
-### 1. `Configurable`
+### 1. `core.LayoutForm` interface
 
-The new interface in §"Configurable model". Default implementation lives on
-`Component`; concrete widgets append kind-specific entries.
+Defined in core because widget container forms declare it as a return
+type. See §"WidgetForm model".
 
-### 2. `Container.Remove(child Widget) error`
+### 2. `core.StyleForm`
 
-Counterpart to `Add`. Each container implementation already tracks children,
-so this is a few lines per kind plus an `ErrNotFound` sentinel.
+Already implemented. The `fixed` snapshot field is added so
+`EmitBuilderChain` short-circuits on themed styles.
 
-### 3. `Container.Insert(index int, child Widget) error`
+### 3. ComponentForm + per-widget *Form structs
+
+Live in the widgets package. ComponentForm exposes primitives plus the
+`EmitFrame` template method. Each concrete widget gets a sibling
+`*Form` struct (~50 forms total, mostly mechanical copies of the
+established pattern).
+
+### 4. `Container.Remove(child Widget) error`
+
+Counterpart to `Add`. Each container implementation already tracks
+children, so this is a few lines per kind plus an `ErrNotFound`
+sentinel.
+
+### 5. `Container.Insert(index int, child Widget, params ...any) error`
 
 Index-based child insertion. `ErrFull` for fixed-arity containers.
+Variadic `params` mirrors `Add` for containers (Grid) that need
+per-child layout arguments.
 
-### 4. `Component.Handlers() map[Event][]Handler`
+### 6. `Component.Handlers() map[Event][]Handler`
 
-Already in the previous draft; still required.
+Already in the previous draft; still required for the Events tab.
 
-### 5. `StylesProvider`
+### 7. `StylesProvider`
 
 ```go
 type StylesProvider interface {
@@ -627,21 +804,20 @@ type StylesProvider interface {
 }
 ```
 
-Already in the previous draft; still required.
-
-### 6. `(*TableLog).Reset()`
+### 8. `(*TableLog).Reset()`
 
 Empties the circular buffer.
 
-### 7. `(*UI).Inspector() *Inspector`
+### 9. `(*UI).Inspector() *Inspector`
 
-Cached singleton accessor; the existing `Ctrl+D` handler in `ui.go` calls
-`ui.Inspector().Toggle()`.
+Cached singleton accessor; the existing `Ctrl+D` handler in `ui.go`
+calls `ui.Inspector().Toggle()`.
 
-### 8. Kind registry (`Kinds map` + `RegisterKind`)
+### 10. Form-widget control types
 
-In a new `inspector` package or in `widgets/kinds.go`. Each widget's `init`
-function registers itself.
+The Form widget's `BuildFormGroup` already handles `string`, `int`,
+`bool`, and `select`. The inspector needs `color`, `border`, `insets`,
+and `font` controls — small additions to the form-control switch.
 
 ---
 
@@ -649,74 +825,77 @@ function registers itself.
 
 ```
 inspector/
-├── inspector.go     — Inspector struct, mode detection, Toggle, public API
-├── widgets-tab.go   — Tree explorer + properties form + structural actions
-├── styles-tab.go    — Embeds StyleEditor; scope-driven
-├── events-tab.go    — Handler table + source-snippet panel
-├── theme-tab.go     — Theme selector picker + computed-style panel
-├── log-tab.go       — TableLog viewer with filters
-├── codegen.go       — Builder + Compose code emitters; walks live tree
-├── kinds.go         — KindEntry, RegisterKind, Kinds map, defaults
-├── handler-meta.go  — runtime.FuncForPC + closure-name unwrapping helpers
+├── inspector.go       — Inspector struct, mode detection, Toggle, public API
+├── designer.go        — Designer struct, kind table, tree edits, codegen
+├── widget-form.go     — WidgetForm, ContainerForm, ModeBuilder/Compose
+├── kinds.go           — Kind struct + Designer.Register validation helpers
+├── widgets-tab.go     — Tree explorer + properties form + structural actions
+├── styles-tab.go      — Embeds StyleEditor over core.StyleForm; scope-driven
+├── events-tab.go      — Handler table + source-snippet panel
+├── theme-tab.go       — Theme selector picker + computed-style panel
+├── log-tab.go         — TableLog viewer with filters
+├── handler-meta.go    — runtime.FuncForPC + closure-name unwrapping helpers
 └── doc.go
+
+widgets/
+├── component-form.go  — ComponentForm + primitives + EmitFrame
+├── static-form.go
+├── flex-form.go
+├── grid-form.go       — GridForm + GridLayoutForm
+├── input-form.go
+├── … per-widget forms
+└── form-designer.go   — Special handling for the Form widget
+
+core/
+├── style-form.go      — StyleForm with fixed snapshot
+└── widget-form.go     — LayoutForm interface
 ```
 
 ### Step-by-step
 
-1. **Library additions** — `Configurable`, `Property`, `PropertyKind`;
-   `Container.Remove` / `Insert`; `Component.Handlers` and
-   `Component.Properties`; `StylesProvider`; `(*TableLog).Reset`;
-   `(*UI).Inspector`.
+1. **Library prerequisites** — `Container.Remove`, `Container.Insert`,
+   `Component.Handlers`, `StylesProvider`, `(*TableLog).Reset`,
+   `(*UI).Inspector`. ~1 day.
 
-2. **Default `Component.Properties()`** — covers id, class, hint, padding,
-   margin, font, fg/bg, border, focusable/visible flags. ~50 LOC.
+2. **Form-widget control types** — extend `BuildFormGroup` /
+   `buildFormControl` to support `color`, `border`, `insets`, `font`.
 
-3. **Per-widget `Properties()` overrides** — append kind-specific entries
-   (`Box.Title`, `Flex.Horizontal/Alignment/Spacing`, `Grid.Rows/Cols`,
-   `Button.Text`, `Static.Text`, `Input.Placeholder/Mask`, etc.). ~10–15
-   LOC per widget × ~50 widgets ≈ 600 LOC total but trivially mechanical.
+3. **WidgetForm interfaces + Designer skeleton** — `inspector/widget-form.go`,
+   `inspector/designer.go`, `inspector/kinds.go`. Implement Register
+   validation, Kind/FormFor lookup.
 
-4. **Kind registry** — one `init()` block per widget. Mostly mechanical.
+4. **ComponentForm** — primitives + `EmitFrame`. Add `style` snapshot field;
+   wire Load/Store through `*Style.Modifiable()`.
 
-5. **Code generation (`codegen.go`)** — single tree walk, calls
-   `Properties()`, splits on `Constructor`, emits with the
-   formatter table from §"Argument formatting". Separate Builder and
-   Compose emitters share a helper that does the property split.
+5. **core.StyleForm.fixed** — add the snapshot field; short-circuit
+   `EmitBuilderChain`.
 
-6. **Widgets tab** — Tree from `core.Traverse`; properties form from
-   `Properties()` with the editor-kind table; toolbar buttons drive the
-   structural mutations through `Container.Add` / `Insert` / `Remove`.
+6. **Per-widget Form structs** — ~50 forms, mostly mechanical copies of
+   the StaticForm pattern.
 
-7. **Styles tab** — wraps `StyleEditor` (already specified) with a scope
-   selector that switches its `*Theme` between the live theme and a
-   per-widget synthetic theme.
+7. **Designer tree-edit operations** — `Add`, `Remove`, `Move`,
+   `SetField`. Each calls into the form, mutates the tree, relayouts,
+   and logs.
 
-8. **Theme tab** — selector list + computed-style panel.
-   `[Edit in Styles]` switches tab and pre-loads the editor.
+8. **Codegen walker + GenerateFragment/GenerateFile** — including
+   `go/format` post-processing and trailing `End() // Kind#ID` comments.
 
-9. **Events tab** — unchanged from previous draft.
+9. **Round-trip test** — table-driven: canned trees → `GenerateFragment`
+   → `go/parser` → walk AST and rebuild a `*Form` tree → compare to
+   the original via Load. Catches field-level codegen bugs.
 
-10. **Log tab** — unchanged from previous draft.
+10. **Inspector tabs** — Widgets, Styles, Events, Theme, Log.
 
 11. **Stand-alone binary (`cmd/inspector`)** — boots a fresh `*UI` whose
-    root is an empty `Flex`, opens the Inspector popup at startup. Flags:
-    `--theme`, `--snapshot <dump.json>` (READONLY), `--out <file.go>`
-    (write generated code on quit).
+    root is an empty `Flex`; opens the Inspector popup at startup.
+    Flags: `--theme`, `--snapshot <dump.json>` (READONLY), `--out
+    <file.go>` (write generated code on quit).
 
-12. **Theme entries** — add the inspector-specific selectors listed below
-    to every `themes/theme-*.go`.
+12. **Theme entries** — add the inspector-specific selectors listed
+    below to every `themes/theme-*.go`.
 
-13. **Tests** —
-    - `inspector/codegen_test.go`: round-trip tree → Builder code → re-parse
-      with `go/parser` for syntactic validity; spot-check generated code
-      for representative trees.
-    - `inspector/kinds_test.go`: every registered kind has a working `New`
-      factory whose result implements `Configurable` with at least the
-      `Constructor: true` properties needed to reconstruct it.
-    - `inspector/properties_test.go`: per-widget `Properties()` round-trip
-      (Get → format → parse → Set returns same value).
-    - `inspector/handler-meta_test.go`: function-name resolution for
-      top-level fns, methods, anonymous closures, typed-wrapper closures.
+13. **Form designer** — separate handling for the `Form` widget itself,
+    which edits user data via reflection on a struct field.
 
 ---
 
@@ -746,37 +925,42 @@ primitive — so themes only need the selector additions.
 
 ## Mutation contract (ATTACHED mode)
 
-Mutations only happen in response to explicit user action:
+All mutations go through the Designer; the Inspector never touches
+container methods directly.
 
-| Action | Mutation |
-|--------|----------|
-| Property edit | `prop.Set(v)`; widget calls `Redraw` / `Relayout` |
-| Style edit (widget overrides) | `widget.SetStyle(sel, *Style)`; `Relayout(widget)` |
-| Style edit (theme) | `theme.SetStyle(sel, *Style)`; `Refresh()` on root |
-| `[+ Child]` | `container.Add(child)`; `Relayout(container)` |
-| `[+ Sibling]` | `container.Insert(idx+1, child)`; `Relayout(container)` |
-| `[Delete]` | `parent.Remove(child)`; `Relayout(parent)`; refocus parent if focus was on child |
-| `[↑]` / `[↓]` | `parent.Remove(child)` + `parent.Insert(newIdx, child)` |
-| `[Indent]` | move child into previous sibling (must be a container) |
-| `[Outdent]` | move child into grandparent at parent's position |
+| Action | Designer call | Side effects |
+|--------|---------------|--------------|
+| Property edit | `d.SetField(widget, name, value)` | validate, store, `Relayout(widget)` |
+| Style edit (widget overrides) | `widget.SetStyle(sel, *Style)` (via Styles tab) | `Relayout(widget)` |
+| Style edit (theme) | `theme.SetStyle(sel, *Style)` (via Styles tab) | `Refresh()` on root |
+| `[+ Child]` | `d.Add(parent, kind)` | `Relayout(parent)` |
+| `[+ Sibling]` | `d.Add(parent, kind)` + `d.Move(child, parent, idx+1)` | `Relayout(parent)` |
+| `[Delete]` | `d.Remove(child)` | `Relayout(parent)`; refocus parent if focus was on child |
+| `[↑]` / `[↓]` | `d.Move(child, parent, newIdx)` | `Relayout(parent)` |
+| `[Indent]` | `d.Move(child, prevSibling, end)` | `Relayout(prevSibling)` and old parent |
+| `[Outdent]` | `d.Move(child, grandparent, parentIdx)` | `Relayout` both |
 
 All mutations log at `slog.Info` with `source=inspector`. Failures
-(`Container.Insert` returns `ErrFull`, e.g.) surface as a red `Notification`
-toast for 3 seconds and a `slog.Warn` entry.
+(`Container.Insert` returns `ErrFull`, e.g.) surface as a red
+`Notification` toast for 3 seconds and a `slog.Warn` entry.
 
 ---
 
 ## Non-goals
 
 - **Undo / redo** of inspector edits. The simplest path forward is to
-  generate code, save to disk, and re-run; full in-memory undo is a future
-  enhancement.
-- **Cross-process inspection.** The Inspector lives in the host process and
-  reads in-memory state. Remote inspection over a socket is a future
-  enhancement; READONLY mode operating on a serialised snapshot is the seam.
+  generate code, save to disk, and re-run; full in-memory undo is a
+  future enhancement.
+- **Cross-process inspection.** The Inspector lives in the host process
+  and reads in-memory state. Remote inspection over a socket is a
+  future enhancement; READONLY mode operating on a serialised snapshot
+  is the seam.
 - **Source modification.** The Inspector emits Go code to a file or the
   clipboard; it never edits the user's existing source.
-- **Hot reload.** Generated code is non-executing. Re-running the binary
-  picks up changes; the Inspector itself is the short-feedback path.
-- **Round-tripping closures.** Event handlers, render functions, and table
-  providers are emitted as `// TODO` stubs.
+- **Hot reload.** Generated code is non-executing. Re-running the
+  binary picks up changes; the Inspector itself is the short-feedback
+  path.
+- **Round-tripping closures.** Event handlers, render functions, and
+  table providers are emitted as `// TODO` stubs.
+- **Concurrent Designer use.** The Designer is single-threaded; the
+  TUI's main loop is the natural serialiser.

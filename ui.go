@@ -2,6 +2,7 @@ package zeichenwerk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -331,13 +332,19 @@ func (ui *UI) Children() []Widget {
 	return result
 }
 
-// Layout recalculates and applies the layout for all widget layers in the UI.
-// This method is called automatically when the screen is resized or when
-// the UI structure changes. It ensures that all are properly
-// positioned and sized according to their layout constraints.
+// Layout recalculates and applies the layout for every widget layer
+// in the UI. The base layer (layers[0]) is sized to the screen
+// (minus one row for the debug overlay when active); popup layers
+// keep their existing bounds — those were set when the popup was
+// pushed via Popup, and re-running Layout on a popup re-flows its
+// internal children without moving or resizing the popup itself.
+//
+// This is called automatically when the screen is resized and after
+// any structural change (Relayout). The errors from individual
+// Layout calls are joined and returned together.
 func (ui *UI) Layout() error {
-	// Set the bounds of the root widget to the screen bounds.
-	// In debug mode, the bottom line is reserved for debug information
+	// Size the base layer to the full screen, reserving one row for
+	// the debug overlay when debug mode is active.
 	_, _, width, height := ui.Bounds()
 	if ui.debug {
 		ui.layers[0].SetBounds(0, 0, width, height-1)
@@ -345,8 +352,15 @@ func (ui *UI) Layout() error {
 		ui.layers[0].SetBounds(0, 0, width, height)
 	}
 
-	// Lay out the root widget.
-	return ui.layers[0].Layout()
+	// Lay out every layer. Popup layers keep their current bounds;
+	// only their internal child layout is recomputed.
+	var errs []error
+	for _, layer := range ui.layers {
+		if err := layer.Layout(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // ---- Drawing Methods -------------------------------------------------------
