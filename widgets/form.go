@@ -409,7 +409,7 @@ func buildFormControl(control, id, class string, v reflect.Value, options string
 		input.SetHint(-1, 1)
 		input.Set(v.String())
 
-		block := NewStatic("color-preview-"+id, "", "█")
+		block := NewStatic("color-preview-"+id, "", "◼")
 		block.Apply(theme)
 		block.SetHint(2, 1)
 

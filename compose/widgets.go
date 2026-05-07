@@ -414,7 +414,7 @@ func Marquee(id, class string, options ...Option) Option {
 func PreviewPanel(id, class string, options ...Option) Option {
 	return func(theme *core.Theme, widget core.Widget) {
 		if container, ok := widget.(core.Container); ok {
-			w := widgets.NewPreviewPanel(id, class)
+			w := widgets.NewColorPreview(id, class)
 			w.Apply(theme)
 			container.Add(w)
 			for _, option := range options {

@@ -5,6 +5,7 @@ import "github.com/tekugo/zeichenwerk/core"
 // Compile-time interface type checks
 var (
 	_ core.Container = (*Box)(nil)
+	_ core.Container = (*Collapsible)(nil)
 
 	_ core.Widget = (*Animation)(nil)
 	_ core.Widget = (*Breadcrumb)(nil)

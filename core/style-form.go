@@ -3,8 +3,6 @@ package core
 import (
 	"fmt"
 	"io"
-	"strconv"
-	"strings"
 )
 
 // StyleForm is the editor + codegen surface for a *Style. It mirrors the
@@ -60,8 +58,16 @@ func (f *StyleForm) Load(s *Style) {
 	f.Foreground = s.foreground
 	f.Background = s.background
 	f.Border = s.border
-	f.Padding = formatInsets(s.padding)
-	f.Margin = formatInsets(s.margin)
+	if s.padding == nil {
+		f.Padding = ""
+	} else {
+		f.Padding = s.padding.String()
+	}
+	if s.margin == nil {
+		f.Margin = ""
+	} else {
+		f.Margin = s.margin.String()
+	}
 	f.Font = s.font
 	f.Cursor = s.cursor
 	f.Shadow = s.shadow
@@ -83,15 +89,17 @@ func (f *StyleForm) Store(s *Style) *Style {
 		s = NewStyle(f.Selector)
 	}
 	s = s.Modifiable()
+	if s.padding == nil {
+		s.padding = NewInsets()
+	}
+	if s.margin == nil {
+		s.margin = NewInsets()
+	}
 	s.foreground = f.Foreground
 	s.background = f.Background
 	s.border = f.Border
-	if pad, ok := parseInsetsCSV(f.Padding); ok {
-		s.padding = insetsFromFormArray(pad)
-	}
-	if mar, ok := parseInsetsCSV(f.Margin); ok {
-		s.margin = insetsFromFormArray(mar)
-	}
+	s.padding.Parse(f.Padding)
+	s.margin.Parse(f.Margin)
 	s.font = f.Font
 	s.cursor = f.Cursor
 	s.shadow = f.Shadow
@@ -121,11 +129,11 @@ func (f *StyleForm) EmitBuilderChain(w io.Writer) {
 	if f.fixed {
 		return
 	}
-	if pad, ok := parseInsetsCSV(f.Padding); ok && !zeroFormInsets(pad) {
-		fmt.Fprintf(w, "Padding(%s).\n", formatFormInsets(pad))
+	if pad, ok := parseInsets(f.Padding); ok && !pad.IsZero() {
+		fmt.Fprintf(w, "Padding(%s).\n", pad.String(", "))
 	}
-	if mar, ok := parseInsetsCSV(f.Margin); ok && !zeroFormInsets(mar) {
-		fmt.Fprintf(w, "Margin(%s).\n", formatFormInsets(mar))
+	if mar, ok := parseInsets(f.Margin); ok && !mar.IsZero() {
+		fmt.Fprintf(w, "Margin(%s).\n", mar.String(", "))
 	}
 	if f.Border != "" {
 		fmt.Fprintf(w, "Border(%q).\n", f.Border)
@@ -149,95 +157,11 @@ func (f *StyleForm) EmitBuilderChain(w io.Writer) {
 
 // ---- helpers ----
 
-// formatInsets renders an *Insets as the canonical CSV-shorthand
-// string used by StyleForm.Padding / Margin. nil and all-zero
-// Insets both return "" (the form's representation of NoInsets);
-// non-zero values use CSS-shorthand collapsing via formatFormInsets.
-func formatInsets(in *Insets) string {
-	a := insetsToFormArray(in)
-	if zeroFormInsets(a) {
-		return ""
-	}
-	return formatFormInsets(a)
-}
-
-// parseInsetsCSV parses a CSS-shorthand inset string into a [4]int
-// keyed Top, Right, Bottom, Left. Whitespace and commas are both
-// accepted as separators, so "1 2", "1, 2", "1,2", and "  1 ,  2"
-// all yield the same result.
-//
-// Element-count semantics:
-//
-//	0 ("")           -> [0, 0, 0, 0]               (NoInsets)
-//	1 ("a")          -> [a, a, a, a]
-//	2 ("a b")        -> [a, b, a, b]               (top/bottom, left/right)
-//	3 ("a b c")      -> [a, b, c, b]               (top, left/right, bottom)
-//	4 ("a b c d")    -> [a, b, c, d]               (top, right, bottom, left)
-//
-// Returns ok=false on parse failure or unsupported element counts;
-// callers (Store, Emit) keep the existing inset rather than
-// applying a half-typed mid-edit value.
-func parseInsetsCSV(s string) ([4]int, bool) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return [4]int{}, true
-	}
-	fields := strings.FieldsFunc(s, func(r rune) bool {
-		return r == ',' || r == ' ' || r == '\t'
-	})
-	nums := make([]int, len(fields))
-	for i, f := range fields {
-		n, err := strconv.Atoi(f)
-		if err != nil {
-			return [4]int{}, false
-		}
-		nums[i] = n
-	}
-	switch len(nums) {
-	case 1:
-		v := nums[0]
-		return [4]int{v, v, v, v}, true
-	case 2:
-		t, h := nums[0], nums[1]
-		return [4]int{t, h, t, h}, true
-	case 3:
-		t, h, b := nums[0], nums[1], nums[2]
-		return [4]int{t, h, b, h}, true
-	case 4:
-		return [4]int{nums[0], nums[1], nums[2], nums[3]}, true
-	}
-	return [4]int{}, false
-}
-
-func zeroFormInsets(a [4]int) bool { return a == [4]int{} }
-
-func insetsToFormArray(in *Insets) [4]int {
-	if in == nil {
-		return [4]int{}
-	}
-	return [4]int{in.Top, in.Right, in.Bottom, in.Left}
-}
-
-func insetsFromFormArray(a [4]int) *Insets {
-	if zeroFormInsets(a) {
-		return nil
-	}
-	return &Insets{Top: a[0], Right: a[1], Bottom: a[2], Left: a[3]}
-}
-
-// formatFormInsets reverses the CSS-shorthand expansion so the shortest
-// equivalent variadic argument list is emitted (matches WithPadding /
-// WithMargin's input expectations).
-func formatFormInsets(a [4]int) string {
-	t, r, b, l := a[0], a[1], a[2], a[3]
-	switch {
-	case t == r && r == b && b == l:
-		return fmt.Sprintf("%d", t)
-	case t == b && r == l:
-		return fmt.Sprintf("%d, %d", t, r)
-	case r == l:
-		return fmt.Sprintf("%d, %d, %d", t, r, b)
-	default:
-		return fmt.Sprintf("%d, %d, %d, %d", t, r, b, l)
+func parseInsets(s string) (*Insets, bool) {
+	i := NewInsets()
+	if !i.Parse(s) {
+		return i, false
+	} else {
+		return i, true
 	}
 }

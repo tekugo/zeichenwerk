@@ -7,7 +7,7 @@ import (
 )
 
 func TestPreviewPanel_DefaultIsBlackOnWhite(t *testing.T) {
-	pp := NewPreviewPanel("pp", "")
+	pp := NewColorPreview("pp", "")
 	if pp.Foreground() != (RGB{0, 0, 0}) {
 		t.Errorf("default fg = %+v; want black", pp.Foreground())
 	}
@@ -17,14 +17,14 @@ func TestPreviewPanel_DefaultIsBlackOnWhite(t *testing.T) {
 }
 
 func TestPreviewPanel_Contrast_BlackOnWhite(t *testing.T) {
-	pp := NewPreviewPanel("pp", "")
+	pp := NewColorPreview("pp", "")
 	if got := pp.Contrast(); math.Abs(got-21) > 0.01 {
 		t.Errorf("contrast = %.4f; want ~21.0", got)
 	}
 }
 
 func TestPreviewPanel_SetColors_UpdatesContrast(t *testing.T) {
-	pp := NewPreviewPanel("pp", "")
+	pp := NewColorPreview("pp", "")
 	pp.SetColors(RGB{255, 128, 64}, RGB{16, 16, 32})
 	r := pp.Contrast()
 	if r < 1 || r > 21 {
@@ -36,7 +36,7 @@ func TestPreviewPanel_SetColors_UpdatesContrast(t *testing.T) {
 }
 
 func TestPreviewPanel_SetForegroundOnly(t *testing.T) {
-	pp := NewPreviewPanel("pp", "")
+	pp := NewColorPreview("pp", "")
 	pp.SetForeground(RGB{10, 20, 30})
 	if pp.Foreground() != (RGB{10, 20, 30}) {
 		t.Errorf("Foreground = %+v; want {10 20 30}", pp.Foreground())
@@ -47,7 +47,7 @@ func TestPreviewPanel_SetForegroundOnly(t *testing.T) {
 }
 
 func TestPreviewPanel_HintIsContentSize(t *testing.T) {
-	pp := NewPreviewPanel("pp", "")
+	pp := NewColorPreview("pp", "")
 	w, h := pp.Hint()
 	if w != 13 || h != 7 {
 		t.Errorf("Hint = (%d,%d); want (13,7) content size", w, h)
@@ -55,7 +55,7 @@ func TestPreviewPanel_HintIsContentSize(t *testing.T) {
 }
 
 func TestPreviewPanel_ContrastLabelFormat(t *testing.T) {
-	pp := NewPreviewPanel("pp", "")
+	pp := NewColorPreview("pp", "")
 	pp.SetColors(RGB{0, 0, 0}, RGB{0, 0, 0})
 	got := pp.contrastLabel.Text
 	if got != "Contrast  1.0" {

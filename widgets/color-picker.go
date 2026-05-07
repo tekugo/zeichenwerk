@@ -30,7 +30,7 @@ type ColorPicker struct {
 	mode    ColorPickerMode
 	fg      *ColorPanel
 	bg      *ColorPanel   // nil in ColorSingle
-	preview *PreviewPanel // nil in ColorSingle
+	preview *ColorPreview // nil in ColorSingle
 }
 
 // NewColorPicker creates a colour picker in the given mode.
@@ -63,7 +63,7 @@ func (cp *ColorPicker) build() {
 		cp.Flex.Add(cp.bg)
 		cp.bg.On(EvtChange, cp.onPanelChange)
 
-		cp.preview = NewPreviewPanel(id+"-preview", class)
+		cp.preview = NewColorPreview(id+"-preview", class)
 		cp.Flex.Add(cp.preview)
 	}
 }
@@ -154,4 +154,4 @@ func (cp *ColorPicker) ForegroundPanel() *ColorPanel { return cp.fg }
 func (cp *ColorPicker) BackgroundPanel() *ColorPanel { return cp.bg }
 
 // Preview returns the PreviewPanel, or nil in ColorSingle mode.
-func (cp *ColorPicker) Preview() *PreviewPanel { return cp.preview }
+func (cp *ColorPicker) Preview() *ColorPreview { return cp.preview }

@@ -36,12 +36,12 @@ func TestParseInsetsCSV(t *testing.T) {
 		{"1,", [4]int{1, 1, 1, 1}, true}, // trailing comma is whitespace
 	}
 	for _, tc := range cases {
-		got, ok := parseInsetsCSV(tc.in)
+		got, ok := parseInsets(tc.in)
 		if ok != tc.ok {
 			t.Errorf("parseInsetsCSV(%q): ok = %v, want %v", tc.in, ok, tc.ok)
 			continue
 		}
-		if got != tc.want {
+		if got.Array() != tc.want {
 			t.Errorf("parseInsetsCSV(%q) = %v, want %v", tc.in, got, tc.want)
 		}
 	}
@@ -54,16 +54,16 @@ func TestFormatInsets(t *testing.T) {
 	}{
 		// Nil and all-zero collapse to "" (NoInsets).
 		{nil, ""},
-		{&Insets{}, ""},
+		{&Insets{}, "0"},
 
 		// Symmetric collapses.
 		{&Insets{Top: 5, Right: 5, Bottom: 5, Left: 5}, "5"},
-		{&Insets{Top: 1, Right: 2, Bottom: 1, Left: 2}, "1, 2"},
-		{&Insets{Top: 1, Right: 2, Bottom: 3, Left: 2}, "1, 2, 3"},
-		{&Insets{Top: 1, Right: 2, Bottom: 3, Left: 4}, "1, 2, 3, 4"},
+		{&Insets{Top: 1, Right: 2, Bottom: 1, Left: 2}, "1 2"},
+		{&Insets{Top: 1, Right: 2, Bottom: 3, Left: 2}, "1 2 3"},
+		{&Insets{Top: 1, Right: 2, Bottom: 3, Left: 4}, "1 2 3 4"},
 	}
 	for _, tc := range cases {
-		got := formatInsets(tc.in)
+		got := tc.in.String()
 		if got != tc.want {
 			t.Errorf("formatInsets(%+v) = %q, want %q", tc.in, got, tc.want)
 		}

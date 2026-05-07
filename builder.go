@@ -378,7 +378,7 @@ func (b *Builder) Marquee(id string) *Builder {
 // (typically a ColorPicker) and emits no events. The builder treats it as
 // a leaf — its inner widgets are managed internally.
 func (b *Builder) PreviewPanel(id string) *Builder {
-	pp := NewPreviewPanel(id, b.class)
+	pp := NewColorPreview(id, b.class)
 	b.addLeaf(pp)
 	return b
 }

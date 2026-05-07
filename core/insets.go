@@ -1,6 +1,10 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // NoInsets is a shared, zero-valued Insets instance used as the canonical
 // "no spacing" sentinel. It is returned by Style accessors when no margin
@@ -135,4 +139,82 @@ func (i *Insets) Vertical() int {
 //   - int: Total vertical spacing (top + bottom)
 func (i *Insets) Total() (int, int) {
 	return i.Horizontal(), i.Vertical()
+}
+
+// String reverses the CSS-shorthand expansion so the shortest
+// equivalent variadic argument list is emitted (matches WithPadding /
+// WithMargin's input expectations).
+func (i *Insets) String(separator ...string) string {
+	if i == nil {
+		return ""
+	}
+
+	sep := " "
+	if len(separator) > 0 {
+		sep = separator[0]
+	}
+
+	switch {
+	case i.Top == i.Right && i.Right == i.Bottom && i.Bottom == i.Left:
+		return fmt.Sprintf("%d", i.Top)
+	case i.Top == i.Bottom && i.Right == i.Left:
+		return fmt.Sprintf("%d%s%d", i.Top, sep, i.Right)
+	case i.Right == i.Left:
+		return fmt.Sprintf("%d%s%d%s%d", i.Top, sep, i.Right, sep, i.Bottom)
+	default:
+		return fmt.Sprintf("%d%s%d%s%d%s%d", i.Top, sep, i.Right, sep, i.Bottom, sep, i.Left)
+	}
+}
+
+// Parse parses a CSS-shorthand inset string keyed Top, Right, Bottom, Left.
+// Whitespace and commas are both accepted as separators, so "1 2", "1, 2",
+// "1,2", and "  1 ,  2 all yield the same result.
+//
+// Element-count semantics:
+//
+//	0 ("")           -> [0, 0, 0, 0]               (NoInsets)
+//	1 ("a")          -> [a, a, a, a]
+//	2 ("a b")        -> [a, b, a, b]               (top/bottom, left/right)
+//	3 ("a b c")      -> [a, b, c, b]               (top, left/right, bottom)
+//	4 ("a b c d")    -> [a, b, c, d]               (top, right, bottom, left)
+//
+// Returns ok=false on parse failure or unsupported element counts;
+// callers (Store, Emit) keep the existing inset rather than
+// applying a half-typed mid-edit value.
+func (i *Insets) Parse(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		i.Set(0)
+		return true
+	}
+
+	fields := strings.FieldsFunc(s, func(r rune) bool {
+		return r == ',' || r == ' ' || r == '\t'
+	})
+	if len(fields) > 4 {
+		return false
+	}
+
+	nums := make([]int, len(fields))
+	for i, f := range fields {
+		n, err := strconv.Atoi(f)
+		if err != nil {
+			return false
+		}
+		nums[i] = n
+	}
+	i.Set(nums...)
+	return true
+}
+
+func (i *Insets) IsZero() bool {
+	return i == nil || (i.Top == 0 && i.Right == 0 && i.Bottom == 0 && i.Left == 0)
+}
+
+func (i *Insets) Array() [4]int {
+	if i == nil {
+		return [4]int{}
+	} else {
+		return [4]int{i.Top, i.Right, i.Bottom, i.Left}
+	}
 }

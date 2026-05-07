@@ -13,14 +13,20 @@ import "io"
 // return values of this type so the inspector can drive them
 // structurally without an import-cycle workaround.
 type LayoutForm interface {
+	// Load loads the layout data from the parent container for the
+	// given widget into the form.
 	Load(parent Container, child Widget)
+
+	// Store transfers the layout data from the form to the Container
+	// for the widget.
 	Store(parent Container, child Widget)
+
+	// Validate checks the field data or complete form.
 	Validate(field string) error
 
 	// Emit writes the chain prefix placed in front of the child's
 	// own call. In Builder mode this is typically a single chained
-	// method like ".Cell(0, 1, 1, 1)" — leading ".\n" since the
-	// child's constructor follows on the same chain. Indentation is
-	// gofmt's responsibility.
+	// method like "Cell(0, 1, 1, 1)." since the child's constructor
+	// follows on the same chain. Indentation isgofmt's responsibility.
 	Emit(w io.Writer, mode string) error
 }

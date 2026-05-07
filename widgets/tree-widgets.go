@@ -2,7 +2,6 @@ package widgets
 
 import (
 	"fmt"
-	"reflect"
 
 	. "github.com/tekugo/zeichenwerk/core"
 )
@@ -40,6 +39,8 @@ func NewTreeWidgets(id, class string, root Widget) *TreeWidgets {
 	return tw
 }
 
+// ---- Widget Methods -------------------------------------------------------
+
 // Apply applies theme styles by delegating to the embedded Tree's
 // Apply, so TreeWidgets uses the same "tree" selector family that
 // every theme registers. A previous version applied a "tree-widgets"
@@ -54,11 +55,19 @@ func (tw *TreeWidgets) Apply(theme *Theme) {
 	tw.Tree.Apply(theme)
 }
 
-// Root returns the widget the tree currently mirrors.
-func (tw *TreeWidgets) Root() Widget { return tw.root }
+// Refresh rebuilds the tree from the current widget hierarchy. Call this
+// when the underlying layout has changed (children added or removed).
+func (tw *TreeWidgets) Refresh() {
+	tw.Set(tw.root)
+}
 
-// SetRoot replaces the mirrored widget and rebuilds the tree.
-func (tw *TreeWidgets) SetRoot(root Widget) {
+// ---- Setter interface -----------------------------------------------------
+
+// Get returns the widget the tree currently mirrors.
+func (tw *TreeWidgets) Get() Widget { return tw.root }
+
+// Set replaces the mirrored widget and rebuilds the tree.
+func (tw *TreeWidgets) Set(root Widget) {
 	tw.root = root
 	parent := NewTreeNode("")
 	if root != nil {
@@ -67,11 +76,7 @@ func (tw *TreeWidgets) SetRoot(root Widget) {
 	tw.Tree.SetRoot(parent)
 }
 
-// Refresh rebuilds the tree from the current widget hierarchy. Call this
-// when the underlying layout has changed (children added or removed).
-func (tw *TreeWidgets) Refresh() {
-	tw.SetRoot(tw.root)
-}
+// ---- Helper Methods -------------------------------------------------------
 
 // buildTreeWidgetsNode mirrors the subtree rooted at w as a TreeNode with
 // the widget attached as opaque data.
@@ -88,25 +93,9 @@ func buildTreeWidgetsNode(w Widget) *TreeNode {
 // formatWidgetLabel returns a node label like "Flex (#main)" when the
 // widget has an id, or just "Flex" when it does not.
 func formatWidgetLabel(w Widget) string {
-	name := widgetTypeName(w)
+	name := WidgetType(w)
 	if id := w.ID(); id != "" {
 		return fmt.Sprintf("%s (#%s)", name, id)
 	}
 	return name
-}
-
-// widgetTypeName returns the unqualified Go type name of a widget, stripping
-// pointer and package qualifiers (e.g. "*widgets.Flex" → "Flex").
-func widgetTypeName(w Widget) string {
-	t := reflect.TypeOf(w)
-	if t == nil {
-		return "Widget"
-	}
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	if name := t.Name(); name != "" {
-		return name
-	}
-	return "Widget"
 }
