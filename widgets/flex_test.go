@@ -62,6 +62,74 @@ func TestFlex_Add_SetsParent(t *testing.T) {
 	}
 }
 
+func TestFlex_Insert_Middle(t *testing.T) {
+	f := NewFlex("flex", "", Start, 0)
+	c1 := NewComponent("c1", "")
+	c2 := NewComponent("c2", "")
+	c3 := NewComponent("c3", "")
+	f.Add(c1)
+	f.Add(c3)
+	if err := f.Insert(1, c2); err != nil {
+		t.Fatalf("Insert returned error: %v", err)
+	}
+	if got := []string{f.children[0].ID(), f.children[1].ID(), f.children[2].ID()}; got[0] != "c1" || got[1] != "c2" || got[2] != "c3" {
+		t.Errorf("Insert order = %v; want [c1 c2 c3]", got)
+	}
+	if c2.Parent() != f {
+		t.Error("Insert should set parent on inserted child")
+	}
+}
+
+func TestFlex_Insert_ClampsIndex(t *testing.T) {
+	f := NewFlex("flex", "", Start, 0)
+	c1 := NewComponent("c1", "")
+	c2 := NewComponent("c2", "")
+	c3 := NewComponent("c3", "")
+	f.Add(c2)
+	f.Insert(-100, c1) // clamps to 0
+	f.Insert(999, c3)  // clamps to len
+	if got := []string{f.children[0].ID(), f.children[1].ID(), f.children[2].ID()}; got[0] != "c1" || got[1] != "c2" || got[2] != "c3" {
+		t.Errorf("Insert clamp order = %v; want [c1 c2 c3]", got)
+	}
+}
+
+func TestFlex_Insert_Nil(t *testing.T) {
+	f := NewFlex("flex", "", Start, 0)
+	if err := f.Insert(0, nil); err != ErrChildIsNil {
+		t.Errorf("Insert(nil) = %v; want ErrChildIsNil", err)
+	}
+}
+
+func TestFlex_Remove(t *testing.T) {
+	f := NewFlex("flex", "", Start, 0)
+	c1 := NewComponent("c1", "")
+	c2 := NewComponent("c2", "")
+	c3 := NewComponent("c3", "")
+	f.Add(c1)
+	f.Add(c2)
+	f.Add(c3)
+	if err := f.Remove(c2); err != nil {
+		t.Fatalf("Remove returned error: %v", err)
+	}
+	if len(f.children) != 2 || f.children[0].ID() != "c1" || f.children[1].ID() != "c3" {
+		t.Errorf("after Remove(c2) children = %v; want [c1 c3]",
+			[]string{f.children[0].ID(), f.children[1].ID()})
+	}
+	if c2.Parent() != nil {
+		t.Error("Remove should clear the removed child's parent")
+	}
+}
+
+func TestFlex_Remove_NotFound(t *testing.T) {
+	f := NewFlex("flex", "", Start, 0)
+	c1 := NewComponent("c1", "")
+	f.Add(c1)
+	stranger := NewComponent("stranger", "")
+	if err := f.Remove(stranger); err != ErrNotFound {
+		t.Errorf("Remove(stranger) = %v; want ErrNotFound", err)
+	}
+}
+
 func TestFlex_Children(t *testing.T) {
 	f := NewFlex("flex", "", Start, 0)
 	c1 := NewComponent("c1", "")

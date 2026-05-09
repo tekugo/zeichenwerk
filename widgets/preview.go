@@ -93,6 +93,34 @@ func (p *Preview) Children() []Widget {
 	return nil
 }
 
+// Insert sets the preview target. Only index 0 is valid; any other
+// value returns ErrFull. The Preview deliberately hides its target
+// from Children() walks, but the underlying single-slot semantics
+// match every other one-child container.
+func (p *Preview) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	p.SetTarget(widget)
+	return nil
+}
+
+// Remove clears the preview target if it matches child. Returns
+// ErrNotFound otherwise.
+func (p *Preview) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if p.target != child {
+		return ErrNotFound
+	}
+	p.SetTarget(nil)
+	return nil
+}
+
 // Hint returns the preferred size of the wrapped target plus the
 // Preview's own style overhead, falling back to (0, 0) when there
 // is no target.

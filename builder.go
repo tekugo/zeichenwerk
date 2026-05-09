@@ -143,6 +143,17 @@ func (b *Builder) BarChart(id string) *Builder {
 // Box creates a new box widget with the specified id and display title.
 // The box is automatically styled with theme styles for the border and
 // the title.
+// Card creates a card container with the specified id and title.
+// Card holds two slots — content and footer — populated by the next
+// two children added to the chain. The class is inherited from the
+// builder's current Class context, matching every other Builder
+// constructor.
+func (b *Builder) Card(id, title string) *Builder {
+	card := NewCard(id, b.class, title)
+	b.Add(card)
+	return b
+}
+
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, b.class, title)
 	b.Add(box)

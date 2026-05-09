@@ -209,6 +209,83 @@ func (g *Grid) Children() []Widget {
 	return result
 }
 
+// Insert places widget into the grid at insertion index, taking
+// optional Cell coordinates from params (x, y, w, h) the same way Add
+// does. Insertion index controls only the order in g.cells (which
+// drives focus traversal and Children() ordering); the visual cell
+// position comes entirely from the params. Out-of-range indices are
+// clamped to [0, len(cells)].
+func (g *Grid) Insert(index int, widget Widget, params ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	x, y, w, h := 0, 0, 1, 1
+	if len(params) > 0 {
+		if v, ok := params[0].(int); ok {
+			x = v
+		}
+	}
+	if len(params) > 1 {
+		if v, ok := params[1].(int); ok {
+			y = v
+		}
+	}
+	if len(params) > 2 {
+		if v, ok := params[2].(int); ok && v > 0 {
+			w = v
+		}
+	}
+	if len(params) > 3 {
+		if v, ok := params[3].(int); ok && v > 0 {
+			h = v
+		}
+	}
+	if x >= len(g.columns) {
+		x = len(g.columns) - 1
+		w = 1
+	}
+	if x+w > len(g.columns) {
+		w = len(g.columns) - x
+	}
+	if y >= len(g.rows) {
+		y = len(g.rows) - 1
+		h = 1
+	}
+	if y+h > len(g.rows) {
+		h = len(g.rows) - y
+	}
+
+	if index < 0 {
+		index = 0
+	}
+	if index > len(g.cells) {
+		index = len(g.cells)
+	}
+
+	c := &cell{x: x, y: y, w: w, h: h, content: widget}
+	g.cells = append(g.cells, nil)
+	copy(g.cells[index+1:], g.cells[index:])
+	g.cells[index] = c
+	widget.SetParent(g)
+	return nil
+}
+
+// Remove detaches child from the grid, drops its cell metadata, and
+// clears its parent. Returns ErrNotFound if child is not present.
+func (g *Grid) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	for i, c := range g.cells {
+		if c.content == child {
+			g.cells = append(g.cells[:i], g.cells[i+1:]...)
+			child.SetParent(nil)
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
 // ---- Summarizer -----------------------------------------------------------
 
 // Summary returns row/column sizes and grid-lines setting for Dump output.

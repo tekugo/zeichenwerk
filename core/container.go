@@ -29,6 +29,31 @@ type Container interface {
 	// having to explicitly remove it first.
 	Add(widget Widget, params ...any) error
 
+	// Insert places widget at index in the container's child list, shifting
+	// subsequent children to higher indices. The semantics match Add (same
+	// validation, same params interpretation, same parenting side effects)
+	// except that the caller controls the insertion position. An index of
+	// len(Children()) appends; values outside [0, len(Children())] are
+	// clamped to the closest valid endpoint.
+	//
+	// Single-child containers (Box, Card, Collapsible, Dialog, Viewport,
+	// Preview) accept index 0 — replacing their existing child if any —
+	// and return ErrFull for any other index.
+	//
+	// When widget is nil, implementations MUST return ErrChildIsNil.
+	Insert(index int, widget Widget, params ...any) error
+
+	// Remove detaches child from the container, clears its parent reference,
+	// and shifts any subsequent siblings down by one index. Returns
+	// ErrNotFound when child is not a direct child of the receiver, and
+	// ErrChildIsNil when child is nil.
+	//
+	// Implementations MUST drop any cached layout metadata associated with
+	// the child (Grid cell info, Flex layout params, etc.) so that the
+	// container's Layout pass after the removal does not consult stale
+	// state.
+	Remove(child Widget) error
+
 	// Children returns a slice of all direct child widgets in their current
 	// layout order. Both visible and hidden children are included so that
 	// traversal, focus handling, and debugging tools see the full tree.

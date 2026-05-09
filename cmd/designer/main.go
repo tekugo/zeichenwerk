@@ -51,6 +51,14 @@ func (d *Designer) Add(_ Widget, _ ...any) error {
 	return nil
 }
 
+func (d *Designer) Insert(_ int, _ Widget, _ ...any) error {
+	return nil
+}
+
+func (d *Designer) Remove(_ Widget) error {
+	return nil
+}
+
 func (d *Designer) Layout() error {
 	x, y, w, h := d.Content()
 	lw, _ := d.children[1].Hint()

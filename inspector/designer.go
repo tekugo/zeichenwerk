@@ -164,6 +164,90 @@ func (d *Designer) Add(parent core.Container, kindName string) (core.Widget, err
 	return nil, fmt.Errorf("inspector: Add: no kind named %q", kindName)
 }
 
+// Remove detaches child from its parent. Returns an error when child
+// is nil, when child has no parent (typically the target root, which
+// the user is not allowed to remove), or when the parent's
+// Container.Remove call fails.
+func (d *Designer) Remove(child core.Widget) error {
+	if child == nil {
+		return fmt.Errorf("inspector: Remove: child is nil")
+	}
+	parent := child.Parent()
+	if parent == nil {
+		return fmt.Errorf("inspector: Remove: child %T has no parent", child)
+	}
+	if err := parent.Remove(child); err != nil {
+		return fmt.Errorf("inspector: Remove: %w", err)
+	}
+	return nil
+}
+
+// Move repositions child within its current parent or relocates it to
+// newParent at index pos. When newParent is nil or equal to the
+// current parent, Move reorders within the same container; otherwise
+// it removes from the old parent and inserts into the new one.
+//
+// pos is clamped to [0, len(newParent.Children())] by Insert.
+//
+// Layout parameters (e.g. Grid cell coordinates) are not preserved
+// across re-parenting because the new container may interpret params
+// differently. Callers wanting to preserve grid placement should
+// re-apply the relevant LayoutForm after the move.
+func (d *Designer) Move(child core.Widget, newParent core.Container, pos int) error {
+	if child == nil {
+		return fmt.Errorf("inspector: Move: child is nil")
+	}
+	oldParent := child.Parent()
+	if oldParent == nil {
+		return fmt.Errorf("inspector: Move: child %T has no parent", child)
+	}
+	if newParent == nil {
+		newParent = oldParent
+	}
+
+	if newParent == oldParent {
+		// Reorder within the same container. Calculate the post-removal
+		// destination index so callers can pass either the pre-removal
+		// or post-removal index without surprise: we treat pos as the
+		// final position in the children slice after the move.
+		siblings := oldParent.Children()
+		curIdx := -1
+		for i, c := range siblings {
+			if c == child {
+				curIdx = i
+				break
+			}
+		}
+		if curIdx < 0 {
+			return fmt.Errorf("inspector: Move: child not in parent's children")
+		}
+		if pos < 0 {
+			pos = 0
+		}
+		if pos > len(siblings)-1 {
+			pos = len(siblings) - 1
+		}
+		if pos == curIdx {
+			return nil
+		}
+		if err := oldParent.Remove(child); err != nil {
+			return fmt.Errorf("inspector: Move: remove: %w", err)
+		}
+		if err := oldParent.Insert(pos, child); err != nil {
+			return fmt.Errorf("inspector: Move: re-insert: %w", err)
+		}
+		return nil
+	}
+
+	if err := oldParent.Remove(child); err != nil {
+		return fmt.Errorf("inspector: Move: remove from old parent: %w", err)
+	}
+	if err := newParent.Insert(pos, child); err != nil {
+		return fmt.Errorf("inspector: Move: insert into new parent: %w", err)
+	}
+	return nil
+}
+
 // Generate writes Builder-mode source for d.target's tree to w.
 // Deprecated wrapper around GenerateFragment for the legacy
 // signature; new callers should use GenerateFragment or

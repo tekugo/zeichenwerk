@@ -8,17 +8,20 @@
 // subtree entirely; Layout and Render still drive it normally so it
 // renders and updates as a non-interactive preview.
 //
-// Ctrl+Space opens the designer in a popup. The popup contains a Tree
-// of the target widgets, a Properties pane that renders the selected
-// widget's WidgetForm via BuildFormGroup, and an Apply / Reset /
-// Generate toolbar. Apply mutates the live target so the preview
-// reflects edits immediately. ESC closes the popup; Ctrl+Q quits.
+// Ctrl+Space opens the designer popup. The popup has three areas:
+// a top header band (project filename + dirty dot + theme + Save /
+// Generate / Run / Settings actions); a left tree pane stacking the
+// widget tree above its structural-action toolbar; and a right
+// detail pane that switches between General / Layout / Style / Info
+// tabs. Apply mutates the live target so the preview reflects edits
+// immediately. ESC closes the popup; Ctrl+Q quits.
 package main
 
 import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -31,7 +34,27 @@ import (
 	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
-const outputPath = "/tmp/designer-poc-out.go"
+// project holds the codegen output settings the Settings dialog
+// edits. The defaults match the previous PoC behaviour so existing
+// muscle memory (open the popup, hit Generate, find the file in /tmp)
+// keeps working.
+type project struct {
+	Name     string // shown in the header band
+	OutPath  string // file written by Save / Generate
+	Package  string // emitted package declaration
+	FuncName string // emitted func wrapper name
+	Theme    string // theme label shown in the header
+}
+
+func defaultProject() *project {
+	return &project{
+		Name:     "untitled.go",
+		OutPath:  "/tmp/designer-poc-out.go",
+		Package:  "main",
+		FuncName: "BuildUI",
+		Theme:    "TokyoNight",
+	}
+}
 
 func main() {
 	theme := themes.TokyoNight()
@@ -74,12 +97,13 @@ func main() {
 	d := inspector.NewDesigner(target)
 	registerKinds(d)
 
-	// Build the designer popup as a free-standing Container. Same
-	// layout as the previous standalone version: tree | properties on
-	// top, toolbar on bottom.
-	popup := buildDesignerPopup(theme, target)
+	proj := defaultProject()
 
-	// State shared between popup widgets.
+	// Build the designer popup as a free-standing Container.
+	popup := buildDesignerPopup(theme, target, proj)
+
+	// State shared between popup widgets. The dirty dot's visibility
+	// IS the dirty state — no separate flag needed.
 	var (
 		currentWidget Widget
 		currentNode   *TreeNode
@@ -89,53 +113,83 @@ func main() {
 	)
 
 	tree := MustFind[*Tree](popup, "tree")
-	pane := MustFind[*Box](popup, "form-pane")
+	tabs := MustFind[*Tabs](popup, "details-tabs")
+	dirtyDot := MustFind[*Static](popup, "header-dirty")
+	fileLabel := MustFind[*Static](popup, "header-file")
+	themeLabel := MustFind[*Static](popup, "header-theme")
 	status := MustFind[*Static](popup, "status")
+
+	paneGeneral := MustFind[*Box](popup, "tab-general")
+	paneLayout := MustFind[*Box](popup, "tab-layout")
+	paneStyle := MustFind[*Box](popup, "tab-style")
+	paneInfo := MustFind[*Box](popup, "tab-info")
+
+	setDirty := func(v bool) {
+		dirtyDot.SetFlag(FlagHidden, !v)
+		Redraw(dirtyDot)
+	}
+
+	refreshHeader := func() {
+		fileLabel.Set(proj.Name)
+		themeLabel.Set(proj.Theme)
+		Redraw(fileLabel)
+		Redraw(themeLabel)
+	}
+
+	clearTabs := func() {
+		empty := func(name string) Widget {
+			s := NewStatic("empty-"+name, "muted", "(no widget selected)")
+			s.Apply(theme)
+			return s
+		}
+		_ = paneGeneral.Add(empty("g"))
+		_ = paneLayout.Add(empty("l"))
+		_ = paneStyle.Add(empty("s"))
+		_ = paneInfo.Add(empty("i"))
+		Relayout(paneGeneral)
+	}
 
 	rebuildPane := func(w Widget) {
 		form := d.FormFor(w)
 		if form == nil {
-			lbl := NewStatic("no-form", "", "(no form registered for this widget)")
-			lbl.Apply(theme)
-			pane.Add(lbl)
-			currentWidget, currentForm, currentLayout, currentParent = nil, nil, nil, nil
-			Relayout(pane)
+			lbl := func(name string) Widget {
+				s := NewStatic("noform-"+name, "muted", "(no form registered for this widget)")
+				s.Apply(theme)
+				return s
+			}
+			_ = paneGeneral.Add(lbl("g"))
+			_ = paneLayout.Add(lbl("l"))
+			_ = paneStyle.Add(lbl("s"))
+			_ = paneInfo.Add(lbl("i"))
+			currentWidget, currentForm, currentLayout, currentParent = w, nil, nil, nil
+			Relayout(paneGeneral)
 			return
 		}
 		currentWidget = w
 		currentForm = form
 		currentLayout, currentParent = nil, nil
 
-		stack := NewFlex("form-stack", "", Stretch, 0)
-		stack.SetFlag(FlagVertical, true)
+		// ---- General tab: ComponentForm + per-widget fields. ----
+		general := NewFlex("general-stack", "", Stretch, 0)
+		general.SetFlag(FlagVertical, true)
 
-		// One Form widget pointing at the underlying *WidgetForm
-		// struct. The Update handlers BuildFormGroupAt installs all
-		// hold reflect.Values rooted at this same form.Data, so
-		// rendering each struct level into its own FormGroup still
-		// writes back to the right field.
-		f := NewForm("form", "", "", form)
+		f := NewForm("form-general", "", "", form)
 		f.Apply(theme)
 
-		formContent := NewFlex("form-content", "", Stretch, 0)
-		formContent.SetFlag(FlagVertical, true)
+		generalContent := NewFlex("general-content", "", Stretch, 0)
+		generalContent.SetFlag(FlagVertical, true)
 
 		v := reflect.ValueOf(form).Elem()
 		t := v.Type()
 
-		// addSection wraps addFormSection with a thin horizontal
-		// separator before each section except the first, so the
-		// Component / Static / Input / etc groups read as distinct
-		// blocks rather than running together.
 		isFirst := true
 		addSection := func(title string, fv reflect.Value) {
 			if !isFirst {
-				addSeparator(formContent, theme)
+				addSeparator(generalContent, theme)
 			}
 			isFirst = false
-			addFormSection(f, formContent, theme, title, fv)
+			addFormSection(f, generalContent, theme, title, fv)
 		}
-
 		for i := 0; i < v.NumField(); i++ {
 			sf := t.Field(i)
 			fv := v.Field(i)
@@ -144,46 +198,28 @@ func main() {
 			}
 			addSection(sectionTitle(sf.Type.Name()), fv)
 		}
-		// Outer struct's own (non-embedded) fields.
 		addSection(sectionTitle(t.Name()), v)
+		_ = f.Add(generalContent)
+		_ = general.Add(f)
+		_ = paneGeneral.Add(general)
 
-		_ = f.Add(formContent)
-		_ = stack.Add(f)
+		// ---- Layout tab: parent's LayoutForm (if any) + Computed. ----
+		layoutStack := NewFlex("layout-stack", "", Stretch, 0)
+		layoutStack.SetFlag(FlagVertical, true)
 
-		// Style section. Backed by a separate Form widget pointing
-		// at the same *core.StyleForm snapshot ComponentForm holds
-		// internally, so edits made here flow back through
-		// ComponentForm.Store on Apply (Modifiable creates a non-
-		// fixed child for previously-themed styles, so the next
-		// generation stops being suppressed).
-		if styleForm := form.Style(); styleForm != nil {
-			addSeparator(stack, theme)
-
-			styleW := NewForm("style-form", "", "", styleForm)
-			styleW.Apply(theme)
-
-			styleContent := NewFlex("style-content", "", Stretch, 0)
-			styleContent.SetFlag(FlagVertical, true)
-
-			addFormSection(styleW, styleContent, theme, "Style", reflect.ValueOf(styleForm).Elem())
-
-			_ = styleW.Add(styleContent)
-			_ = stack.Add(styleW)
-		}
-
+		hasLayoutForm := false
 		if parent := w.Parent(); parent != nil {
 			if pf := d.FormFor(parent); pf != nil {
 				if cf, ok := pf.(inspector.ContainerForm); ok {
 					if lf := cf.LayoutForm(parent, w); lf != nil {
 						currentLayout = lf
 						currentParent = parent
+						hasLayoutForm = true
 
-						addSeparator(stack, theme)
-
-						hdr := NewStatic("layout-header", "",
-							fmt.Sprintf(" Layout in %s#%s ", widgetKind(parent), parent.ID()))
+						hdr := NewStatic("layout-header", "section",
+							fmt.Sprintf(" Layout in %s%s ", widgetKind(parent), idSuffix(parent)))
 						hdr.Apply(theme)
-						_ = stack.Add(hdr)
+						_ = layoutStack.Add(hdr)
 
 						lfForm := NewForm("layout-form", "", "", lf)
 						lfGroup := NewFormGroup("layout-fg", "", "", true, 0)
@@ -191,30 +227,103 @@ func main() {
 						lfGroup.Apply(theme)
 						BuildFormGroup(lfForm, lfGroup, "", theme)
 						_ = lfForm.Add(lfGroup)
-						_ = stack.Add(lfForm)
+						_ = layoutStack.Add(lfForm)
+
+						addSeparator(layoutStack, theme)
 					}
 				}
 			}
 		}
-
-		// Read-only Info section: bounds + hint as computed by the
-		// most recent Layout pass. Not part of the form because these
-		// are runtime-derived rather than user-editable; they refresh
-		// whenever the user re-selects the widget.
-		addSeparator(stack, theme)
-		infoHdr := NewStatic("info-header", "", " Info ")
-		infoHdr.Apply(theme)
-		_ = stack.Add(infoHdr)
+		if !hasLayoutForm {
+			note := NewStatic("layout-note", "muted",
+				"  parent has no per-child layout parameters")
+			note.Apply(theme)
+			_ = layoutStack.Add(note)
+			addSeparator(layoutStack, theme)
+		}
+		// Always-visible Computed block.
+		comp := NewStatic("layout-computed-header", "section", " Computed ")
+		comp.Apply(theme)
+		_ = layoutStack.Add(comp)
 
 		x, y, ww, wh := w.Bounds()
 		hw, hh := w.Hint()
-		info := NewStatic("info", "",
-			fmt.Sprintf("bounds: x=%d y=%d w=%d h=%d   hint: w=%d h=%d", x, y, ww, wh, hw, hh))
-		info.Apply(theme)
-		_ = stack.Add(info)
+		bounds := NewStatic("layout-bounds", "",
+			fmt.Sprintf("  bounds   x=%d  y=%d  w=%d  h=%d", x, y, ww, wh))
+		bounds.Apply(theme)
+		_ = layoutStack.Add(bounds)
+		hint := NewStatic("layout-hint", "",
+			fmt.Sprintf("  hint     w=%d  h=%d", hw, hh))
+		hint.Apply(theme)
+		_ = layoutStack.Add(hint)
+		_ = paneLayout.Add(layoutStack)
 
-		_ = pane.Add(stack)
-		Relayout(pane)
+		// ---- Style tab: StyleForm if available. ----
+		styleStack := NewFlex("style-stack", "", Stretch, 0)
+		styleStack.SetFlag(FlagVertical, true)
+		if styleForm := form.Style(); styleForm != nil {
+			styleW := NewForm("form-style", "", "", styleForm)
+			styleW.Apply(theme)
+			styleContent := NewFlex("style-content", "", Stretch, 0)
+			styleContent.SetFlag(FlagVertical, true)
+			addFormSection(styleW, styleContent, theme, "Style",
+				reflect.ValueOf(styleForm).Elem())
+			_ = styleW.Add(styleContent)
+			_ = styleStack.Add(styleW)
+		} else {
+			note := NewStatic("style-note", "muted",
+				"  no style form available")
+			note.Apply(theme)
+			_ = styleStack.Add(note)
+		}
+		_ = paneStyle.Add(styleStack)
+
+		// ---- Info tab: read-only kind summary. ----
+		infoStack := NewFlex("info-stack", "", Stretch, 0)
+		infoStack.SetFlag(FlagVertical, true)
+
+		hdr := NewStatic("info-header", "section", " Widget ")
+		hdr.Apply(theme)
+		_ = infoStack.Add(hdr)
+
+		typ := NewStatic("info-type", "",
+			fmt.Sprintf("  type     %s", widgetKind(w)))
+		typ.Apply(theme)
+		_ = infoStack.Add(typ)
+
+		idStr := w.ID()
+		if idStr == "" {
+			idStr = "—"
+		}
+		idLine := NewStatic("info-id", "", "  id       "+idStr)
+		idLine.Apply(theme)
+		_ = infoStack.Add(idLine)
+
+		parentDesc := "—"
+		if p := w.Parent(); p != nil {
+			parentDesc = fmt.Sprintf("%s%s", widgetKind(p), idSuffix(p))
+		}
+		parentLine := NewStatic("info-parent", "", "  parent   "+parentDesc)
+		parentLine.Apply(theme)
+		_ = infoStack.Add(parentLine)
+
+		childCount := "—"
+		if c, ok := w.(Container); ok {
+			childCount = fmt.Sprintf("%d", len(c.Children()))
+		}
+		childLine := NewStatic("info-children", "", "  children "+childCount)
+		childLine.Apply(theme)
+		_ = infoStack.Add(childLine)
+
+		flagsLine := NewStatic("info-flags", "", "  flags    "+flagSummary(w))
+		flagsLine.Apply(theme)
+		_ = infoStack.Add(flagsLine)
+		_ = paneInfo.Add(infoStack)
+
+		Relayout(paneGeneral)
+		Relayout(paneLayout)
+		Relayout(paneStyle)
+		Relayout(paneInfo)
 	}
 
 	tree.On(EvtSelect, func(_ Widget, _ Event, _ ...any) bool {
@@ -228,37 +337,64 @@ func main() {
 		}
 		currentNode = node
 		rebuildPane(w)
-		setStatus(status, fmt.Sprintf("selected %s#%s", widgetKind(w), w.ID()))
+		setStatus(status, fmt.Sprintf("selected %s%s", widgetKind(w), idSuffix(w)))
 		return false
 	})
 
-	MustFind[*Button](popup, "apply-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+	// Tab keys 1–4 jump to the matching detail tab. We attach to the
+	// popup so the binding is active anywhere inside it; the handler
+	// short-circuits before letting the framework treat the digit as
+	// input to a focused field.
+	popup.On(EvtKey, func(_ Widget, _ Event, data ...any) bool {
+		if len(data) == 0 {
+			return false
+		}
+		ev, ok := data[0].(*tcell.EventKey)
+		if !ok || ev.Key() != tcell.KeyRune {
+			return false
+		}
+		if ev.Modifiers()&tcell.ModAlt == 0 {
+			return false
+		}
+		switch ev.Str() {
+		case "1":
+			tabs.Set(0)
+			return true
+		case "2":
+			tabs.Set(1)
+			return true
+		case "3":
+			tabs.Set(2)
+			return true
+		case "4":
+			tabs.Set(3)
+			return true
+		}
+		return false
+	})
+
+	apply := func() {
 		if currentForm == nil || currentWidget == nil {
 			setStatus(status, "no widget selected")
-			return false
+			return
 		}
 		currentForm.Store(currentWidget)
 		if currentLayout != nil && currentParent != nil {
 			currentLayout.Store(currentParent, currentWidget)
 		}
-		// Target is part of the live UI now — Relayout walks up to
-		// the visible root so the preview reflects the change.
 		Relayout(currentWidget)
-
 		if currentNode != nil {
 			currentNode.SetText(treeLabel(currentWidget))
 			Redraw(tree)
 		}
-
-		// Rebuild the pane so the Info section picks up the new
-		// post-layout bounds. This also re-Loads the form from the
-		// just-stored state, which is a no-op for fields the user
-		// edited and a refresh for any value the widget may have
-		// massaged during Store (e.g. clamped, normalized).
 		w := currentWidget
 		rebuildPane(w)
+		setDirty(true)
+		setStatus(status, fmt.Sprintf("applied → %s%s", widgetKind(w), idSuffix(w)))
+	}
 
-		setStatus(status, fmt.Sprintf("applied → %s#%s", widgetKind(w), w.ID()))
+	MustFind[*Button](popup, "apply-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		apply()
 		return false
 	})
 
@@ -271,23 +407,34 @@ func main() {
 		return false
 	})
 
-	MustFind[*Button](popup, "generate-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+	writeFile := func() {
 		var buf bytes.Buffer
-		// GenerateFile produces a complete, gofmt-canonical Go
-		// file (package + imports + func) that can be saved
-		// directly and re-run. GenerateFragment would produce
-		// just the chained expression — useful for splicing into
-		// existing code, but less convenient as a save-to-disk
-		// target.
-		if err := d.GenerateFile(inspector.ModeBuilder, &buf, "main", "BuildUI"); err != nil {
+		if err := d.GenerateFile(inspector.ModeBuilder, &buf, proj.Package, proj.FuncName); err != nil {
 			setStatus(status, "generate failed: "+err.Error())
-			return false
+			return
 		}
-		if err := os.WriteFile(outputPath, buf.Bytes(), 0o644); err != nil {
+		if err := os.WriteFile(proj.OutPath, buf.Bytes(), 0o644); err != nil {
 			setStatus(status, "write failed: "+err.Error())
-			return false
+			return
 		}
-		setStatus(status, "wrote "+outputPath)
+		setDirty(false)
+		setStatus(status, "wrote "+proj.OutPath)
+	}
+
+	MustFind[*Button](popup, "save-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		writeFile()
+		return false
+	})
+	MustFind[*Button](popup, "generate-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		writeFile()
+		return false
+	})
+	MustFind[*Button](popup, "run-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		setStatus(status, "Run: not implemented yet")
+		return false
+	})
+	MustFind[*Button](popup, "settings-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		openSettingsDialog(ui, proj, refreshHeader, func(msg string) { setStatus(status, msg) })
 		return false
 	})
 
@@ -301,9 +448,6 @@ func main() {
 		Redraw(tree)
 	}
 
-	// resolveAddParent picks the container that a new child should
-	// land in: the selected widget if it's a container, otherwise
-	// its nearest container ancestor, falling back to the target.
 	resolveAddParent := func() Container {
 		if currentWidget != nil {
 			if c, ok := currentWidget.(Container); ok {
@@ -322,11 +466,107 @@ func main() {
 			child.Apply(theme)
 			Relayout(child)
 			refreshTree()
-			setStatus(status, fmt.Sprintf("added %s under %s#%s",
-				widgetKind(child), widgetKind(parent), parent.ID()))
+			setDirty(true)
+			setStatus(status, fmt.Sprintf("added %s under %s%s",
+				widgetKind(child), widgetKind(parent), idSuffix(parent)))
 		})
 		return false
 	})
+
+	// selectAfterMutation re-points currentWidget at the given widget
+	// (typically the parent of a deleted child) and rebuilds the
+	// detail panes around it. clearWhenNil collapses the panes back to
+	// the empty placeholder when nothing sensible remains selected.
+	selectAfterMutation := func(w Widget) {
+		if w == nil {
+			currentWidget, currentForm, currentLayout, currentParent, currentNode = nil, nil, nil, nil, nil
+			clearTabs()
+			return
+		}
+		currentWidget = w
+		rebuildPane(w)
+	}
+
+	MustFind[*Button](popup, "del-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		if currentWidget == nil {
+			setStatus(status, "Delete: no widget selected")
+			return false
+		}
+		if currentWidget == target {
+			setStatus(status, "Delete: cannot remove the root")
+			return false
+		}
+		victim := currentWidget
+		parent := victim.Parent()
+		if err := d.Remove(victim); err != nil {
+			setStatus(status, "delete failed: "+err.Error())
+			return false
+		}
+		Relayout(parent)
+		refreshTree()
+		setDirty(true)
+		setStatus(status, fmt.Sprintf("removed %s%s", widgetKind(victim), idSuffix(victim)))
+		// Snap selection up to the parent so the property panel does
+		// not keep showing a widget that is no longer in the tree.
+		selectAfterMutation(parent)
+		return false
+	})
+
+	moveSibling := func(delta int) bool {
+		if currentWidget == nil {
+			setStatus(status, "Move: no widget selected")
+			return false
+		}
+		parent := currentWidget.Parent()
+		if parent == nil {
+			setStatus(status, "Move: no parent")
+			return false
+		}
+		siblings := parent.Children()
+		idx := -1
+		for i, s := range siblings {
+			if s == currentWidget {
+				idx = i
+				break
+			}
+		}
+		if idx < 0 {
+			setStatus(status, "Move: child not in parent")
+			return false
+		}
+		newIdx := idx + delta
+		if newIdx < 0 || newIdx >= len(siblings) {
+			setStatus(status, "Move: already at boundary")
+			return false
+		}
+		if err := d.Move(currentWidget, parent, newIdx); err != nil {
+			setStatus(status, "move failed: "+err.Error())
+			return false
+		}
+		Relayout(parent)
+		refreshTree()
+		setDirty(true)
+		direction := "↑"
+		if delta > 0 {
+			direction = "↓"
+		}
+		setStatus(status, fmt.Sprintf("moved %s%s %s",
+			widgetKind(currentWidget), idSuffix(currentWidget), direction))
+		return false
+	}
+
+	MustFind[*Button](popup, "up-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		return moveSibling(-1)
+	})
+	MustFind[*Button](popup, "down-btn").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		return moveSibling(+1)
+	})
+
+	// Initialise empty-state placeholders so the popup is well-formed
+	// before any selection.
+	clearTabs()
+	refreshHeader()
+	setDirty(false)
 
 	// Toggle the designer popup with Ctrl+Space. The handler runs
 	// before UI's hardcoded global-key block, so it can intercept
@@ -340,8 +580,6 @@ func main() {
 		if !ok {
 			return false
 		}
-		// Most terminals send Ctrl+Space as the NUL byte (KeyNUL).
-		// Some send Rune ' ' with the Ctrl modifier set; cover both.
 		if ev.Key() == tcell.KeyNUL ||
 			(ev.Key() == tcell.KeyRune && ev.Str() == " " && ev.Modifiers()&tcell.ModCtrl != 0) {
 			ui.Popup(-1, -1, 0, 0, popup)
@@ -353,45 +591,173 @@ func main() {
 	ui.Run()
 }
 
-// buildDesignerPopup constructs the popup as a standalone Box-wrapped
-// VFlex. Each pane has its own toolbar: the tree column carries the
-// structural actions ([+ Child], [Generate]) and the properties
-// column carries the form actions ([Apply], [Reset]). The status
-// line spans the full width at the bottom. Returns the root Box so
-// the caller can pass it directly to ui.Popup.
-func buildDesignerPopup(theme *Theme, target Widget) Container {
+// Nerd-font glyphs used on the tree-action toolbar. Pre-resolved
+// codepoints (FontAwesome subset, identical to the ones already used
+// in cmd/malwerk/glyphs.go) so terminals with a configured Nerd Font
+// render them as proper icons; non-Nerd terminals fall back to a
+// generic missing-glyph indicator, which is still better than a row
+// of three-letter abbreviations.
+const (
+	iconAdd    = "" // nf-fa-plus
+	iconDelete = "" // nf-fa-trash
+	iconUp     = "" // nf-fa-arrow_up
+	iconDown   = "" // nf-fa-arrow_down
+)
+
+// buildDesignerPopup constructs the popup as a 3-row × 2-column
+// Grid with rendered grid lines. The Grid replaces the previous
+// Box+VFlex combination so the whole frame, the title, the
+// header-band, the tree/details split and the status line are all
+// expressed as cells with shared dividers.
+//
+// Layout:
+//
+//	row 0 (h=1)        : title + project chrome (spans both cols)
+//	row 1 (h=-1, fills): tree pane | details pane
+//	row 2 (h=1)        : status line (spans both cols)
+//
+//	col 0 (w=34): tree pane — TreeWidgets above an icon toolbar
+//	col 1 (w=-1): details pane — Tabs / Switcher / Apply-Reset toolbar
+//
+// The 96×36 outer hint keeps the popup a focused modal rather than
+// letting it grow to fill the terminal; grid lines do the visual
+// framing the Box border used to do.
+func buildDesignerPopup(theme *Theme, target Widget, proj *project) Container {
 	b := NewBuilder(theme).
-		Box("designer-frame", " Designer ").Hint(96, 36).
-		VFlex("designer-main", Stretch, 0).
-		HFlex("designer-upper", Stretch, 1).Hint(0, -1).
-		// Left column: tree + tree-related toolbar.
-		VFlex("tree-pane", Stretch, 0).Hint(36, 0).
-		TreeWidgets("tree", target).Hint(0, -1).
-		HFlex("tree-toolbar", Start, 2).Hint(0, 3).
-		Button("add-btn", "+ Child").
+		Grid("designer-grid", 3, 2, true).Hint(96, 36).
+		Columns(34, -1).Rows(1, -1, 1).
+		// ===== Row 0: header band, spanning both columns =====
+		Cell(0, 0, 2, 1).
+		HFlex("header-band", Center, 1).
+		Static("designer-title", " Designer ").Class("title").
+		Static("header-file", proj.Name).
+		Static("header-dirty", "●").Hint(1, 1).
+		Static("header-spacer-1", "  ").
+		Static("header-theme", proj.Theme).
+		Spacer().Hint(-1, 0).
+		Button("save-btn", "Save").
 		Button("generate-btn", "Generate").
-		End(). // closes tree-toolbar HFlex
-		End(). // closes tree-pane VFlex
-		// Right column: properties pane + form-related toolbar.
-		// width=-1 → take the rest of designer-upper's horizontal
-		// space after tree-pane's fixed 36 cols. height is the
-		// cross-axis here (HFlex with Stretch alignment) so it's
-		// filled regardless of what we put.
-		VFlex("props-pane", Stretch, 0).Hint(-1, 0).
-		Box("form-pane", " Properties ").Hint(0, -1).
-		End(). // closes form-pane Box
-		HFlex("props-toolbar", Start, 2).Hint(0, 3).
+		Button("run-btn", "Run").
+		Button("settings-btn", "Settings").
+		End(). // closes header-band
+		// ===== Row 1, col 0: tree pane =====
+		Cell(0, 1, 1, 1).
+		VFlex("tree-pane", Stretch, 0).
+		TreeWidgets("tree", target).Hint(0, -1).
+		HFlex("tree-toolbar", Center, 2).Hint(0, 1).
+		Button("add-btn", iconAdd).
+		Button("del-btn", iconDelete).
+		Button("up-btn", iconUp).
+		Button("down-btn", iconDown).
+		End(). // closes tree-toolbar
+		End(). // closes tree-pane
+		// ===== Row 1, col 1: details pane =====
+		Cell(1, 1, 1, 1).
+		VFlex("details-pane", Stretch, 0).
+		Tabs("details-tabs", "General", "Layout", "Style", "Info").Hint(0, 2).
+		Switcher("details-switcher", true).Hint(0, -1).
+		// Tab panes: borderless boxes so they read as plain panels;
+		// the Tabs strip and the surrounding grid lines already
+		// supply the framing, an extra box border just adds noise.
+		Box("tab-general", "").Border("none").
+		End(). // closes tab-general Box (no-op)
+		Box("tab-layout", "").Border("none").
+		End(). // closes tab-layout Box (no-op)
+		Box("tab-style", "").Border("none").
+		End(). // closes tab-style Box (no-op)
+		Box("tab-info", "").Border("none").
+		End(). // closes tab-info Box (no-op)
+		End(). // closes details-switcher
+		HFlex("details-toolbar", End, 2).Hint(0, 1).
+		Spacer().Hint(-1, 0).
 		Button("apply-btn", "Apply").
 		Button("reset-btn", "Reset").
-		End(). // closes props-toolbar HFlex
-		End(). // closes props-pane VFlex
-		End(). // closes designer-upper HFlex
-		// Status line spans the full popup width at the bottom.
-		Static("status", "                                                                ").Hint(0, 1).
-		End(). // closes designer-main VFlex
-		End()  // closes designer-frame Box (no-op at root)
+		End(). // closes details-toolbar
+		End(). // closes details-pane
+		// ===== Row 2: status line, spanning both columns =====
+		Cell(0, 2, 2, 1).
+		Static("status", " ").
+		End() // closes designer-grid
 
 	return b.Container()
+}
+
+// openSettingsDialog edits the project struct in place. Fields
+// covered: filename label (header chrome), output path, package
+// name, function name, theme label. Theme is currently a label only —
+// switching themes at runtime would require re-applying every widget,
+// which is out of scope for the PoC; the field is here so the chrome
+// reflects the theme the user thinks they're designing in.
+func openSettingsDialog(ui *UI, proj *project, onChange func(), notify func(string)) {
+	dialog := ui.NewBuilder().
+		Dialog("settings-dialog", "Project Settings").
+		Class("dialog").
+		VFlex("settings-body", Stretch, 1).Padding(1, 2).
+		Static("settings-prompt", "Edit codegen and chrome settings.").Hint(0, 1).
+		HFlex("settings-name-row", Start, 1).Hint(0, 1).
+		Static("settings-name-label", "Name      ").Hint(12, 1).
+		Input("settings-name", proj.Name).Hint(40, 1).
+		End().
+		HFlex("settings-out-row", Start, 1).Hint(0, 1).
+		Static("settings-out-label", "Output    ").Hint(12, 1).
+		Input("settings-out", proj.OutPath).Hint(40, 1).
+		End().
+		HFlex("settings-pkg-row", Start, 1).Hint(0, 1).
+		Static("settings-pkg-label", "Package   ").Hint(12, 1).
+		Input("settings-pkg", proj.Package).Hint(40, 1).
+		End().
+		HFlex("settings-fn-row", Start, 1).Hint(0, 1).
+		Static("settings-fn-label", "Func name ").Hint(12, 1).
+		Input("settings-fn", proj.FuncName).Hint(40, 1).
+		End().
+		HFlex("settings-theme-row", Start, 1).Hint(0, 1).
+		Static("settings-theme-label", "Theme     ").Hint(12, 1).
+		Input("settings-theme", proj.Theme).Hint(40, 1).
+		End().
+		HFlex("settings-buttons", End, 2).Hint(0, 1).
+		Spacer().Hint(-1, 0).
+		Button("settings-ok", "Save").
+		Button("settings-cancel", "Cancel").
+		End().
+		End().
+		Class("").
+		Container()
+
+	commit := func() {
+		nameIn := MustFind[*Input](dialog, "settings-name")
+		outIn := MustFind[*Input](dialog, "settings-out")
+		pkgIn := MustFind[*Input](dialog, "settings-pkg")
+		fnIn := MustFind[*Input](dialog, "settings-fn")
+		themeIn := MustFind[*Input](dialog, "settings-theme")
+
+		newName := strings.TrimSpace(nameIn.Get())
+		if newName == "" {
+			newName = filepath.Base(outIn.Get())
+		}
+		proj.Name = newName
+		proj.OutPath = strings.TrimSpace(outIn.Get())
+		proj.Package = strings.TrimSpace(pkgIn.Get())
+		proj.FuncName = strings.TrimSpace(fnIn.Get())
+		proj.Theme = strings.TrimSpace(themeIn.Get())
+		ui.Close()
+		if onChange != nil {
+			onChange()
+		}
+		if notify != nil {
+			notify("settings updated")
+		}
+	}
+
+	MustFind[*Button](dialog, "settings-ok").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		commit()
+		return true
+	})
+	MustFind[*Button](dialog, "settings-cancel").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		ui.Close()
+		return true
+	})
+
+	ui.Popup(-1, -1, 0, 0, dialog)
 }
 
 // buildWidgetTreeNode mirrors w as a TreeNode, recursing into
@@ -427,7 +793,7 @@ func openAddChildDialog(ui *UI, _ *Theme, status *Static, parent Container, d *i
 		Class("dialog").
 		VFlex("add-child-body", Stretch, 1).
 		Static("add-child-prompt",
-			fmt.Sprintf("Add child to %s#%s", widgetKind(parent), parent.ID())).
+			fmt.Sprintf("Add child to %s%s", widgetKind(parent), idSuffix(parent))).
 		List("add-child-list", kinds...).Hint(28, 8).
 		HFlex("add-child-buttons", End, 2).
 		Button("add-child-ok", "Add").
@@ -490,6 +856,16 @@ func registerKinds(d *inspector.Designer) {
 		func() inspector.WidgetForm { return &FlexForm{} })
 	register(reflect.TypeOf((*Input)(nil)),
 		func() inspector.WidgetForm { return &InputForm{} })
+	register(reflect.TypeOf((*Button)(nil)),
+		func() inspector.WidgetForm { return &ButtonForm{} })
+	register(reflect.TypeOf((*Box)(nil)),
+		func() inspector.WidgetForm { return &BoxForm{} })
+	register(reflect.TypeOf((*Card)(nil)),
+		func() inspector.WidgetForm { return &CardForm{} })
+	register(reflect.TypeOf((*Checkbox)(nil)),
+		func() inspector.WidgetForm { return &CheckboxForm{} })
+	register(reflect.TypeOf((*List)(nil)),
+		func() inspector.WidgetForm { return &ListForm{} })
 }
 
 // widgetKind returns the Go type name without the "*widgets." prefix.
@@ -499,6 +875,41 @@ func widgetKind(w Widget) string {
 		t = t.Elem()
 	}
 	return t.Name()
+}
+
+// idSuffix returns "#id" when w has an id, "" otherwise. Used to
+// build human-readable labels like "Static#title" in the breadcrumb,
+// status line, and Layout-tab header — never appearing for unnamed
+// widgets that would otherwise read as "Static#".
+func idSuffix(w Widget) string {
+	if id := w.ID(); id != "" {
+		return "#" + id
+	}
+	return ""
+}
+
+// flagSummary collapses the most relevant runtime flags into a short
+// space-separated label for the Info tab. Focused / hovered are not
+// included because they're transient and would flicker; Skip / Hidden
+// / Disabled are persistent enough to be worth showing.
+func flagSummary(w Widget) string {
+	parts := make([]string, 0, 4)
+	if w.Flag(FlagFocused) {
+		parts = append(parts, "focused")
+	}
+	if w.Flag(FlagSkip) {
+		parts = append(parts, "skip")
+	}
+	if w.Flag(FlagHidden) {
+		parts = append(parts, "hidden")
+	}
+	if w.Flag(FlagDisabled) {
+		parts = append(parts, "disabled")
+	}
+	if len(parts) == 0 {
+		return "—"
+	}
+	return strings.Join(parts, " ")
 }
 
 // treeLabel formats a widget as it appears in the tree, matching
@@ -527,7 +938,7 @@ func addSeparator(container Container, theme *Theme) {
 // reach the underlying struct fields, so each section can target a
 // different embedded level while sharing one *Form data root.
 func addFormSection(f *Form, container Container, theme *Theme, title string, v reflect.Value) {
-	hdr := NewStatic("section-"+title, "", " "+title+" ")
+	hdr := NewStatic("section-"+title, "section", " "+title+" ")
 	hdr.Apply(theme)
 	_ = container.Add(hdr)
 

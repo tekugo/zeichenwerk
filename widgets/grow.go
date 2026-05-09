@@ -59,6 +59,37 @@ func (g *Grow) Children() []Widget {
 	}
 }
 
+// Insert places widget into the Grow's single child slot. Only
+// index 0 is valid; any other index returns ErrFull.
+func (g *Grow) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	if g.child != nil {
+		g.child.SetParent(nil)
+	}
+	g.child = widget
+	widget.SetParent(g)
+	return nil
+}
+
+// Remove clears the Grow's child slot. Returns ErrNotFound when
+// child does not match the current child.
+func (g *Grow) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if g.child != child {
+		return ErrNotFound
+	}
+	g.child.SetParent(nil)
+	g.child = nil
+	return nil
+}
+
 // Hint returns the preferred size of the child widget including its style overhead.
 func (g *Grow) Hint() (int, int) {
 	if g.hwidth != 0 || g.hheight != 0 {

@@ -58,6 +58,37 @@ func (v *Viewport) Children() []Widget {
 	return []Widget{v.child}
 }
 
+// Insert places widget into the viewport's single child slot. Only
+// index 0 is valid; any other index returns ErrFull.
+func (v *Viewport) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	if v.child != nil {
+		v.child.SetParent(nil)
+	}
+	v.child = widget
+	widget.SetParent(v)
+	return nil
+}
+
+// Remove clears the viewport's child. Returns ErrNotFound when child
+// does not match the current child.
+func (v *Viewport) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if v.child != child {
+		return ErrNotFound
+	}
+	v.child.SetParent(nil)
+	v.child = nil
+	return nil
+}
+
 // Layout positions the child at its full preferred size offset by the current
 // scroll position. For FlagVertical/FlagHorizontal the child is constrained
 // to fill the perpendicular axis so it never needs to scroll that direction.

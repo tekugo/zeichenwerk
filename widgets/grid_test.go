@@ -68,6 +68,41 @@ func TestGrid_Add(t *testing.T) {
 	}
 }
 
+func TestGrid_Insert_PlacesAtIndex(t *testing.T) {
+	g := NewGrid("grid", "", 3, 3, false)
+	c1 := NewComponent("c1", "")
+	c3 := NewComponent("c3", "")
+	c2 := NewComponent("c2", "")
+	g.Add(c1, 0, 0, 1, 1)
+	g.Add(c3, 2, 0, 1, 1)
+	if err := g.Insert(1, c2, 1, 0, 1, 1); err != nil {
+		t.Fatalf("Insert returned error: %v", err)
+	}
+	if got := []string{g.cells[0].content.ID(), g.cells[1].content.ID(), g.cells[2].content.ID()}; got[0] != "c1" || got[1] != "c2" || got[2] != "c3" {
+		t.Errorf("Insert order = %v; want [c1 c2 c3]", got)
+	}
+	if g.cells[1].x != 1 {
+		t.Errorf("inserted cell x = %d; want 1", g.cells[1].x)
+	}
+}
+
+func TestGrid_Remove(t *testing.T) {
+	g := NewGrid("grid", "", 2, 2, false)
+	c1 := NewComponent("c1", "")
+	c2 := NewComponent("c2", "")
+	g.Add(c1, 0, 0, 1, 1)
+	g.Add(c2, 1, 0, 1, 1)
+	if err := g.Remove(c1); err != nil {
+		t.Fatalf("Remove returned error: %v", err)
+	}
+	if len(g.cells) != 1 || g.cells[0].content.ID() != "c2" {
+		t.Errorf("after Remove(c1), expected one cell holding c2, got %d cells", len(g.cells))
+	}
+	if c1.Parent() != nil {
+		t.Error("Remove should clear the removed child's parent")
+	}
+}
+
 func TestGrid_Add_SetsParent(t *testing.T) {
 	g := NewGrid("grid", "", 2, 2, false)
 	c := NewComponent("c", "")

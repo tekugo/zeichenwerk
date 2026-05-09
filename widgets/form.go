@@ -70,6 +70,37 @@ func (f *Form) Children() []Widget {
 	return []Widget{f.child}
 }
 
+// Insert places widget into the Form's single child slot. Only
+// index 0 is valid; any other index returns ErrFull.
+func (f *Form) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	if f.child != nil {
+		f.child.SetParent(nil)
+	}
+	f.child = widget
+	widget.SetParent(f)
+	return nil
+}
+
+// Remove clears the Form's body. Returns ErrNotFound if child does
+// not match the current body widget.
+func (f *Form) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if f.child != child {
+		return ErrNotFound
+	}
+	f.child.SetParent(nil)
+	f.child = nil
+	return nil
+}
+
 func (f *Form) Hint() (int, int) {
 	if f.hwidth != 0 || f.hheight != 0 {
 		return f.hwidth, f.hheight

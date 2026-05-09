@@ -90,6 +90,37 @@ func (d *Dialog) Children() []Widget {
 	return []Widget{d.child}
 }
 
+// Insert places widget into the dialog's body slot. Only index 0 is
+// valid; any other index returns ErrFull.
+func (d *Dialog) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	if d.child != nil {
+		d.child.SetParent(nil)
+	}
+	d.child = widget
+	widget.SetParent(d)
+	return nil
+}
+
+// Remove clears the dialog's body. Returns ErrNotFound if child
+// does not match the current body widget.
+func (d *Dialog) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if d.child != child {
+		return ErrNotFound
+	}
+	d.child.SetParent(nil)
+	d.child = nil
+	return nil
+}
+
 // Layout positions the body widget below the title bar within the content area.
 func (d *Dialog) Layout() error {
 	if d.child != nil {

@@ -332,6 +332,51 @@ func (ui *UI) Children() []Widget {
 	return result
 }
 
+// Insert places a layer at the given index in the layer stack,
+// shifting later layers up. The widget must be a Container; non-
+// container values yield ErrNoContainer to mirror Add. Out-of-range
+// indices are clamped to [0, len(layers)]. In practice the public
+// API is Popup() / Close() — this method exists so *UI satisfies the
+// Container interface.
+func (ui *UI) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	container, ok := widget.(Container)
+	if !ok {
+		return ErrNoContainer
+	}
+	if index < 0 {
+		index = 0
+	}
+	if index > len(ui.layers) {
+		index = len(ui.layers)
+	}
+	container.SetParent(ui)
+	ui.layers = append(ui.layers, nil)
+	copy(ui.layers[index+1:], ui.layers[index:])
+	ui.layers[index] = container
+	return nil
+}
+
+// Remove drops a layer from the stack. The base layer is removable
+// for symmetry with Add; in practice callers should never do that —
+// Popup pushes layers, Close pops them. Returns ErrNotFound when the
+// widget is not currently a layer.
+func (ui *UI) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	for i, layer := range ui.layers {
+		if layer == child {
+			ui.layers = append(ui.layers[:i], ui.layers[i+1:]...)
+			child.SetParent(nil)
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
 // Layout recalculates and applies the layout for every widget layer
 // in the UI. The base layer (layers[0]) is sized to the screen
 // (minus one row for the debug overlay when active); popup layers
