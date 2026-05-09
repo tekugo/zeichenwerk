@@ -9,3 +9,7 @@ import "time"
 // to avoid false positives on slow navigation yet long enough to tolerate
 // modest input lag.
 const DoubleClickThreshold = 300 * time.Millisecond
+
+// MouseWheelStep is the number of items advanced per mouse-wheel impulse in
+// scrollable widgets (Tree, List, Table).
+const MouseWheelStep = 3

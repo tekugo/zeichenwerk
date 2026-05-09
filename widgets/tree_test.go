@@ -582,6 +582,39 @@ func TestTree_MouseClickLeafPrefix_DoesNotToggle(t *testing.T) {
 	}
 }
 
+func TestTree_MouseWheelDown(t *testing.T) {
+	// Build a flat tree of 8 leaves so wheel scrolling has room to move.
+	tr := NewTree("t", "")
+	for i := 0; i < 8; i++ {
+		tr.root.Add(NewTreeNode(string(rune('a' + i))))
+	}
+	tr.rebuild()
+	tr.SetBounds(0, 0, 20, 4)
+	tr.Select(tr.flat[0].node)
+	if !tr.handleMouse(tcell.NewEventMouse(2, 0, tcell.WheelDown, tcell.ModNone)) {
+		t.Fatal("WheelDown should be handled")
+	}
+	if got := tr.flat[MouseWheelStep].node; tr.Selected() != got {
+		t.Errorf("WheelDown: selected node = %v; want %v", tr.Selected(), got)
+	}
+}
+
+func TestTree_MouseWheelUp(t *testing.T) {
+	tr := NewTree("t", "")
+	for i := 0; i < 8; i++ {
+		tr.root.Add(NewTreeNode(string(rune('a' + i))))
+	}
+	tr.rebuild()
+	tr.SetBounds(0, 0, 20, 4)
+	tr.Select(tr.flat[7].node)
+	if !tr.handleMouse(tcell.NewEventMouse(2, 0, tcell.WheelUp, tcell.ModNone)) {
+		t.Fatal("WheelUp should be handled")
+	}
+	if got := tr.flat[7-MouseWheelStep].node; tr.Selected() != got {
+		t.Errorf("WheelUp: selected node = %v; want %v", tr.Selected(), got)
+	}
+}
+
 func TestTree_MouseClickPrefix_NestedRow(t *testing.T) {
 	// Build a tree where row 1 is a depth-1 branch we can click into.
 	root := NewTreeNode("root")

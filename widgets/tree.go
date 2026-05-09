@@ -423,7 +423,16 @@ func (t *Tree) handleActivate() {
 }
 
 func (t *Tree) handleMouse(ev *tcell.EventMouse) bool {
-	if ev.Buttons() != tcell.Button1 {
+	switch ev.Buttons() {
+	case tcell.WheelUp:
+		t.Move(-MouseWheelStep)
+		return true
+	case tcell.WheelDown:
+		t.Move(MouseWheelStep)
+		return true
+	case tcell.Button1:
+		// fall through to click handling below
+	default:
 		return false
 	}
 	mx, my := ev.Position()
