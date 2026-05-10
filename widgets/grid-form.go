@@ -18,10 +18,10 @@ import (
 // render []int slices today. Negative values are fractional, zero
 // uses the child's hint, positive values are fixed sizes — same
 // semantics as the underlying Grid. Changing the *count* of values
-// in the form is intentionally a no-op: the Grid's cells, widths,
-// heights and separators are sized to the row/column count at
-// construction, so resizing them safely requires more than a slice
-// replacement. Editing values within the existing count works.
+// resizes the live grid via Grid.Resize: cells whose origin falls
+// outside the new bounds are dropped, cells whose span overshoots
+// are clamped, and freshly-added rows / columns default to
+// fractional sizing (-1).
 type GridForm struct {
 	ComponentForm
 
@@ -45,10 +45,30 @@ func (f *GridForm) Load(w core.Widget) {
 func (f *GridForm) Store(w core.Widget) {
 	g := w.(*Grid)
 	f.ComponentForm.Store(&g.Component)
-	if rows, ok := parseIntCSV(f.Rows); ok && len(rows) == len(g.rows) {
+
+	rows, rowsOk := parseIntCSV(f.Rows)
+	cols, colsOk := parseIntCSV(f.Columns)
+
+	// Resize first if either count changed; Resize keeps
+	// surviving size-config values intact and pads new entries
+	// with -1, so the subsequent copy below only overwrites
+	// what the user typed.
+	newRows := len(g.rows)
+	if rowsOk && len(rows) > 0 {
+		newRows = len(rows)
+	}
+	newCols := len(g.columns)
+	if colsOk && len(cols) > 0 {
+		newCols = len(cols)
+	}
+	if newRows != len(g.rows) || newCols != len(g.columns) {
+		g.Resize(newRows, newCols)
+	}
+
+	if rowsOk && len(rows) == len(g.rows) {
 		copy(g.rows, rows)
 	}
-	if cols, ok := parseIntCSV(f.Columns); ok && len(cols) == len(g.columns) {
+	if colsOk && len(cols) == len(g.columns) {
 		copy(g.columns, cols)
 	}
 	g.lines = f.Lines

@@ -28,6 +28,7 @@
 - **Reference**: [`doc/reference/overview.md`](doc/reference/overview.md) — one page per widget.
 - **Design principles**: [`doc/principles.md`](doc/principles.md) — the small set of invariants the framework relies on.
 - **Events / flags**: [`doc/events.md`](doc/events.md), [`doc/flags.md`](doc/flags.md).
+- **Designer**: [`doc/designer/README.md`](doc/designer/README.md) — the inspector framework, per-widget `*-form.go` files, codegen, and the `cmd/designer-poc` driver.
 
 ## Project Overview
 
@@ -248,6 +249,56 @@ deterministic without a live terminal session.
 6. Register in `compose/compose.go`: add `func MyWidget(id, class string, options ...Option) Option`
 7. Add theme style keys to all five theme files (`theme-*.go`)
 8. Add `doc.go` entry and export all public symbols with comments
+9. Create `mywidget-form.go` next to `mywidget.go` (see Designer section); register the form in `cmd/designer-poc/main.go` `registerKinds`
+
+## Designer
+
+The designer is the interactive layout editor — see
+[`doc/designer/README.md`](doc/designer/README.md) for the full
+guide. Three layers, each with a single concern:
+
+- **`widgets/*-form.go`** — per-widget editing surface. Every form
+  embeds `ComponentForm` (id, class, hint, flags, style snapshot)
+  and implements `inspector.WidgetForm`: `Name/Group/Help`,
+  `Load/Store`, `New`, `Validate`, `Emit`. Container forms whose
+  `Add` consumes per-child parameters additionally implement
+  `ContainerForm.LayoutForm`. Forms live next to the widgets they
+  edit so they can read and write unexported fields directly.
+- **`inspector/`** — type registry (`Kind`), state holder
+  (`Designer`), and codegen walker. Public surface is
+  `Register(Kind) error`, `FormFor(w) WidgetForm`,
+  `GenerateFragment(mode, w) error`, `GenerateFile(mode, w, pkg, fn) error`.
+  Modes are `ModeBuilder` (implemented) and `ModeCompose` (reserved).
+- **`cmd/designer-poc/main.go`** — reference driver. Builds a
+  `Ctrl+Space` popup with a tree pane, four-tab detail pane
+  (General / Layout / Style / Info), and a status bar.
+  `registerKinds(d)` is the only glue between the framework and the
+  widgets package — every supported kind has one entry there.
+
+### Designer rules
+
+- The `*-form.go` file MUST live in package `widgets`, next to the
+  widget it edits, and MUST NOT import `inspector`.
+- Every form MUST embed `ComponentForm` and call
+  `f.ComponentForm.Load(&w.Component)` / `Store(&w.Component)` first
+  in its own `Load` / `Store`.
+- Form fields MUST use Go struct tags
+  (`group`, `label`, `control`, `options`, `width`, `line`,
+  `readonly`) to drive control generation.
+- Slice fields (items, names, segments) MUST be surfaced as
+  comma-separated strings; use the package-level `parseItems` helper
+  (or `parseSelectOptions` / `parseShortcutPairs` for `key:value`
+  pairs).
+- `Emit` SHOULD use `EmitFrame` for the standard prefix-and-chain
+  shape; bypass only when the constructor name itself is computed
+  (`HFlex` vs `VFlex`).
+- Properties without a chained Builder setter MUST emit a
+  `// TODO: Setter(value) — no Builder setter` comment after the
+  frame so the user can fill in the call after generation.
+- A new widget kind MUST be registered in
+  `cmd/designer-poc/main.go`'s `registerKinds(d)` table; otherwise
+  `Designer.FormFor(w)` returns nil and the General tab shows
+  "no form registered for this widget".
 
 ## Events
 

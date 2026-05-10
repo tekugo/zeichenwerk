@@ -866,6 +866,68 @@ func registerKinds(d *inspector.Designer) {
 		func() inspector.WidgetForm { return &CheckboxForm{} })
 	register(reflect.TypeOf((*List)(nil)),
 		func() inspector.WidgetForm { return &ListForm{} })
+
+	// Forms added with the per-widget *-form.go files.
+	register(reflect.TypeOf((*Breadcrumb)(nil)),
+		func() inspector.WidgetForm { return &BreadcrumbForm{} })
+	register(reflect.TypeOf((*Clock)(nil)),
+		func() inspector.WidgetForm { return &ClockForm{} })
+	register(reflect.TypeOf((*Collapsible)(nil)),
+		func() inspector.WidgetForm { return &CollapsibleForm{} })
+	register(reflect.TypeOf((*Combo)(nil)),
+		func() inspector.WidgetForm { return &ComboForm{} })
+	register(reflect.TypeOf((*Deck)(nil)),
+		func() inspector.WidgetForm { return &DeckForm{} })
+	register(reflect.TypeOf((*Dialog)(nil)),
+		func() inspector.WidgetForm { return &DialogForm{} })
+	register(reflect.TypeOf((*Digits)(nil)),
+		func() inspector.WidgetForm { return &DigitsForm{} })
+	register(reflect.TypeOf((*Editor)(nil)),
+		func() inspector.WidgetForm { return &EditorForm{} })
+	register(reflect.TypeOf((*Filter)(nil)),
+		func() inspector.WidgetForm { return &FilterForm{} })
+	register(reflect.TypeOf((*Indicator)(nil)),
+		func() inspector.WidgetForm { return &IndicatorForm{} })
+	register(reflect.TypeOf((*Marquee)(nil)),
+		func() inspector.WidgetForm { return &MarqueeForm{} })
+	register(reflect.TypeOf((*Progress)(nil)),
+		func() inspector.WidgetForm { return &ProgressForm{} })
+	register(reflect.TypeOf((*Rule)(nil)),
+		func() inspector.WidgetForm { return &RuleForm{} })
+	register(reflect.TypeOf((*Scanner)(nil)),
+		func() inspector.WidgetForm { return &ScannerForm{} })
+	register(reflect.TypeOf((*Select)(nil)),
+		func() inspector.WidgetForm { return &SelectForm{} })
+	register(reflect.TypeOf((*Shortcuts)(nil)),
+		func() inspector.WidgetForm { return &ShortcutsForm{} })
+	register(reflect.TypeOf((*Spinner)(nil)),
+		func() inspector.WidgetForm { return &SpinnerForm{} })
+	register(reflect.TypeOf((*Styled)(nil)),
+		func() inspector.WidgetForm { return &StyledForm{} })
+	register(reflect.TypeOf((*Switcher)(nil)),
+		func() inspector.WidgetForm { return &SwitcherForm{} })
+	register(reflect.TypeOf((*Table)(nil)),
+		func() inspector.WidgetForm { return &TableForm{} })
+	register(reflect.TypeOf((*Tabs)(nil)),
+		func() inspector.WidgetForm { return &TabsForm{} })
+	register(reflect.TypeOf((*Terminal)(nil)),
+		func() inspector.WidgetForm { return &TerminalForm{} })
+	register(reflect.TypeOf((*Text)(nil)),
+		func() inspector.WidgetForm { return &TextForm{} })
+	register(reflect.TypeOf((*Tiles)(nil)),
+		func() inspector.WidgetForm { return &TilesForm{} })
+	// TreeFS and TreeWidgets publish their inner *Tree to the
+	// builder, so a single *Tree registration must serve all three
+	// roles. TreeForm covers the common case; specialised TreeFS /
+	// TreeWidgets editing happens through dedicated dialogs.
+	register(reflect.TypeOf((*Tree)(nil)),
+		func() inspector.WidgetForm { return &TreeForm{} })
+	register(reflect.TypeOf((*Typeahead)(nil)),
+		func() inspector.WidgetForm { return &TypeaheadForm{} })
+	register(reflect.TypeOf((*Typewriter)(nil)),
+		func() inspector.WidgetForm { return &TypewriterForm{} })
+	register(reflect.TypeOf((*Viewport)(nil)),
+		func() inspector.WidgetForm { return &ViewportForm{} })
 }
 
 // widgetKind returns the Go type name without the "*widgets." prefix.

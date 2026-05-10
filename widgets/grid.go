@@ -335,6 +335,109 @@ func (g *Grid) Rows(rows ...int) {
 	}
 }
 
+// Resize changes the grid's row and column count.
+//
+// Both arguments must be >= 1; non-positive values are clamped to 1.
+// Existing row / column size configuration is preserved where the
+// indices still exist; newly-created rows or columns default to
+// fractional sizing (-1). The widths and heights arrays are
+// reallocated to the new column / row count and the separator grid
+// is rebuilt — existing intersections keep their value, new ones
+// initialise to GridB.
+//
+// Cells are reconciled with the new dimensions:
+//   - A cell whose origin (x, y) is outside the new grid is dropped
+//     and its parent reference cleared.
+//   - A cell whose span extends past the new right or bottom edge
+//     is clamped so it fits, never below width=1 / height=1.
+//
+// The caller is responsible for triggering a relayout afterwards
+// (Resize itself does not call Layout, since the trigger is usually
+// part of a larger transaction such as a form Apply).
+func (g *Grid) Resize(rows, columns int) {
+	if rows < 1 {
+		rows = 1
+	}
+	if columns < 1 {
+		columns = 1
+	}
+	if rows == len(g.rows) && columns == len(g.columns) {
+		return
+	}
+
+	// Resize the size-config slices, preserving existing values for
+	// indices that survive and defaulting new entries to fractional.
+	newRows := make([]int, rows)
+	for i := range newRows {
+		if i < len(g.rows) {
+			newRows[i] = g.rows[i]
+		} else {
+			newRows[i] = -1
+		}
+	}
+	newColumns := make([]int, columns)
+	for i := range newColumns {
+		if i < len(g.columns) {
+			newColumns[i] = g.columns[i]
+		} else {
+			newColumns[i] = -1
+		}
+	}
+	g.rows = newRows
+	g.columns = newColumns
+
+	// Calculated arrays are reset; Layout will recompute them from
+	// rows / columns / cell hints on the next pass.
+	g.widths = make([]int, columns)
+	g.heights = make([]int, rows)
+
+	// Rebuild the separator grid. Surviving intersections keep
+	// their existing setting; new ones initialise to GridB so the
+	// freshly-added rows / columns render full grid lines by
+	// default — same convention NewGrid uses.
+	newSeparators := make([][]int, rows)
+	for i := range newSeparators {
+		newSeparators[i] = make([]int, columns)
+		for j := range newSeparators[i] {
+			if i < len(g.separators) && j < len(g.separators[i]) {
+				newSeparators[i][j] = g.separators[i][j]
+			} else {
+				newSeparators[i][j] = GridB
+			}
+		}
+	}
+	g.separators = newSeparators
+
+	// Reconcile cells. Drop anything whose origin is outside the
+	// new grid; clamp spans that overshoot the new edges.
+	kept := g.cells[:0]
+	for _, c := range g.cells {
+		if c.x >= columns || c.y >= rows {
+			c.content.SetParent(nil)
+			continue
+		}
+		if c.x+c.w > columns {
+			c.w = columns - c.x
+		}
+		if c.y+c.h > rows {
+			c.h = rows - c.y
+		}
+		if c.w < 1 {
+			c.w = 1
+		}
+		if c.h < 1 {
+			c.h = 1
+		}
+		kept = append(kept, c)
+	}
+	// Zero-fill the freed tail so the dropped *cell pointers do
+	// not retain widget references for the GC.
+	for i := len(kept); i < len(g.cells); i++ {
+		g.cells[i] = nil
+	}
+	g.cells = kept
+}
+
 // ---- Layout ---------------------------------------------------------------
 
 // Layout arranges all child widgets within the grid according to the configured
