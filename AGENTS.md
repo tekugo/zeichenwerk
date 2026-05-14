@@ -115,6 +115,8 @@ At least one row size and one column size MUST be negative for the Grid to fill 
 | `Combo`     | `combo.go`     | `NewCombo(id, class, items []string)`                | `EvtChange(string)` `EvtActivate(string)` | `Get() string`, `Set(string)`, `SetItems([]string)` — opens popup on focus    |
 | `Filter`    | `filter.go`    | `NewFilter(id, class)`                               | inherits `Typeahead`                    | `Bind(Filterable)`, `Unbind()`, `Bound() Filterable` — drives a target widget   |
 | `Select`    | `select.go`    | `NewSelect(id, class, val, label, …)`                | `EvtChange(string)`                     | `Select(string)`, `Value() string`                                              |
+| `Radio`     | `radio.go`     | `NewRadio(id, class, val, label, …)`                 | `EvtChange(string)`                     | `Select(string)` (silent), `Value() string`, `Text() string` — all options visible, no cursor; glyphs `radio.on`/`radio.off` |
+| `Slider`    | `slider.go`    | `NewSlider(id, class)`                               | `EvtChange(int)`                        | `Set(int)`, `Value()`, `SetMin/SetMax/SetStep` — defaults `0..100` step `1`; compact `━┃` at h=1, rounded box `╥╨` at h≥2 |
 | `List`      | `list.go`      | `NewList(id, class, items []string)`                 | `EvtSelect(int)` `EvtActivate(int)`     | `Set([]string)`, `Items()`, `Select(int)`, `Selected() int`, `Filter(string)`   |
 | `Deck`      | `deck.go`      | `NewDeck(id, class, render ItemRender, itemHeight)`  | `EvtSelect(int)` `EvtActivate(int)`     | `Get() []any`, `Set([]any)`, `Select(int)`, `Selected() int` — itemHeight ≥ 1   |
 | `Tiles`     | `tiles.go`     | `NewTiles(id, class, render ItemRender, tw, th int)` | `EvtSelect(int)` `EvtActivate(int)`     | `Items()`, `SetItems([]any)`, `Move(dr, dc int)` — wrapping grid                |
@@ -241,15 +243,26 @@ deterministic without a live terminal session.
 
 ## Building a new widget — checklist
 
-1. Create `mywidget.go` with `type MyWidget struct { Component; ... }`
+Every new widget MUST go through every step below. Skipping the docs, themes, or
+demo steps leaves a widget invisible to users and other agents — treat the list
+as a single unit of work, not a menu.
+
+1. Create `widgets/mywidget.go` with `type MyWidget struct { Component; ... }`
 2. Constructor: `NewMyWidget(id, class string, ...) *MyWidget` — call `SetFlag(FlagFocusable, true)` if interactive
 3. Implement `Render(r *Renderer)` — call `c.Component.Render(r)` first for borders/bg
 4. Implement `Apply(theme *Theme)` — call `theme.Apply(w, w.Selector("mywidget"), states...)`
 5. Register in `Builder` (`builder.go`): add `func (b *Builder) MyWidget(id string, ...) *Builder`
-6. Register in `compose/compose.go`: add `func MyWidget(id, class string, options ...Option) Option`
-7. Add theme style keys to all five theme files (`theme-*.go`)
-8. Add `doc.go` entry and export all public symbols with comments
-9. Create `mywidget-form.go` next to `mywidget.go` (see Designer section); register the form in `cmd/designer-poc/main.go` `registerKinds`
+6. Register in `compose/widgets.go`: add `func MyWidget(id, class string, options ...Option) Option`
+7. Add theme **styles** to `themes/default-styles.go` (`mywidget`, plus state and part variants such as `mywidget:focused`, `mywidget/thumb:focused`) — every theme inherits from this baseline
+8. Add theme **strings** for any glyphs the widget reads from the theme: register them in `themes/unicode-strings.go` and `themes/nerd-strings.go` (and any other string sets)
+9. Add `doc.go` entry and export all public symbols with comments
+10. Create `widgets/mywidget-form.go` next to the widget (see Designer section); register the form in `cmd/designer-poc/main.go` `registerKinds`
+11. Update **`AGENTS.md`** — add a row to the appropriate widget reference table (Containers / Input / Display / Animated)
+12. Update **`doc/reference/`** — add a new `mywidget.md` page (use an existing widget such as `radio.md`/`slider.md` as a template) and list it in `doc/reference/overview.md` under both the widget category and the Builder methods
+13. Update the **skill** — add the widget to `.claude/skills/zeichenwerk/SKILL.md` (constructor table) and `.claude/skills/zeichenwerk/widgets.md` (full section + theme-string list at the bottom if applicable)
+14. Wire the widget into **`cmd/demo`** — add a label to the navigation list, a `With(myWidgetDemo)` call into the switcher chain, and a `myWidgetDemo(builder *Builder)` function. Bump every special-case index in the nav handler that sits past the insertion point
+15. Wire the widget into **`cmd/demo2`** — add an `Entry` (with `Builder`/`Compose` snippets and `DocFile`) to the appropriate `*Entries` slice and a matching demo function. Copy the reference doc to `cmd/demo2/docs/mywidget.md` so the embedded doc panel can render it
+16. Add `widgets/mywidget_test.go` covering constructor defaults, state transitions, key/mouse handling, and at least one render assertion per visual style
 
 ## Designer
 

@@ -123,7 +123,7 @@ go get github.com/tekugo/zeichenwerk
 | Category   | Widgets                                                                                                                             |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Containers | Box, Card, Collapsible, CRT, Dialog, Flex, Form, FormGroup, Grid, Grow, Switcher, Tabs, Viewport                                    |
-| Input      | Button, Checkbox, Combo, Editor, Filter, Input, List, Select, Tree, TreeFS, Typeahead                                               |
+| Input      | Button, Checkbox, Combo, Editor, Filter, Input, List, Radio, Select, Tree, TreeFS, Typeahead                                        |
 | Display    | BarChart, Breadcrumb, Canvas, Deck, Digits, Heatmap, Rule, Shortcuts, Sparkline, Static, Styled, Table, Tabs, Terminal, Text, Tiles |
 | Animated   | Clock, Marquee, Progress, Scanner, Shimmer, Spinner, Typewriter                                                                     |
 | Overlay    | Commands palette, Dialog, and container-based popups                                                                                |

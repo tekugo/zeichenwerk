@@ -416,6 +416,27 @@ func (b *Builder) Progress(id string, horizontal bool) *Builder {
 	return b
 }
 
+// Radio creates a vertical radio-button group from the given alternating
+// value/text pairs. The interface mirrors Select — args is a flat list of
+// value1, text1, value2, text2, ... — but every option is shown on its own
+// row and the selection changes immediately on navigation (no cursor).
+func (b *Builder) Radio(id string, args ...string) *Builder {
+	r := NewRadio(id, b.class, args...)
+	b.Add(r)
+	return b
+}
+
+// Slider creates a horizontal int-valued range input. The widget defaults to
+// min=0, max=100, value=0, step=1; configure via the returned widget after
+// retrieval with Find. The renderer picks a compact one-row style at height
+// 1 and a centred two-row rounded box at height ≥ 2 — both glyph sets come
+// from theme strings under "slider.*".
+func (b *Builder) Slider(id string) *Builder {
+	s := NewSlider(id, b.class)
+	b.Add(s)
+	return b
+}
+
 // Scanner creates a new scanner widget for displaying a back-and-forth
 // scanning animation with a fading trail.
 //

@@ -892,6 +892,10 @@ func registerKinds(d *inspector.Designer) {
 		func() inspector.WidgetForm { return &MarqueeForm{} })
 	register(reflect.TypeOf((*Progress)(nil)),
 		func() inspector.WidgetForm { return &ProgressForm{} })
+	register(reflect.TypeOf((*Radio)(nil)),
+		func() inspector.WidgetForm { return &RadioForm{} })
+	register(reflect.TypeOf((*Slider)(nil)),
+		func() inspector.WidgetForm { return &SliderForm{} })
 	register(reflect.TypeOf((*Rule)(nil)),
 		func() inspector.WidgetForm { return &RuleForm{} })
 	register(reflect.TypeOf((*Scanner)(nil)),

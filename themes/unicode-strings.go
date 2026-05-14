@@ -28,6 +28,25 @@ func AddUnicodeStrings(theme *Theme) {
 		"progress.v.end.filled":    "█",
 		"progress.v.end.empty":     "░",
 
+		// ---- Radio ----
+		"radio.on":  "◉",
+		"radio.off": "○",
+
+		// ---- Slider ----
+		// Compact (height 1) — heavy horizontal track with a heavy vertical thumb.
+		"slider.compact.track": "━",
+		"slider.compact.thumb": "┃",
+		// Two-row (height ≥ 2) — rounded outer box, double-stem thumb (╥/╨)
+		// joining the single-line border so the thumb stands out without
+		// breaking the box's horizontal flow.
+		"slider.box.top-left":     "╭",
+		"slider.box.top-right":    "╮",
+		"slider.box.bottom-left":  "╰",
+		"slider.box.bottom-right": "╯",
+		"slider.box.horizontal":   "─",
+		"slider.box.thumb-top":    "╥",
+		"slider.box.thumb-bottom": "╨",
+
 		// ---- Select ----
 		"select.dropdown": " ▼",
 

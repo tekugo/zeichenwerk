@@ -113,12 +113,46 @@ list.On(EvtActivate, func(_ Widget, _ Event, data ...any) bool {
 	},
 	{
 		Category: "Input",
+		Name:     "Radio",
+		Summary:  "Inline mutually-exclusive choice; same key/label pairs as Select.",
+		DocFile:  "radio.md",
+		DemoFn:   radioDemo,
+		Builder: `builder.Radio("size", "s", "Small", "m", "Medium", "l", "Large")
+r := builder.Find("size").(*Radio)
+r.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+    fmt.Println("size =", data[0])
+    return true
+})`,
+		Compose: `compose.Radio("size", "", []string{"s", "Small", "m", "Medium", "l", "Large"})`,
+	},
+	{
+		Category: "Input",
 		Name:     "Select",
 		Summary:  "Dropdown selection with key/label pairs.",
 		DocFile:  "select.md",
 		DemoFn:   selectDemo,
 		Builder: `builder.Select("sex", "f", "Female", "m", "Male", "d", "Diverse")`,
 		Compose: `compose.Select("sex", "", []string{"f", "Female", "m", "Male", "d", "Diverse"})`,
+	},
+	{
+		Category: "Input",
+		Name:     "Slider",
+		Summary:  "Horizontal int range input — compact one-row bar at h=1, rounded box at h≥2.",
+		DocFile:  "slider.md",
+		DemoFn:   sliderDemo,
+		Builder: `builder.Slider("volume").Hint(0, 1)
+s := builder.Find("volume").(*Slider)
+s.SetMin(0); s.SetMax(11); s.SetStep(1); s.Set(7)
+s.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+    fmt.Println("volume =", data[0])
+    return true
+})`,
+		Compose: `compose.Slider("volume", "",
+    compose.Range(0, 11),
+    compose.Step(1),
+    compose.Value(7),
+    compose.Hint(0, 1),
+)`,
 	},
 	{
 		Category: "Input",
@@ -304,6 +338,29 @@ func listDemo(b *Builder) {
 	})
 }
 
+func radioDemo(b *Builder) {
+	b.VFlex("radio-demo", Stretch, 1).Padding(1, 2).
+		Static("desc", "Radio groups show every option inline. ↑↓ (or j/k) change the selection immediately — no separate cursor.").
+		Padding(0, 0, 1, 0).
+		Static("size-label", "T-shirt size:").
+		Radio("size", "s", "Small", "m", "Medium", "l", "Large", "xl", "Extra Large").
+		Spacer().Hint(0, 1).
+		Static("env-label", "Environment:").
+		Radio("env", "dev", "Development", "stg", "Staging", "prd", "Production").
+		Spacer().Hint(0, 1).
+		Static("status", "Pick a value above.").
+		End()
+	for _, id := range []string{"size", "env"} {
+		id := id
+		Find(b.Container(), id).On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+			if v, ok := data[0].(string); ok {
+				Find(b.Container(), "status").(*Static).Set(id + " = " + v)
+			}
+			return true
+		})
+	}
+}
+
 func selectDemo(b *Builder) {
 	b.VFlex("select-demo", Stretch, 1).Padding(1, 2).
 		Static("desc", "Dropdown selection. Enter or Space opens the popup; arrow keys + Enter pick a value.").
@@ -325,6 +382,36 @@ func selectDemo(b *Builder) {
 			return true
 		})
 	}
+}
+
+func sliderDemo(b *Builder) {
+	b.VFlex("slider-demo", Stretch, 1).Padding(1, 2).
+		Static("desc", "Horizontal int range input. ←/→ (or h/l) step; Home/End jump to bounds. Click on the track to set a value.").
+		Padding(0, 0, 1, 0).
+		Static("compact-label", "Compact (height 1 — heavy line + bar):").
+		Slider("volume").Hint(0, 1).
+		Spacer().Hint(0, 1).
+		Static("box-label", "Box (height 2 — rounded box + ╥╨ thumb):").
+		Slider("brightness").Hint(0, 2).
+		Spacer().Hint(0, 1).
+		Static("tall-label", "Box, centred in a taller area (height 4):").
+		Slider("contrast").Hint(0, 4).
+		Static("status", "Volume = 0   Brightness = 50   Contrast = 25").Padding(1, 0, 0, 0).
+		End()
+
+	volume := b.Find("volume").(*Slider)
+	brightness := b.Find("brightness").(*Slider)
+	contrast := b.Find("contrast").(*Slider)
+	brightness.Set(50)
+	contrast.Set(25)
+	status := b.Find("status").(*Static)
+	update := func() {
+		status.Set(fmt.Sprintf("Volume = %d   Brightness = %d   Contrast = %d",
+			volume.Value(), brightness.Value(), contrast.Value()))
+	}
+	volume.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
+	brightness.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
+	contrast.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
 }
 
 func treeDemo(b *Builder) {

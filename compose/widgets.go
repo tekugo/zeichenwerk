@@ -441,6 +441,41 @@ func Progress(id, class string, horizontal bool, options ...Option) Option {
 	}
 }
 
+// Radio adds a vertical radio-button group to the parent. args is a flat
+// list of alternating value/label pairs, identical to [Select]:
+// []string{"key1", "Label 1", "key2", "Label 2", …}. Unlike [Select], every
+// option is rendered on its own row and navigating with the arrow keys
+// changes the selection immediately (no separate cursor).
+func Radio(id, class string, args []string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewRadio(id, class, args...)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Slider adds a horizontal int-valued range input to the parent. The widget
+// defaults to min=0, max=100, value=0, step=1; configure via [Min], [Max],
+// [Value], [Step] options. The renderer chooses a compact one-row style at
+// height 1 and a centred two-row rounded box at height ≥ 2.
+func Slider(id, class string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewSlider(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Scanner adds an animated scanning-bar widget to the parent. width is the
 // bar width in cells; style selects the visual style.
 func Scanner(id, class string, width int, style string, options ...Option) Option {

@@ -210,11 +210,13 @@ State priority for `:state` selectors: `disabled > pressed > focused > hovered`.
 | List         | `NewList(id, class, items []string)`                         | `EvtSelect(int)` `EvtActivate(int)`         |
 | Marquee      | `NewMarquee(id, class)`                                      | —                                           |
 | Progress     | `NewProgress(id, class, horizontal)`                         | —                                           |
+| Radio        | `NewRadio(id, class, val, lbl, …)`                           | `EvtChange(string)`                         |
 | Rule         | `NewHRule(class, style)` / `NewVRule(class, style)`          | —                                           |
 | Scanner      | `NewScanner(id, class, width, charStyle)`                    | —                                           |
 | Select       | `NewSelect(id, class, val, lbl, …)`                          | `EvtChange(string)`                         |
 | Shimmer      | `NewShimmer(id, class)`                                      | —                                           |
 | Shortcuts    | `NewShortcuts(id, class, pairs ...string)`                   | —                                           |
+| Slider       | `NewSlider(id, class)`                                       | `EvtChange(int)`                            |
 | Sparkline    | `NewSparkline(id, class)`                                    | —                                           |
 | Spinner      | `NewSpinner(id, class, sequence)`                            | —                                           |
 | Static       | `NewStatic(id, class, text)`                                 | —                                           |

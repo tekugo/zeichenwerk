@@ -70,7 +70,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Color Picker", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Indicator", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Color Picker", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Indicator", "Marquee", "Progress", "Radio", "Scanner", "Sparkline", "Select", "Shimmer", "Slider", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
@@ -91,10 +91,12 @@ func createUI(theme *Theme) *UI {
 		With(indicatorDemo).
 		With(marqueeDemo).
 		With(progress).
+		With(radioDemo).
 		With(scanner).
 		With(sparklineDemo).
 		With(dropdown).
 		With(shimmerDemo).
+		With(sliderDemo).
 		With(spinner).
 		With(styled).
 		With(table).
@@ -159,7 +161,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 34:
+					case 36:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -181,7 +183,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 35:
+					case 37:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -194,7 +196,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 36:
+					case 38:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -207,7 +209,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 37:
+					case 39:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -215,7 +217,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 38:
+					case 40:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -223,7 +225,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 39:
+					case 41:
 						d := ui.FileChooser("Save As", "Save", "save", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							path := data[0].(string)
@@ -875,6 +877,28 @@ func progress(builder *Builder) {
 		End()
 }
 
+// Radio demo
+func radioDemo(builder *Builder) {
+	builder.VFlex("radio-demo", Start, 1).Padding(1, 2).
+		Static("radio-title", "Radio Widget Demo").Padding(0, 0, 1, 0).
+		Static("radio-info", "Radio groups show every option inline. Up/Down (or j/k) move the selection — there is no separate cursor.").Padding(0, 0, 1, 0).
+		Static("", "Pick a size:").
+		Radio("radio-size", "s", "Small", "m", "Medium", "l", "Large", "xl", "Extra Large").
+		Static("radio-status", "Selected: Small").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+	if status, ok := Find(container, "radio-status").(*Static); ok {
+		Find(container, "radio-size").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+			if v, ok := data[0].(string); ok {
+				labels := map[string]string{"s": "Small", "m": "Medium", "l": "Large", "xl": "Extra Large"}
+				status.Set("Selected: " + labels[v])
+			}
+			return true
+		})
+	}
+}
+
 // Scanner demo
 func scanner(builder *Builder) {
 	builder.VFlex("scanner-container", Stretch, 1).Padding(1).
@@ -904,6 +928,37 @@ func scanner(builder *Builder) {
 		}
 		return true
 	})
+}
+
+// Slider demo
+func sliderDemo(builder *Builder) {
+	builder.VFlex("slider-demo", Start, 1).Padding(1, 2).
+		Static("slider-title", "Slider Widget Demo").Padding(0, 0, 1, 0).
+		Static("slider-info", "Sliders pick an int value in a range. ←/→ (or h/l) step; Home/End jump to bounds. Click anywhere on the track to set the value.").Padding(0, 0, 1, 0).
+		Static("", "Compact (height 1, ━ track + ┃ thumb):").
+		Slider("slider-compact").Hint(0, 1).
+		Static("", "Box (height 2, rounded box + ╥╨ thumb):").
+		Slider("slider-box").Hint(0, 2).
+		Static("", "Box centred in a taller area (height 4):").
+		Slider("slider-tall").Hint(0, 4).
+		Static("slider-status", "Compact = 0   Box = 50   Tall = 25").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+	compact := Find(container, "slider-compact").(*Slider)
+	box := Find(container, "slider-box").(*Slider)
+	tall := Find(container, "slider-tall").(*Slider)
+	box.Set(50)
+	tall.Set(25)
+	status, _ := Find(container, "slider-status").(*Static)
+	update := func() {
+		if status != nil {
+			status.Set(fmt.Sprintf("Compact = %d   Box = %d   Tall = %d", compact.Value(), box.Value(), tall.Value()))
+		}
+	}
+	compact.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
+	box.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
+	tall.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
 }
 
 // Spinner demo
