@@ -227,7 +227,7 @@ go run ./cmd/compose
 
 ## Documentation
 
-- **Tutorial (start here):** [doc/tutorial/README.md](doc/tutorial/README.md)
+- **Tutorial (start here):** [github.com/tekugo/zeichenwerk-tutorial](https://github.com/tekugo/zeichenwerk-tutorial) — guided chapters from a 20-line teaser through a SQLite query tool, with runnable example programs.
 - Package docs: [doc.go](doc.go)
 - Widget reference: [doc/reference/overview.md](doc/reference/overview.md)
 - Builder pattern: [builder.go](builder.go)

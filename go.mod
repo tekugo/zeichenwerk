@@ -7,7 +7,6 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gdamore/tcell/v3 v3.3.0
-	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/rivo/uniseg v0.4.7
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/proto/otlp v1.10.0

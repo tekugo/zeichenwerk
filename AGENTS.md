@@ -24,7 +24,7 @@
 
 ## Reading order for new contributors
 
-- **Tutorial**: [`doc/tutorial/README.md`](doc/tutorial/README.md) — chapters from a 20-line teaser through a real SQLite query tool. Every snippet has a runnable program under `doc/tutorial/examples/`.
+- **Tutorial**: [`github.com/tekugo/zeichenwerk-tutorial`](https://github.com/tekugo/zeichenwerk-tutorial) — chapters from a 20-line teaser through a real SQLite query tool. Lives in a separate repo so the sqlite3 dependency does not leak into zeichenwerk's module graph; every snippet has a runnable program under `examples/`.
 - **Reference**: [`doc/reference/overview.md`](doc/reference/overview.md) — one page per widget.
 - **Design principles**: [`doc/principles.md`](doc/principles.md) — the small set of invariants the framework relies on.
 - **Events / flags**: [`doc/events.md`](doc/events.md), [`doc/flags.md`](doc/flags.md).
