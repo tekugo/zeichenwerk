@@ -94,7 +94,7 @@ func (v *Viewport) Remove(child Widget) error {
 // to fill the perpendicular axis so it never needs to scroll that direction.
 func (v *Viewport) Layout() error {
 	if v.child != nil {
-		cx, cy, vw, vh := v.Content()
+		_, _, vw, vh := v.Content()
 		pw, ph := v.child.Hint()
 		switch {
 		case v.Flag(FlagVertical):
@@ -103,16 +103,16 @@ func (v *Viewport) Layout() error {
 			if ph > vh {
 				iw-- // reserve right column for V-scrollbar
 			}
-			v.child.SetBounds(cx, cy-v.ty, iw, ph)
+			v.child.SetBounds(0, 0, iw, ph)
 		case v.Flag(FlagHorizontal):
 			// horizontal only: child fills viewport height
 			ih := vh
 			if pw > vw {
 				ih-- // reserve bottom row for H-scrollbar
 			}
-			v.child.SetBounds(cx-v.tx, cy, pw, ih)
+			v.child.SetBounds(0, 0, pw, ih)
 		default:
-			v.child.SetBounds(cx-v.tx, cy-v.ty, pw, ph)
+			v.child.SetBounds(0, 0, pw, ph)
 		}
 	}
 	return Layout(v)

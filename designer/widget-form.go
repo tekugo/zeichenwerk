@@ -1,4 +1,4 @@
-// Package inspector hosts the runtime developer console.
+// Package designer hosts the design-time UI editor.
 //
 // The form-driven editing and codegen surface is rooted in the
 // WidgetForm and ContainerForm interfaces and the ModeBuilder /
@@ -6,12 +6,12 @@
 // *Form structs that know each widget's internals live in the widgets
 // package alongside the widgets they edit so they can read and write
 // unexported fields directly; they satisfy these interfaces
-// structurally and never reference the inspector package by name.
+// structurally and never reference the designer package by name.
 //
 // LayoutForm — the per-child Add-params form returned by container
-// forms — lives in core, not inspector, so widget container forms
-// can declare it as a return type without importing inspector.
-package inspector
+// forms — lives in core, not designer, so widget container forms
+// can declare it as a return type without importing designer.
+package designer
 
 import (
 	"io"

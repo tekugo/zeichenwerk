@@ -10,6 +10,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/inspector"
 	"github.com/tekugo/zeichenwerk/themes"
 	. "github.com/tekugo/zeichenwerk/values"
 	. "github.com/tekugo/zeichenwerk/widgets"
@@ -36,6 +37,7 @@ func main() {
 		ui.Dump(os.Stdout, DumpOptions{Style: false})
 		return
 	}
+	inspector.Open(ui)
 	ui.Run()
 }
 

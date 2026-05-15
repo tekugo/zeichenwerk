@@ -9,7 +9,6 @@ import (
 	"os"
 	"runtime/debug"
 	"sync"
-	"time"
 
 	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk/core"
@@ -226,15 +225,6 @@ func (ui *UI) Handle(event tcell.Event) bool {
 			}
 		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
 			ui.Quit()
-		case tcell.KeyCtrlD:
-			ui.Log(ui, Debug, "Opening inspector")
-			animation := NewGrow("inspector-grow", "", false)
-			animation.Add(NewInspector(ui).UI())
-			hw, hh := animation.Hint()
-			animation.Start(10 * time.Millisecond)
-			ui.Log(ui, Debug, "Inspection hint", "hw", hw, "hh", hh)
-			ui.Popup(-1, -1, 0, 0, animation)
-			ui.Refresh()
 		case tcell.KeyRune:
 			switch event.Str() {
 			case "q", "Q":

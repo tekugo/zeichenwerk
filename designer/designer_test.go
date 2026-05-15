@@ -1,4 +1,4 @@
-package inspector_test
+package designer_test
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	. "github.com/tekugo/zeichenwerk/core"
-	"github.com/tekugo/zeichenwerk/inspector"
+	"github.com/tekugo/zeichenwerk/designer"
 	. "github.com/tekugo/zeichenwerk/widgets"
 )
 
@@ -17,22 +17,22 @@ import (
 // about, so the test exercises the same registry the inspector-poc
 // uses. Failures here would catch a mis-registration before it
 // propagates into the driver.
-func registerKinds(t *testing.T, d *inspector.Designer) {
+func registerKinds(t *testing.T, d *designer.Designer) {
 	t.Helper()
-	register := func(typ reflect.Type, mk func() inspector.WidgetForm) {
+	register := func(typ reflect.Type, mk func() designer.WidgetForm) {
 		t.Helper()
-		if err := d.Register(inspector.Kind{Type: typ, Make: mk}); err != nil {
+		if err := d.Register(designer.Kind{Type: typ, Make: mk}); err != nil {
 			t.Fatalf("register %s: %v", typ, err)
 		}
 	}
 	register(reflect.TypeOf((*Static)(nil)),
-		func() inspector.WidgetForm { return &StaticForm{} })
+		func() designer.WidgetForm { return &StaticForm{} })
 	register(reflect.TypeOf((*Grid)(nil)),
-		func() inspector.WidgetForm { return &GridForm{} })
+		func() designer.WidgetForm { return &GridForm{} })
 	register(reflect.TypeOf((*Flex)(nil)),
-		func() inspector.WidgetForm { return &FlexForm{} })
+		func() designer.WidgetForm { return &FlexForm{} })
 	register(reflect.TypeOf((*Input)(nil)),
-		func() inspector.WidgetForm { return &InputForm{} })
+		func() designer.WidgetForm { return &InputForm{} })
 }
 
 // TestGenerateFragment_RoundTrip generates Builder source for a few
@@ -145,11 +145,11 @@ func TestGenerateFragment_RoundTrip(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			d := inspector.NewDesigner(tc.root())
+			d := designer.NewDesigner(tc.root())
 			registerKinds(t, d)
 
 			var buf bytes.Buffer
-			if err := d.GenerateFragment(inspector.ModeBuilder, &buf); err != nil {
+			if err := d.GenerateFragment(designer.ModeBuilder, &buf); err != nil {
 				t.Fatalf("GenerateFragment: %v", err)
 			}
 			out := buf.String()
@@ -192,11 +192,11 @@ func TestGenerateFile_BuildsValidSource(t *testing.T) {
 	root := NewFlex("root", "", Stretch, 0)
 	_ = root.Add(NewStatic("hi", "", "hi"))
 
-	d := inspector.NewDesigner(root)
+	d := designer.NewDesigner(root)
 	registerKinds(t, d)
 
 	var buf bytes.Buffer
-	if err := d.GenerateFile(inspector.ModeBuilder, &buf, "demo", "BuildUI"); err != nil {
+	if err := d.GenerateFile(designer.ModeBuilder, &buf, "demo", "BuildUI"); err != nil {
 		t.Fatalf("GenerateFile: %v", err)
 	}
 	out := buf.String()
@@ -222,10 +222,10 @@ func TestGenerateFile_BuildsValidSource(t *testing.T) {
 // form whose New returns the wrong widget type is rejected at
 // registration time, not when Load is later called.
 func TestRegister_RejectsMismatch(t *testing.T) {
-	d := inspector.NewDesigner(NewFlex("r", "", Stretch, 0))
-	err := d.Register(inspector.Kind{
+	d := designer.NewDesigner(NewFlex("r", "", Stretch, 0))
+	err := d.Register(designer.Kind{
 		Type: reflect.TypeOf((*Static)(nil)),
-		Make: func() inspector.WidgetForm { return &GridForm{} }, // wrong form
+		Make: func() designer.WidgetForm { return &GridForm{} }, // wrong form
 	})
 	if err == nil {
 		t.Fatalf("expected error registering *Static against &GridForm{}, got nil")
