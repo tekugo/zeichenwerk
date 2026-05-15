@@ -126,6 +126,53 @@ func (c *Card) Children() []Widget {
 	return out
 }
 
+// Insert routes the widget to either the content (index 0) or footer
+// (index 1) slot, replacing whatever was there. Index 2+ is ErrFull
+// because Card has exactly two slots.
+func (c *Card) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	switch index {
+	case 0:
+		if c.content != nil {
+			c.content.SetParent(nil)
+		}
+		c.content = widget
+		widget.SetParent(c)
+		return nil
+	case 1:
+		if c.footer != nil {
+			c.footer.SetParent(nil)
+		}
+		c.footer = widget
+		widget.SetParent(c)
+		return nil
+	default:
+		return ErrFull
+	}
+}
+
+// Remove clears whichever slot currently holds child. Returns
+// ErrNotFound if child matches neither slot.
+func (c *Card) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	switch child {
+	case c.content:
+		c.content.SetParent(nil)
+		c.content = nil
+		return nil
+	case c.footer:
+		c.footer.SetParent(nil)
+		c.footer = nil
+		return nil
+	default:
+		return ErrNotFound
+	}
+}
+
 // Layout positions the content to fill the available space minus the footer
 // height, and pins the footer to the bottom of the content area.
 func (c *Card) Layout() error {

@@ -106,6 +106,39 @@ func Clock(id, class string, interval time.Duration, format, prefix string, opti
 	}
 }
 
+// ColorPanel adds a single-colour editor panel (3-row swatch + RGB, HSL, and
+// Hex inputs). The panel emits [EvtChange] on every value change with the
+// panel pointer as payload.
+func ColorPanel(id, class, title string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewColorPanel(id, class, title)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// ColorPicker adds a colour picker composite to the parent. In
+// [widgets.ColorSingle] mode it shows one [ColorPanel]; in
+// [widgets.ColorFgBg] mode it shows two [ColorPanel]s plus a [PreviewPanel]
+// side by side and exposes the WCAG contrast ratio between fg and bg.
+func ColorPicker(id, class string, mode widgets.ColorPickerMode, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewColorPicker(id, class, mode)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Combo adds a traditional combo box to the parent: a free-text [Typeahead]
 // input paired with a suggestion [List]. items is the initial suggestion set.
 //
@@ -313,6 +346,22 @@ func HRule(class, style string, options ...Option) Option {
 	}
 }
 
+// Indicator adds a status Indicator widget to the parent. The level drives
+// the glyph colour via the indicator:<level> style variants; the label
+// always renders in the base "indicator" style.
+func Indicator(id, class string, level core.Level, label string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewIndicator(id, class, level, label)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Input adds a single-line text input widget to the parent. params is passed
 // directly to the underlying constructor; the first element is typically used
 // as placeholder text.
@@ -359,6 +408,22 @@ func Marquee(id, class string, options ...Option) Option {
 	}
 }
 
+// PreviewPanel adds a fg/bg preview swatch with a WCAG contrast ratio readout
+// to the parent. The panel does not emit events and is normally driven by a
+// surrounding [ColorPicker].
+func PreviewPanel(id, class string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewColorPreview(id, class)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
 // Progress adds a progress bar widget to the parent. When horizontal is true
 // the bar fills left-to-right; otherwise bottom-to-top. Use [Total] and
 // [Value] to set the range and current value at construction time, or retrieve
@@ -367,6 +432,41 @@ func Progress(id, class string, horizontal bool, options ...Option) Option {
 	return func(theme *core.Theme, widget core.Widget) {
 		if container, ok := widget.(core.Container); ok {
 			w := widgets.NewProgress(id, class, horizontal)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Radio adds a vertical radio-button group to the parent. args is a flat
+// list of alternating value/label pairs, identical to [Select]:
+// []string{"key1", "Label 1", "key2", "Label 2", …}. Unlike [Select], every
+// option is rendered on its own row and navigating with the arrow keys
+// changes the selection immediately (no separate cursor).
+func Radio(id, class string, args []string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewRadio(id, class, args...)
+			w.Apply(theme)
+			container.Add(w)
+			for _, option := range options {
+				option(theme, w)
+			}
+		}
+	}
+}
+
+// Slider adds a horizontal int-valued range input to the parent. The widget
+// defaults to min=0, max=100, value=0, step=1; configure via [Min], [Max],
+// [Value], [Step] options. The renderer chooses a compact one-row style at
+// height 1 and a centred two-row rounded box at height ≥ 2.
+func Slider(id, class string, options ...Option) Option {
+	return func(theme *core.Theme, widget core.Widget) {
+		if container, ok := widget.(core.Container); ok {
+			w := widgets.NewSlider(id, class)
 			w.Apply(theme)
 			container.Add(w)
 			for _, option := range options {

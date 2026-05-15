@@ -2,13 +2,13 @@ package zeichenwerk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"runtime/debug"
 	"sync"
-	"time"
 
 	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk/core"
@@ -225,15 +225,6 @@ func (ui *UI) Handle(event tcell.Event) bool {
 			}
 		case tcell.KeyCtrlC, tcell.KeyCtrlQ:
 			ui.Quit()
-		case tcell.KeyCtrlD:
-			ui.Log(ui, Debug, "Opening inspector")
-			animation := NewGrow("inspector-grow", "", false)
-			animation.Add(NewInspector(ui).UI())
-			hw, hh := animation.Hint()
-			animation.Start(10 * time.Millisecond)
-			ui.Log(ui, Debug, "Inspection hint", "hw", hw, "hh", hh)
-			ui.Popup(-1, -1, 0, 0, animation)
-			ui.Refresh()
 		case tcell.KeyRune:
 			switch event.Str() {
 			case "q", "Q":
@@ -331,13 +322,64 @@ func (ui *UI) Children() []Widget {
 	return result
 }
 
-// Layout recalculates and applies the layout for all widget layers in the UI.
-// This method is called automatically when the screen is resized or when
-// the UI structure changes. It ensures that all are properly
-// positioned and sized according to their layout constraints.
+// Insert places a layer at the given index in the layer stack,
+// shifting later layers up. The widget must be a Container; non-
+// container values yield ErrNoContainer to mirror Add. Out-of-range
+// indices are clamped to [0, len(layers)]. In practice the public
+// API is Popup() / Close() — this method exists so *UI satisfies the
+// Container interface.
+func (ui *UI) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	container, ok := widget.(Container)
+	if !ok {
+		return ErrNoContainer
+	}
+	if index < 0 {
+		index = 0
+	}
+	if index > len(ui.layers) {
+		index = len(ui.layers)
+	}
+	container.SetParent(ui)
+	ui.layers = append(ui.layers, nil)
+	copy(ui.layers[index+1:], ui.layers[index:])
+	ui.layers[index] = container
+	return nil
+}
+
+// Remove drops a layer from the stack. The base layer is removable
+// for symmetry with Add; in practice callers should never do that —
+// Popup pushes layers, Close pops them. Returns ErrNotFound when the
+// widget is not currently a layer.
+func (ui *UI) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	for i, layer := range ui.layers {
+		if layer == child {
+			ui.layers = append(ui.layers[:i], ui.layers[i+1:]...)
+			child.SetParent(nil)
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
+// Layout recalculates and applies the layout for every widget layer
+// in the UI. The base layer (layers[0]) is sized to the screen
+// (minus one row for the debug overlay when active); popup layers
+// keep their existing bounds — those were set when the popup was
+// pushed via Popup, and re-running Layout on a popup re-flows its
+// internal children without moving or resizing the popup itself.
+//
+// This is called automatically when the screen is resized and after
+// any structural change (Relayout). The errors from individual
+// Layout calls are joined and returned together.
 func (ui *UI) Layout() error {
-	// Set the bounds of the root widget to the screen bounds.
-	// In debug mode, the bottom line is reserved for debug information
+	// Size the base layer to the full screen, reserving one row for
+	// the debug overlay when debug mode is active.
 	_, _, width, height := ui.Bounds()
 	if ui.debug {
 		ui.layers[0].SetBounds(0, 0, width, height-1)
@@ -345,8 +387,15 @@ func (ui *UI) Layout() error {
 		ui.layers[0].SetBounds(0, 0, width, height)
 	}
 
-	// Lay out the root widget.
-	return ui.layers[0].Layout()
+	// Lay out every layer. Popup layers keep their current bounds;
+	// only their internal child layout is recomputed.
+	var errs []error
+	for _, layer := range ui.layers {
+		if err := layer.Layout(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // ---- Drawing Methods -------------------------------------------------------

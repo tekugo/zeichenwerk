@@ -13,6 +13,7 @@ import (
 	z "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/compose"
 	"github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/inspector"
 	"github.com/tekugo/zeichenwerk/themes"
 	"github.com/tekugo/zeichenwerk/widgets"
 )
@@ -70,6 +71,7 @@ func main() {
 	})
 
 	crt.Start(20 * time.Millisecond)
+	inspector.Open(ui)
 	ui.Run()
 }
 

@@ -92,6 +92,42 @@ func (f *Flex) Children() []Widget {
 	return f.children
 }
 
+// Insert places widget at index in the children slice, shifting later
+// siblings up by one. Index values outside [0, len(children)] are
+// clamped to the closest valid endpoint.
+func (f *Flex) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index < 0 {
+		index = 0
+	}
+	if index > len(f.children) {
+		index = len(f.children)
+	}
+	widget.SetParent(f)
+	f.children = append(f.children, nil)
+	copy(f.children[index+1:], f.children[index:])
+	f.children[index] = widget
+	return nil
+}
+
+// Remove detaches child from the children slice and clears its parent.
+// Returns ErrNotFound if child is not a direct child of this flex.
+func (f *Flex) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	for i, c := range f.children {
+		if c == child {
+			f.children = append(f.children[:i], f.children[i+1:]...)
+			child.SetParent(nil)
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
 // ---- Summarizer -----------------------------------------------------------
 
 // Alignment returns the child alignment setting.

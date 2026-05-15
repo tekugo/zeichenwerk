@@ -502,3 +502,149 @@ func TestTree_RenderNoPanel(t *testing.T) {
 	// Must not panic
 	tr.Render(newTestRenderer())
 }
+
+// ---- Mouse -----------------------------------------------------------------
+
+// mouseTree builds a small tree with two top-level branches and one nested
+// child for clicking on. The branch is initially collapsed.
+func mouseTree() *Tree {
+	branch := NewTreeNode("branch")
+	branch.Add(NewTreeNode("child"))
+	leaf := NewTreeNode("leaf")
+	tr := newTree(branch, leaf)
+	tr.SetBounds(0, 0, 40, 10)
+	return tr
+}
+
+// indicatorCol returns the leftmost cell of the indicator for a top-level row.
+// At depth 0 the indicator starts at the content's left edge.
+func indicatorCol() int { return 0 }
+
+func TestTree_MouseClickPrefix_ExpandsCollapsed(t *testing.T) {
+	tr := mouseTree()
+	branch := tr.flat[0].node
+	if branch.Expanded() {
+		t.Fatal("precondition: branch should start collapsed")
+	}
+	ev := tcell.NewEventMouse(indicatorCol(), 0, tcell.Button1, tcell.ModNone)
+	if !tr.handleMouse(ev) {
+		t.Fatal("handleMouse should return true on a valid click")
+	}
+	if !branch.Expanded() {
+		t.Error("clicking the prefix on a collapsed non-leaf should expand it")
+	}
+	if tr.Selected() != branch {
+		t.Error("clicking the prefix should also select the row")
+	}
+}
+
+func TestTree_MouseClickPrefix_CollapsesExpanded(t *testing.T) {
+	tr := mouseTree()
+	branch := tr.flat[0].node
+	tr.Expand(branch)
+	ev := tcell.NewEventMouse(indicatorCol()+1, 0, tcell.Button1, tcell.ModNone)
+	if !tr.handleMouse(ev) {
+		t.Fatal("handleMouse should return true on a valid click")
+	}
+	if branch.Expanded() {
+		t.Error("clicking the prefix on an expanded non-leaf should collapse it")
+	}
+}
+
+func TestTree_MouseClickLabel_SelectsOnly(t *testing.T) {
+	tr := mouseTree()
+	branch := tr.flat[0].node
+	// Label area starts after the 2-cell indicator at depth 0.
+	ev := tcell.NewEventMouse(3, 0, tcell.Button1, tcell.ModNone)
+	if !tr.handleMouse(ev) {
+		t.Fatal("handleMouse should return true on a valid click")
+	}
+	if tr.Selected() != branch {
+		t.Error("clicking the label should select the row")
+	}
+	if branch.Expanded() {
+		t.Error("clicking the label should not toggle expand state")
+	}
+}
+
+func TestTree_MouseClickLeafPrefix_DoesNotToggle(t *testing.T) {
+	tr := mouseTree()
+	leaf := tr.flat[1].node // second top-level item, a leaf
+	if !leaf.Leaf() {
+		t.Fatal("precondition: row 1 should be a leaf")
+	}
+	ev := tcell.NewEventMouse(indicatorCol(), 1, tcell.Button1, tcell.ModNone)
+	if !tr.handleMouse(ev) {
+		t.Fatal("handleMouse should return true on a valid click")
+	}
+	if tr.Selected() != leaf {
+		t.Error("leaf prefix click should still select the row")
+	}
+}
+
+func TestTree_MouseWheelDown(t *testing.T) {
+	// Build a flat tree of 8 leaves so wheel scrolling has room to move.
+	tr := NewTree("t", "")
+	for i := 0; i < 8; i++ {
+		tr.root.Add(NewTreeNode(string(rune('a' + i))))
+	}
+	tr.rebuild()
+	tr.SetBounds(0, 0, 20, 4)
+	tr.Select(tr.flat[0].node)
+	if !tr.handleMouse(tcell.NewEventMouse(2, 0, tcell.WheelDown, tcell.ModNone)) {
+		t.Fatal("WheelDown should be handled")
+	}
+	if got := tr.flat[MouseWheelStep].node; tr.Selected() != got {
+		t.Errorf("WheelDown: selected node = %v; want %v", tr.Selected(), got)
+	}
+}
+
+func TestTree_MouseWheelUp(t *testing.T) {
+	tr := NewTree("t", "")
+	for i := 0; i < 8; i++ {
+		tr.root.Add(NewTreeNode(string(rune('a' + i))))
+	}
+	tr.rebuild()
+	tr.SetBounds(0, 0, 20, 4)
+	tr.Select(tr.flat[7].node)
+	if !tr.handleMouse(tcell.NewEventMouse(2, 0, tcell.WheelUp, tcell.ModNone)) {
+		t.Fatal("WheelUp should be handled")
+	}
+	if got := tr.flat[7-MouseWheelStep].node; tr.Selected() != got {
+		t.Errorf("WheelUp: selected node = %v; want %v", tr.Selected(), got)
+	}
+}
+
+func TestTree_MouseClickPrefix_NestedRow(t *testing.T) {
+	// Build a tree where row 1 is a depth-1 branch we can click into.
+	root := NewTreeNode("root")
+	inner := NewTreeNode("inner")
+	inner.Add(NewTreeNode("grand"))
+	root.Add(inner)
+	root.Expand()
+	tr := newTree(root)
+	tr.SetBounds(0, 0, 40, 10)
+
+	// Sanity: row 0 is "root", row 1 is "inner" at depth 1, currently collapsed.
+	if tr.flat[1].node != inner || tr.flat[1].depth != 1 {
+		t.Fatalf("unexpected flat layout: %+v", tr.flat)
+	}
+
+	// Inner's indicator at depth 1 sits at column (depth-1)*3 + 3 = 3.
+	ev := tcell.NewEventMouse(3, 1, tcell.Button1, tcell.ModNone)
+	if !tr.handleMouse(ev) {
+		t.Fatal("handleMouse should return true on a valid click")
+	}
+	if !inner.Expanded() {
+		t.Error("clicking the indicator of a depth-1 row should expand it")
+	}
+
+	// Click at column 7 (inside the label area for depth-1 row: prefix end = 1*3+2 = 5).
+	ev = tcell.NewEventMouse(7, 1, tcell.Button1, tcell.ModNone)
+	if !tr.handleMouse(ev) {
+		t.Fatal("handleMouse should return true on label click")
+	}
+	if !inner.Expanded() {
+		t.Error("label click must not toggle expand state")
+	}
+}

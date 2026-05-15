@@ -10,6 +10,7 @@ import (
 
 	. "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/inspector"
 	"github.com/tekugo/zeichenwerk/themes"
 	. "github.com/tekugo/zeichenwerk/widgets"
 )
@@ -52,6 +53,7 @@ func main() {
 	if dbg {
 		ui.Debug()
 	}
+	inspector.Open(ui)
 	ui.Run()
 }
 

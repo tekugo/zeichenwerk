@@ -26,7 +26,9 @@ A TUI component library based on tcell/v3.
 - [Filter](filter.md) — search input bound to a Filterable widget
 - [Input](input.md) — single-line text field
 - [List](list.md) — scrollable selectable list
+- [Radio](radio.md) — mutually-exclusive choice rendered inline
 - [Select](select.md) — dropdown selection
+- [Slider](slider.md) — horizontal int range input
 - [Tree](tree.md) — expandable hierarchy of nodes
 - [TreeFS](tree-fs.md) — Tree pre-wired for filesystem navigation
 - [Typeahead](typeahead.md) — input with ghost-text suggestion completion
@@ -195,8 +197,10 @@ Fluent API for constructing UIs.
 - `Input(id string, params ...string)`
 - `List(id string, values ...string)`
 - `Progress(id string, horizontal bool)`
+- `Radio(id string, args ...string)`
 - `Scanner(id string, width int, charStyle string)`
 - `Select(id string, args ...string)`
+- `Slider(id string)`
 - `Spacer()`
 - `Spinner(id string, sequence string)`
 - `Static(id, text string)`

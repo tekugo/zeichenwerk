@@ -1,8 +1,7 @@
 package widgets
 
 import (
-	"fmt"
-	"strings"
+	"reflect"
 
 	. "github.com/tekugo/zeichenwerk/core"
 )
@@ -56,7 +55,17 @@ func Relayout(widget Widget) {
 }
 
 // WidgetType returns a clean, human-readable string representation of the
-// widget's type.
+// widget's type, using the unqualified Go type name.
 func WidgetType(widget Widget) string {
-	return strings.TrimPrefix(fmt.Sprintf("%T", widget), "*widgets.")
+	t := reflect.TypeOf(widget)
+	if t == nil {
+		return "Widget"
+	}
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if name := t.Name(); name != "" {
+		return name
+	}
+	return "Widget"
 }

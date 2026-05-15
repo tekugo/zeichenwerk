@@ -364,6 +364,76 @@ func TestTable_Render_ShowsHeaderAndData(t *testing.T) {
 	}
 }
 
+// ── Mouse ─────────────────────────────────────────────────────────────────────
+
+func TestTable_Mouse_WheelDownMovesRow(t *testing.T) {
+	tbl := NewTable("t", "", makeProvider(), false)
+	tbl.SetBounds(0, 0, 40, 10)
+	if !tbl.handleMouse(tcell.NewEventMouse(2, 2, tcell.WheelDown, tcell.ModNone)) {
+		t.Fatal("WheelDown should be handled")
+	}
+	row, _ := tbl.Selected()
+	if row != MouseWheelStep {
+		t.Errorf("row = %d after WheelDown; want %d", row, MouseWheelStep)
+	}
+}
+
+func TestTable_Mouse_WheelUpClampsAtZero(t *testing.T) {
+	tbl := NewTable("t", "", makeProvider(), false)
+	tbl.SetBounds(0, 0, 40, 10)
+	tbl.SetSelected(1, 0)
+	if !tbl.handleMouse(tcell.NewEventMouse(2, 2, tcell.WheelUp, tcell.ModNone)) {
+		t.Fatal("WheelUp should be handled")
+	}
+	row, _ := tbl.Selected()
+	if row != 0 {
+		t.Errorf("row = %d after WheelUp from 1; want 0 (clamped)", row)
+	}
+}
+
+func TestTable_Mouse_WheelDownClampsAtEnd(t *testing.T) {
+	p := makeProvider()
+	tbl := NewTable("t", "", p, false)
+	tbl.SetBounds(0, 0, 40, 10)
+	tbl.SetSelected(p.Length()-1, 0)
+	if !tbl.handleMouse(tcell.NewEventMouse(2, 2, tcell.WheelDown, tcell.ModNone)) {
+		t.Fatal("WheelDown should be handled")
+	}
+	row, _ := tbl.Selected()
+	if row != p.Length()-1 {
+		t.Errorf("row = %d after WheelDown at last row; want %d", row, p.Length()-1)
+	}
+}
+
+func TestTable_Mouse_WheelHorizontalScroll(t *testing.T) {
+	tbl := NewTable("t", "", makeProvider(), false)
+	// Narrow viewport so columns don't all fit; gives WheelRight room to scroll.
+	tbl.SetBounds(0, 0, 10, 10)
+	beforeX, _ := tbl.Offset()
+	if !tbl.handleMouse(tcell.NewEventMouse(2, 2, tcell.WheelRight, tcell.ModNone)) {
+		t.Fatal("WheelRight should be handled")
+	}
+	afterX, _ := tbl.Offset()
+	if afterX <= beforeX {
+		t.Errorf("WheelRight offsetX %d → %d; expected increase", beforeX, afterX)
+	}
+	if !tbl.handleMouse(tcell.NewEventMouse(2, 2, tcell.WheelLeft, tcell.ModNone)) {
+		t.Fatal("WheelLeft should be handled")
+	}
+	leftX, _ := tbl.Offset()
+	if leftX >= afterX {
+		t.Errorf("WheelLeft offsetX %d → %d; expected decrease", afterX, leftX)
+	}
+}
+
+func TestTable_Mouse_OtherButtonsIgnored(t *testing.T) {
+	tbl := NewTable("t", "", makeProvider(), false)
+	tbl.SetBounds(0, 0, 40, 10)
+	if tbl.handleMouse(tcell.NewEventMouse(2, 2, tcell.Button2, tcell.ModNone)) {
+		t.Error("Button2 should not be handled")
+	}
+}
+
 // ── ImplementsInterface ───────────────────────────────────────────────────────
 
 func TestTable_ImplementsWidget(t *testing.T) {

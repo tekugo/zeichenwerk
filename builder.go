@@ -112,6 +112,23 @@ func (b *Builder) End() *Builder {
 	return b
 }
 
+// addLeaf adds widget to the current parent and applies the theme without
+// pushing the widget onto the container stack. It is used for composite
+// widgets whose internal child tree should not be exposed to the builder
+// API (e.g. ColorPanel, ColorPicker).
+func (b *Builder) addLeaf(widget Widget) {
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		if _, ok := top.(*Grid); ok {
+			top.Add(widget, b.x, b.y, b.w, b.h)
+		} else {
+			top.Add(widget)
+		}
+	}
+	widget.Apply(b.theme)
+	b.current = widget
+}
+
 // ---- Widgets --------------------------------------------------------------
 
 // BarChart creates a new BarChart widget for displaying multi-series stacked
@@ -126,9 +143,40 @@ func (b *Builder) BarChart(id string) *Builder {
 // Box creates a new box widget with the specified id and display title.
 // The box is automatically styled with theme styles for the border and
 // the title.
+// Card creates a card container with the specified id and title.
+// Card holds two slots — content and footer — populated by the next
+// two children added to the chain. The class is inherited from the
+// builder's current Class context, matching every other Builder
+// constructor.
+func (b *Builder) Card(id, title string) *Builder {
+	card := NewCard(id, b.class, title)
+	b.Add(card)
+	return b
+}
+
 func (b *Builder) Box(id, title string) *Builder {
 	box := NewBox(id, b.class, title)
 	b.Add(box)
+	return b
+}
+
+// ColorPanel creates a single-colour editor panel (3-row swatch + RGB,
+// HSL, and Hex inputs). The panel emits EvtChange on every value change.
+// It is a composite widget — its inner children are managed internally,
+// so the builder treats it as a leaf and does not push it onto the stack.
+func (b *Builder) ColorPanel(id, title string) *Builder {
+	cp := NewColorPanel(id, b.class, title)
+	b.addLeaf(cp)
+	return b
+}
+
+// ColorPicker creates a colour picker composite. In [ColorSingle] mode it
+// shows one ColorPanel; in [ColorFgBg] mode it shows two ColorPanels and a
+// PreviewPanel side by side. The picker re-emits a single EvtChange when
+// either child panel changes. It is treated as a leaf by the builder.
+func (b *Builder) ColorPicker(id string, mode ColorPickerMode) *Builder {
+	cp := NewColorPicker(id, b.class, mode)
+	b.addLeaf(cp)
 	return b
 }
 
@@ -294,6 +342,20 @@ func (b *Builder) HRule(style string) *Builder {
 	return b
 }
 
+// Indicator creates a new Indicator status widget. The level drives the
+// glyph colour via the indicator:<level> style variants; the label always
+// renders in the base "indicator" style.
+//
+// Parameters:
+//   - id:    unique identifier for the indicator widget
+//   - level: severity level (Debug, Info, Warning, Error, Fatal)
+//   - label: text drawn after the glyph
+func (b *Builder) Indicator(id string, level Level, label string) *Builder {
+	indicator := NewIndicator(id, b.class, level, label)
+	b.Add(indicator)
+	return b
+}
+
 // Input creates a new input widget for entering text.
 //
 // Parameters:
@@ -322,12 +384,56 @@ func (b *Builder) Marquee(id string) *Builder {
 	return b
 }
 
+// PreviewPanel creates a fg/bg preview panel that displays the WCAG
+// contrast ratio between its colours. It is updated by parent widgets
+// (typically a ColorPicker) and emits no events. The builder treats it as
+// a leaf — its inner widgets are managed internally.
+func (b *Builder) PreviewPanel(id string) *Builder {
+	pp := NewColorPreview(id, b.class)
+	b.addLeaf(pp)
+	return b
+}
+
+// Preview opens a Preview container, used to wrap a subtree that
+// should render and lay out normally but stay invisible to focus
+// traversal, hit testing, and other framework walks. Subsequent
+// builder calls populate the Preview's wrapped target until End()
+// pops it off the stack. The first widget added becomes the
+// target; further Adds replace it (Preview holds a single target
+// like Box).
+func (b *Builder) Preview(id string) *Builder {
+	p := NewPreview(id, b.class, nil)
+	b.Add(p)
+	return b
+}
+
 // Progress creates a new progress widget for displaying progress indicators.
 // The progress is initially indeterminate (total=0). Use SetTotal and SetValue
 // to configure it after retrieval via Find.
 func (b *Builder) Progress(id string, horizontal bool) *Builder {
 	p := NewProgress(id, b.class, horizontal)
 	b.Add(p)
+	return b
+}
+
+// Radio creates a vertical radio-button group from the given alternating
+// value/text pairs. The interface mirrors Select — args is a flat list of
+// value1, text1, value2, text2, ... — but every option is shown on its own
+// row and the selection changes immediately on navigation (no cursor).
+func (b *Builder) Radio(id string, args ...string) *Builder {
+	r := NewRadio(id, b.class, args...)
+	b.Add(r)
+	return b
+}
+
+// Slider creates a horizontal int-valued range input. The widget defaults to
+// min=0, max=100, value=0, step=1; configure via the returned widget after
+// retrieval with Find. The renderer picks a compact one-row style at height
+// 1 and a centred two-row rounded box at height ≥ 2 — both glyph sets come
+// from theme strings under "slider.*".
+func (b *Builder) Slider(id string) *Builder {
+	s := NewSlider(id, b.class)
+	b.Add(s)
 	return b
 }
 
@@ -495,6 +601,22 @@ func (b *Builder) TreeFS(id, root string, dirsOnly bool) *Builder {
 		top.Add(tfs.Tree)
 	}
 	b.current = tfs.Tree
+	return b
+}
+
+// TreeWidgets creates a widget-hierarchy tree rooted at root. Each node is
+// labelled with the widget's Go type and id, e.g. "Flex (#main)". The tree
+// is intended for the Inspector and designer tooling. The TreeWidgets
+// pointer itself is not retained; for advanced use (Refresh, SetRoot)
+// instantiate it directly via NewTreeWidgets.
+func (b *Builder) TreeWidgets(id string, root Widget) *Builder {
+	tw := NewTreeWidgets(id, b.class, root)
+	tw.Apply(b.theme)
+	if len(b.stack) > 0 {
+		top := b.stack.Peek()
+		top.Add(tw.Tree)
+	}
+	b.current = tw.Tree
 	return b
 }
 

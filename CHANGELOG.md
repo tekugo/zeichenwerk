@@ -8,7 +8,15 @@ and this project adheres to
 
 ---
 
+## [Unreleased]
+
+---
+
 ## v2.0.0
+
+---
+
+## [Unreleased]
 
 ---
 
@@ -104,6 +112,10 @@ and this project adheres to
 
 ---
 
+## [Unreleased]
+
+---
+
 ## v2.0.0-beta.5
 
 ### Added
@@ -172,6 +184,10 @@ and this project adheres to
   bleeding through on rules and headings
 - `hr` and `h2` underline rules are one character shorter than the content
   width, leaving a visible space before the scrollbar
+
+---
+
+## [Unreleased]
 
 ---
 

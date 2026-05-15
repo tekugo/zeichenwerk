@@ -8,10 +8,14 @@ type Level string
 
 // Severity levels from lowest to highest. The numeric ordering is not
 // significant — filters compare on the string value — but this list is
-// arranged in the conventional order for readability.
+// arranged in the conventional order for readability. Success sits on
+// the positive side of Info; it is not a severity in the failure sense
+// but is included so UI status indicators can theme a "completed
+// successfully" state alongside the diagnostic levels.
 const (
 	Debug   Level = "debug"   // fine-grained diagnostic output for development
 	Info    Level = "info"    // routine informational messages
+	Success Level = "success" // a successful operation or healthy state
 	Warning Level = "warning" // unexpected but recoverable conditions
 	Error   Level = "error"   // a failure that prevented an operation from completing
 	Fatal   Level = "fatal"   // an unrecoverable failure; the program is about to exit

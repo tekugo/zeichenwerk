@@ -28,6 +28,7 @@
 - **Reference**: [`doc/reference/overview.md`](doc/reference/overview.md) — one page per widget.
 - **Design principles**: [`doc/principles.md`](doc/principles.md) — the small set of invariants the framework relies on.
 - **Events / flags**: [`doc/events.md`](doc/events.md), [`doc/flags.md`](doc/flags.md).
+- **Designer**: [`doc/designer/README.md`](doc/designer/README.md) — the inspector framework, per-widget `*-form.go` files, codegen, and the `cmd/designer-poc` driver.
 
 ## Project Overview
 
@@ -114,6 +115,8 @@ At least one row size and one column size MUST be negative for the Grid to fill 
 | `Combo`     | `combo.go`     | `NewCombo(id, class, items []string)`                | `EvtChange(string)` `EvtActivate(string)` | `Get() string`, `Set(string)`, `SetItems([]string)` — opens popup on focus    |
 | `Filter`    | `filter.go`    | `NewFilter(id, class)`                               | inherits `Typeahead`                    | `Bind(Filterable)`, `Unbind()`, `Bound() Filterable` — drives a target widget   |
 | `Select`    | `select.go`    | `NewSelect(id, class, val, label, …)`                | `EvtChange(string)`                     | `Select(string)`, `Value() string`                                              |
+| `Radio`     | `radio.go`     | `NewRadio(id, class, val, label, …)`                 | `EvtChange(string)`                     | `Select(string)` (silent), `Value() string`, `Text() string` — all options visible, no cursor; glyphs `radio.on`/`radio.off` |
+| `Slider`    | `slider.go`    | `NewSlider(id, class)`                               | `EvtChange(int)`                        | `Set(int)`, `Value()`, `SetMin/SetMax/SetStep` — defaults `0..100` step `1`; compact `━┃` at h=1, rounded box `╥╨` at h≥2 |
 | `List`      | `list.go`      | `NewList(id, class, items []string)`                 | `EvtSelect(int)` `EvtActivate(int)`     | `Set([]string)`, `Items()`, `Select(int)`, `Selected() int`, `Filter(string)`   |
 | `Deck`      | `deck.go`      | `NewDeck(id, class, render ItemRender, itemHeight)`  | `EvtSelect(int)` `EvtActivate(int)`     | `Get() []any`, `Set([]any)`, `Select(int)`, `Selected() int` — itemHeight ≥ 1   |
 | `Tiles`     | `tiles.go`     | `NewTiles(id, class, render ItemRender, tw, th int)` | `EvtSelect(int)` `EvtActivate(int)`     | `Items()`, `SetItems([]any)`, `Move(dr, dc int)` — wrapping grid                |
@@ -240,14 +243,75 @@ deterministic without a live terminal session.
 
 ## Building a new widget — checklist
 
-1. Create `mywidget.go` with `type MyWidget struct { Component; ... }`
+Every new widget MUST go through every step below. Skipping the docs, themes, or
+demo steps leaves a widget invisible to users and other agents — treat the list
+as a single unit of work, not a menu.
+
+1. Create `widgets/mywidget.go` with `type MyWidget struct { Component; ... }`
 2. Constructor: `NewMyWidget(id, class string, ...) *MyWidget` — call `SetFlag(FlagFocusable, true)` if interactive
 3. Implement `Render(r *Renderer)` — call `c.Component.Render(r)` first for borders/bg
 4. Implement `Apply(theme *Theme)` — call `theme.Apply(w, w.Selector("mywidget"), states...)`
 5. Register in `Builder` (`builder.go`): add `func (b *Builder) MyWidget(id string, ...) *Builder`
-6. Register in `compose/compose.go`: add `func MyWidget(id, class string, options ...Option) Option`
-7. Add theme style keys to all five theme files (`theme-*.go`)
-8. Add `doc.go` entry and export all public symbols with comments
+6. Register in `compose/widgets.go`: add `func MyWidget(id, class string, options ...Option) Option`
+7. Add theme **styles** to `themes/default-styles.go` (`mywidget`, plus state and part variants such as `mywidget:focused`, `mywidget/thumb:focused`) — every theme inherits from this baseline
+8. Add theme **strings** for any glyphs the widget reads from the theme: register them in `themes/unicode-strings.go` and `themes/nerd-strings.go` (and any other string sets)
+9. Add `doc.go` entry and export all public symbols with comments
+10. Create `widgets/mywidget-form.go` next to the widget (see Designer section); register the form in `cmd/designer-poc/main.go` `registerKinds`
+11. Update **`AGENTS.md`** — add a row to the appropriate widget reference table (Containers / Input / Display / Animated)
+12. Update **`doc/reference/`** — add a new `mywidget.md` page (use an existing widget such as `radio.md`/`slider.md` as a template) and list it in `doc/reference/overview.md` under both the widget category and the Builder methods
+13. Update the **skill** — add the widget to `.claude/skills/zeichenwerk/SKILL.md` (constructor table) and `.claude/skills/zeichenwerk/widgets.md` (full section + theme-string list at the bottom if applicable)
+14. Wire the widget into **`cmd/demo`** — add a label to the navigation list, a `With(myWidgetDemo)` call into the switcher chain, and a `myWidgetDemo(builder *Builder)` function. Bump every special-case index in the nav handler that sits past the insertion point
+15. Wire the widget into **`cmd/demo2`** — add an `Entry` (with `Builder`/`Compose` snippets and `DocFile`) to the appropriate `*Entries` slice and a matching demo function. Copy the reference doc to `cmd/demo2/docs/mywidget.md` so the embedded doc panel can render it
+16. Add `widgets/mywidget_test.go` covering constructor defaults, state transitions, key/mouse handling, and at least one render assertion per visual style
+
+## Designer
+
+The designer is the interactive layout editor — see
+[`doc/designer/README.md`](doc/designer/README.md) for the full
+guide. Three layers, each with a single concern:
+
+- **`widgets/*-form.go`** — per-widget editing surface. Every form
+  embeds `ComponentForm` (id, class, hint, flags, style snapshot)
+  and implements `inspector.WidgetForm`: `Name/Group/Help`,
+  `Load/Store`, `New`, `Validate`, `Emit`. Container forms whose
+  `Add` consumes per-child parameters additionally implement
+  `ContainerForm.LayoutForm`. Forms live next to the widgets they
+  edit so they can read and write unexported fields directly.
+- **`inspector/`** — type registry (`Kind`), state holder
+  (`Designer`), and codegen walker. Public surface is
+  `Register(Kind) error`, `FormFor(w) WidgetForm`,
+  `GenerateFragment(mode, w) error`, `GenerateFile(mode, w, pkg, fn) error`.
+  Modes are `ModeBuilder` (implemented) and `ModeCompose` (reserved).
+- **`cmd/designer-poc/main.go`** — reference driver. Builds a
+  `Ctrl+Space` popup with a tree pane, four-tab detail pane
+  (General / Layout / Style / Info), and a status bar.
+  `registerKinds(d)` is the only glue between the framework and the
+  widgets package — every supported kind has one entry there.
+
+### Designer rules
+
+- The `*-form.go` file MUST live in package `widgets`, next to the
+  widget it edits, and MUST NOT import `inspector`.
+- Every form MUST embed `ComponentForm` and call
+  `f.ComponentForm.Load(&w.Component)` / `Store(&w.Component)` first
+  in its own `Load` / `Store`.
+- Form fields MUST use Go struct tags
+  (`group`, `label`, `control`, `options`, `width`, `line`,
+  `readonly`) to drive control generation.
+- Slice fields (items, names, segments) MUST be surfaced as
+  comma-separated strings; use the package-level `parseItems` helper
+  (or `parseSelectOptions` / `parseShortcutPairs` for `key:value`
+  pairs).
+- `Emit` SHOULD use `EmitFrame` for the standard prefix-and-chain
+  shape; bypass only when the constructor name itself is computed
+  (`HFlex` vs `VFlex`).
+- Properties without a chained Builder setter MUST emit a
+  `// TODO: Setter(value) — no Builder setter` comment after the
+  frame so the user can fill in the call after generation.
+- A new widget kind MUST be registered in
+  `cmd/designer-poc/main.go`'s `registerKinds(d)` table; otherwise
+  `Designer.FormFor(w)` returns nil and the General tab shows
+  "no form registered for this widget".
 
 ## Events
 

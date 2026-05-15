@@ -365,7 +365,16 @@ func (l *List) handleKey(event *tcell.EventKey) bool {
 }
 
 func (l *List) handleMouse(event *tcell.EventMouse) bool {
-	if event.Buttons() != tcell.Button1 {
+	switch event.Buttons() {
+	case tcell.WheelUp:
+		l.Move(-MouseWheelStep)
+		return true
+	case tcell.WheelDown:
+		l.Move(MouseWheelStep)
+		return true
+	case tcell.Button1:
+		// fall through to click handling below
+	default:
 		return false
 	}
 	mx, my := event.Position()

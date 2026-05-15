@@ -124,6 +124,39 @@ func (c *Collapsible) Children() []Widget {
 	return []Widget{c.child}
 }
 
+// Insert places widget in the body slot. Only index 0 is valid;
+// any other index returns ErrFull. The new child inherits the
+// current expanded state.
+func (c *Collapsible) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	if c.child != nil {
+		c.child.SetParent(nil)
+	}
+	c.child = widget
+	widget.SetParent(c)
+	widget.SetFlag(FlagHidden, !c.expanded)
+	return nil
+}
+
+// Remove clears the body. Returns ErrNotFound when child does not
+// match the current body widget.
+func (c *Collapsible) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if c.child != child {
+		return ErrNotFound
+	}
+	c.child.SetParent(nil)
+	c.child = nil
+	return nil
+}
+
 // Layout positions the child within the body area (below the header row).
 func (c *Collapsible) Layout() error {
 	cx, cy, cw, ch := c.Content()

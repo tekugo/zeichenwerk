@@ -371,6 +371,39 @@ Theme strings (replace `h` with `v` for vertical):
 
 ---
 
+## Radio
+
+```go
+NewRadio(id, class string, args ...string) *Radio
+// args: flat pairs — value1, label1, value2, label2, ...
+```
+
+Vertical, mutually-exclusive selection where every option is rendered on its
+own row. Same constructor and public surface as [Select](#select), but no
+dropdown popup — the list is always visible and there is no separate cursor
+(navigation keys move the selection directly).
+
+| Style key                                 | When                                  |
+|-------------------------------------------|---------------------------------------|
+| `"radio"`                                 | base row (unselected)                 |
+| `":disabled"` / `":focused"` / `":hovered"` | widget state                          |
+| `"radio/selected"`                        | selected row, widget unfocused        |
+| `"radio/selected:focused"`                | selected row, widget focused          |
+
+Theme strings (any rune width — both glyphs are padded to the longer one):
+- `"radio.on"`  — selected glyph (defaults: `◉` Unicode / Nerd Font circle filled)
+- `"radio.off"` — unselected glyph (defaults: `○` Unicode / Nerd Font circle outline)
+
+Keys: `Up`/`k`, `Down`/`j`, `Home`, `End` — all change the selection
+immediately. Left-click selects the row under the cursor.
+
+Events: `EvtChange(string)` — selected value (fires on keyboard/mouse, **not**
+on programmatic `Select()`).
+
+Methods: `Select(string)` (silent), `Value() string`, `Text() string`.
+
+---
+
 ## Rule
 
 ```go
@@ -440,6 +473,47 @@ NewSelect(id, class string, args ...string) *Select
 Theme string: `"select.dropdown"` — dropdown indicator glyph.
 Events: `EvtChange(string)` — selected value.
 Methods: `Select(string)`, `Value() string`, `Text() string`.
+
+---
+
+## Slider
+
+```go
+NewSlider(id, class string) *Slider
+```
+
+Horizontal integer range input. Defaults: `min=0`, `max=100`, `value=0`,
+`step=1`. The renderer picks a visual style from the available content height
+— `1` row uses a compact heavy-line bar (`━` track, `┃` thumb); `2`+ rows use
+a centred rounded box (`╭─╮`/`╰─╯`) with a double-stem thumb (`╥`/`╨`)
+piercing both rows. Extra height becomes padding above and below.
+
+| Style key                | When                              |
+|--------------------------|-----------------------------------|
+| `"slider"`               | whole widget (track + thumb)      |
+| `":focused"` / `":disabled"` / `":hovered"` | widget state           |
+
+The slider has no part selectors — the entire widget paints in a single
+state-resolved style. Change colours via the state variants (`:focused`,
+`:disabled`, `:hovered`) rather than a thumb sub-part.
+
+Theme strings (compact):
+`"slider.compact.track"` `"slider.compact.thumb"`
+
+Theme strings (box):
+`"slider.box.top-left"` `"slider.box.top-right"`
+`"slider.box.bottom-left"` `"slider.box.bottom-right"`
+`"slider.box.horizontal"`
+`"slider.box.thumb-top"` `"slider.box.thumb-bottom"`
+
+Keys: `←`/`h` / `→`/`l` step by `step`; `Home`/`End` jump to bounds.
+Left-click maps the column to a value (clamped to inner track in box style).
+
+Events: `EvtChange(int)` — new value (fires whenever the value changes,
+including via `Set()`).
+
+Methods: `Set(int)`, `Value() int`, `Min/Max/Step() int`,
+`SetMin(int)`, `SetMax(int)`, `SetStep(int)` (clamps to ≥ 1).
 
 ---
 
@@ -979,7 +1053,15 @@ progress.v.prefix           progress.v.suffix
 progress.v.start.filled     progress.v.middle.filled    progress.v.end.filled
 progress.v.start.empty      progress.v.middle.empty     progress.v.end.empty
 
+radio.on    radio.off
+
 select.dropdown
+
+slider.compact.track    slider.compact.thumb
+slider.box.top-left     slider.box.top-right
+slider.box.bottom-left  slider.box.bottom-right
+slider.box.horizontal
+slider.box.thumb-top    slider.box.thumb-bottom
 
 shortcuts.prefix    shortcuts.separator    shortcuts.suffix
 

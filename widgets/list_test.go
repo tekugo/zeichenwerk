@@ -346,3 +346,27 @@ func TestList_Mouse_NonButton1Ignored(t *testing.T) {
 		t.Error("handleMouse with Button2 should return false")
 	}
 }
+
+func TestList_Mouse_WheelDownMovesSelection(t *testing.T) {
+	l := NewList("l", "", []string{"a", "b", "c", "d", "e", "f", "g", "h"})
+	l.SetBounds(0, 0, 10, 4)
+	l.Select(0)
+	if !l.handleMouse(tcell.NewEventMouse(2, 2, tcell.WheelDown, tcell.ModNone)) {
+		t.Fatal("WheelDown should be handled")
+	}
+	if l.Selected() != MouseWheelStep {
+		t.Errorf("Selected() = %d after WheelDown; want %d", l.Selected(), MouseWheelStep)
+	}
+}
+
+func TestList_Mouse_WheelUpMovesSelection(t *testing.T) {
+	l := NewList("l", "", []string{"a", "b", "c", "d", "e", "f", "g", "h"})
+	l.SetBounds(0, 0, 10, 4)
+	l.Select(7)
+	if !l.handleMouse(tcell.NewEventMouse(2, 2, tcell.WheelUp, tcell.ModNone)) {
+		t.Fatal("WheelUp should be handled")
+	}
+	if l.Selected() != 7-MouseWheelStep {
+		t.Errorf("Selected() = %d after WheelUp; want %d", l.Selected(), 7-MouseWheelStep)
+	}
+}

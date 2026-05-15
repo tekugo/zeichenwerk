@@ -10,14 +10,16 @@ Module: `github.com/tekugo/zeichenwerk`
 
 Sub-packages:
 
-- `core` — `Widget`, `Container`, `Theme`, `Style`, `Event`, `Handler`, alignment / flag constants, `Find`, `MustFind`, `FindAll`, `FindAt`, `Layout`, `Traverse`
-- `widgets` — concrete widget types (`List`, `Button`, …), event helpers (`OnActivate`, `OnChange`, `OnKey`, `OnMouse`, …), `Redraw`, `Relayout`
+- `core` — `Widget`, `Container`, `Theme`, `Style`, `Event`, `Handler`, alignment / flag constants, `Find`, `MustFind`, `FindAll`, `FindAt`, `Layout`, `Traverse`, `LayoutForm`, `StyleForm`
+- `widgets` — concrete widget types (`List`, `Button`, …), event helpers (`OnActivate`, `OnChange`, `OnKey`, `OnMouse`, …), `Redraw`, `Relayout`, per-widget `*Form` types (`StaticForm`, `FlexForm`, `BreadcrumbForm`, …) for the inspector / designer
+- `inspector` — designer state machine: `Designer`, `Kind`, `WidgetForm`, `ContainerForm`, `ModeBuilder` / `ModeCompose`; codegen via `GenerateFragment` / `GenerateFile`
 - `themes` — pre-built themes: `TokyoNight()`, `Nord()`, `MidnightNeon()`, `GruvboxDark()`, `GruvboxLight()`, `Lipstick()`
 - `compose` — functional alternative to the Builder
 - `values` — reactive `Value[T]`, `Setter[T]` interface, `Update[T](container, id, value)`
 
 Tutorial: [`doc/tutorial/README.md`](../../../doc/tutorial/README.md)
 Full widget reference: [widgets.md](widgets.md)
+Designer guide: [`doc/designer/README.md`](../../../doc/designer/README.md) — covers `*-form.go` files, the `inspector` package, codegen, and the `cmd/designer-poc` driver.
 
 ---
 
@@ -208,11 +210,13 @@ State priority for `:state` selectors: `disabled > pressed > focused > hovered`.
 | List         | `NewList(id, class, items []string)`                         | `EvtSelect(int)` `EvtActivate(int)`         |
 | Marquee      | `NewMarquee(id, class)`                                      | —                                           |
 | Progress     | `NewProgress(id, class, horizontal)`                         | —                                           |
+| Radio        | `NewRadio(id, class, val, lbl, …)`                           | `EvtChange(string)`                         |
 | Rule         | `NewHRule(class, style)` / `NewVRule(class, style)`          | —                                           |
 | Scanner      | `NewScanner(id, class, width, charStyle)`                    | —                                           |
 | Select       | `NewSelect(id, class, val, lbl, …)`                          | `EvtChange(string)`                         |
 | Shimmer      | `NewShimmer(id, class)`                                      | —                                           |
 | Shortcuts    | `NewShortcuts(id, class, pairs ...string)`                   | —                                           |
+| Slider       | `NewSlider(id, class)`                                       | `EvtChange(int)`                            |
 | Sparkline    | `NewSparkline(id, class)`                                    | —                                           |
 | Spinner      | `NewSpinner(id, class, sequence)`                            | —                                           |
 | Static       | `NewStatic(id, class, text)`                                 | —                                           |
@@ -403,6 +407,64 @@ state directly.
 core.ErrScreenInit  // tcell init failure from Run(); supports errors.Is()
 core.ErrChildIsNil  // nil passed to Add()
 ```
+
+---
+
+## Designer & per-widget forms
+
+`zeichenwerk` ships a runtime designer / inspector. Three layers:
+
+- **`widgets/*-form.go`** — every supported widget kind has a
+  `*Form` struct that implements `inspector.WidgetForm`
+  (`Name/Group/Help`, `Load/Store`, `New`, `Validate`, `Emit`).
+  Each form embeds `ComponentForm` for the standard
+  id / class / hint / flags / style snapshot, then declares
+  kind-specific fields with struct tags
+  (`group`, `label`, `control`, `options`, `width`, `line`,
+  `readonly`).
+- **`inspector` package** — central state holder
+  `inspector.Designer`, type registry (`Kind`), and the codegen
+  walker (`GenerateFragment`, `GenerateFile`). Forms register a
+  `Kind{Type, Make}` pair; `Designer.FormFor(w)` returns a fresh
+  form pre-loaded from the widget. `ContainerForm.LayoutForm`
+  surfaces per-child Add-params (e.g. `Grid` cell coordinates).
+- **`cmd/designer-poc/main.go`** — reference popup driver
+  (`Ctrl+Space` opens; tabs General / Layout / Style / Info).
+  Apply writes form → live widget; Generate writes Builder-mode
+  source via `Designer.GenerateFile(ModeBuilder, …)`.
+
+Adding a form for a custom widget:
+
+1. Create `mywidget-form.go` next to `mywidget.go`. Embed
+   `ComponentForm`, declare fields with struct tags, implement the
+   seven required methods. `Load`/`Store` MUST call the embedded
+   `f.ComponentForm.Load/Store(&w.Component)` first.
+2. `Emit` SHOULD use `EmitFrame(out, mode, body)` so the standard
+   class prefix and trailing `Hint`/`Flag`/style chain happen
+   automatically. Only bypass when the constructor name itself is
+   computed (e.g. `HFlex` vs `VFlex`).
+3. Properties without a chained Builder setter MUST emit a
+   `// TODO: Setter(value) — no Builder setter` comment after the
+   frame.
+4. Register the form in `cmd/designer-poc/main.go`'s
+   `registerKinds(d)` table:
+   ```go
+   register(reflect.TypeOf((*MyWidget)(nil)),
+       func() inspector.WidgetForm { return &MyWidgetForm{} })
+   ```
+
+Slice fields (List items, Tabs names, Combo items, Tree segments,
+Shortcuts pairs) MUST be exposed as comma-separated strings; use
+the package-level `parseItems` helper, or `parseSelectOptions` /
+`parseShortcutPairs` for `key:value` pairs. Typed enums
+(`time.Duration`, `core.Level`, `core.Alignment`) MUST round-trip
+as strings with `parseXxx` / `xxxConst` helpers — see
+`ClockForm`, `IndicatorForm`, `FlexForm`.
+
+See [`doc/designer/forms.md`](../../../doc/designer/forms.md) for
+the full per-form recipe and
+[`doc/designer/codegen.md`](../../../doc/designer/codegen.md) for
+the chain-element convention.
 
 ---
 

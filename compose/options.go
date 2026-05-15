@@ -203,12 +203,36 @@ func Total(n int) Option {
 	}
 }
 
-// Value sets the current value of a [Progress] bar at construction time.
-// It is a no-op when applied to any other widget type.
+// Value sets the current value of a [Progress] bar or [Slider] at
+// construction time. It is a no-op when applied to any other widget type.
 func Value(n int) Option {
 	return func(_ *core.Theme, widget core.Widget) {
-		if w, ok := widget.(*widgets.Progress); ok {
+		switch w := widget.(type) {
+		case *widgets.Progress:
 			w.Set(n)
+		case *widgets.Slider:
+			w.Set(n)
+		}
+	}
+}
+
+// Range sets the [min, max] bounds of a [Slider] at construction time. It is
+// a no-op when applied to any other widget type.
+func Range(minV, maxV int) Option {
+	return func(_ *core.Theme, widget core.Widget) {
+		if s, ok := widget.(*widgets.Slider); ok {
+			s.SetMin(minV)
+			s.SetMax(maxV)
+		}
+	}
+}
+
+// Step sets the arrow-key step size of a [Slider]. It is a no-op when applied
+// to any other widget type.
+func Step(n int) Option {
+	return func(_ *core.Theme, widget core.Widget) {
+		if s, ok := widget.(*widgets.Slider); ok {
+			s.SetStep(n)
 		}
 	}
 }

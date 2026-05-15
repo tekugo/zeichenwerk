@@ -30,6 +30,21 @@ func AddNerdStrings(theme *Theme) {
 		"progress.v.end.filled":    "█",
 		"progress.v.end.empty":     "░",
 
+		// ---- Radio ----
+		"radio.on":  "\uF111",
+		"radio.off": "\uF10C",
+
+		// ---- Slider ----
+		"slider.compact.track":    "\u2501",
+		"slider.compact.thumb":    "\u2503",
+		"slider.box.top-left":     "\u256D",
+		"slider.box.top-right":    "\u256E",
+		"slider.box.bottom-left":  "\u2570",
+		"slider.box.bottom-right": "\u256F",
+		"slider.box.horizontal":   "\u2500",
+		"slider.box.thumb-top":    "\u2565",
+		"slider.box.thumb-bottom": "\u2568",
+
 		// ---- Select ----
 		"select.dropdown": " \u25BC",
 

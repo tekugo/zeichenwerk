@@ -423,7 +423,16 @@ func (t *Tree) handleActivate() {
 }
 
 func (t *Tree) handleMouse(ev *tcell.EventMouse) bool {
-	if ev.Buttons() != tcell.Button1 {
+	switch ev.Buttons() {
+	case tcell.WheelUp:
+		t.Move(-MouseWheelStep)
+		return true
+	case tcell.WheelDown:
+		t.Move(MouseWheelStep)
+		return true
+	case tcell.Button1:
+		// fall through to click handling below
+	default:
 		return false
 	}
 	mx, my := ev.Position()
@@ -438,10 +447,31 @@ func (t *Tree) handleMouse(ev *tcell.EventMouse) bool {
 	if index < 0 || index >= len(t.flat) {
 		return false
 	}
-	if t.flat[index].node.disabled {
+	item := t.flat[index]
+	if item.node.disabled {
 		return false
 	}
+
+	// Row layout (matches Render):
+	//   [indent: (depth-1)*3 cells, only if depth>=1]
+	//   [connector: 3 cells, only if depth>=1]
+	//   [indicator: 2 cells]
+	//   [label: remaining cells]
+	// Click inside the prefix region toggles expand/collapse on non-leaf nodes;
+	// click on the label only changes selection.
+	prefixEnd := cx + 2
+	if item.depth > 0 {
+		prefixEnd = cx + item.depth*3 + 2
+	}
+
 	t.moveTo(index)
+	if mx < prefixEnd && !item.node.Leaf() {
+		if item.node.expanded {
+			t.Collapse(item.node)
+		} else {
+			t.Expand(item.node)
+		}
+	}
 	return true
 }
 

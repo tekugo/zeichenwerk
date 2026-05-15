@@ -303,6 +303,37 @@ func (c *CRT) Children() []Widget {
 	return []Widget{}
 }
 
+// Insert places widget into the CRT's single child slot. Only
+// index 0 is valid; any other index returns ErrFull.
+func (c *CRT) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	if c.child != nil {
+		c.child.SetParent(nil)
+	}
+	c.child = widget
+	widget.SetParent(c)
+	return nil
+}
+
+// Remove clears the child slot. Returns ErrNotFound if child does
+// not match the current child.
+func (c *CRT) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if c.child != child {
+		return ErrNotFound
+	}
+	c.child.SetParent(nil)
+	c.child = nil
+	return nil
+}
+
 // ---- Animation Control ----------------------------------------------------
 
 // Start begins the power-on animation at the given tick interval. Should be

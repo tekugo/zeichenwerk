@@ -35,9 +35,10 @@ showcase *args:
 lazymake *args:
     go run ./cmd/lazymake {{args}}
 
-# Remove build artifacts
+# Remove build artifacts and generated binaries
 clean:
     rm -f coverage.out
+    for d in cmd/*/; do rm -f "$(basename "$d")"; done
 
 # Release: merge develop into main, tag, push, return to develop, prepend new Unreleased section
 # Usage: just release 2.0.0

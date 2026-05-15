@@ -55,6 +55,12 @@ func (n *TreeNode) Add(child *TreeNode) *TreeNode {
 // Text returns the node's display text.
 func (n *TreeNode) Text() string { return n.text }
 
+// SetText replaces the node's display text. The Tree widget reads node
+// text on every render, so callers do not need to rebuild the flat
+// list — a Redraw on the owning tree is enough to make the new label
+// visible.
+func (n *TreeNode) SetText(s string) { n.text = s }
+
 // Data returns the opaque user data attached to the node.
 func (n *TreeNode) Data() any { return n.data }
 

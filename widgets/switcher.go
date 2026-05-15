@@ -99,6 +99,68 @@ func (s *Switcher) Children() []Widget {
 	return s.panes
 }
 
+// Insert places widget at index in the pane list. Out-of-range
+// indices are clamped. The pane is hidden unless the switcher's
+// current selection lands on it; visibility of the previously selected
+// pane is preserved by adjusting s.selected up by one when an
+// insertion happens at or before it.
+func (s *Switcher) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index < 0 {
+		index = 0
+	}
+	if index > len(s.panes) {
+		index = len(s.panes)
+	}
+	widget.SetParent(s)
+	x, y, w, h := s.Content()
+	widget.SetBounds(x, y, w, h)
+	s.panes = append(s.panes, nil)
+	copy(s.panes[index+1:], s.panes[index:])
+	s.panes[index] = widget
+
+	if len(s.panes) == 1 {
+		s.selected = 0
+	} else if index <= s.selected {
+		s.selected++
+	}
+	widget.SetFlag(FlagHidden, index != s.selected)
+	return nil
+}
+
+// Remove drops a pane from the switcher. The pane's parent is cleared
+// and s.selected is adjusted so the visible pane index stays
+// consistent: a pane removed at or before the current selection
+// shifts the selection down by one; removing the currently visible
+// pane snaps to the previous neighbour, or 0 when none exists.
+func (s *Switcher) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	for i, p := range s.panes {
+		if p == child {
+			s.panes = append(s.panes[:i], s.panes[i+1:]...)
+			child.SetParent(nil)
+			child.SetFlag(FlagHidden, false)
+			switch {
+			case len(s.panes) == 0:
+				s.selected = 0
+			case i < s.selected:
+				s.selected--
+			case i == s.selected && s.selected >= len(s.panes):
+				s.selected = len(s.panes) - 1
+			}
+			if len(s.panes) > 0 {
+				s.panes[s.selected].SetFlag(FlagHidden, false)
+			}
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
 // Layout calculates and applies layout positioning for all panes in the
 // switcher. All panes are positioned to fill the switcher's content area,
 // ensuring they are ready for display when selected, though only the selected

@@ -15,6 +15,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	. "github.com/tekugo/zeichenwerk"
 	. "github.com/tekugo/zeichenwerk/core"
+	"github.com/tekugo/zeichenwerk/inspector"
 	"github.com/tekugo/zeichenwerk/themes"
 	. "github.com/tekugo/zeichenwerk/values"
 	. "github.com/tekugo/zeichenwerk/widgets"
@@ -57,6 +58,7 @@ func main() {
 	if dbg {
 		ui.Debug()
 	}
+	inspector.Open(ui)
 	ui.Run()
 }
 
@@ -70,7 +72,7 @@ func createUI(theme *Theme) *UI {
 		End().
 		Grid("content", 2, 2, true).Hint(0, -1).Columns(32, -1).Rows(-1, 10).
 		Cell(0, 0, 1, 2).
-		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Marquee", "Progress", "Scanner", "Sparkline", "Select", "Shimmer", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
+		List("navigation", "Bar Chart", "Box", "Breadcrumb", "Canvas", "Checkbox", "Collapsible", "Color Picker", "Combo", "Deck", "Digits", "Editor", "Filter", "Form", "Grid", "Heatmap", "Indicator", "Marquee", "Progress", "Radio", "Scanner", "Sparkline", "Select", "Shimmer", "Slider", "Spinner", "Styled", "Table", "Tabs", "Terminal", "Tiles", "Tree FS", "Typeahead", "Typewriter", "Value", "Viewport", "Commands", "Dialog", "Confirm", "Prompt", "File Chooser", "Dir Chooser", "Save As").
 		Cell(1, 0, 1, 1).
 		Switcher("switcher", false).
 		With(barChartDemo).
@@ -79,6 +81,7 @@ func createUI(theme *Theme) *UI {
 		With(canvas).
 		With(checkbox).
 		With(collapsibleDemo).
+		With(colorPickerDemo).
 		With(comboDemo).
 		With(func(b *Builder) { deckDemo(b, theme) }).
 		With(digits).
@@ -87,12 +90,15 @@ func createUI(theme *Theme) *UI {
 		With(form).
 		With(grid).
 		With(heatmapDemo).
+		With(indicatorDemo).
 		With(marqueeDemo).
 		With(progress).
+		With(radioDemo).
 		With(scanner).
 		With(sparklineDemo).
 		With(dropdown).
 		With(shimmerDemo).
+		With(sliderDemo).
 		With(spinner).
 		With(styled).
 		With(table).
@@ -157,7 +163,7 @@ func createUI(theme *Theme) *UI {
 					switcher.Select(selected)
 				} else {
 					switch selected {
-					case 32:
+					case 36:
 						dialog := ui.NewBuilder().
 							Dialog("dialog", "Test Dialog").
 							Class("dialog").
@@ -179,7 +185,7 @@ func createUI(theme *Theme) *UI {
 							return true
 						})
 						ui.Popup(-1, -1, 0, 0, dialog)
-					case 33:
+					case 37:
 						ui.Confirm("Confirm Action", "Do you really want to do this?",
 							func() {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -192,7 +198,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 34:
+					case 38:
 						ui.Prompt("Enter Value", "Please enter a value:",
 							func(text string) {
 								if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -205,7 +211,7 @@ func createUI(theme *Theme) *UI {
 								}
 							},
 						)
-					case 35:
+					case 39:
 						d := ui.FileChooser("Open File", "Open", "file", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -213,7 +219,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 36:
+					case 40:
 						d := ui.FileChooser("Open Directory", "Select", "dir", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							if log, ok := Find(ui, "debug-log").(*Text); ok {
@@ -221,7 +227,7 @@ func createUI(theme *Theme) *UI {
 							}
 							return true
 						})
-					case 37:
+					case 41:
 						d := ui.FileChooser("Save As", "Save", "save", "", false)
 						d.On(EvtAccept, func(_ Widget, _ Event, data ...any) bool {
 							path := data[0].(string)
@@ -453,6 +459,48 @@ func collapsibleDemo(builder *Builder) {
 	}
 }
 
+// Color Picker demo — shows both single-colour and fg/bg pickers.
+func colorPickerDemo(builder *Builder) {
+	builder.VFlex("color-picker-demo", Stretch, 1).Padding(1, 2).
+		Static("cp-title", "Color Picker Demo").Padding(0, 0, 1, 0).
+		Static("cp-info", "Edit any of R/G/B, H/S/L, or Hex — the other representations update automatically.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Static("cp-single-label", "Single colour:").Padding(0, 0, 0, 0).
+		ColorPicker("cp-single", ColorSingle).Padding(1, 0).
+		Static("cp-fgbg-label", "Foreground / background with contrast ratio:").Padding(1, 0, 0, 0).
+		ColorPicker("cp-fgbg", ColorFgBg).Padding(1, 0).
+		Static("cp-status", "").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+
+	if single, ok := Find(container, "cp-single").(*ColorPicker); ok {
+		single.SetForeground("#ff8040")
+		single.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+			if cp, ok := data[0].(*ColorPicker); ok {
+				if label, ok := Find(container, "cp-status").(*Static); ok {
+					label.Set(fmt.Sprintf("single: %s", cp.Foreground()))
+				}
+			}
+			return true
+		})
+	}
+
+	if fgbg, ok := Find(container, "cp-fgbg").(*ColorPicker); ok {
+		fgbg.SetForeground("#ffffff")
+		fgbg.SetBackground("#1a1b26")
+		fgbg.On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+			if cp, ok := data[0].(*ColorPicker); ok {
+				if label, ok := Find(container, "cp-status").(*Static); ok {
+					label.Set(fmt.Sprintf("fg=%s  bg=%s  contrast=%.1f",
+						cp.Foreground(), cp.Background(), cp.Contrast()))
+				}
+			}
+			return true
+		})
+	}
+}
+
 // Deck demo — displays all theme colors as rich multi-line cards.
 func deckDemo(builder *Builder, theme *Theme) {
 	type colorItem struct{ name, hex string }
@@ -661,6 +709,38 @@ func grid(builder *Builder) {
 		End()
 }
 
+// Indicator demo
+func indicatorDemo(builder *Builder) {
+	builder.VFlex("indicator-demo", Stretch, 1).Padding(1, 2).
+		Static("indicator-title", "Indicator Widget Demo").Padding(0, 0, 1, 0).
+		Static("indicator-desc", "Status glyph + label. The glyph colour follows the indicator:<level> state selector.").Padding(0, 0, 1, 0).
+		HRule("thin").Padding(0, 0, 1, 0).
+		Indicator("ind-debug", Debug, "Debug — verbose diagnostics").
+		Indicator("ind-info", Info, "Info — connection established").
+		Indicator("ind-success", Success, "Success — build completed").
+		Indicator("ind-warning", Warning, "Warning — disk usage at 85%").
+		Indicator("ind-error", Error, "Error — request timed out").
+		Indicator("ind-fatal", Fatal, "Fatal — process aborted").
+		Spacer().Hint(0, 1).
+		HFlex("indicator-controls", Start, 2).
+		Static("ind-cycle-label", "Cycle target:").
+		Button("ind-cycle", "Cycle level").
+		End().
+		Static("indicator-status", "Click 'Cycle level' to step the first indicator through every level.").Padding(1, 0, 0, 0).
+		End()
+
+	pane := builder.Find("indicator-demo").(Container)
+	target := Find(pane, "ind-debug").(*Indicator)
+	cycle := []Level{Debug, Info, Success, Warning, Error, Fatal}
+	idx := 0
+	Find(pane, "ind-cycle").On(EvtActivate, func(_ Widget, _ Event, _ ...any) bool {
+		idx = (idx + 1) % len(cycle)
+		target.SetLevel(cycle[idx])
+		target.SetLabel(fmt.Sprintf("%s — set via SetLevel", cycle[idx]))
+		return true
+	})
+}
+
 // Progress demo
 func marqueeDemo(builder *Builder) {
 	builder.VFlex("marquee-demo", Stretch, 1).Padding(1, 2).
@@ -799,6 +879,28 @@ func progress(builder *Builder) {
 		End()
 }
 
+// Radio demo
+func radioDemo(builder *Builder) {
+	builder.VFlex("radio-demo", Start, 1).Padding(1, 2).
+		Static("radio-title", "Radio Widget Demo").Padding(0, 0, 1, 0).
+		Static("radio-info", "Radio groups show every option inline. Up/Down (or j/k) move the selection — there is no separate cursor.").Padding(0, 0, 1, 0).
+		Static("", "Pick a size:").
+		Radio("radio-size", "s", "Small", "m", "Medium", "l", "Large", "xl", "Extra Large").
+		Static("radio-status", "Selected: Small").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+	if status, ok := Find(container, "radio-status").(*Static); ok {
+		Find(container, "radio-size").On(EvtChange, func(_ Widget, _ Event, data ...any) bool {
+			if v, ok := data[0].(string); ok {
+				labels := map[string]string{"s": "Small", "m": "Medium", "l": "Large", "xl": "Extra Large"}
+				status.Set("Selected: " + labels[v])
+			}
+			return true
+		})
+	}
+}
+
 // Scanner demo
 func scanner(builder *Builder) {
 	builder.VFlex("scanner-container", Stretch, 1).Padding(1).
@@ -828,6 +930,37 @@ func scanner(builder *Builder) {
 		}
 		return true
 	})
+}
+
+// Slider demo
+func sliderDemo(builder *Builder) {
+	builder.VFlex("slider-demo", Start, 1).Padding(1, 2).
+		Static("slider-title", "Slider Widget Demo").Padding(0, 0, 1, 0).
+		Static("slider-info", "Sliders pick an int value in a range. ←/→ (or h/l) step; Home/End jump to bounds. Click anywhere on the track to set the value.").Padding(0, 0, 1, 0).
+		Static("", "Compact (height 1, ━ track + ┃ thumb):").
+		Slider("slider-compact").Hint(0, 1).
+		Static("", "Box (height 2, rounded box + ╥╨ thumb):").
+		Slider("slider-box").Hint(0, 2).
+		Static("", "Box centred in a taller area (height 4):").
+		Slider("slider-tall").Hint(0, 4).
+		Static("slider-status", "Compact = 0   Box = 50   Tall = 25").Padding(1, 0, 0, 0).
+		End()
+
+	container := builder.Container()
+	compact := Find(container, "slider-compact").(*Slider)
+	box := Find(container, "slider-box").(*Slider)
+	tall := Find(container, "slider-tall").(*Slider)
+	box.Set(50)
+	tall.Set(25)
+	status, _ := Find(container, "slider-status").(*Static)
+	update := func() {
+		if status != nil {
+			status.Set(fmt.Sprintf("Compact = %d   Box = %d   Tall = %d", compact.Value(), box.Value(), tall.Value()))
+		}
+	}
+	compact.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
+	box.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
+	tall.On(EvtChange, func(_ Widget, _ Event, _ ...any) bool { update(); return true })
 }
 
 // Spinner demo

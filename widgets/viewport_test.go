@@ -79,85 +79,82 @@ func makeScrollableViewport() (*Viewport, *Static) {
 	return vp, child
 }
 
+// Scroll is observed via the viewport's offset fields (tx, ty), not via
+// the child's bounds. Layout pins the child at (0, 0, w, h) regardless of
+// scroll position; the offset is applied through Translate at Render time.
+
 func TestViewport_Keyboard_Down_ScrollsDown(t *testing.T) {
-	vp, child := makeScrollableViewport()
-	_, yBefore, _, _ := child.Bounds()
+	vp, _ := makeScrollableViewport()
+	tyBefore := vp.ty
 	handled := vp.handleKey(BuildKey(tcell.KeyDown))
 	if !handled {
 		t.Error("Down key should be handled when child is taller than viewport")
 	}
-	_, yAfter, _, _ := child.Bounds()
-	if yAfter >= yBefore {
-		t.Errorf("child y = %d after Down; want < %d (scrolled up)", yAfter, yBefore)
+	if vp.ty <= tyBefore {
+		t.Errorf("vp.ty = %d after Down; want > %d", vp.ty, tyBefore)
 	}
 }
 
 func TestViewport_Keyboard_Up_ScrollsUp(t *testing.T) {
-	vp, child := makeScrollableViewport()
+	vp, _ := makeScrollableViewport()
 	vp.handleKey(BuildKey(tcell.KeyDown)) // scroll down first
-	_, yAfterDown, _, _ := child.Bounds()
+	tyAfterDown := vp.ty
 	vp.handleKey(BuildKey(tcell.KeyUp))
-	_, yAfterUp, _, _ := child.Bounds()
-	if yAfterUp <= yAfterDown {
-		t.Errorf("child y = %d after Up; want > %d (scrolled back)", yAfterUp, yAfterDown)
+	if vp.ty >= tyAfterDown {
+		t.Errorf("vp.ty = %d after Up; want < %d", vp.ty, tyAfterDown)
 	}
 }
 
 func TestViewport_Keyboard_Up_AtTop_NoOp(t *testing.T) {
-	vp, child := makeScrollableViewport()
-	_, yBefore, _, _ := child.Bounds()
+	vp, _ := makeScrollableViewport()
+	tyBefore := vp.ty
 	handled := vp.handleKey(BuildKey(tcell.KeyUp))
-	_, yAfter, _, _ := child.Bounds()
 	if handled {
 		t.Error("Up at top should return false")
 	}
-	if yAfter != yBefore {
-		t.Error("child position should not change when Up at top")
+	if vp.ty != tyBefore {
+		t.Errorf("vp.ty = %d after Up at top; want %d (unchanged)", vp.ty, tyBefore)
 	}
 }
 
 func TestViewport_Keyboard_Right_ScrollsRight(t *testing.T) {
-	vp, child := makeScrollableViewport()
-	xBefore, _, _, _ := child.Bounds()
+	vp, _ := makeScrollableViewport()
+	txBefore := vp.tx
 	handled := vp.handleKey(BuildKey(tcell.KeyRight))
 	if !handled {
 		t.Error("Right key should be handled when child is wider than viewport")
 	}
-	xAfter, _, _, _ := child.Bounds()
-	if xAfter >= xBefore {
-		t.Errorf("child x = %d after Right; want < %d (scrolled left)", xAfter, xBefore)
+	if vp.tx <= txBefore {
+		t.Errorf("vp.tx = %d after Right; want > %d", vp.tx, txBefore)
 	}
 }
 
 func TestViewport_Keyboard_Left_ScrollsLeft(t *testing.T) {
-	vp, child := makeScrollableViewport()
+	vp, _ := makeScrollableViewport()
 	vp.handleKey(BuildKey(tcell.KeyRight))
-	xAfterRight, _, _, _ := child.Bounds()
+	txAfterRight := vp.tx
 	vp.handleKey(BuildKey(tcell.KeyLeft))
-	xAfterLeft, _, _, _ := child.Bounds()
-	if xAfterLeft <= xAfterRight {
-		t.Errorf("child x = %d after Left; want > %d (scrolled back)", xAfterLeft, xAfterRight)
+	if vp.tx >= txAfterRight {
+		t.Errorf("vp.tx = %d after Left; want < %d", vp.tx, txAfterRight)
 	}
 }
 
 func TestViewport_Keyboard_Home_ResetsScroll(t *testing.T) {
-	vp, child := makeScrollableViewport()
+	vp, _ := makeScrollableViewport()
 	vp.handleKey(BuildKey(tcell.KeyDown))
 	vp.handleKey(BuildKey(tcell.KeyRight))
 	vp.handleKey(BuildKey(tcell.KeyHome))
-	x, y, _, _ := child.Bounds()
-	if x != 0 || y != 0 {
-		t.Errorf("child position = (%d,%d) after Home; want (0,0)", x, y)
+	if vp.tx != 0 || vp.ty != 0 {
+		t.Errorf("vp offsets = (%d,%d) after Home; want (0,0)", vp.tx, vp.ty)
 	}
 }
 
 func TestViewport_Keyboard_End_ScrollsToMax(t *testing.T) {
-	vp, child := makeScrollableViewport()
-	_, yBefore, _, _ := child.Bounds()
+	vp, _ := makeScrollableViewport()
+	tyBefore := vp.ty
 	vp.handleKey(BuildKey(tcell.KeyEnd))
-	_, yAfter, _, _ := child.Bounds()
-	if yAfter >= yBefore {
-		t.Errorf("child y = %d after End; want < %d (at maximum scroll)", yAfter, yBefore)
+	if vp.ty <= tyBefore {
+		t.Errorf("vp.ty = %d after End; want > %d (at maximum scroll)", vp.ty, tyBefore)
 	}
 }
 

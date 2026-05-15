@@ -33,7 +33,34 @@ func NewTable(id, class string, provider TableProvider, cellNav bool) *Table {
 	table.SetFlag(FlagFocusable, true)
 	table.Set(provider)
 	OnKey(table, table.handleKey)
+	OnMouse(table, table.handleMouse)
 	return table
+}
+
+// handleMouse handles mouse wheel events on the table. Vertical wheel impulses
+// move the selected row by MouseWheelStep, horizontal impulses scroll the
+// viewport by one column. Click handling is not yet implemented.
+func (t *Table) handleMouse(ev *tcell.EventMouse) bool {
+	if t.provider == nil {
+		return false
+	}
+	switch ev.Buttons() {
+	case tcell.WheelUp:
+		t.row = max(0, t.row-MouseWheelStep)
+		t.adjust()
+		return true
+	case tcell.WheelDown:
+		t.row = min(t.provider.Length()-1, t.row+MouseWheelStep)
+		t.adjust()
+		return true
+	case tcell.WheelLeft:
+		t.scrollByColumn(-1)
+		return true
+	case tcell.WheelRight:
+		t.scrollByColumn(1)
+		return true
+	}
+	return false
 }
 
 // Apply applies theme styles to the table and its sub-selectors.

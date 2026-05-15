@@ -79,8 +79,38 @@ func (fg *FormGroup) Children() []Widget {
 	return children
 }
 
+// Insert appends widget into the form group; the index parameter is
+// ignored because FormGroup positions fields by (line, label) — not
+// linear order. Use Add for new entries with proper line+label
+// metadata. Insert exists to satisfy the Container interface for
+// generic tree-edit operations (e.g. inspector / designer Move).
+func (fg *FormGroup) Insert(_ int, widget Widget, params ...any) error {
+	return fg.Add(widget, params...)
+}
+
+// Remove finds and removes child from whichever line it occupies.
+// Empty lines are kept so subsequent indices stay stable.
+func (fg *FormGroup) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	for li, line := range fg.lines {
+		for i, f := range line {
+			if f.widget == child {
+				fg.lines[li] = append(line[:i], line[i+1:]...)
+				child.SetParent(nil)
+				return nil
+			}
+		}
+	}
+	return ErrNotFound
+}
+
 // Hint returns the preferred content size needed to display all lines and
-// their labels at their natural sizes.
+// their labels at their natural sizes. The returned height matches what
+// Layout actually consumes: sum of per-line heights, plus one row per
+// label line in vertical orientation, plus fg.spacing rows between
+// adjacent lines.
 func (fg *FormGroup) Hint() (int, int) {
 	if fg.hwidth != 0 || fg.hheight != 0 {
 		return fg.hwidth, fg.hheight
@@ -112,16 +142,20 @@ func (fg *FormGroup) Hint() (int, int) {
 				lw++
 			}
 		}
+		// Vertical orientation reserves one row above the controls
+		// for the label.
 		if !fg.horizontal {
-			lh++
-		}
-		if i > 0 {
 			lh++
 		}
 		if lw > w {
 			w = lw
 		}
 		h += lh
+		// Configured spacing applies between adjacent lines only —
+		// not above the first or below the last.
+		if i > 0 {
+			h += fg.spacing
+		}
 	}
 	return mlw + w, h
 }
@@ -143,7 +177,7 @@ func (fg *FormGroup) Layout() error {
 
 	// Current line y position
 	ly := cy
-	for _, line := range fg.lines {
+	for i, line := range fg.lines {
 		// Current line x position
 		lx := cx + mlw + 1
 		lh := 0 // line height
@@ -179,9 +213,21 @@ func (fg *FormGroup) Layout() error {
 				lh = fh
 			}
 		}
-		ly = ly + lh + fg.spacing
+		ly += lh
+		// Configured spacing applies between adjacent lines only —
+		// matches the Hint formulation above.
+		if i < len(fg.lines)-1 {
+			ly += fg.spacing
+		}
 	}
-	return nil
+	// Recurse into container fields. SetBounds above gives the
+	// outer bounds; the children of a composite control (e.g. an
+	// HFlex containing an Input + a preview block) need their
+	// internal Layout to actually receive bounds. Without this
+	// pass, composite controls render as nothing because every
+	// inner widget sits at (0, 0, 0, 0) and their Render methods
+	// short-circuit on a zero content area.
+	return Layout(fg)
 }
 
 // Render draws the group background, labels, and all child controls.

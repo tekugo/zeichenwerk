@@ -135,6 +135,40 @@ func (b *Box) Children() []Widget {
 	return []Widget{b.child}
 }
 
+// Insert is the indexed counterpart to Add. Box only holds one child,
+// so the only valid index is 0 (which replaces the existing child if
+// any). Any other index returns ErrFull. Insert(0, nil, …) returns
+// ErrChildIsNil rather than clearing — callers should use Remove for
+// that.
+func (b *Box) Insert(index int, widget Widget, _ ...any) error {
+	if widget == nil {
+		return ErrChildIsNil
+	}
+	if index != 0 {
+		return ErrFull
+	}
+	if b.child != nil {
+		b.child.SetParent(nil)
+	}
+	b.child = widget
+	widget.SetParent(b)
+	return nil
+}
+
+// Remove clears the box's child if it matches. Returns ErrNotFound
+// when child is not the current child of this box.
+func (b *Box) Remove(child Widget) error {
+	if child == nil {
+		return ErrChildIsNil
+	}
+	if b.child != child {
+		return ErrNotFound
+	}
+	b.child.SetParent(nil)
+	b.child = nil
+	return nil
+}
+
 // Layout positions and sizes the child widget within this box's content area.
 // The child widget is given the full content area of the box, which excludes
 // the space used by borders, padding, and margins. After positioning the child,
