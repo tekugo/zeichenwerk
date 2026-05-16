@@ -8,7 +8,10 @@ and this project adheres to
 
 ---
 
-## [Unreleased]
+## v1.1.1 — 2026-05-16
+
+Housekeeping release — no library code changes. Command-only apps moved
+to standalone repos so the library `go.mod` stops carrying their deps.
 
 ### Changed
 
