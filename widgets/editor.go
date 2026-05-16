@@ -128,6 +128,16 @@ func (e *Editor) Lines() []string {
 	return lines
 }
 
+// Line returns the current cursor line (0-based).
+func (e *Editor) Line() int {
+	return e.line
+}
+
+// Column returns the current cursor column (0-based, rune index).
+func (e *Editor) Column() int {
+	return e.column
+}
+
 // SetAutoIndent configures auto-indentation.
 func (e *Editor) SetAutoIndent(auto bool) {
 	e.indent = auto
@@ -413,6 +423,7 @@ func (e *Editor) DocumentHome() {
 }
 
 func (e *Editor) Down() {
+	defer e.Dispatch(e, EvtMove)
 	e.ClearSelection()
 	if e.line < len(e.content)-1 {
 		e.line++
@@ -426,6 +437,7 @@ func (e *Editor) Down() {
 }
 
 func (e *Editor) End() {
+	defer e.Dispatch(e, EvtMove)
 	e.ClearSelection()
 	e.column = e.content[e.line].Length()
 	e.adjustViewport()
@@ -433,6 +445,7 @@ func (e *Editor) End() {
 }
 
 func (e *Editor) Left() {
+	defer e.Dispatch(e, EvtMove)
 	if e.HasSelection() {
 		startLine, startCol, _, _, _ := e.selectionBounds()
 		e.ClearSelection()
@@ -455,6 +468,7 @@ func (e *Editor) Left() {
 }
 
 func (e *Editor) Home() {
+	defer e.Dispatch(e, EvtMove)
 	e.ClearSelection()
 	e.column = 0
 	e.adjustViewport()
@@ -463,6 +477,7 @@ func (e *Editor) Home() {
 
 // MoveTo moves the cursor to the specified line and column.
 func (e *Editor) MoveTo(line, column int) {
+	defer e.Dispatch(e, EvtMove)
 	e.ClearSelection()
 	if line < 0 {
 		line = 0
@@ -498,6 +513,7 @@ func (e *Editor) PageUp() {
 }
 
 func (e *Editor) Right() {
+	defer e.Dispatch(e, EvtMove)
 	if e.HasSelection() {
 		_, _, endLine, endCol, _ := e.selectionBounds()
 		e.ClearSelection()
@@ -521,6 +537,7 @@ func (e *Editor) Right() {
 }
 
 func (e *Editor) Up() {
+	defer e.Dispatch(e, EvtMove)
 	e.ClearSelection()
 	if e.line > 0 {
 		e.line--

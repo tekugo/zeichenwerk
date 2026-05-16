@@ -35,7 +35,7 @@ type rankedCommand struct {
 type Commands struct {
 	ui       *UI
 	entries  []*Command // registration order preserved
-	maxItems int        // max visible rows before scrolling (default 10)
+	maxItems int        // max visible rows before scrolling (default 14)
 	width    int        // explicit popup width override; 0 = auto
 	open     bool       // true while the popup is in the layer stack
 }
@@ -43,7 +43,7 @@ type Commands struct {
 func newCommands(ui *UI) *Commands {
 	return &Commands{
 		ui:       ui,
-		maxItems: 10,
+		maxItems: 14,
 	}
 }
 
@@ -245,8 +245,8 @@ func (c *Commands) computePopupSize(items []rankedCommand) (w, h int) {
 	}
 	minW += 4 // padding + border
 	w = minW
-	if w < 44 {
-		w = 44
+	if w < 56 {
+		w = 56
 	}
 	if c.ui != nil && width > 0 {
 		if maxW := width - 4; w > maxW {
