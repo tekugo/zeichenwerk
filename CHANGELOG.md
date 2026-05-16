@@ -29,11 +29,68 @@ to standalone repos so the library `go.mod` stops carrying their deps.
 
 ---
 
-## v2.0.0
+## v1.1.0 — 2026-05-15
+
+> **Note on the version number.** This release was being prepared as
+> `v2.0.0` throughout the `v2.0.0-beta.1` … `v2.0.0-beta.6` cycle (see
+> the development log below). Before tagging, it was renumbered to
+> `v1.1.0` because the public API remained backward-compatible with
+> `v1.0.0` — no consumer code needs to change. The `v2.0.0` slot is
+> reserved for a future release that actually breaks the API.
+
+All work captured in the `v2.0.0-beta.*` sections below is part of
+this release. Highlights:
+
+### Added
+
+- **Composition API** — functional, option-based alternative to the
+  Builder (`compose` package); full widget coverage
+- **New widgets:** Combo, Filter, Heatmap, Marquee, Shimmer, Sparkline,
+  Styled (Markdown renderer), Terminal (VT100/ANSI), Tree, TreeFS,
+  Typeahead, Typewriter, CRT, Radio, Slider
+- **Reactive bindings** — generic `Value[T]` with `Bind` / `Observe` /
+  `Derived` and the `Setter[T]` interface (`value.go`, `setter.go`)
+- **Showcase app** (`cmd/showcase`) — interactive widget reference with
+  live code examples and theme switching
+- **Tutorial and reference docs** — `doc/tutorial.md`, `doc/reference/`
+- **Theme system overhaul** — five built-in themes (Tokyo Night,
+  Midnight Neon, Nord, Gruvbox Dark, Gruvbox Light, Lipstick) with a
+  full colour variable system
+- **Table cell-navigation mode** — `SetCellNav(true)` for cell-level
+  focus with dedicated `table/cell` / `table/cell:focused` styles
+- **Form improvements** — `FormGroup` horizontal layout, struct-tag
+  control over field width, control type, and read-only state
+- **`Inspector` overlay** — live widget tree, layout info, structured
+  log table (`Ctrl+I` in debug mode)
+- **Designer PoC**, `zw` command, colour picker, `EvtFocus` / `EvtBlur`,
+  focus stack, mouse-wheel support, unicode borders, `FindAll[T]`,
+  `Update` helper
+
+### Changed
+
+- Major refactoring: `HFlex` / `VFlex` builder methods, `Set` / `Get`
+  cleanup, `Builder.Add` auto-applies the theme, `On` / `OnKey` /
+  `OnMouse` handler signatures unified
+- `EvtChange` no longer fires from programmatic setters — only from
+  user-interaction paths
+- `EvtSelect` payload on `Table` now `(row, col)` instead of
+  `(row, rowData)`
+
+### Fixed
+
+- Viewport tests for local-coordinate child bounds, scroll axis flags,
+  Editor cursor positioning, Deck scrollbar, Collapsible height hint,
+  Dialog hint with optional title bar, `Styled` block-style background
+  fallback, and many more — see the beta sections for the full list.
 
 ---
 
-## [Unreleased]
+## Development log — v2.0.0-beta cycle
+
+The entries below document features as they landed during the
+`v2.0.0-beta.1` … `v2.0.0-beta.6` development cycle. None of these
+betas were tagged on the public repo; the work was released as
+**v1.1.0** instead (see above).
 
 ---
 
@@ -129,10 +186,6 @@ to standalone repos so the library `go.mod` stops carrying their deps.
 
 ---
 
-## [Unreleased]
-
----
-
 ## v2.0.0-beta.5
 
 ### Added
@@ -201,10 +254,6 @@ to standalone repos so the library `go.mod` stops carrying their deps.
   bleeding through on rules and headings
 - `hr` and `h2` underline rules are one character shorter than the content
   width, leaving a visible space before the scrollbar
-
----
-
-## [Unreleased]
 
 ---
 
@@ -450,8 +499,6 @@ to standalone repos so the library `go.mod` stops carrying their deps.
 - `TreeFS` filesystem tree helper
 - `AGENTS.md` and `doc/` reference documentation
 
-[2.0.0-beta.2]:
-  https://github.com/tekugo/zeichenwerk/compare/v2.0.0-beta.1...v2.0.0-beta.2
-[2.0.0-beta.1]:
-  https://github.com/tekugo/zeichenwerk/compare/v1.0.0...v2.0.0-beta.1
+[1.1.1]: https://github.com/tekugo/zeichenwerk/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/tekugo/zeichenwerk/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/tekugo/zeichenwerk/releases/tag/v1.0.0
