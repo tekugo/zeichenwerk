@@ -30,6 +30,20 @@
 - **Events / flags**: [`doc/events.md`](doc/events.md), [`doc/flags.md`](doc/flags.md).
 - **Designer**: [`doc/designer/README.md`](doc/designer/README.md) — the inspector framework, per-widget `*-form.go` files, codegen, and the `cmd/designer-poc` driver.
 
+## Extracted apps
+
+Most cmd/ tools were extracted to standalone repos under `tekugo/`. Each consumes zeichenwerk as a normal dependency, so app-only deps don't leak into the library's `go.mod`:
+
+- [tekugo/datenwerk](https://github.com/tekugo/datenwerk) — sqlite3
+- [tekugo/triebwerk](https://github.com/tekugo/triebwerk) — fsnotify, doublestar (binary `tw`)
+- [tekugo/messwerk](https://github.com/tekugo/messwerk) — otlp/grpc (binary `mw`)
+- [tekugo/tblr](https://github.com/tekugo/tblr) — atotto/clipboard
+- [tekugo/malwerk](https://github.com/tekugo/malwerk)
+- [tekugo/hal-explorer](https://github.com/tekugo/hal-explorer)
+- [tekugo/figlet](https://github.com/tekugo/figlet)
+
+What stays in `cmd/`: showcase apps (`demo`, `demo2`, `compose`, `showcase`, `editor`), dev tools (`zw`, `analyzer`, `coverage`), and proof-of-concept drivers (`designer-poc`, `inspector-poc`).
+
 ## Project Overview
 
 This is a TUI component library based on `tcell/v3`. Key types:

@@ -235,6 +235,18 @@ go run ./cmd/compose
 - Theme system: [theme.go](theme.go)
 - Component base: [component.go](component.go)
 
+## Apps built on zeichenwerk
+
+Separate tools and example apps, each in its own repo:
+
+- [tekugo/datenwerk](https://github.com/tekugo/datenwerk) — SQLite browser / ad-hoc query tool
+- [tekugo/triebwerk](https://github.com/tekugo/triebwerk) (binary `tw`) — Makefile / Justfile task runner with file watching
+- [tekugo/messwerk](https://github.com/tekugo/messwerk) (binary `mw`) — Claude Code OTLP telemetry monitor
+- [tekugo/tblr](https://github.com/tekugo/tblr) — tabular-data CLI/TUI (CSV/TSV/Markdown/AsciiDoc/HTML/Typst)
+- [tekugo/malwerk](https://github.com/tekugo/malwerk) — modal vi-style terminal drawing tool
+- [tekugo/hal-explorer](https://github.com/tekugo/hal-explorer) — interactive HAL+JSON REST API browser
+- [tekugo/figlet](https://github.com/tekugo/figlet) — pure-Go FIGlet (`.flf`) renderer
+
 ## Agentic-ready
 
 Zeichenwerk ships with first-class support for AI agents and automated tooling

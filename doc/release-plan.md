@@ -1,5 +1,29 @@
 # Publish zeichenwerk: extract apps + launch checklist
 
+## Status — 2026-05-16
+
+**Part 1 extractions: largely done.** Eight apps are now standalone
+repos under `tekugo/` at `v0.1.0` (or higher):
+
+| App           | Repo                                                       | Tag    |
+|---------------|------------------------------------------------------------|--------|
+| dbu           | [tekugo/datenwerk](https://github.com/tekugo/datenwerk)            | v0.1.0 |
+| triebwerk     | [tekugo/triebwerk](https://github.com/tekugo/triebwerk) (binary `tw`) | v0.1.0 |
+| messwerk      | [tekugo/messwerk](https://github.com/tekugo/messwerk) (binary `mw`)   | v0.1.0 |
+| tblr          | [tekugo/tblr](https://github.com/tekugo/tblr)                      | v0.1.0 |
+| figlet        | [tekugo/figlet](https://github.com/tekugo/figlet)                  | v0.1.0 |
+| malwerk       | [tekugo/malwerk](https://github.com/tekugo/malwerk)                | v0.1.0 |
+| hal-explorer  | [tekugo/hal-explorer](https://github.com/tekugo/hal-explorer)      | v0.1.0 |
+| (tutorial)    | [tekugo/zeichenwerk-tutorial](https://github.com/tekugo/zeichenwerk-tutorial) | v1.1.0 |
+
+Per-app effect on zeichenwerk's `go.mod`: `fsnotify` + `doublestar` (triebwerk), `otlp` + `grpc` + `grpc-gateway` + `genproto` + `protobuf` (messwerk), `atotto/clipboard` (tblr) are all gone. The library now requires only `tcell`, `uniseg`, `testify`, and `golang.org/x/tools`.
+
+**Not extracted (decision):** `cmd/editor` stays in zeichenwerk as a showcase that will be expanded. `cmd/designer` (the binary driving the root-level `designer/` package) was removed manually; the package itself is library code and stays.
+
+**Remaining Part 1 work:** none — extractions are complete.
+
+Parts 2–4 (CI/CONTRIBUTING, homepage, launch content) are still TODO.
+
 ## Context
 
 The library has reached v2 beta and is largely publish-ready: MIT LICENSE, strong README (325 lines, 24 code blocks, comparison table, gif), CHANGELOG (440 lines), substantial `doc/` tree (tutorial / reference / spec / designer subdirs), and a `doc.go` that gives `pkg.go.dev` a real landing page. Release tags exist up to `v2.0.0-beta.6`.

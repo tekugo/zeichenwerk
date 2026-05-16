@@ -10,6 +10,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- **Apps moved to standalone repos.** `cmd/triebwerk`, `cmd/messwerk`,
+  `cmd/tblr`, `cmd/figlet`, `cmd/malwerk`, and `cmd/hal-explorer` are
+  now separate Go modules under `tekugo/`. Each consumes zeichenwerk
+  as a normal dependency. See the README for the full list.
+- **`go.mod` slimmed.** App-only dependencies dropped from the library:
+  `fsnotify` + `doublestar` (triebwerk), `otlp` + `grpc` +
+  `grpc-gateway` + `genproto` + `protobuf` (messwerk),
+  `atotto/clipboard` (tblr). Zeichenwerk now requires only `tcell`,
+  `uniseg`, `testify`, and `golang.org/x/tools`.
+- Spec docs for the extracted apps moved to their respective repos
+  (`doc/spec/{triebwerk,messwerk,tblr,malwerk}.md` removed).
+
 ---
 
 ## v2.0.0
